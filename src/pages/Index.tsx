@@ -160,13 +160,6 @@ const Index = () => {
           <Store size={24} className="mb-2" />
           <span className="text-sm font-medium">Add Venue</span>
         </Button>
-        <Button
-          className="flex flex-col items-center justify-center h-24 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-transform hover:scale-105 sm:col-span-1 col-span-3"
-          onClick={() => navigate("/search")}
-        >
-          <Search size={24} className="mb-2" />
-          <span className="text-sm font-medium">Search</span>
-        </Button>
       </div>
 
       {loading ? (
@@ -269,8 +262,8 @@ const Index = () => {
                     className="min-w-[280px] bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 cursor-pointer"
                     onClick={() => navigate(`/venue/${venue.slug}`)}
                   >
-                    <img
-                      src="https://images.unsplash.com/photo-1560272564-c83b66b1ad12?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80"
+ <img
+                      src="https://dailytrust.com/wp-content/uploads/2023/12/football-488714_1280.jpg"
                       alt={venue.name}
                       className="w-full h-40 object-cover rounded-t-lg"
                     />
