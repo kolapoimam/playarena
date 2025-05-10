@@ -61,9 +61,14 @@ const Index = () => {
       try {
         // Get current time in Africa/Lagos timezone
         const now = new Date().toLocaleString("en-US", { timeZone: "Africa/Lagos" });
-        const currentDateTime = new Date(now).toISOString();
+        const currentDateTime = new Date(now);
+        const currentDate = currentDateTime.toISOString().split("T")[0];
+        const currentTime = currentDateTime.toTimeString().slice(0, 5); // HH:MM format
 
-        // Get upcoming matches (only future or ongoing matches)
+        console.log("Current Date (Africa/Lagos):", currentDate);
+        console.log("Current Time (Africa/Lagos):", currentTime);
+
+        // Fetch upcoming matches
         const { data: matchesData, error: matchesError } = await supabase
           .from("matches")
           .select(`
@@ -76,15 +81,24 @@ const Index = () => {
             price,
             venue:venues(slug, name, city, image_url)
           `)
-          .gte("match_date", currentDateTime.split("T")[0]) // Matches from today onward
-          .filter("match_date", "eq", currentDateTime.split("T")[0]) // For today, check time
-          .gte("match_time", currentDateTime.split("T")[1].slice(0, 5)) // Time not passed today
-          .or(`match_date.gt.${currentDateTime.split("T")[0]}`) // Or future dates
+          .gte("match_date", currentDate) // Matches from today onward
           .order("match_date", { ascending: true })
           .order("match_time", { ascending: true })
           .limit(5);
 
         if (matchesError) throw matchesError;
+
+        console.log("Raw Matches Data:", matchesData);
+
+        // Filter matches to exclude those where time has passed today
+        const filteredMatches = matchesData.filter((match: Match) => {
+          const matchDateTime = new Date(`${match.match_date}T${match.match_time}:00`);
+          const isToday = match.match_date === currentDate;
+          const isTimePassed = isToday && match.match_time < currentTime;
+          return !isTimePassed || match.match_date > currentDate;
+        });
+
+        console.log("Filtered Matches:", filteredMatches);
 
         // Get popular venues with match count
         const { data: venuesData, error: venuesError } = await supabase
@@ -109,7 +123,7 @@ const Index = () => {
           match_count: venue.matches[0]?.count || 0,
         }));
 
-        setUpcomingMatches(matchesData as Match[]);
+        setUpcomingMatches(filteredMatches as Match[]);
         setPopularVenues(venuesWithMatchCount as Venue[]);
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -149,7 +163,6 @@ const Index = () => {
           className="flex flex-col items-center justify-center h-24 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-transform hover:scale-105"
           onClick={() => navigate("/organize")}
         >
-аю
           <Plus size={24} className="mb-2" />
           <span className="text-sm font-medium">Organize</span>
         </Button>
