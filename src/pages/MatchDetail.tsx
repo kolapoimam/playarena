@@ -103,6 +103,13 @@ const MatchDetail = () => {
     return timeString.slice(0, 5); // Format from "14:30:00" to "14:30"
   };
 
+  const isMatchTimePassed = () => {
+    if (!match) return false;
+    const now = new Date();
+    const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
+    return now >= matchDateTime;
+  };
+
   const copyMatchLink = async () => {
     if (!match) return;
     
@@ -203,6 +210,7 @@ const MatchDetail = () => {
   }
 
   const isFull = match.players?.length >= match.total_slots;
+  const matchHasStarted = isMatchTimePassed();
 
   return (
     <div className="min-h-screen pb-20">
@@ -222,6 +230,12 @@ const MatchDetail = () => {
         {isFull && (
           <div className="bg-red-100 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
             This match is completely filled up!
+          </div>
+        )}
+        
+        {matchHasStarted && (
+          <div className="bg-yellow-100 border border-yellow-200 text-yellow-700 px-4 py-3 rounded mb-4">
+            This match has already started!
           </div>
         )}
         
@@ -309,12 +323,22 @@ const MatchDetail = () => {
               <p className="text-muted-foreground text-sm">No players have joined yet</p>
             )}
             
-            {!isFull && (
+            {!isFull && !matchHasStarted && (
               <Button 
                 className="w-full mt-4"
                 onClick={() => navigate(`/join/${match.slug}`)}
               >
                 Join This Match
+              </Button>
+            )}
+            
+            {!isFull && matchHasStarted && (
+              <Button 
+                className="w-full mt-4"
+                variant="outline"
+                disabled
+              >
+                Match Has Started
               </Button>
             )}
           </div>
