@@ -1,4 +1,3 @@
-
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
@@ -8,8 +7,8 @@ import Navbar from "@/components/Navbar";
 const VenueCreate = () => {
   const navigate = useNavigate();
 
-  const handleSuccess = (venueId: string) => {
-    navigate(`/venue/${venueId}`);
+  const handleSuccess = (venueId: string, venueSlug: string) => {
+    navigate(`/venue/${venueSlug}`);
   };
 
   return (
