@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Store, Plus, Calendar, Search } from "lucide-react";
+import { Store, Plus, Calendar, Search, Clock } from "lucide-react";
 import ActionButton from "@/components/ActionButton";
 import MatchCard from "@/components/MatchCard";
 import SearchBar from "@/components/SearchBar";
@@ -15,6 +15,7 @@ type Match = {
   slug: string;
   title: string;
   match_date: string;
+  match_time: string;
   is_paid: boolean;
   price: number | null;
   venue: {
@@ -32,6 +33,19 @@ type Venue = {
   city: string;
   state: string;
   image_url: string | null;
+};
+
+const formatDate = (dateString: string) => {
+  const options: Intl.DateTimeFormatOptions = { weekday: 'short', month: 'short', day: 'numeric' };
+  return new Date(dateString).toLocaleDateString('en-US', options);
+};
+
+const formatTime = (timeString: string) => {
+  const [hours, minutes] = timeString.split(':');
+  const hour = parseInt(hours);
+  const period = hour >= 12 ? 'PM' : 'AM';
+  const displayHour = hour % 12 || 12;
+  return `${displayHour}:${minutes} ${period}`;
 };
 
 const Index = () => {
@@ -54,6 +68,7 @@ const Index = () => {
             slug,
             title,
             match_date,
+            match_time,
             is_paid,
             price,
             venue:venues(slug, name, city, image_url)
@@ -96,22 +111,6 @@ const Index = () => {
     
     fetchData();
   }, [toast]);
-
-  const getMatchDetails = (match: Match) => {
-    const details = [];
-    
-    if (match.is_paid) {
-      details.push(`Paid (₦${match.price?.toFixed(2)})`);
-    } else {
-      details.push("Free");
-    }
-    
-    if (match.venue) {
-      details.push(`at ${match.venue.name}`);
-    }
-    
-    return details.join(", ");
-  };
 
   return (
     <div className="min-h-screen pb-20">
@@ -171,15 +170,46 @@ const Index = () => {
             {upcomingMatches.length > 0 ? (
               <div className="flex gap-4 overflow-x-auto px-4 pb-4">
                 {upcomingMatches.map((match) => (
-                  <div key={match.id} className="min-w-[280px]">
-                    <MatchCard 
-                      title={match.title}
-                      slug={match.slug}
-                      details={getMatchDetails(match)}
-                      image={match.venue?.image_url || "https://images.unsplash.com/photo-1560272564-c83b66b1ad12?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80"}
-                      is_paid={match.is_paid}
-                      price={match.price}
-                    />
+                  <div 
+                    key={match.id} 
+                    className="min-w-[280px] bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 border border-gray-200 dark:border-gray-700"
+                  >
+                    <h3 className="font-bold text-lg mb-2">{match.title}</h3>
+                    
+                    <div className="space-y-3 mb-4">
+                      <div className="flex items-center gap-2">
+                        <Calendar size={18} />
+                        <span>{formatDate(match.match_date)}</span>
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <Clock size={18} />
+                        <span>{formatTime(match.match_time)}</span>
+                      </div>
+                      
+                      {match.venue && (
+                        <div 
+                          className="flex items-start gap-2 cursor-pointer" 
+                          onClick={() => navigate(`/venue/${match.venue?.slug}`)}
+                        >
+                          <Store size={18} />
+                          <span>{match.venue.name}</span>
+                        </div>
+                      )}
+                      
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">
+                          {match.is_paid ? `₦${match.price?.toFixed(2)}` : 'Free'}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <button
+                      onClick={() => navigate(`/match/${match.slug}`)}
+                      className="w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-md font-medium transition-colors"
+                    >
+                      Join Match
+                    </button>
                   </div>
                 ))}
               </div>
@@ -209,13 +239,14 @@ const Index = () => {
             </div>
             
             {popularVenues.length > 0 ? (
-              <div className="px-4 space-y-3">
+              <div className="flex gap-4 overflow-x-auto px-4 pb-4">
                 {popularVenues.map((venue) => (
-                  <div key={venue.id} onClick={() => navigate(`/venue/${venue.slug}`)}>
+                  <div key={venue.id} className="min-w-[280px]">
                     <VenueItem
                       name={venue.name}
                       location={`${venue.city}, ${venue.state}`}
-                      image={venue.image_url || "https://images.unsplash.com/photo-1571056642329-4f49f8af6443?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80"}
+                      image={null}
+                      onClick={() => navigate(`/venue/${venue.slug}`)}
                     />
                   </div>
                 ))}
