@@ -8,7 +8,6 @@ import ThemeToggle from "@/components/ThemeToggle";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
-import { DateTime } from "luxon";
 
 type Match = {
   id: string;
@@ -37,13 +36,16 @@ type Venue = {
 };
 
 const formatDate = (dateString: string) => {
-  const date = DateTime.fromFormat(dateString, "yyyy-MM-dd", { zone: "Africa/Lagos" });
-  return date.toFormat("ccc, LLL d");
+  const options: Intl.DateTimeFormatOptions = { weekday: "short", month: "short", day: "numeric" };
+  return new Date(dateString).toLocaleDateString("en-US", options);
 };
 
 const formatTime = (timeString: string) => {
-  const time = DateTime.fromFormat(timeString, "HH:mm", { zone: "Africa/Lagos" });
-  return time.toFormat("h:mm a");
+  const [hours, minutes] = timeString.split(":");
+  const hour = parseInt(hours);
+  const period = hour >= 12 ? "PM" : "AM";
+  const displayHour = hour % 12 || 12;
+  return `${displayHour}:${minutes} ${period}`;
 };
 
 const Index = () => {
@@ -58,13 +60,13 @@ const Index = () => {
     const fetchData = async () => {
       try {
         // Get current time in Africa/Lagos timezone
-        const now = DateTime.now().setZone("Africa/Lagos");
-        const currentDate = now.toFormat("yyyy-MM-dd");
-        const currentTime = now.toFormat("HH:mm");
+        const now = new Date().toLocaleString("en-US", { timeZone: "Africa/Lagos" });
+        const currentDateTime = new Date(now);
+        const currentDate = currentDateTime.toISOString().split("T")[0];
+        const currentTime = currentDateTime.toTimeString().slice(0, 5); // HH:MM format
 
         console.log("Current Date (Africa/Lagos):", currentDate);
         console.log("Current Time (Africa/Lagos):", currentTime);
-        console.log("Now (ISO):", now.toISO());
 
         // Fetch upcoming matches
         const { data: matchesData, error: matchesError } = await supabase
@@ -90,14 +92,10 @@ const Index = () => {
 
         // Filter matches to exclude those where time has passed today
         const filteredMatches = matchesData.filter((match: Match) => {
-          const matchDateTime = DateTime.fromFormat(
-            `${match.match_date} ${match.match_time}`,
-            "yyyy-MM-dd HH:mm",
-            { zone: "Africa/Lagos" }
-          );
-          const isFuture = matchDateTime >= now;
-          console.log(`Match: ${match.title}, DateTime: ${matchDateTime.toISO()}, Is Future: ${isFuture}`);
-          return isFuture;
+          const matchDateTime = new Date(`${match.match_date}T${match.match_time}:00`);
+          const isToday = match.match_date === currentDate;
+          const isTimePassed = isToday && match.match_time < currentTime;
+          return !isTimePassed || match.match_date > currentDate;
         });
 
         console.log("Filtered Matches:", filteredMatches);

@@ -3,24 +3,14 @@ import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { 
-  Calendar, 
-  Clock, 
-  MapPin, 
-  Users, 
-  ChevronLeft, 
-  ChevronRight, 
-  Filter,
-  Plus
-} from "lucide-react";
+import { Calendar, Clock, MapPin, Users, ChevronLeft, ChevronRight, Filter } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import { useToast } from "@/hooks/use-toast";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { format, isToday, isPast, differenceInHours } from "date-fns";
-import { DateTime } from "luxon";
 
+// Match type definition based on the existing Supabase schema
 type Match = {
   id: string;
   slug: string;
@@ -42,6 +32,7 @@ type Match = {
   }[];
 };
 
+// Venue type for filter dropdown
 type Venue = {
   id: string;
   slug: string;
@@ -115,7 +106,7 @@ const Matches = () => {
       }
       if (durationFilter !== "all") {
         const today = new Date();
-        today.setHours(0, 0, 0, 0);
+        today.setHours(0, 0, 0, 0); // Normalize to start of day
         let startDate: Date, endDate: Date;
 
         switch (durationFilter) {
@@ -125,15 +116,15 @@ const Matches = () => {
             break;
           case "this_week":
             startDate = new Date(today);
-            startDate.setDate(today.getDate() - today.getDay() + (today.getDay() === 0 ? -6 : 1));
+            startDate.setDate(today.getDate() - today.getDay() + (today.getDay() === 0 ? -6 : 1)); // Monday
             endDate = new Date(startDate);
-            endDate.setDate(startDate.getDate() + 6);
+            endDate.setDate(startDate.getDate() + 6); // Sunday
             break;
           case "next_week":
             startDate = new Date(today);
-            startDate.setDate(today.getDate() - today.getDay() + 8);
+            startDate.setDate(today.getDate() - today.getDay() + 8); // Next Monday
             endDate = new Date(startDate);
-            endDate.setDate(startDate.getDate() + 6);
+            endDate.setDate(startDate.getDate() + 6); // Next Sunday
             break;
           case "this_month":
             startDate = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -184,42 +175,6 @@ const Matches = () => {
     }
   };
 
-  const getMatchStatus = (matchDate: string, matchTime: string) => {
-    const timeZone = "Africa/Lagos";
-    const matchDateTime = new Date(`${matchDate}T${matchTime}`);
-    const zonedMatchDate = utcToZonedTime(matchDateTime, timeZone);
-    const now = utcToZonedTime(new Date(), timeZone);
-
-    if (isPast(zonedMatchDate)) {
-      if (isToday(zonedMatchDate)) {
-        return { 
-          label: "Match Ended", 
-          class: "bg-gray-200 text-gray-600" 
-        };
-      }
-      return { 
-        label: "Match Passed", 
-        class: "bg-gray-200 text-gray-600" 
-      };
-    } else if (isToday(zonedMatchDate)) {
-      const hoursDiff = differenceInHours(zonedMatchDate, now);
-      if (hoursDiff >= 0 && hoursDiff <= 4) {
-        return { 
-          label: "Live Match", 
-          class: "bg-red-100 text-red-700 animate-pulse" 
-        };
-      }
-      return { 
-        label: "Today's Match", 
-        class: "bg-green-100 text-green-700" 
-      };
-    }
-    return { 
-      label: "Upcoming Match", 
-      class: "bg-blue-100 text-blue-800" 
-    };
-  };
-
   const formatDate = (dateString: string) => {
     const options: Intl.DateTimeFormatOptions = {
       weekday: "short",
@@ -230,7 +185,7 @@ const Matches = () => {
   };
 
   const formatTime = (timeString: string) => {
-    return timeString.slice(0, 5);
+    return timeString.slice(0, 5); // Format from "14:30:00" to "14:30"
   };
 
   const totalPages = Math.ceil(totalMatches / matchesPerPage);
@@ -257,13 +212,12 @@ const Matches = () => {
 
   return (
     <div className="min-h-screen pb-20">
-      <header className="p-4 flex justify-between items-center">
+<header className="p-4 flex justify-between items-center">
         <h1 className="text-2xl font-bold">My Matches</h1>
         <Button
           className="bg-playarena-500 hover:bg-playarena-600 text-white"
           onClick={() => navigate("/organize")}
         >
-          <Plus size={16} className="mr-2" />
           Organize Match
         </Button>
       </header>
@@ -384,78 +338,66 @@ const Matches = () => {
         </div>
       ) : matches.length > 0 ? (
         <div className="px-4 space-y-4">
-          {matches.map((match) => {
-            const status = getMatchStatus(match.match_date, match.match_time);
-            const isFull = match.players?.length >= match.total_slots;
-            
-            return (
-              <div 
-                key={match.id} 
-                className="border rounded-lg overflow-hidden shadow-sm bg-card relative"
-              >
-                <div className="absolute top-2 right-2">
-                  <span className={`px-2 py-1 text-xs font-semibold rounded-md ${status.class}`}>
-                    {status.label}
-                  </span>
+          {matches.map((match) => (
+            <div 
+              key={match.id} 
+              className="border rounded-lg overflow-hidden shadow-sm bg-card"
+            >
+              <div className="p-4">
+                <h3 className="font-bold text-lg">{match.title}</h3>
+                
+                <div className="mt-2 space-y-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Calendar size={16} />
+                    <span>{formatDate(match.match_date)}</span>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <Clock size={16} />
+                    <span>{formatTime(match.match_time)}</span>
+                  </div>
+                  
+                  {match.venue && (
+                    <div className="flex items-center gap-2">
+                      <MapPin size={16} />
+                      <a
+                        href={`/venue/${match.venue.slug}`}
+                        className="text-primary hover:underline"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          navigate(`/venue/${match.venue.slug}`);
+                        }}
+                      >
+                        {match.venue.name}, {match.venue.city}
+                      </a>
+                    </div>
+                  )}
+                  
+                  <div className="flex items-center gap-2">
+                    <Users size={16} />
+                    <span>
+                      {match.players?.length || 0}/{match.total_slots} spots filled
+                    </span>
+                  </div>
                 </div>
                 
-                <div className="p-4">
-                  <h3 className="font-bold text-lg">{match.title}</h3>
-                  
-                  <div className="mt-2 space-y-2 text-sm">
-                    <div className="flex items-center gap-2">
-                      <Calendar size={16} />
-                      <span>{formatDate(match.match_date)}</span>
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                      <Clock size={16} />
-                      <span>{formatTime(match.match_time)}</span>
-                    </div>
-                    
-                    {match.venue && (
-                      <div className="flex items-center gap-2">
-                        <MapPin size={16} />
-                        <a
-                          href={`/venue/${match.venue.slug}`}
-                          className="text-primary hover:underline"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            navigate(`/venue/${match.venue?.slug}`);
-                          }}
-                        >
-                          {match.venue.name}, {match.venue.city}
-                        </a>
-                      </div>
-                    )}
-                    
-                    <div className="flex items-center gap-2">
-                      <Users size={16} />
-                      <span>
-                        {match.players?.length || 0}/{match.total_slots} spots filled
-                        {isFull && " (FULL)"}
-                      </span>
-                    </div>
+                <div className="mt-4 flex justify-between items-center">
+                  <div>
+                    <span className="text-xs text-muted-foreground">Organized by:</span>
+                    <p className="font-medium">{match.organizer_name}</p>
                   </div>
                   
-                  <div className="mt-4 flex justify-between items-center">
-                    <div>
-                      <span className="text-xs text-muted-foreground">Organized by:</span>
-                      <p className="font-medium">{match.organizer_name}</p>
-                    </div>
-                    
-                    <Button 
-                      variant="outline"
-                      size="sm"
-                      onClick={() => navigate(`/match/${match.slug}`)}
-                    >
-                      View Details
-                    </Button>
-                  </div>
+                  <Button 
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate(`/match/${match.slug}`)}
+                  >
+                    View Details
+                  </Button>
                 </div>
               </div>
-            );
-          })}
+            </div>
+          ))}
           
           {/* Pagination Controls */}
           <div className="flex justify-between items-center mt-4">
@@ -486,7 +428,6 @@ const Matches = () => {
             No matches found. Create or join a match to see it here.
           </p>
           <Button onClick={() => navigate("/organize")}>
-            <Plus size={16} className="mr-2" />
             Organize a Match
           </Button>
         </div>
