@@ -9,8 +9,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { DayPicker, DateRange } from "react-day-picker";
-import "react-day-picker/dist/style.css";
 
 // Match type definition based on the existing Supabase schema
 type Match = {
@@ -49,9 +47,8 @@ const Matches = () => {
   const [totalMatches, setTotalMatches] = useState(0);
   const [isPaidFilter, setIsPaidFilter] = useState<boolean | null>(null);
   const [venueFilter, setVenueFilter] = useState<string | null>(null);
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [durationFilter, setDurationFilter] = useState<string>("all");
   const [timeStart, setTimeStart] = useState<string>("");
-  const [timeEnd, setTimeEnd] = useState<string>("");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -61,7 +58,7 @@ const Matches = () => {
   useEffect(() => {
     fetchVenues();
     fetchMatches();
-  }, [currentPage, isPaidFilter, venueFilter, dateRange, timeStart, timeEnd]);
+  }, [currentPage, isPaidFilter, venueFilter, durationFilter, timeStart]);
 
   const fetchVenues = async () => {
     try {
@@ -102,19 +99,45 @@ const Matches = () => {
         query = query.eq("is_paid", isPaidFilter);
       }
       if (venueFilter) {
-        // Find the venue ID for the selected slug
         const venue = venues.find((v) => v.slug === venueFilter);
         if (venue) {
           query = query.eq("venue_id", venue.id);
         }
       }
-      if (dateRange?.from) {
-        const startDate = dateRange.from.toISOString().split("T")[0];
-        query = query.gte("match_date", startDate);
-      }
-      if (dateRange?.to) {
-        const endDate = dateRange.to.toISOString().split("T")[0];
-        query = query.lte("match_date", endDate);
+      if (durationFilter !== "all") {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Normalize to start of day
+        let startDate: Date, endDate: Date;
+
+        switch (durationFilter) {
+          case "today":
+            startDate = today;
+            endDate = today;
+            break;
+          case "this_week":
+            startDate = new Date(today);
+            startDate.setDate(today.getDate() - today.getDay() + (today.getDay() === 0 ? -6 : 1)); // Monday
+            endDate = new Date(startDate);
+            endDate.setDate(startDate.getDate() + 6); // Sunday
+            break;
+          case "next_week":
+            startDate = new Date(today);
+            startDate.setDate(today.getDate() - today.getDay() + 8); // Next Monday
+            endDate = new Date(startDate);
+            endDate.setDate(startDate.getDate() + 6); // Next Sunday
+            break;
+          case "this_month":
+            startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+            endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+            break;
+          default:
+            startDate = today;
+            endDate = today;
+        }
+
+        const startDateStr = startDate.toISOString().split("T")[0];
+        const endDateStr = endDate.toISOString().split("T")[0];
+        query = query.gte("match_date", startDateStr).lte("match_date", endDateStr);
       }
       if (timeStart) {
         const timeRanges: { [key: string]: { start: string; end: string } } = {
@@ -122,15 +145,7 @@ const Matches = () => {
           afternoon: { start: "12:00:00", end: "18:00:00" },
           evening: { start: "18:00:00", end: "23:59:59" },
         };
-        query = query.gte("match_time", timeRanges[timeStart].start);
-      }
-      if (timeEnd) {
-        const timeRanges: { [key: string]: { start: string; end: string } } = {
-          morning: { start: "06:00:00", end: "12:00:00" },
-          afternoon: { start: "12:00:00", end: "18:00:00" },
-          evening: { start: "18:00:00", end: "23:59:59" },
-        };
-        query = query.lte("match_time", timeRanges[timeEnd].end);
+        query = query.gte("match_time", timeRanges[timeStart].start).lte("match_time", timeRanges[timeStart].end);
       }
 
       // Apply pagination
@@ -148,7 +163,6 @@ const Matches = () => {
       console.error("Error fetching matches:", error.message);
       setMatches([]);
       setTotalMatches(0);
-      // Only show toast for unexpected errors, not empty results
       if (error.code !== "PGRST116" && error.message !== "JSON object requested, multiple (or no) rows returned") {
         toast({
           title: "Error",
@@ -191,9 +205,8 @@ const Matches = () => {
   const resetFilters = () => {
     setIsPaidFilter(null);
     setVenueFilter(null);
-    setDateRange(undefined);
+    setDurationFilter("all");
     setTimeStart("");
-    setTimeEnd("");
     setCurrentPage(1);
   };
 
@@ -268,41 +281,30 @@ const Matches = () => {
               </Select>
             </div>
 
-            {/* Date Range Filter */}
-            <div className="sm:col-span-2">
-              <Label>Date Range</Label>
-              <DayPicker
-                mode="range"
-                selected={dateRange}
-                onSelect={(range) => {
-                  setDateRange(range);
+            {/* Duration Filter */}
+            <div>
+              <Label htmlFor="duration-filter">Duration</Label>
+              <Select
+                value={durationFilter}
+                onValueChange={(value) => {
+                  setDurationFilter(value);
                   setCurrentPage(1);
                 }}
-                className="border rounded-lg p-2 bg-card"
-                classNames={{
-                  months: "flex flex-col sm:flex-row gap-4",
-                  month: "space-y-4",
-                  caption: "flex justify-center pt-1 relative items-center",
-                  caption_label: "text-sm font-medium",
-                  nav: "space-x-1 flex items-center",
-                  nav_button: "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100",
-                  nav_button_previous: "absolute left-1",
-                  nav_button_next: "absolute right-1",
-                  table: "w-full border-collapse space-y-1",
-                  head_row: "flex",
-                  head_cell: "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]",
-                  row: "flex w-full mt-2",
-                  cell: "text-center text-sm p-0 relative rounded-md w-9 h-9 hover:bg-accent",
-                  day: "h-9 w-9 p-0 font-normal",
-                  day_selected: "bg-primary text-primary-foreground",
-                  day_today: "bg-accent text-accent-foreground",
-                  day_outside: "text-muted-foreground opacity-50",
-                  day_disabled: "text-muted-foreground opacity-50",
-                }}
-              />
+              >
+                <SelectTrigger id="duration-filter">
+                  <SelectValue placeholder="Select duration" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Dates</SelectItem>
+                  <SelectItem value="today">Today</SelectItem>
+                  <SelectItem value="this_week">This Week</SelectItem>
+                  <SelectItem value="next_week">Next Week</SelectItem>
+                  <SelectItem value="this_month">This Month</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
-            {/* Time Range Filter */}
+            {/* Start Time Filter */}
             <div>
               <Label htmlFor="time-start">Start Time</Label>
               <Select
@@ -314,26 +316,6 @@ const Matches = () => {
               >
                 <SelectTrigger id="time-start">
                   <SelectValue placeholder="Select start time" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Times</SelectItem>
-                  <SelectItem value="morning">Morning (6AM-12PM)</SelectItem>
-                  <SelectItem value="afternoon">Afternoon (12PM-6PM)</SelectItem>
-                  <SelectItem value="evening">Evening (6PM-12AM)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="time-end">End Time</Label>
-              <Select
-                value={timeEnd || "all"}
-                onValueChange={(value) => {
-                  setTimeEnd(value === "all" ? "" : value);
-                  setCurrentPage(1);
-                }}
-              >
-                <SelectTrigger id="time-end">
-                  <SelectValue placeholder="Select end time" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Times</SelectItem>
