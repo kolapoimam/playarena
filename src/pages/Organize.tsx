@@ -3,7 +3,6 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import Navbar from "@/components/Navbar";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -63,6 +62,7 @@ type FormValues = z.infer<typeof formSchema>;
 
 type Venue = {
   id: string;
+  slug: string;
   name: string;
   city: string;
 };
@@ -74,7 +74,7 @@ const Organize = () => {
   const [loading, setLoading] = useState(false);
   const [venuesLoading, setVenuesLoading] = useState(true);
   const [searchParams] = useSearchParams();
-  const preSelectedVenueId = searchParams.get('venue');
+  const preSelectedVenueSlug = searchParams.get('venue');
   const [venueDialogOpen, setVenueDialogOpen] = useState(false);
 
   // Initialize the form
@@ -100,15 +100,18 @@ const Organize = () => {
       try {
         const { data, error } = await supabase
           .from("venues")
-          .select("id, name, city")
+          .select("id, slug, name, city")
           .order("name");
 
         if (error) throw error;
         setVenues(data || []);
         
-        // If a venue ID was provided in the URL, set it as the default
-        if (preSelectedVenueId) {
-          form.setValue("venue_id", preSelectedVenueId);
+        // If a venue slug was provided in the URL, find its ID and set it
+        if (preSelectedVenueSlug) {
+          const venue = data?.find(v => v.slug === preSelectedVenueSlug);
+          if (venue) {
+            form.setValue("venue_id", venue.id);
+          }
         }
       } catch (error) {
         console.error("Error fetching venues:", error);
@@ -123,15 +126,12 @@ const Organize = () => {
     };
 
     fetchVenues();
-  }, [toast, form, preSelectedVenueId]);
+  }, [toast, form, preSelectedVenueSlug]);
 
   const onSubmit = async (data: FormValues) => {
     setLoading(true);
 
     try {
-      // Format the match time
-      const formattedTime = data.match_time;
-
       // Create the match in the database
       const { data: match, error } = await supabase
         .from("matches")
@@ -139,7 +139,7 @@ const Organize = () => {
           title: data.title,
           venue_id: data.venue_id,
           match_date: format(data.match_date, "yyyy-MM-dd"),
-          match_time: formattedTime,
+          match_time: data.match_time,
           total_slots: data.total_slots,
           is_paid: data.is_paid,
           price: data.is_paid ? data.price : null,
@@ -147,7 +147,7 @@ const Organize = () => {
           organizer_name: data.organizer_name,
           player_number_required: data.player_number_required,
         })
-        .select()
+        .select('id, slug')
         .single();
 
       if (error) throw error;
@@ -158,8 +158,8 @@ const Organize = () => {
         description: "Your match has been created.",
       });
 
-      // Navigate to the match detail page
-      navigate(`/match/${match.id}`);
+      // Navigate to the match detail page using slug
+      navigate(`/match/${match.slug}`);
     } catch (error) {
       console.error("Error creating match:", error);
       toast({
@@ -172,9 +172,9 @@ const Organize = () => {
     }
   };
 
-  const handleVenueCreated = (venueId: string, venueName: string) => {
+  const handleVenueCreated = (venueId: string, venueSlug: string, venueName: string) => {
     // Add the new venue to the venues list
-    setVenues(prev => [{ id: venueId, name: venueName, city: "" }, ...prev]);
+    setVenues(prev => [{ id: venueId, slug: venueSlug, name: venueName, city: "" }, ...prev]);
     
     // Set the venue in the form
     form.setValue("venue_id", venueId);
@@ -240,7 +240,7 @@ const Organize = () => {
                       </DialogContent>
                     </Dialog>
                   </div>
-                  <Select onValueChange={uitableField.onChange} value={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select a venue" />
