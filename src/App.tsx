@@ -9,6 +9,9 @@ import Search from "./pages/Search";
 import Matches from "./pages/Matches";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
+import Organize from "./pages/Organize";
+import MatchDetail from "./pages/MatchDetail";
+import JoinMatch from "./pages/JoinMatch";
 
 const queryClient = new QueryClient();
 
@@ -23,6 +26,9 @@ const App = () => (
           <Route path="/search" element={<Search />} />
           <Route path="/matches" element={<Matches />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/organize" element={<Organize />} />
+          <Route path="/match/:id" element={<MatchDetail />} />
+          <Route path="/join/:id" element={<JoinMatch />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
