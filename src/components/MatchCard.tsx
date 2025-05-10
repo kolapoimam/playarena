@@ -38,6 +38,9 @@ export default function MatchCard({
     if (hoursDiff >= 0 && hoursDiff <= 4) {
       statusLabel = "Live";
       statusClass = "bg-red-100 text-red-700 animate-pulse";
+    } else if (hoursDiff < 0) {
+      statusLabel = "Passed";
+      statusClass = "bg-gray-200 text-gray-600";
     } else {
       statusLabel = "Today";
       statusClass = "bg-green-100 text-green-700";
