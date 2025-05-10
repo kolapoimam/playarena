@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,6 +25,7 @@ import {
 // Match type definition
 type Match = {
   id: string;
+  slug: string;
   title: string;
   match_date: string;
   match_time: string;
@@ -37,6 +37,7 @@ type Match = {
   player_number_required: boolean;
   venue: {
     id: string;
+    slug: string;
     name: string;
     city: string;
     map_link: string | null;
@@ -47,7 +48,7 @@ type Match = {
 };
 
 const MatchDetail = () => {
-  const { id } = useParams<{ id: string }>();
+  const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [match, setMatch] = useState<Match | null>(null);
@@ -55,21 +56,21 @@ const MatchDetail = () => {
   const [copying, setCopying] = useState(false);
 
   useEffect(() => {
-    if (!id) return;
+    if (!slug) return;
     
-    fetchMatch(id);
-  }, [id]);
+    fetchMatch(slug);
+  }, [slug]);
 
-  const fetchMatch = async (matchId: string) => {
+  const fetchMatch = async (matchSlug: string) => {
     try {
       const { data, error } = await supabase
         .from("matches")
         .select(`
           *,
-          venue:venues(id, name, city, map_link),
+          venue:venues(id, slug, name, city, map_link),
           players(*)
         `)
-        .eq("id", matchId)
+        .eq("slug", matchSlug)
         .single();
 
       if (error) throw error;
@@ -105,7 +106,7 @@ const MatchDetail = () => {
     if (!match) return;
     
     setCopying(true);
-    const url = `${window.location.origin}/match/${match.id}`;
+    const url = `${window.location.origin}/match/${match.slug}`;
     
     try {
       await navigator.clipboard.writeText(url);
@@ -127,7 +128,7 @@ const MatchDetail = () => {
   const shareMatch = async () => {
     if (!match) return;
     
-    const url = `${window.location.origin}/match/${match.id}`;
+    const url = `${window.location.origin}/match/${match.slug}`;
     const title = `Join my football match: ${match.title}`;
     
     if (navigator.share) {
@@ -148,7 +149,7 @@ const MatchDetail = () => {
   const shareToWhatsApp = () => {
     if (!match) return;
     
-    const url = `${window.location.origin}/match/${match.id}`;
+    const url = `${window.location.origin}/match/${match.slug}`;
     const text = `Join my football match: ${match.title} on ${formatDate(match.match_date)} at ${formatTime(match.match_time)}. ${url}`;
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
     window.open(whatsappUrl, '_blank');
@@ -157,7 +158,7 @@ const MatchDetail = () => {
   const shareToTwitter = () => {
     if (!match) return;
     
-    const url = `${window.location.origin}/match/${match.id}`;
+    const url = `${window.location.origin}/match/${match.slug}`;
     const text = `Join my football match: ${match.title}`;
     const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
     window.open(twitterUrl, '_blank');
@@ -166,7 +167,7 @@ const MatchDetail = () => {
   const shareToFacebook = () => {
     if (!match) return;
     
-    const url = `${window.location.origin}/match/${match.id}`;
+    const url = `${window.location.origin}/match/${match.slug}`;
     const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
     window.open(facebookUrl, '_blank');
   };
@@ -231,7 +232,7 @@ const MatchDetail = () => {
               {match.venue && (
                 <div 
                   className="flex items-start gap-2 cursor-pointer" 
-                  onClick={() => navigate(`/venue/${match.venue?.id}`)}
+                  onClick={() => navigate(`/venue/${match.venue?.slug}`)}
                 >
                   <MapPin size={18} className="mt-0.5" />
                   <div>
@@ -299,7 +300,7 @@ const MatchDetail = () => {
             {match.players.length < match.total_slots && (
               <Button 
                 className="w-full mt-4"
-                onClick={() => navigate(`/join/${match.id}`)}
+                onClick={() => navigate(`/join/${match.slug}`)}
               >
                 Join This Match
               </Button>
@@ -346,6 +347,7 @@ const MatchDetail = () => {
           </div>
         </div>
       </div>
+      <Navbar />
     </div>
   );
 };
