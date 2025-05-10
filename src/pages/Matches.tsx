@@ -1,5 +1,5 @@
-
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 // Match type definition based on the existing Supabase schema
 type Match = {
   id: string;
+  slug: string;
   title: string;
   match_date: string;
   match_time: string;
@@ -18,6 +19,7 @@ type Match = {
   notes: string | null;
   organizer_name: string;
   venue: {
+    slug: string;
     name: string;
     city: string;
   } | null;
@@ -30,6 +32,7 @@ const Matches = () => {
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchMatches();
@@ -40,8 +43,8 @@ const Matches = () => {
       const { data, error } = await supabase
         .from("matches")
         .select(`
-          *,
-          venue:venues(*),
+          id, slug, title, match_date, match_time, total_slots, is_paid, price, notes, organizer_name,
+          venue:venues(slug, name, city),
           players(*)
         `)
         .order("match_date", { ascending: true });
@@ -82,8 +85,11 @@ const Matches = () => {
     <div className="min-h-screen pb-20">
       <header className="p-4 flex justify-between items-center">
         <h1 className="text-2xl font-bold">My Matches</h1>
-        <Button asChild className="bg-green-500 hover:bg-green-600">
-          <a href="/organize">Organize Match</a>
+        <Button
+          className="bg-green-500 hover:bg-green-600"
+          onClick={() => navigate("/organize")}
+        >
+          Organize Match
         </Button>
       </header>
       
@@ -136,9 +142,9 @@ const Matches = () => {
                   <Button 
                     variant="outline"
                     size="sm"
-                    asChild
+                    onClick={() => navigate(`/match/${match.slug}`)}
                   >
-                    <a href={`/match/${match.id}`}>View Details</a>
+                    View Details
                   </Button>
                 </div>
               </div>
@@ -150,8 +156,8 @@ const Matches = () => {
           <p className="text-muted-foreground text-center p-4">
             No matches found. Create or join a match to see it here.
           </p>
-          <Button asChild>
-            <a href="/organize">Organize a Match</a>
+          <Button onClick={() => navigate("/organize")}>
+            Organize a Match
           </Button>
         </div>
       )}
