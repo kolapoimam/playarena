@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -33,7 +32,7 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 interface VenueFormProps {
-  onSuccess?: (venueId: string, venueName: string) => void;
+  onSuccess?: (venueId: string, venueSlug: string, venueName: string) => void;
   onCancel?: () => void;
 }
 
@@ -71,7 +70,7 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
           map_link: data.map_link || null,
           image_url: data.image_url || null,
         })
-        .select()
+        .select('id, slug, name')
         .single();
 
       if (error) throw error;
@@ -84,7 +83,7 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
 
       // Call onSuccess if provided
       if (onSuccess && venue) {
-        onSuccess(venue.id, venue.name);
+        onSuccess(venue.id, venue.slug, venue.name);
       }
     } catch (error) {
       console.error("Error creating venue:", error);
@@ -150,89 +149,89 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
                     <Input placeholder="E.g., Lagos" {...field} />
                   </FormControl>
                   <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="state"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>State</FormLabel>
-                  <FormControl>
-                    <Input placeholder="E.g., Lagos State" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
-          <FormField
-            control={form.control}
-            name="description"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Description (Optional)</FormLabel>
-                <FormControl>
-                  <Textarea 
-                    placeholder="Describe the venue, facilities, etc."
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
               </FormItem>
             )}
           />
 
           <FormField
             control={form.control}
-            name="map_link"
+            name="state"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Google Maps Link (Optional)</FormLabel>
+                <FormLabel>State</FormLabel>
                 <FormControl>
-                  <Input 
-                    placeholder="Paste Google Maps URL here"
-                    {...field}
-                  />
+                  <Input placeholder="E.g., Lagos State" {...field} />
                 </FormControl>
-                <FormDescription>
-                  Add a Google Maps link to help players find the venue easily
-                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
           />
+        </div>
 
-          <FormField
-            control={form.control}
-            name="image_url"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Image URL (Optional)</FormLabel>
-                <FormControl>
-                  <Input 
-                    placeholder="https://example.com/image.jpg"
-                    {...field}
-                  />
-                </FormControl>
-                <FormDescription>
-                  Add an image URL for the venue
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Description (Optional)</FormLabel>
+              <FormControl>
+                <Textarea 
+                  placeholder="Describe the venue, facilities, etc."
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Creating..." : "Create Venue"}
-          </Button>
-        </form>
-      </Form>
-    </div>
-  );
+        <FormField
+          control={form.control}
+          name="map_link"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Google Maps Link (Optional)</FormLabel>
+              <FormControl>
+                <Input 
+                  placeholder="Paste Google Maps URL here"
+                  {...field}
+                />
+              </FormControl>
+              <FormDescription>
+                Add a Google Maps link to help players find the venue easily
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="image_url"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Image URL (Optional)</FormLabel>
+              <FormControl>
+                <Input 
+                  placeholder="https://example.com/image.jpg"
+                  {...field}
+                />
+              </FormControl>
+              <FormDescription>
+                Add an image URL for the venue
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <Button type="submit" className="w-full" disabled={loading}>
+          {loading ? "Creating..." : "Create Venue"}
+        </Button>
+      </form>
+    </Form>
+  </div>
+);
 };
 
 export default VenueForm;
