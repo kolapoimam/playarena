@@ -1,6 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { format, isToday, isPast, differenceInHours } from "date-fns";
-import { utcToZonedTime } from "date-fns-tz";
+import { DateTime } from "luxon";
 
 interface MatchCardProps {
   title: string;
@@ -24,17 +23,20 @@ export default function MatchCard({
   const navigate = useNavigate();
 
   const timeZone = "Africa/Lagos";
-  const zonedMatchDate = utcToZonedTime(new Date(match_time), timeZone);
-  const now = utcToZonedTime(new Date(), timeZone);
+  const matchDate = DateTime.fromISO(match_time, { zone: "utc" }).setZone(timeZone);
+  const now = DateTime.now().setZone(timeZone);
 
   let statusLabel = "Upcoming";
   let statusClass = "bg-blue-100 text-blue-800";
 
-  if (isPast(zonedMatchDate) && !isToday(zonedMatchDate)) {
+  const isToday = matchDate.hasSame(now, "day");
+  const isPast = matchDate < now;
+
+  if (isPast && !isToday) {
     statusLabel = "Passed";
     statusClass = "bg-gray-200 text-gray-600";
-  } else if (isToday(zonedMatchDate)) {
-    const hoursDiff = differenceInHours(zonedMatchDate, now);
+  } else if (isToday) {
+    const hoursDiff = matchDate.diff(now, "hours").hours;
     if (hoursDiff >= 0 && hoursDiff <= 4) {
       statusLabel = "Live";
       statusClass = "bg-red-100 text-red-700 animate-pulse";
@@ -68,7 +70,7 @@ export default function MatchCard({
         <h3 className="text-lg font-bold">{title}</h3>
         <p className="text-muted-foreground">{details}</p>
         <p className="text-xs text-muted-foreground mt-1">
-          Match time: {format(zonedMatchDate, "PPpp")}
+          Match time: {matchDate.toFormat("MMM d, yyyy, h:mm a")}
         </p>
         <div className="mt-2">
           {is_paid ? (
@@ -83,6 +85,5 @@ export default function MatchCard({
         </div>
       </div>
     </div>
-iorno
   );
 }
