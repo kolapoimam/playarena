@@ -13,6 +13,8 @@ import MatchDetail from "./pages/MatchDetail";
 import JoinMatch from "./pages/JoinMatch";
 import VenueDetail from "./pages/VenueDetail";
 import VenueCreate from "./pages/VenueCreate";
+import MatchRedirect from "./pages/MatchRedirect";
+import VenueRedirect from "./pages/VenueRedirect";
 
 const queryClient = new QueryClient();
 
@@ -23,18 +25,25 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
+          {/* Main App Routes */}
           <Route path="/" element={<Index />} />
           <Route path="/search" element={<Search />} />
           <Route path="/matches" element={<Matches />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/organize" element={<Organize />} />
+          <Route path="/venue-create" element={<VenueCreate />} />
+
+          {/* Slug-Based Routes for Matches and Venues */}
           <Route path="/match/:slug" element={<MatchDetail />} />
           <Route path="/join/:slug" element={<JoinMatch />} />
           <Route path="/venue/:slug" element={<VenueDetail />} />
-          <Route path="/venue-create" element={<VenueCreate />} />
-          <Route path="*" element={<NotFound />} />
+
+          {/* Redirect Routes for Backward Compatibility */}
           <Route path="/match-id/:id" element={<MatchRedirect />} />
-<Route path="/venue-id/:id" element={<VenueRedirect />} />
+          <Route path="/venue-id/:id" element={<VenueRedirect />} />
+
+          {/* Catch-All Route */}
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
     </TooltipProvider>
