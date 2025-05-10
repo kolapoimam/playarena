@@ -123,7 +123,7 @@ const Index = () => {
   return (
     <div className="min-h-screen pb-20">
       {/* Header */}
-      <header className="p-4 flex justify-between items-center">
+<header className="sticky top-0 z-50 p-4 flex justify-between items-center bg-white dark:bg-gray-900 shadow-sm">
         <img
           src={theme === "dark" ? "/playarenadark.png" : "/playarenalight.png"}
           alt="PlayArena Logo"
