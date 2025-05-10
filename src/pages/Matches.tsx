@@ -212,10 +212,10 @@ const Matches = () => {
 
   return (
     <div className="min-h-screen pb-20">
-      <header className="p-4 flex justify-between items-center">
+<header className="p-4 flex justify-between items-center">
         <h1 className="text-2xl font-bold">My Matches</h1>
         <Button
-          className="bg-green-500 hover:bg-green-600"
+          className="bg-playarena-500 hover:bg-playarena-600 text-white"
           onClick={() => navigate("/organize")}
         >
           Organize Match
