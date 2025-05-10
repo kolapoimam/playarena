@@ -1,39 +1,113 @@
 
-import { Plus, Check, Store, Pencil } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Store, Plus, Calendar, Search } from "lucide-react";
 import ActionButton from "@/components/ActionButton";
 import MatchCard from "@/components/MatchCard";
 import SearchBar from "@/components/SearchBar";
 import Navbar from "@/components/Navbar";
 import VenueItem from "@/components/VenueItem";
 import ThemeToggle from "@/components/ThemeToggle";
+import { useToast } from "@/hooks/use-toast";
+
+type Match = {
+  id: string;
+  title: string;
+  match_date: string;
+  is_paid: boolean;
+  price: number | null;
+  venue: {
+    name: string;
+    city: string;
+    image_url: string | null;
+  } | null;
+};
+
+type Venue = {
+  id: string;
+  name: string;
+  city: string;
+  state: string;
+  image_url: string | null;
+};
 
 const Index = () => {
-  // Sample data
-  const upcomingMatches = [
-    {
-      title: "Lagos Derby",
-      details: "Free, 5-a-side",
-      image: "https://images.unsplash.com/photo-1560272564-c83b66b1ad12?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80"
-    },
-    {
-      title: "Abuja Challenge",
-      details: "Paid, 11-a-side",
-      image: "https://images.unsplash.com/photo-1461896836934-ffe607ba8211?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80"
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [upcomingMatches, setUpcomingMatches] = useState<Match[]>([]);
+  const [popularVenues, setPopularVenues] = useState<Venue[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Get upcoming matches
+        const today = new Date().toISOString().split('T')[0];
+        
+        const { data: matchesData, error: matchesError } = await supabase
+          .from("matches")
+          .select(`
+            id,
+            title,
+            match_date,
+            is_paid,
+            price,
+            venue:venues(name, city, image_url)
+          `)
+          .gte('match_date', today)
+          .order('match_date', { ascending: true })
+          .limit(5);
+        
+        if (matchesError) throw matchesError;
+        
+        // Get popular venues
+        const { data: venuesData, error: venuesError } = await supabase
+          .from("venues")
+          .select(`
+            id,
+            name,
+            city,
+            state,
+            image_url
+          `)
+          .order('created_at', { ascending: false })
+          .limit(5);
+          
+        if (venuesError) throw venuesError;
+        
+        setUpcomingMatches(matchesData as Match[]);
+        setPopularVenues(venuesData as Venue[]);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load data. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchData();
+  }, [toast]);
+
+  const getMatchDetails = (match: Match) => {
+    const details = [];
+    
+    if (match.is_paid) {
+      details.push(`Paid (₦${match.price?.toFixed(2)})`);
+    } else {
+      details.push("Free");
     }
-  ];
-  
-  const popularVenues = [
-    {
-      name: "National Stadium",
-      location: "Lagos, 20 slots",
-      image: "https://images.unsplash.com/photo-1571056642329-4f49f8af6443?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80"
-    },
-    {
-      name: "Eko Football Park",
-      location: "Lagos, 15 slots",
-      image: "https://images.unsplash.com/photo-1560272564-c83b66b1ad12?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80"
+    
+    if (match.venue) {
+      details.push(`at ${match.venue.name}`);
     }
-  ];
+    
+    return details.join(", ");
+  };
 
   return (
     <div className="min-h-screen pb-20">
@@ -52,56 +126,107 @@ const Index = () => {
       <div className="grid grid-cols-4 gap-2 px-4 mb-8">
         <ActionButton 
           icon={Plus} 
-          label="Host Match" 
-          href="/host" 
+          label="Organize" 
+          href="/organize" 
         />
         <ActionButton 
-          icon={Check} 
+          icon={Calendar} 
           label="Join Match" 
-          href="/join" 
+          href="/search" 
         />
         <ActionButton 
           icon={Store} 
-          label="Create Venue" 
-          href="/venue" 
+          label="Add Venue" 
+          href="/venue-create" 
         />
         <ActionButton 
-          icon={Pencil} 
-          label="Register" 
-          href="/register" 
+          icon={Search} 
+          label="Search" 
+          href="/search" 
         />
       </div>
 
-      {/* Upcoming Matches */}
-      <section className="mb-8">
-        <h2 className="text-2xl font-bold px-4 mb-3">Upcoming Matches</h2>
-        <div className="flex gap-4 overflow-x-auto px-4 pb-4">
-          {upcomingMatches.map((match, index) => (
-            <div key={index} className="min-w-[280px]">
-              <MatchCard 
-                title={match.title}
-                details={match.details}
-                image={match.image}
-              />
+      {loading ? (
+        <div className="flex justify-center items-center h-32">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
+        </div>
+      ) : (
+        <>
+          {/* Upcoming Matches */}
+          <section className="mb-8">
+            <div className="flex justify-between items-center px-4 mb-3">
+              <h2 className="text-2xl font-bold">Upcoming Matches</h2>
+              <button 
+                className="text-primary text-sm"
+                onClick={() => navigate('/search')}
+              >
+                See all
+              </button>
             </div>
-          ))}
-        </div>
-      </section>
+            
+            {upcomingMatches.length > 0 ? (
+              <div className="flex gap-4 overflow-x-auto px-4 pb-4">
+                {upcomingMatches.map((match) => (
+                  <div key={match.id} className="min-w-[280px]" onClick={() => navigate(`/match/${match.id}`)}>
+                    <MatchCard 
+                      title={match.title}
+                      details={getMatchDetails(match)}
+                      image={match.venue?.image_url || "https://images.unsplash.com/photo-1560272564-c83b66b1ad12?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80"}
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="px-4 py-8 text-center">
+                <p className="text-muted-foreground">No upcoming matches yet.</p>
+                <button 
+                  className="mt-2 text-primary"
+                  onClick={() => navigate('/organize')}
+                >
+                  Create the first match!
+                </button>
+              </div>
+            )}
+          </section>
 
-      {/* Popular Venues */}
-      <section>
-        <h2 className="text-2xl font-bold px-4 mb-3">Popular Venues</h2>
-        <div className="px-4 space-y-3">
-          {popularVenues.map((venue, index) => (
-            <VenueItem
-              key={index}
-              name={venue.name}
-              location={venue.location}
-              image={venue.image}
-            />
-          ))}
-        </div>
-      </section>
+          {/* Popular Venues */}
+          <section>
+            <div className="flex justify-between items-center px-4 mb-3">
+              <h2 className="text-2xl font-bold">Venues</h2>
+              <button 
+                className="text-primary text-sm"
+                onClick={() => navigate('/venue-create')}
+              >
+                Add venue
+              </button>
+            </div>
+            
+            {popularVenues.length > 0 ? (
+              <div className="px-4 space-y-3">
+                {popularVenues.map((venue) => (
+                  <div key={venue.id} onClick={() => navigate(`/venue/${venue.id}`)}>
+                    <VenueItem
+                      name={venue.name}
+                      location={`${venue.city}, ${venue.state}`}
+                      image={venue.image_url || "https://images.unsplash.com/photo-1571056642329-4f49f8af6443?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80"}
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="px-4 py-8 text-center">
+                <p className="text-muted-foreground">No venues added yet.</p>
+                <button 
+                  className="mt-2 text-primary"
+                  onClick={() => navigate('/venue-create')}
+                >
+                  Add the first venue!
+                </button>
+              </div>
+            )}
+          </section>
+        </>
+      )}
 
       {/* Bottom Navigation */}
       <Navbar />

@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Calendar, Clock, MapPin, Users, ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import {
   Form,
   FormControl,
@@ -19,24 +19,15 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-// Form validation schema
-const formSchema = z.object({
-  player_name: z.string().min(2, { message: "Name must be at least 2 characters" }),
-});
-
-type FormValues = z.infer<typeof formSchema>;
-
-// Match type definition
 type Match = {
   id: string;
   title: string;
   match_date: string;
-  match_time: string;
   total_slots: number;
+  organizer_name: string;
   is_paid: boolean;
   price: number | null;
-  notes: string | null;
-  organizer_name: string;
+  player_number_required: boolean;
   venue: {
     name: string;
     city: string;
@@ -46,6 +37,12 @@ type Match = {
   }[];
 };
 
+// Define the form schema
+const formSchema = z.object({
+  player_name: z.string().min(2, { message: "Name must be at least 2 characters" }),
+  player_number: z.string().optional(),
+});
+
 const JoinMatch = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -54,85 +51,61 @@ const JoinMatch = () => {
   const [loading, setLoading] = useState(true);
   const [joining, setJoining] = useState(false);
 
-  // Set up form
-  const form = useForm<FormValues>({
+  const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       player_name: "",
+      player_number: "",
     },
   });
 
   useEffect(() => {
     if (!id) return;
-    
-    fetchMatch(id);
-  }, [id]);
 
-  const fetchMatch = async (matchId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from("matches")
-        .select(`
-          *,
-          venue:venues(*),
-          players(*)
-        `)
-        .eq("id", matchId)
-        .single();
+    const fetchMatch = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("matches")
+          .select(`
+            *,
+            venue:venues(name, city),
+            players(*)
+          `)
+          .eq("id", id)
+          .single();
 
-      if (error) throw error;
-
-      setMatch(data as Match);
-      
-      // Check if the match is full
-      if (data.players.length >= data.total_slots) {
+        if (error) throw error;
+        setMatch(data as Match);
+      } catch (error) {
+        console.error("Error fetching match:", error);
         toast({
-          title: "Match is full",
-          description: "Sorry, all spots for this match have been filled.",
+          title: "Error",
+          description: "Failed to load match details. Please try again.",
           variant: "destructive",
         });
+      } finally {
+        setLoading(false);
       }
-      
-    } catch (error) {
-      console.error("Error fetching match:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load match details. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    const options: Intl.DateTimeFormatOptions = {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
     };
-    return new Date(dateString).toLocaleDateString("en-NG", options);
-  };
 
-  const formatTime = (timeString: string) => {
-    return timeString.slice(0, 5); // Format from "14:30:00" to "14:30"
-  };
+    fetchMatch();
+  }, [id, toast]);
 
-  const onSubmit = async (data: FormValues) => {
+  const onSubmit = async (data: z.infer<typeof formSchema>) => {
     if (!match || !id) return;
-    
-    // Check if the match is already full
+
+    // Check if match is already full
     if (match.players.length >= match.total_slots) {
       toast({
         title: "Match is full",
-        description: "Sorry, all spots for this match have been filled.",
+        description: "Sorry, this match has reached its player limit.",
         variant: "destructive",
       });
       return;
     }
-    
+
     setJoining(true);
-    
+
     try {
       // Add player to the match
       const { error } = await supabase
@@ -140,18 +113,20 @@ const JoinMatch = () => {
         .insert({
           match_id: id,
           player_name: data.player_name,
-          payment_status: match.is_paid ? "pending" : "not_required",
+          // If player number is required, add it to player_name
+          player_name: match.player_number_required && data.player_number
+            ? `${data.player_name} (#${data.player_number})`
+            : data.player_name,
         });
 
       if (error) throw error;
 
-      // Success! Show toast and navigate to the match detail page
       toast({
         title: "Success!",
         description: "You have joined the match successfully.",
       });
 
-      // Navigate back to the match detail page
+      // Navigate to the match detail
       navigate(`/match/${id}`);
     } catch (error) {
       console.error("Error joining match:", error);
@@ -165,6 +140,16 @@ const JoinMatch = () => {
     }
   };
 
+  const formatDate = (dateString: string) => {
+    const options: Intl.DateTimeFormatOptions = {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    };
+    return new Date(dateString).toLocaleDateString("en-NG", options);
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-[50vh]">
@@ -176,9 +161,9 @@ const JoinMatch = () => {
   if (!match) {
     return (
       <div className="p-4">
-        <Button 
-          variant="ghost" 
-          onClick={() => navigate(-1)} 
+        <Button
+          variant="ghost"
+          onClick={() => navigate(-1)}
           className="mb-4"
         >
           <ArrowLeft size={18} className="mr-2" />
@@ -192,64 +177,45 @@ const JoinMatch = () => {
     );
   }
 
+  // Check if match is already full
   const isFull = match.players.length >= match.total_slots;
 
   return (
-    <div className="min-h-screen pb-20">
+    <div className="min-h-screen">
       <div className="p-4">
-        <Button 
-          variant="ghost" 
-          onClick={() => navigate(-1)} 
+        <Button
+          variant="ghost"
+          onClick={() => navigate(-1)}
           className="mb-4"
         >
           <ArrowLeft size={18} className="mr-2" />
           Back
         </Button>
-        
-        <h1 className="text-2xl font-bold mb-2">Join: {match.title}</h1>
-        
-        <div className="border rounded-lg p-4 mb-6 bg-card">
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Calendar size={18} />
-              <span>{formatDate(match.match_date)}</span>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <Clock size={18} />
-              <span>{formatTime(match.match_time)}</span>
-            </div>
-            
-            {match.venue && (
-              <div className="flex items-center gap-2">
-                <MapPin size={18} />
-                <span>{match.venue.name}, {match.venue.city}</span>
-              </div>
-            )}
-            
-            <div className="flex items-center gap-2">
-              <Users size={18} />
-              <span className={isFull ? "text-red-500 font-medium" : ""}>
-                {match.players.length}/{match.total_slots} spots filled
-                {isFull && " (FULL)"}
-              </span>
-            </div>
-            
-            {match.is_paid && (
-              <div className="font-semibold mt-2">
-                Price: ₦{match.price?.toFixed(2)}
-              </div>
-            )}
-          </div>
-        </div>
-        
-        {isFull ? (
-          <div className="text-center py-4">
-            <h2 className="text-xl text-red-500 font-semibold mb-2">Match is Full</h2>
-            <p className="text-muted-foreground mb-4">
-              Sorry, all spots for this match have been filled.
+
+        <h1 className="text-2xl font-bold mb-2">Join Match</h1>
+        <div className="mb-6">
+          <h2 className="font-semibold text-xl">{match.title}</h2>
+          <p className="text-muted-foreground">
+            {formatDate(match.match_date)} · {match.venue?.name}, {match.venue?.city}
+          </p>
+          <p className="mt-2">
+            Spots available: {match.total_slots - match.players.length} / {match.total_slots}
+          </p>
+          {match.is_paid && (
+            <p className="font-medium mt-2">
+              Price: ₦{match.price?.toFixed(2)}
             </p>
-            <Button onClick={() => navigate(`/match/${match.id}`)}>
+          )}
+        </div>
+
+        {isFull ? (
+          <div className="text-center py-6 bg-muted rounded-lg">
+            <h2 className="text-lg font-semibold">This match is full</h2>
+            <p className="text-muted-foreground mt-2">All player slots have been filled.</p>
+            <Button
+              className="mt-4"
+              onClick={() => navigate(`/match/${id}`)}
+            >
               View Match Details
             </Button>
           </div>
@@ -265,26 +231,40 @@ const JoinMatch = () => {
                     <FormControl>
                       <Input placeholder="Enter your name" {...field} />
                     </FormControl>
-                    <FormDescription>
-                      Your name will be visible to other players
-                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              
-              {match.is_paid && (
-                <div className="rounded-md border border-yellow-200 bg-yellow-50 dark:bg-yellow-950/50 dark:border-yellow-900/50 p-3">
-                  <p className="text-sm">
-                    <strong>Note:</strong> This is a paid match. You will need to pay ₦{match.price?.toFixed(2)} to the organizer.
-                  </p>
-                </div>
+
+              {match.player_number_required && (
+                <FormField
+                  control={form.control}
+                  name="player_number"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Jersey Number</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          placeholder="Enter your jersey number"
+                          min={1}
+                          max={99}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        This match requires players to provide their jersey number
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               )}
-              
-              <Button 
-                type="submit" 
-                className="w-full" 
-                disabled={joining || isFull}
+
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={joining}
               >
                 {joining ? "Joining..." : "Join Match"}
               </Button>

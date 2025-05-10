@@ -1,6 +1,6 @@
 
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Calendar as CalendarIcon, Clock, MapPin, ArrowLeft } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, MapPin, ArrowLeft, Plus } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Form,
@@ -32,9 +32,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
+import VenueForm from "@/components/VenueForm";
 
 // Form schema using zod
 const formSchema = z.object({
@@ -49,6 +55,7 @@ const formSchema = z.object({
   price: z.number().optional().nullable(),
   notes: z.string().optional(),
   organizer_name: z.string().min(2, { message: "Name must be at least 2 characters" }),
+  player_number_required: z.boolean().default(false),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -65,6 +72,9 @@ const Organize = () => {
   const [venues, setVenues] = useState<Venue[]>([]);
   const [loading, setLoading] = useState(false);
   const [venuesLoading, setVenuesLoading] = useState(true);
+  const [searchParams] = useSearchParams();
+  const preSelectedVenueId = searchParams.get('venue');
+  const [venueDialogOpen, setVenueDialogOpen] = useState(false);
 
   // Initialize the form
   const form = useForm<FormValues>({
@@ -76,6 +86,7 @@ const Organize = () => {
       price: null,
       notes: "",
       organizer_name: "",
+      player_number_required: false,
     },
   });
 
@@ -83,7 +94,7 @@ const Organize = () => {
   const isPaid = form.watch("is_paid");
 
   // Load venues from Supabase
-  useState(() => {
+  useEffect(() => {
     const fetchVenues = async () => {
       try {
         const { data, error } = await supabase
@@ -93,6 +104,11 @@ const Organize = () => {
 
         if (error) throw error;
         setVenues(data || []);
+        
+        // If a venue ID was provided in the URL, set it as the default
+        if (preSelectedVenueId) {
+          form.setValue("venue_id", preSelectedVenueId);
+        }
       } catch (error) {
         console.error("Error fetching venues:", error);
         toast({
@@ -106,7 +122,7 @@ const Organize = () => {
     };
 
     fetchVenues();
-  }, []);
+  }, [toast, form, preSelectedVenueId]);
 
   const onSubmit = async (data: FormValues) => {
     setLoading(true);
@@ -128,6 +144,7 @@ const Organize = () => {
           price: data.is_paid ? data.price : null,
           notes: data.notes || null,
           organizer_name: data.organizer_name,
+          player_number_required: data.player_number_required,
         })
         .select()
         .single();
@@ -152,6 +169,23 @@ const Organize = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleVenueCreated = (venueId: string, venueName: string) => {
+    // Add the new venue to the venues list
+    setVenues(prev => [{ id: venueId, name: venueName, city: "" }, ...prev]);
+    
+    // Set the venue in the form
+    form.setValue("venue_id", venueId);
+    
+    // Close the dialog
+    setVenueDialogOpen(false);
+    
+    // Show success toast
+    toast({
+      title: "Venue created",
+      description: `${venueName} has been added to venues.`,
+    });
   };
 
   return (
@@ -189,7 +223,22 @@ const Organize = () => {
               name="venue_id"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Venue</FormLabel>
+                  <div className="flex justify-between items-center">
+                    <FormLabel>Venue</FormLabel>
+                    <Dialog open={venueDialogOpen} onOpenChange={setVenueDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm" type="button">
+                          <Plus size={16} className="mr-1" /> Add New Venue
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
+                        <VenueForm 
+                          onSuccess={handleVenueCreated} 
+                          onCancel={() => setVenueDialogOpen(false)} 
+                        />
+                      </DialogContent>
+                    </Dialog>
+                  </div>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger className="w-full">
@@ -204,7 +253,7 @@ const Organize = () => {
                       ) : venues.length > 0 ? (
                         venues.map((venue) => (
                           <SelectItem key={venue.id} value={venue.id}>
-                            {venue.name}, {venue.city}
+                            {venue.name}{venue.city ? `, ${venue.city}` : ''}
                           </SelectItem>
                         ))
                       ) : (
@@ -303,6 +352,29 @@ const Organize = () => {
                     Total number of players needed for this match
                   </FormDescription>
                   <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="player_number_required"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-base">
+                      Require Jersey Number
+                    </FormLabel>
+                    <FormDescription>
+                      Toggle if players need to provide their jersey number when joining
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
                 </FormItem>
               )}
             />

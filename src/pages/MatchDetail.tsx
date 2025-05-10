@@ -4,7 +4,23 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Calendar, Clock, MapPin, Users, ArrowLeft, Share2, Copy } from "lucide-react";
+import { 
+  Calendar, 
+  Clock, 
+  MapPin, 
+  Users, 
+  ArrowLeft, 
+  Share2, 
+  Copy, 
+  ChevronDown,
+  ExternalLink
+} from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 // Match type definition
 type Match = {
@@ -17,9 +33,12 @@ type Match = {
   price: number | null;
   notes: string | null;
   organizer_name: string;
+  player_number_required: boolean;
   venue: {
+    id: string;
     name: string;
     city: string;
+    map_link: string | null;
   } | null;
   players: {
     player_name: string;
@@ -46,7 +65,7 @@ const MatchDetail = () => {
         .from("matches")
         .select(`
           *,
-          venue:venues(*),
+          venue:venues(id, name, city, map_link),
           players(*)
         `)
         .eq("id", matchId)
@@ -125,6 +144,32 @@ const MatchDetail = () => {
     }
   };
 
+  const shareToWhatsApp = () => {
+    if (!match) return;
+    
+    const url = `${window.location.origin}/match/${match.id}`;
+    const text = `Join my football match: ${match.title} on ${formatDate(match.match_date)} at ${formatTime(match.match_time)}. ${url}`;
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
+    window.open(whatsappUrl, '_blank');
+  };
+
+  const shareToTwitter = () => {
+    if (!match) return;
+    
+    const url = `${window.location.origin}/match/${match.id}`;
+    const text = `Join my football match: ${match.title}`;
+    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+    window.open(twitterUrl, '_blank');
+  };
+
+  const shareToFacebook = () => {
+    if (!match) return;
+    
+    const url = `${window.location.origin}/match/${match.id}`;
+    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
+    window.open(facebookUrl, '_blank');
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-[50vh]">
@@ -183,9 +228,30 @@ const MatchDetail = () => {
               </div>
               
               {match.venue && (
-                <div className="flex items-center gap-2">
-                  <MapPin size={18} />
-                  <span>{match.venue.name}, {match.venue.city}</span>
+                <div 
+                  className="flex items-start gap-2 cursor-pointer" 
+                  onClick={() => navigate(`/venue/${match.venue?.id}`)}
+                >
+                  <MapPin size={18} className="mt-0.5" />
+                  <div>
+                    <span className="text-primary hover:underline">
+                      {match.venue.name}, {match.venue.city}
+                    </span>
+                    {match.venue.map_link && (
+                      <div className="mt-1">
+                        <a 
+                          href={match.venue.map_link} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-xs flex items-center text-primary hover:underline"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <ExternalLink size={12} className="mr-1" />
+                          View on Google Maps
+                        </a>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
               
@@ -240,14 +306,33 @@ const MatchDetail = () => {
           </div>
           
           <div className="flex gap-3 mt-6">
-            <Button 
-              variant="outline" 
-              className="flex-1"
-              onClick={shareMatch}
-            >
-              <Share2 size={18} className="mr-2" />
-              Share
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  className="flex-1"
+                >
+                  <Share2 size={18} className="mr-2" />
+                  Share
+                  <ChevronDown size={16} className="ml-2" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-[200px]">
+                <DropdownMenuItem onClick={shareToWhatsApp}>
+                  Share to WhatsApp
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={shareToTwitter}>
+                  Share to Twitter
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={shareToFacebook}>
+                  Share to Facebook
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={shareMatch}>
+                  Share via Device
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            
             <Button 
               variant="outline"
               className="flex-1"

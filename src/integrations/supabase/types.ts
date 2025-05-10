@@ -19,6 +19,7 @@ export type Database = {
           notes: string | null
           organizer_name: string
           organizer_phone: string | null
+          player_number_required: boolean | null
           price: number | null
           title: string
           total_slots: number
@@ -33,6 +34,7 @@ export type Database = {
           notes?: string | null
           organizer_name: string
           organizer_phone?: string | null
+          player_number_required?: boolean | null
           price?: number | null
           title: string
           total_slots: number
@@ -47,6 +49,7 @@ export type Database = {
           notes?: string | null
           organizer_name?: string
           organizer_phone?: string | null
+          player_number_required?: boolean | null
           price?: number | null
           title?: string
           total_slots?: number
@@ -94,13 +97,44 @@ export type Database = {
           },
         ]
       }
+      venue_images: {
+        Row: {
+          created_at: string | null
+          id: string
+          image_url: string
+          venue_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          image_url: string
+          venue_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          image_url?: string
+          venue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "venue_images_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       venues: {
         Row: {
           address: string
           city: string
           created_at: string
+          description: string | null
           id: string
           image_url: string | null
+          map_link: string | null
           name: string
           state: string
         }
@@ -108,8 +142,10 @@ export type Database = {
           address: string
           city: string
           created_at?: string
+          description?: string | null
           id?: string
           image_url?: string | null
+          map_link?: string | null
           name: string
           state: string
         }
@@ -117,8 +153,10 @@ export type Database = {
           address?: string
           city?: string
           created_at?: string
+          description?: string | null
           id?: string
           image_url?: string | null
+          map_link?: string | null
           name?: string
           state?: string
         }

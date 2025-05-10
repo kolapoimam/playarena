@@ -12,6 +12,8 @@ import NotFound from "./pages/NotFound";
 import Organize from "./pages/Organize";
 import MatchDetail from "./pages/MatchDetail";
 import JoinMatch from "./pages/JoinMatch";
+import VenueDetail from "./pages/VenueDetail";
+import VenueCreate from "./pages/VenueCreate";
 
 const queryClient = new QueryClient();
 
@@ -29,6 +31,8 @@ const App = () => (
           <Route path="/organize" element={<Organize />} />
           <Route path="/match/:id" element={<MatchDetail />} />
           <Route path="/join/:id" element={<JoinMatch />} />
+          <Route path="/venue/:id" element={<VenueDetail />} />
+          <Route path="/venue-create" element={<VenueCreate />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
