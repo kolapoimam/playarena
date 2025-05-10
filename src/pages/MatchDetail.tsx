@@ -22,8 +22,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { format, isToday, isPast, differenceInHours } from "date-fns";
+import { utcToZonedTime } from "date-fns-tz";
 
-// Match type definition
 type Match = {
   id: string;
   slug: string;
@@ -58,7 +59,6 @@ const MatchDetail = () => {
 
   useEffect(() => {
     if (!slug) return;
-    
     fetchMatch(slug);
   }, [slug]);
 
@@ -75,7 +75,6 @@ const MatchDetail = () => {
         .single();
 
       if (error) throw error;
-
       setMatch(data as Match);
     } catch (error) {
       console.error("Error fetching match:", error);
@@ -89,6 +88,44 @@ const MatchDetail = () => {
     }
   };
 
+  const getMatchStatus = () => {
+    if (!match) return { label: "", class: "" };
+    
+    const timeZone = "Africa/Lagos";
+    const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
+    const zonedMatchDate = utcToZonedTime(matchDateTime, timeZone);
+    const now = utcToZonedTime(new Date(), timeZone);
+
+    if (isPast(zonedMatchDate) {
+      if (isToday(zonedMatchDate)) {
+        return { 
+          label: "Match Ended", 
+          class: "bg-gray-200 text-gray-600" 
+        };
+      }
+      return { 
+        label: "Match Passed", 
+        class: "bg-gray-200 text-gray-600" 
+      };
+    } else if (isToday(zonedMatchDate)) {
+      const hoursDiff = differenceInHours(zonedMatchDate, now);
+      if (hoursDiff >= 0 && hoursDiff <= 4) {
+        return { 
+          label: "Live Match", 
+          class: "bg-red-100 text-red-700 animate-pulse" 
+        };
+      }
+      return { 
+        label: "Today's Match", 
+        class: "bg-green-100 text-green-700" 
+      };
+    }
+    return { 
+      label: "Upcoming Match", 
+      class: "bg-blue-100 text-blue-800" 
+    };
+  };
+
   const formatDate = (dateString: string) => {
     const options: Intl.DateTimeFormatOptions = {
       weekday: "long",
@@ -100,7 +137,7 @@ const MatchDetail = () => {
   };
 
   const formatTime = (timeString: string) => {
-    return timeString.slice(0, 5); // Format from "14:30:00" to "14:30"
+    return timeString.slice(0, 5);
   };
 
   const isMatchTimePassed = () => {
@@ -211,6 +248,7 @@ const MatchDetail = () => {
 
   const isFull = match.players?.length >= match.total_slots;
   const matchHasStarted = isMatchTimePassed();
+  const matchStatus = getMatchStatus();
 
   return (
     <div className="min-h-screen pb-20">
@@ -224,7 +262,15 @@ const MatchDetail = () => {
           Back
         </Button>
         
-        <h1 className="text-2xl font-bold mb-2">{match.title}</h1>
+        <div className="flex justify-between items-start mb-2">
+          <h1 className="text-2xl font-bold">{match.title}</h1>
+          {matchStatus.label && (
+            <span className={`px-3 py-1 text-xs font-semibold rounded-full ${matchStatus.class}`}>
+              {matchStatus.label}
+            </span>
+          )}
+        </div>
+        
         <p className="text-muted-foreground mb-4">Organized by {match.organizer_name}</p>
         
         {isFull && (
