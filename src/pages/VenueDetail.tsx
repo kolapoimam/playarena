@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { MapPin, ArrowLeft, ExternalLink } from "lucide-react";
+import { MapPin, ArrowLeft, ExternalLink, Calendar, Clock } from "lucide-react";
 import Navbar from "@/components/Navbar";
 
 type Venue = {
@@ -18,12 +18,37 @@ type Venue = {
   image_url: string | null;
 };
 
+type Match = {
+  id: string;
+  slug: string;
+  title: string;
+  match_date: string;
+  match_time: string;
+  is_paid: boolean;
+  price: number | null;
+};
+
+const formatDate = (dateString: string) => {
+  const options: Intl.DateTimeFormatOptions = { weekday: 'short', month: 'short', day: 'numeric' };
+  return new Date(dateString).toLocaleDateString('en-US', options);
+};
+
+const formatTime = (timeString: string) => {
+  const [hours, minutes] = timeString.split(':');
+  const hour = parseInt(hours);
+  const period = hour >= 12 ? 'PM' : 'AM';
+  const displayHour = hour % 12 || 12;
+  return `${displayHour}:${minutes} ${period}`;
+};
+
 const VenueDetail = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [venue, setVenue] = useState<Venue | null>(null);
+  const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
+  const [matchesLoading, setMatchesLoading] = useState(true);
 
   useEffect(() => {
     if (!slug) return;
@@ -38,6 +63,7 @@ const VenueDetail = () => {
 
         if (error) throw error;
         setVenue(data as Venue);
+        return data;
       } catch (error) {
         console.error("Error fetching venue:", error);
         toast({
@@ -45,12 +71,45 @@ const VenueDetail = () => {
           description: "Failed to load venue details. Please try again.",
           variant: "destructive",
         });
+        throw error;
+      }
+    };
+
+    const fetchMatches = async (venueId: string) => {
+      try {
+        const { data, error } = await supabase
+          .from("matches")
+          .select("id, slug, title, match_date, match_time, is_paid, price")
+          .eq("venue_id", venueId)
+          .order("match_date", { ascending: false })
+          .limit(5);
+
+        if (error) throw error;
+        setMatches(data as Match[]);
+      } catch (error) {
+        console.error("Error fetching matches:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load recent matches. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setMatchesLoading(false);
+      }
+    };
+
+    const fetchData = async () => {
+      try {
+        const venueData = await fetchVenue();
+        if (venueData) {
+          await fetchMatches(venueData.id);
+        }
       } finally {
         setLoading(false);
       }
     };
 
-    fetchVenue();
+    fetchData();
   }, [slug, toast]);
 
   if (loading) {
@@ -139,6 +198,42 @@ const VenueDetail = () => {
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Recent Matches Section */}
+          <div className="border rounded-lg p-4 bg-card">
+            <h2 className="font-semibold mb-3">Recent Matches</h2>
+            
+            {matchesLoading ? (
+              <div className="flex justify-center py-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-500"></div>
+              </div>
+            ) : matches.length > 0 ? (
+              <div className="space-y-4">
+                {matches.map((match) => (
+                  <div 
+                    key={match.id} 
+                    className="border rounded-lg p-3 hover:bg-accent cursor-pointer transition-colors"
+                    onClick={() => navigate(`/match/${match.slug}`)}
+                  >
+                    <h3 className="font-medium">{match.title}</h3>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                      <Calendar size={14} />
+                      <span>{formatDate(match.match_date)}</span>
+                      <Clock size={14} />
+                      <span>{formatTime(match.match_time)}</span>
+                    </div>
+                    <div className="mt-1 text-sm">
+                      {match.is_paid ? `₦${match.price?.toFixed(2)}` : 'Free'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-4 text-muted-foreground">
+                No recent matches found at this venue
+              </div>
+            )}
           </div>
           
           <Button 
