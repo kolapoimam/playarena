@@ -237,30 +237,36 @@ const JoinMatch = () => {
                 )}
               />
 
-              {match.player_number_required && (
-                <FormField
-                  control={form.control}
-                  name="player_number"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Jersey Number</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          placeholder="Enter your jersey number"
-                          min={1}
-                          max={99}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        This match requires players to provide their jersey number
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
+{match.player_number_required && (
+  <FormField
+    control={form.control}
+    name="player_number"
+    render={({ field }) => (
+      <FormItem>
+        <FormLabel>Phone Number</FormLabel>
+        <FormControl>
+          <Input
+            type="text"
+            placeholder="Enter your phone number"
+            maxLength={11}
+            inputMode="numeric"
+            pattern="[0-9]*"
+            {...field}
+            onInput={(e) => {
+              // Remove non-digits and limit to 11 digits
+              e.target.value = e.target.value.replace(/\D/g, '').slice(0, 11);
+              field.onChange(e);
+            }}
+          />
+        </FormControl>
+        <FormDescription>
+          This match requires players to provide their phone number
+        </FormDescription>
+        <FormMessage />
+      </FormItem>
+    )}
+  />
+)}
 
               <Button
                 type="submit"
