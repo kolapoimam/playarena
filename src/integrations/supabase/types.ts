@@ -9,7 +9,121 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      matches: {
+        Row: {
+          created_at: string
+          id: string
+          is_paid: boolean
+          match_date: string
+          match_time: string
+          notes: string | null
+          organizer_name: string
+          organizer_phone: string | null
+          price: number | null
+          title: string
+          total_slots: number
+          venue_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_paid?: boolean
+          match_date: string
+          match_time: string
+          notes?: string | null
+          organizer_name: string
+          organizer_phone?: string | null
+          price?: number | null
+          title: string
+          total_slots: number
+          venue_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_paid?: boolean
+          match_date?: string
+          match_time?: string
+          notes?: string | null
+          organizer_name?: string
+          organizer_phone?: string | null
+          price?: number | null
+          title?: string
+          total_slots?: number
+          venue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "matches_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      players: {
+        Row: {
+          created_at: string
+          id: string
+          match_id: string
+          payment_status: string | null
+          player_name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          match_id: string
+          payment_status?: string | null
+          player_name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          match_id?: string
+          payment_status?: string | null
+          player_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "players_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      venues: {
+        Row: {
+          address: string
+          city: string
+          created_at: string
+          id: string
+          image_url: string | null
+          name: string
+          state: string
+        }
+        Insert: {
+          address: string
+          city: string
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          name: string
+          state: string
+        }
+        Update: {
+          address?: string
+          city?: string
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          name?: string
+          state?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
