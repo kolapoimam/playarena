@@ -23,7 +23,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { format, isToday, isPast, differenceInHours } from "date-fns";
-import utcToZonedTime from 'date-fns-tz/utcToZonedTime';
+import { DateTime } from "luxon";
 
 type Match = {
   id: string;
