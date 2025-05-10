@@ -64,6 +64,7 @@ const Index = () => {
 
         console.log("Current Date (Africa/Lagos):", currentDate);
         console.log("Current Time (Africa/Lagos):", currentTime);
+        console.log("Now (ISO):", now.toISO());
 
         // Fetch upcoming matches
         const { data: matchesData, error: matchesError } = await supabase
@@ -94,7 +95,9 @@ const Index = () => {
             "yyyy-MM-dd HH:mm",
             { zone: "Africa/Lagos" }
           );
-          return matchDateTime >= now;
+          const isFuture = matchDateTime >= now;
+          console.log(`Match: ${match.title}, DateTime: ${matchDateTime.toISO()}, Is Future: ${isFuture}`);
+          return isFuture;
         });
 
         console.log("Filtered Matches:", filteredMatches);
