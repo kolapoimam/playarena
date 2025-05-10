@@ -3,6 +3,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { ThemeProvider } from "next-themes";
+import Layout from "@/components/Layout";
 import Index from "./pages/Index";
 import Search from "./pages/Search";
 import Matches from "./pages/Matches";
@@ -21,31 +23,29 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          {/* Main App Routes */}
-          <Route path="/" element={<Index />} />
-          <Route path="/search" element={<Search />} />
-          <Route path="/matches" element={<Matches />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/organize" element={<Organize />} />
-          <Route path="/venue-create" element={<VenueCreate />} />
-
-          {/* Slug-Based Routes for Matches and Venues */}
-          <Route path="/match/:slug" element={<MatchDetail />} />
-          <Route path="/join/:slug" element={<JoinMatch />} />
-          <Route path="/venue/:slug" element={<VenueDetail />} />
-
-          {/* Redirect Routes for Backward Compatibility */}
-          <Route path="/match-id/:id" element={<MatchRedirect />} />
-          <Route path="/venue-id/:id" element={<VenueRedirect />} />
-
-          {/* Catch-All Route */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+      <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            {/* Main App Routes with Layout */}
+            <Route element={<Layout />}>
+              <Route path="/" element={<Index />} />
+              <Route path="/search" element={<Search />} />
+              <Route path="/matches" element={<Matches />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/organize" element={<Organize />} />
+              <Route path="/venue-create" element={<VenueCreate />} />
+              <Route path="/match/:slug" element={<MatchDetail />} />
+              <Route path="/join/:slug" element={<JoinMatch />} />
+              <Route path="/venue/:slug" element={<VenueDetail />} />
+              <Route path="/match-id/:id" element={<MatchRedirect />} />
+              <Route path="/venue-id/:id" element={<VenueRedirect />} />
+              <Route path="*" element={<NotFound />} />
+            </Route>
+          </Routes>
+        </BrowserRouter>
+      </ThemeProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
