@@ -96,7 +96,7 @@ const MatchDetail = () => {
     const zonedMatchDate = utcToZonedTime(matchDateTime, timeZone);
     const now = utcToZonedTime(new Date(), timeZone);
 
-    if (isPast(zonedMatchDate) {
+if (isPast(zonedMatchDate)) {
       if (isToday(zonedMatchDate)) {
         return { 
           label: "Match Ended", 
