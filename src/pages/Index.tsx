@@ -59,7 +59,7 @@ const Index = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Get upcoming matches
+        // Get upcoming matches (including today, excluding past dates)
         const today = new Date().toISOString().split("T")[0];
 
         const { data: matchesData, error: matchesError } = await supabase
@@ -74,8 +74,9 @@ const Index = () => {
             price,
             venue:venues(slug, name, city, image_url)
           `)
-          .gte("match_date", today)
+          .gte("match_date", today) // Only matches from today onward
           .order("match_date", { ascending: true })
+          .order("match_time", { ascending: true })
           .limit(5);
 
         if (matchesError) throw matchesError;
@@ -123,7 +124,7 @@ const Index = () => {
   return (
     <div className="min-h-screen pb-20">
       {/* Header */}
-<header className="sticky top-0 z-50 p-4 flex justify-between items-center bg-white dark:bg-gray-900 shadow-sm">
+      <header className="sticky top-0 z-50 p-4 flex justify-between items-center bg-white dark:bg-gray-900 shadow-sm">
         <img
           src={theme === "dark" ? "/playarenadark.png" : "/playarenalight.png"}
           alt="PlayArena Logo"
@@ -262,7 +263,7 @@ const Index = () => {
                     className="min-w-[280px] bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 cursor-pointer"
                     onClick={() => navigate(`/venue/${venue.slug}`)}
                   >
- <img
+                    <img
                       src="https://dailytrust.com/wp-content/uploads/2023/12/football-488714_1280.jpg"
                       alt={venue.name}
                       className="w-full h-40 object-cover rounded-t-lg"
