@@ -334,7 +334,7 @@ const Matches = () => {
 
       {loading ? (
         <div className="flex justify-center items-center h-[50vh]">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-playarena-500"></div>
         </div>
       ) : matches.length > 0 ? (
         <div className="px-4 space-y-4">
