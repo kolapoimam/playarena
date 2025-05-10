@@ -30,14 +30,14 @@ type Match = {
 };
 
 const formatDate = (dateString: string) => {
-  const options: Intl.DateTimeFormatOptions = { weekday: 'short', month: 'short', day: 'numeric' };
-  return new Date(dateString).toLocaleDateString('en-US', options);
+  const options: Intl.DateTimeFormatOptions = { weekday: "short", month: "short", day: "numeric" };
+  return new Date(dateString).toLocaleDateString("en-US", options);
 };
 
 const formatTime = (timeString: string) => {
-  const [hours, minutes] = timeString.split(':');
+  const [hours, minutes] = timeString.split(":");
   const hour = parseInt(hours);
-  const period = hour >= 12 ? 'PM' : 'AM';
+  const period = hour >= 12 ? "PM" : "AM";
   const displayHour = hour % 12 || 12;
   return `${displayHour}:${minutes} ${period}`;
 };
@@ -53,7 +53,7 @@ const VenueDetail = () => {
 
   useEffect(() => {
     if (!slug) return;
-    
+
     const fetchVenue = async () => {
       try {
         const { data, error } = await supabase
@@ -116,7 +116,7 @@ const VenueDetail = () => {
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-[50vh]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-playarena-500"></div>
       </div>
     );
   }
@@ -124,9 +124,9 @@ const VenueDetail = () => {
   if (!venue) {
     return (
       <div className="p-4">
-        <Button 
-          variant="ghost" 
-          onClick={() => navigate(-1)} 
+        <Button
+          variant="ghost"
+          onClick={() => navigate(-1)}
           className="mb-4"
         >
           <ArrowLeft size={18} className="mr-2" />
@@ -143,55 +143,53 @@ const VenueDetail = () => {
   return (
     <div className="min-h-screen pb-20">
       <div className="p-4">
-        <Button 
-          variant="ghost" 
-          onClick={() => navigate(-1)} 
+        <Button
+          variant="ghost"
+          onClick={() => navigate(-1)}
           className="mb-4"
         >
           <ArrowLeft size={18} className="mr-2" />
           Back
         </Button>
-        
-        {venue.image_url && (
-          <div className="rounded-lg overflow-hidden mb-4 h-48">
-            <img 
-              src={venue.image_url} 
-              alt={venue.name} 
-              className="w-full h-full object-cover"
-            />
-          </div>
-        )}
-        
+
+        <div className="rounded-lg overflow-hidden mb-4 h-48">
+          <img
+            src={venue.image_url || "https://dailytrust.com/wp-content/uploads/2023/12/football-488714_1280.jpg"}
+            alt={venue.name}
+            className="w-full h-full object-cover"
+          />
+        </div>
+
         <h1 className="text-2xl font-bold mb-1">{venue.name}</h1>
         <div className="flex items-center text-muted-foreground mb-4">
           <MapPin size={16} className="mr-1" />
           <span>{venue.city}, {venue.state}</span>
         </div>
-        
+
         <div className="space-y-4">
           <div className="border rounded-lg p-4 bg-card">
             <h2 className="font-semibold mb-3">Venue Details</h2>
-            
+
             <div className="space-y-2">
               <div>
                 <h3 className="text-sm font-medium">Address:</h3>
                 <p className="text-sm">{venue.address}</p>
               </div>
-              
+
               {venue.description && (
                 <div>
                   <h3 className="text-sm font-medium">Description:</h3>
                   <p className="text-sm">{venue.description}</p>
                 </div>
               )}
-              
+
               {venue.map_link && (
                 <div className="pt-2">
-                  <a 
-                    href={venue.map_link} 
-                    target="_blank" 
+                  <a
+                    href={venue.map_link}
+                    target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center text-primary"
+                    className="inline-flex items-center text-playarena-500 hover:text-playarena-600"
                   >
                     <ExternalLink size={16} className="mr-1" />
                     View on Google Maps
@@ -204,16 +202,16 @@ const VenueDetail = () => {
           {/* Recent Matches Section */}
           <div className="border rounded-lg p-4 bg-card">
             <h2 className="font-semibold mb-3">Recent Matches</h2>
-            
+
             {matchesLoading ? (
               <div className="flex justify-center py-4">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-500"></div>
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-playarena-500"></div>
               </div>
             ) : matches.length > 0 ? (
               <div className="space-y-4">
                 {matches.map((match) => (
-                  <div 
-                    key={match.id} 
+                  <div
+                    key={match.id}
                     className="border rounded-lg p-3 hover:bg-accent cursor-pointer transition-colors"
                     onClick={() => navigate(`/match/${match.slug}`)}
                   >
@@ -225,7 +223,7 @@ const VenueDetail = () => {
                       <span>{formatTime(match.match_time)}</span>
                     </div>
                     <div className="mt-1 text-sm">
-                      {match.is_paid ? `₦${match.price?.toFixed(2)}` : 'Free'}
+                      {match.is_paid ? `₦${match.price?.toFixed(2)}` : "Free"}
                     </div>
                   </div>
                 ))}
@@ -236,16 +234,16 @@ const VenueDetail = () => {
               </div>
             )}
           </div>
-          
-          <Button 
-            className="w-full"
+
+          <Button
+            className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
             onClick={() => navigate(`/organize?venue=${venue.slug}`)}
           >
             Organize Match at This Venue
           </Button>
         </div>
       </div>
-      
+
       <Navbar />
     </div>
   );
