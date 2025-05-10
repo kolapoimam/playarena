@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -41,6 +40,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
 import VenueForm from "@/components/VenueForm";
+import Navbar from "@/components/Navbar";
 
 // Form schema using zod
 const formSchema = z.object({
@@ -239,7 +239,7 @@ const Organize = () => {
                       </DialogContent>
                     </Dialog>
                   </div>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select onValueChange={uitableField.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select a venue" />
@@ -299,7 +299,11 @@ const Organize = () => {
                           mode="single"
                           selected={field.value}
                           onSelect={field.onChange}
-                          disabled={(date) => date < new Date()}
+                          disabled={(date) => {
+                            const today = new Date();
+                            today.setHours(0, 0, 0, 0);
+                            return date < today;
+                          }}
                           initialFocus
                         />
                       </PopoverContent>
@@ -469,6 +473,7 @@ const Organize = () => {
           </form>
         </Form>
       </div>
+      <Navbar />
     </div>
   );
 };
