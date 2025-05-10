@@ -59,9 +59,11 @@ const Index = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Get upcoming matches (including today, excluding past dates)
-        const today = new Date().toISOString().split("T")[0];
+        // Get current time in Africa/Lagos timezone
+        const now = new Date().toLocaleString("en-US", { timeZone: "Africa/Lagos" });
+        const currentDateTime = new Date(now).toISOString();
 
+        // Get upcoming matches (only future or ongoing matches)
         const { data: matchesData, error: matchesError } = await supabase
           .from("matches")
           .select(`
@@ -74,7 +76,10 @@ const Index = () => {
             price,
             venue:venues(slug, name, city, image_url)
           `)
-          .gte("match_date", today) // Only matches from today onward
+          .gte("match_date", currentDateTime.split("T")[0]) // Matches from today onward
+          .filter("match_date", "eq", currentDateTime.split("T")[0]) // For today, check time
+          .gte("match_time", currentDateTime.split("T")[1].slice(0, 5)) // Time not passed today
+          .or(`match_date.gt.${currentDateTime.split("T")[0]}`) // Or future dates
           .order("match_date", { ascending: true })
           .order("match_time", { ascending: true })
           .limit(5);
@@ -144,6 +149,7 @@ const Index = () => {
           className="flex flex-col items-center justify-center h-24 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-transform hover:scale-105"
           onClick={() => navigate("/organize")}
         >
+аю
           <Plus size={24} className="mb-2" />
           <span className="text-sm font-medium">Organize</span>
         </Button>
