@@ -108,9 +108,10 @@ const MatchDetail = () => {
     
     setCopying(true);
     const url = `${window.location.origin}/match/${match.slug}`;
+    const shareText = `Join my Football Match: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. Powered by PlayArena. ${url}`;
     
     try {
-      await navigator.clipboard.writeText(url);
+      await navigator.clipboard.writeText(shareText);
       toast({
         title: "Link copied!",
         description: "Share it with your friends to join the match.",
@@ -130,13 +131,13 @@ const MatchDetail = () => {
     if (!match) return;
     
     const url = `${window.location.origin}/match/${match.slug}`;
-    const title = `Join my football match: ${match.title}`;
+    const shareText = `Join my Football Match: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. Powered by PlayArena. ${url}`;
     
     if (navigator.share) {
       try {
         await navigator.share({
-          title: title,
-          text: `Join my football match: ${match.title}`,
+          title: `Join my Football Match: ${match.title}`,
+          text: shareText,
           url: url,
         });
       } catch (err) {
@@ -151,8 +152,8 @@ const MatchDetail = () => {
     if (!match) return;
     
     const url = `${window.location.origin}/match/${match.slug}`;
-    const text = `Join my football match: ${match.title} on ${formatDate(match.match_date)} at ${formatTime(match.match_time)}. ${url}`;
-    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
+    const shareText = `Join my Football Match: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. Powered by PlayArena. ${url}`;
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
     window.open(whatsappUrl, '_blank');
   };
 
@@ -160,8 +161,8 @@ const MatchDetail = () => {
     if (!match) return;
     
     const url = `${window.location.origin}/match/${match.slug}`;
-    const text = `Join my football match: ${match.title}`;
-    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+    const shareText = `Join my Football Match: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. Powered by PlayArena. ${url}`;
+    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
     window.open(twitterUrl, '_blank');
   };
 
@@ -169,7 +170,8 @@ const MatchDetail = () => {
     if (!match) return;
     
     const url = `${window.location.origin}/match/${match.slug}`;
-    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
+    const shareText = `Join my Football Match: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. Powered by PlayArena.`;
+    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(shareText)}`;
     window.open(facebookUrl, '_blank');
   };
 
@@ -200,6 +202,8 @@ const MatchDetail = () => {
     );
   }
 
+  const isFull = match.players?.length >= match.total_slots;
+
   return (
     <div className="min-h-screen pb-20">
       <div className="p-4">
@@ -214,6 +218,12 @@ const MatchDetail = () => {
         
         <h1 className="text-2xl font-bold mb-2">{match.title}</h1>
         <p className="text-muted-foreground mb-4">Organized by {match.organizer_name}</p>
+        
+        {isFull && (
+          <div className="bg-red-100 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
+            This match is completely filled up!
+          </div>
+        )}
         
         <div className="space-y-4">
           <div className="border rounded-lg p-4 bg-card">
@@ -262,6 +272,7 @@ const MatchDetail = () => {
                 <Users size={18} />
                 <span>
                   {match.players?.length || 0}/{match.total_slots} spots filled
+                  {isFull && " (FULL)"}
                 </span>
               </div>
               
@@ -298,7 +309,7 @@ const MatchDetail = () => {
               <p className="text-muted-foreground text-sm">No players have joined yet</p>
             )}
             
-            {match.players.length < match.total_slots && (
+            {!isFull && (
               <Button 
                 className="w-full mt-4"
                 onClick={() => navigate(`/join/${match.slug}`)}
