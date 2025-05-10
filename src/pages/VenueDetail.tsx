@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,6 +8,7 @@ import Navbar from "@/components/Navbar";
 
 type Venue = {
   id: string;
+  slug: string;
   name: string;
   address: string;
   city: string;
@@ -19,21 +19,21 @@ type Venue = {
 };
 
 const VenueDetail = () => {
-  const { id } = useParams<{ id: string }>();
+  const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [venue, setVenue] = useState<Venue | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!id) return;
+    if (!slug) return;
     
     const fetchVenue = async () => {
       try {
         const { data, error } = await supabase
           .from("venues")
-          .select("*")
-          .eq("id", id)
+          .select("id, slug, name, address, city, state, description, map_link, image_url")
+          .eq("slug", slug)
           .single();
 
         if (error) throw error;
@@ -51,7 +51,7 @@ const VenueDetail = () => {
     };
 
     fetchVenue();
-  }, [id, toast]);
+  }, [slug, toast]);
 
   if (loading) {
     return (
@@ -143,7 +143,7 @@ const VenueDetail = () => {
           
           <Button 
             className="w-full"
-            onClick={() => navigate(`/organize?venue=${venue.id}`)}
+            onClick={() => navigate(`/organize?venue=${venue.slug}`)}
           >
             Organize Match at This Venue
           </Button>
