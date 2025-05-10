@@ -19,7 +19,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { format, isToday, isPast, differenceInHours } from "date-fns";
-import { utcToZonedTime } from "date-fns-tz";
+import { DateTime } from "luxon";
 
 type Match = {
   id: string;
