@@ -33,6 +33,8 @@ const App = () => (
           <Route path="/venue/:slug" element={<VenueDetail />} />
           <Route path="/venue-create" element={<VenueCreate />} />
           <Route path="*" element={<NotFound />} />
+          <Route path="/match-id/:id" element={<MatchRedirect />} />
+<Route path="/venue-id/:id" element={<VenueRedirect />} />
         </Routes>
       </BrowserRouter>
     </TooltipProvider>
