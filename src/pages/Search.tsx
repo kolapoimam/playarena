@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,6 +8,7 @@ import { Input } from "@/components/ui/input";
 
 type Match = {
   id: string;
+  slug: string;
   title: string;
   match_date: string;
   match_time: string;
@@ -16,6 +16,7 @@ type Match = {
   price: number | null;
   total_slots: number;
   venue: {
+    slug: string;
     name: string;
     city: string;
   } | null;
@@ -51,15 +52,17 @@ const Search = () => {
     setLoading(true);
 
     try {
-      // Search for matches by title or venue name
+      // Search for matches by title or venue name/city
       const { data, error } = await supabase
         .from("matches")
         .select(`
-          *,
-          venue:venues(name, city),
+          id, slug, title, match_date, match_time, is_paid, price, total_slots,
+          venue:venues(slug, name, city),
           players(*)
         `)
-        .or(`title.ilike.%${query}%,venue.name.ilike.%${query}%,venue.city.ilike.%${query}%`)
+        .or(`title.ilike.%${query}%`)
+        .eq('venue.active', true)
+        .or(`name.ilike.%${query}%,city.ilike.%${query}%`, { foreignTable: "venues" })
         .order('match_date', { ascending: true });
 
       if (error) throw error;
@@ -88,7 +91,7 @@ const Search = () => {
   return (
     <div className="min-h-screen pb-20">
       <div className="p-4">
-        <h1 className="text-2xl font-bold mb-4">Find Matches</h1>
+        <h1 className="text-2xl font-bold mb-4">Find Match</h1>
         
         <form onSubmit={handleSearch} className="mb-6">
           <div className="relative">
@@ -119,7 +122,7 @@ const Search = () => {
               <div 
                 key={match.id}
                 className="border rounded-lg p-4 bg-card hover:border-primary transition-colors cursor-pointer"
-                onClick={() => navigate(`/match/${match.id}`)}
+                onClick={() => navigate(`/match/${match.slug}`)}
               >
                 <h3 className="font-semibold text-lg">{match.title}</h3>
                 
