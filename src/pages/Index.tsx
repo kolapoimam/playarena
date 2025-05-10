@@ -122,6 +122,16 @@ const Index = () => {
 
   return (
     <div className="min-h-screen pb-20">
+      {/* Header */}
+<header className="sticky top-0 z-50 p-4 flex justify-between items-center bg-white dark:bg-gray-900 shadow-sm">
+        <img
+          src={theme === "dark" ? "/playarenadark.png" : "/playarenalight.png"}
+          alt="PlayArena Logo"
+          className="h-12 w-auto object-contain"
+        />
+        <ThemeToggle />
+      </header>
+
       {/* Search Bar */}
       <div className="px-4 mb-6">
         <SearchBar />
