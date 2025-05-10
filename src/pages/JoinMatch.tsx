@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -22,6 +21,7 @@ import {
 
 type Match = {
   id: string;
+  slug: string;
   title: string;
   match_date: string;
   total_slots: number;
@@ -30,6 +30,7 @@ type Match = {
   price: number | null;
   player_number_required: boolean;
   venue: {
+    slug: string;
     name: string;
     city: string;
   } | null;
@@ -45,7 +46,7 @@ const formSchema = z.object({
 });
 
 const JoinMatch = () => {
-  const { id } = useParams<{ id: string }>();
+  const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [match, setMatch] = useState<Match | null>(null);
@@ -61,18 +62,18 @@ const JoinMatch = () => {
   });
 
   useEffect(() => {
-    if (!id) return;
+    if (!slug) return;
 
     const fetchMatch = async () => {
       try {
         const { data, error } = await supabase
           .from("matches")
           .select(`
-            *,
-            venue:venues(name, city),
+            id, slug, title, match_date, total_slots, organizer_name, is_paid, price, player_number_required,
+            venue:venues(slug, name, city),
             players(*)
           `)
-          .eq("id", id)
+          .eq("slug", slug)
           .single();
 
         if (error) throw error;
@@ -90,10 +91,10 @@ const JoinMatch = () => {
     };
 
     fetchMatch();
-  }, [id, toast]);
+  }, [slug, toast]);
 
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
-    if (!match || !id) return;
+    if (!match || !slug) return;
 
     // Check if match is already full
     if (match.players.length >= match.total_slots) {
@@ -112,9 +113,7 @@ const JoinMatch = () => {
       const { error } = await supabase
         .from("players")
         .insert({
-          match_id: id,
-          player_name: data.player_name,
-          // If player number is required, add it to player_name
+          match_id: match.id,
           player_name: match.player_number_required && data.player_number
             ? `${data.player_name} (#${data.player_number})`
             : data.player_name,
@@ -128,7 +127,7 @@ const JoinMatch = () => {
       });
 
       // Navigate to the match detail
-      navigate(`/match/${id}`);
+      navigate(`/match/${match.slug}`);
     } catch (error) {
       console.error("Error joining match:", error);
       toast({
@@ -182,7 +181,7 @@ const JoinMatch = () => {
   const isFull = match.players.length >= match.total_slots;
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen pb-20">
       <div className="p-4">
         <Button
           variant="ghost"
@@ -215,7 +214,7 @@ const JoinMatch = () => {
             <p className="text-muted-foreground mt-2">All player slots have been filled.</p>
             <Button
               className="mt-4"
-              onClick={() => navigate(`/match/${id}`)}
+              onClick={() => navigate(`/match/${match.slug}`)}
             >
               View Match Details
             </Button>
@@ -273,6 +272,7 @@ const JoinMatch = () => {
           </Form>
         )}
       </div>
+      <Navbar />
     </div>
   );
 };
