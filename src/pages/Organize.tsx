@@ -362,28 +362,28 @@ const Organize = () => {
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="player_number_required"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                  <div className="space-y-0.5">
-                    <FormLabel className="text-base">
-                      Require Jersey Number
-                    </FormLabel>
-                    <FormDescription>
-                      Toggle if players need to provide their jersey number when joining
-                    </FormDescription>
-                  </div>
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
+<FormField
+  control={form.control}
+  name="player_number_required"
+  render={({ field }) => (
+    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+      <div className="space-y-0.5">
+        <FormLabel className="text-base">
+          Require Phone Number
+        </FormLabel>
+        <FormDescription>
+          Toggle if players need to provide their phone number when joining
+        </FormDescription>
+      </div>
+      <FormControl>
+        <Switch
+          checked={field.value}
+          onCheckedChange={field.onChange}
+        />
+      </FormControl>
+    </FormItem>
+  )}
+/>
 
             <FormField
               control={form.control}
