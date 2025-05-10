@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,11 +12,13 @@ import { useToast } from "@/hooks/use-toast";
 
 type Match = {
   id: string;
+  slug: string;
   title: string;
   match_date: string;
   is_paid: boolean;
   price: number | null;
   venue: {
+    slug: string;
     name: string;
     city: string;
     image_url: string | null;
@@ -26,6 +27,7 @@ type Match = {
 
 type Venue = {
   id: string;
+  slug: string;
   name: string;
   city: string;
   state: string;
@@ -49,11 +51,12 @@ const Index = () => {
           .from("matches")
           .select(`
             id,
+            slug,
             title,
             match_date,
             is_paid,
             price,
-            venue:venues(name, city, image_url)
+            venue:venues(slug, name, city, image_url)
           `)
           .gte('match_date', today)
           .order('match_date', { ascending: true })
@@ -66,6 +69,7 @@ const Index = () => {
           .from("venues")
           .select(`
             id,
+            slug,
             name,
             city,
             state,
@@ -167,11 +171,14 @@ const Index = () => {
             {upcomingMatches.length > 0 ? (
               <div className="flex gap-4 overflow-x-auto px-4 pb-4">
                 {upcomingMatches.map((match) => (
-                  <div key={match.id} className="min-w-[280px]" onClick={() => navigate(`/match/${match.id}`)}>
+                  <div key={match.id} className="min-w-[280px]">
                     <MatchCard 
                       title={match.title}
+                      slug={match.slug}
                       details={getMatchDetails(match)}
                       image={match.venue?.image_url || "https://images.unsplash.com/photo-1560272564-c83b66b1ad12?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80"}
+                      is_paid={match.is_paid}
+                      price={match.price}
                     />
                   </div>
                 ))}
@@ -204,7 +211,7 @@ const Index = () => {
             {popularVenues.length > 0 ? (
               <div className="px-4 space-y-3">
                 {popularVenues.map((venue) => (
-                  <div key={venue.id} onClick={() => navigate(`/venue/${venue.id}`)}>
+                  <div key={venue.id} onClick={() => navigate(`/venue/${venue.slug}`)}>
                     <VenueItem
                       name={venue.name}
                       location={`${venue.city}, ${venue.state}`}
