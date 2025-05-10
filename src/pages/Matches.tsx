@@ -3,9 +3,13 @@ import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Calendar, Clock, MapPin, Users } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, ChevronLeft, ChevronRight, Filter } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import { useToast } from "@/hooks/use-toast";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 // Match type definition based on the existing Supabase schema
 type Match = {
@@ -29,34 +33,97 @@ type Match = {
   }[];
 };
 
+// Venue type for filter dropdown
+type Venue = {
+  slug: string;
+  name: string;
+};
+
 const Matches = () => {
   const [matches, setMatches] = useState<Match[]>([]);
+  const [venues, setVenues] = useState<Venue[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalMatches, setTotalMatches] = useState(0);
+  const [isPaidFilter, setIsPaidFilter] = useState<boolean | null>(null);
+  const [venueFilter, setVenueFilter] = useState<string | null>(null);
+  const [dateStart, setDateStart] = useState<string>("");
+  const [dateEnd, setDateEnd] = useState<string>("");
+  const [timeStart, setTimeStart] = useState<string>("");
+  const [timeEnd, setTimeEnd] = useState<string>("");
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  const matchesPerPage = 4;
+
   useEffect(() => {
+    fetchVenues();
     fetchMatches();
-  }, []);
+  }, [currentPage, isPaidFilter, venueFilter, dateStart, dateEnd, timeStart, timeEnd]);
+
+  const fetchVenues = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("venues")
+        .select("slug, name")
+        .order("name", { ascending: true });
+
+      if (error) throw error;
+      setVenues(data as Venue[]);
+    } catch (error) {
+      console.error("Error fetching venues:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load venues for filter. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const fetchMatches = async () => {
     try {
-      const { data, error } = await supabase
+      setLoading(true);
+      let query = supabase
         .from("matches")
         .select(`
           id, slug, title, match_date, match_time, total_slots, is_paid, price, notes, organizer_name,
           venue:venues(slug, name, city),
           players(*)
-        `)
+        `, { count: "exact" })
         .order("match_date", { ascending: true });
 
-      if (error) {
-        throw error;
+      // Apply filters
+      if (isPaidFilter !== null) {
+        query = query.eq("is_paid", isPaidFilter);
+      }
+      if (venueFilter) {
+        query = query.eq("venue_id", venueFilter);
+      }
+      if (dateStart) {
+        query = query.gte("match_date", dateStart);
+      }
+      if (dateEnd) {
+        query = query.lte("match_date", dateEnd);
+      }
+      if (timeStart) {
+        query = query.gte("match_time", timeStart);
+      }
+      if (timeEnd) {
+        query = query.lte("match_time", timeEnd);
       }
 
-      if (data) {
-        setMatches(data as Match[]);
-      }
+      // Apply pagination
+      const start = (currentPage - 1) * matchesPerPage;
+      const end = start + matchesPerPage - 1;
+      query = query.range(start, end);
+
+      const { data, error, count } = await query;
+
+      if (error) throw error;
+
+      setMatches(data as Match[]);
+      setTotalMatches(count || 0);
     } catch (error) {
       console.error("Error fetching matches:", error);
       toast({
@@ -82,6 +149,30 @@ const Matches = () => {
     return timeString.slice(0, 5); // Format from "14:30:00" to "14:30"
   };
 
+  const totalPages = Math.ceil(totalMatches / matchesPerPage);
+
+  const handlePreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const resetFilters = () => {
+    setIsPaidFilter(null);
+    setVenueFilter(null);
+    setDateStart("");
+    setDateEnd("");
+    setTimeStart("");
+    setTimeEnd("");
+    setCurrentPage(1);
+  };
+
   return (
     <div className="min-h-screen pb-20">
       <header className="p-4 flex justify-between items-center">
@@ -93,7 +184,124 @@ const Matches = () => {
           Organize Match
         </Button>
       </header>
-      
+
+      {/* Filters */}
+      <Collapsible
+        open={isFilterOpen}
+        onOpenChange={setIsFilterOpen}
+        className="px-4 mb-4"
+      >
+        <CollapsibleTrigger asChild>
+          <Button variant="outline" className="w-full sm:w-auto">
+            <Filter size={16} className="mr-2" />
+            {isFilterOpen ? "Hide Filters" : "Show Filters"}
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="mt-4 p-4 border rounded-lg bg-card space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Paid/Free Filter */}
+            <div>
+              <Label htmlFor="is-paid-filter">Payment Type</Label>
+              <Select
+                value={isPaidFilter === null ? "all" : isPaidFilter ? "paid" : "free"}
+                onValueChange={(value) => {
+                  setIsPaidFilter(value === "all" ? null : value === "paid");
+                  setCurrentPage(1);
+                }}
+              >
+                <SelectTrigger id="is-paid-filter">
+                  <SelectValue placeholder="Select payment type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="paid">Paid</SelectItem>
+                  <SelectItem value="free">Free</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Venue Filter */}
+            <div>
+              <Label htmlFor="venue-filter">Venue</Label>
+              <Select
+                value={venueFilter || "all"}
+                onValueChange={(value) => {
+                  setVenueFilter(value === "all" ? null : value);
+                  setCurrentPage(1);
+                }}
+              >
+                <SelectTrigger id="venue-filter">
+                  <SelectValue placeholder="Select venue" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Venues</SelectItem>
+                  {venues.map((venue) => (
+                    <SelectItem key={venue.slug} value={venue.slug}>
+                      {venue.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Date Range Filter */}
+            <div>
+              <Label htmlFor="date-start">Start Date</Label>
+              <Input
+                id="date-start"
+                type="date"
+                value={dateStart}
+                onChange={(e) => {
+                  setDateStart(e.target.value);
+                  setCurrentPage(1);
+                }}
+              />
+            </div>
+            <div>
+              <Label htmlFor="date-end">End Date</Label>
+              <Input
+                id="date-end"
+                type="date"
+                value={dateEnd}
+                onChange={(e) => {
+                  setDateEnd(e.target.value);
+                  setCurrentPage(1);
+                }}
+              />
+            </div>
+
+            {/* Time Range Filter */}
+            <div>
+              <Label htmlFor="time-start">Start Time</Label>
+              <Input
+                id="time-start"
+                type="time"
+                value={timeStart}
+                onChange={(e) => {
+                  setTimeStart(e.target.value);
+                  setCurrentPage(1);
+                }}
+              />
+            </div>
+            <div>
+              <Label htmlFor="time-end">End Time</Label>
+              <Input
+                id="time-end"
+                type="time"
+                value={timeEnd}
+                onChange={(e) => {
+                  setTimeEnd(e.target.value);
+                  setCurrentPage(1);
+                }}
+              />
+            </div>
+          </div>
+          <Button variant="outline" onClick={resetFilters}>
+            Reset Filters
+          </Button>
+        </CollapsibleContent>
+      </Collapsible>
+
       {loading ? (
         <div className="flex justify-center items-center h-[50vh]">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
@@ -122,7 +330,16 @@ const Matches = () => {
                   {match.venue && (
                     <div className="flex items-center gap-2">
                       <MapPin size={16} />
-                      <span>{match.venue.name}, {match.venue.city}</span>
+                      <a
+                        href={`/venue/${match.venue.slug}`}
+                        className="text-primary hover:underline"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          navigate(`/venue/${match.venue.slug}`);
+                        }}
+                      >
+                        {match.venue.name}, {match.venue.city}
+                      </a>
                     </div>
                   )}
                   
@@ -151,6 +368,29 @@ const Matches = () => {
               </div>
             </div>
           ))}
+          
+          {/* Pagination Controls */}
+          <div className="flex justify-between items-center mt-4">
+            <Button
+              variant="outline"
+              disabled={currentPage === 1}
+              onClick={handlePreviousPage}
+            >
+              <ChevronLeft size={16} className="mr-2" />
+              Previous
+            </Button>
+            <span>
+              Page {currentPage} of {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              disabled={currentPage === totalPages || totalPages === 0}
+              onClick={handleNextPage}
+            >
+              Next
+              <ChevronRight size={16} className="ml-2" />
+            </Button>
+          </div>
         </div>
       ) : (
         <div className="flex items-center justify-center h-[70vh] flex-col gap-4">
