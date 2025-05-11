@@ -1,4 +1,3 @@
-// src/App.tsx
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -37,7 +36,6 @@ const App = () => (
           {/* Slug-Based Routes for Matches and Venues */}
           <Route path="/match/:slug" element={<MatchDetail />} />
           <Route path="/join/:slug" element={<JoinMatch />} />
-          <Route path="/join-match/:slug" element={<JoinMatch />} /> {/* Added for backward compatibility */}
           <Route path="/venue/:slug" element={<VenueDetail />} />
 
           {/* Redirect Routes for Backward Compatibility */}
