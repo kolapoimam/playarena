@@ -1,4 +1,4 @@
-
+// src/pages/JoinMatch.tsx
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -58,12 +58,15 @@ const JoinMatch = () => {
   const [email, setEmail] = useState("");
   const [paystackLoaded, setPaystackLoaded] = useState(false);
 
-  // Load Paystack script dynamically as fallback
+  // Load Paystack script dynamically
   useEffect(() => {
     const script = document.createElement("script");
     script.src = "https://js.paystack.co/v2/inline.js";
     script.async = true;
-    script.onload = () => setPaystackLoaded(true);
+    script.onload = () => {
+      console.log("Paystack script loaded");
+      setPaystackLoaded(true);
+    };
     script.onerror = () => {
       toast({
         title: "Error",
@@ -119,6 +122,8 @@ const JoinMatch = () => {
 
         if (error) throw error;
 
+        console.log("Fetched match:", data);
+
         // Extract and validate required fields
         const requiredFields = Array.isArray(data?.required_fields)
           ? data.required_fields
@@ -150,20 +155,27 @@ const JoinMatch = () => {
 
   // Verify payment when reference is present
   useEffect(() => {
-    if (!reference || !match) return;
+    if (!reference || !match) {
+      console.log("Skipping payment verification: no reference or match", { reference, match });
+      return;
+    }
 
     const verifyPayment = async () => {
       setVerifyingPayment(true);
       try {
+        console.log("Verifying payment with reference:", reference);
         const response = await supabase.functions.invoke("verify-paystack-transaction", {
           body: { reference },
         });
 
+        console.log("Verify payment response:", response);
+
         if (response.error) {
-          throw new Error(response.error.message);
+          throw new Error(response.error.message || "Unknown error in verify-paystack-transaction");
         }
 
         const { verified, match_id, slug: matchSlug } = response.data;
+        console.log("Verification data:", { verified, match_id, matchSlug });
 
         if (verified && match_id === match.id && matchSlug === slug) {
           setPaymentStatus("success");
@@ -189,6 +201,7 @@ const JoinMatch = () => {
         });
       } finally {
         setVerifyingPayment(false);
+        setJoining(false); // Reset joining to prevent "Processing..." hang
       }
     };
 
@@ -196,7 +209,10 @@ const JoinMatch = () => {
   }, [reference, match, slug, toast]);
 
   const handlePaymentInitiation = async () => {
-    if (!match || !match.is_paid || !match.price) return;
+    if (!match || !match.is_paid || !match.price) {
+      console.log("Cannot initiate payment: invalid match data", { match });
+      return;
+    }
 
     // Validate email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -232,23 +248,37 @@ const JoinMatch = () => {
         },
       });
 
+      console.log("Initialize payment response:", response);
+
       if (response.error) {
-        throw new Error(response.error.message);
+        throw new Error(response.error.message || "Failed to initialize payment");
       }
 
-      const { access_code } = response.data;
+      const { access_code, reference: txReference } = response.data;
+      console.log("Paystack transaction data:", { access_code, txReference });
 
       // Initialize Paystack popup
       const paystack = new window.PaystackPop();
       paystack.resumeTransaction(access_code, {
-        onSuccess: () => {
-          // Redirect handled by callback_url
-          console.log("Payment successful");
+        onSuccess: (transaction) => {
+          console.log("Paystack onSuccess:", transaction);
+          // Note: Redirect is handled by callback_url, but we can set joining to false
+          setJoining(false);
         },
         onCancel: () => {
+          console.log("Paystack payment cancelled");
           toast({
             title: "Payment Cancelled",
             description: "You've cancelled the payment process.",
+            variant: "destructive",
+          });
+          setJoining(false);
+        },
+        onError: (error) => {
+          console.error("Paystack error:", error);
+          toast({
+            title: "Payment Error",
+            description: "An error occurred during payment. Please try again.",
             variant: "destructive",
           });
           setJoining(false);
@@ -385,6 +415,9 @@ const JoinMatch = () => {
   // Check match time status
   const matchDate = new Date(`${match.match_date}T00:00:00`);
   const isPastMatch = isPast(matchDate) && !isToday(matchDate);
+
+  // Debug payment status and is_paid
+  console.log("Render - Match is_paid:", match.is_paid, "Payment status:", paymentStatus);
 
   return (
     <div className="min-h-screen pb-20">
