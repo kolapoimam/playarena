@@ -1,4 +1,4 @@
-
+// src/pages/JoinMatch.tsx
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -43,6 +43,9 @@ type Match = {
 
 type PaymentStatus = "pending" | "success" | "failed";
 
+// Use environment variable for Paystack public key
+const PAYSTACK_PUBLIC_KEY = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY;
+
 const JoinMatch = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
@@ -82,11 +85,19 @@ const JoinMatch = () => {
 
   // Define the form schema based on required fields
   const createFormSchema = (requiredFields: string[] = ["name", "phone"]) => {
-    const schemaFields: Record<string, z.ZodString> = {};
+    const schemaFields: Record<string, z.ZodType> = {};
     requiredFields.forEach((field) => {
-      schemaFields[field] = z
-        .string()
-        .min(2, { message: `${field.charAt(0).toUpperCase() + field.slice(1)} must be at least 2 characters` });
+      if (field === "phone") {
+        schemaFields[field] = z
+          .string()
+          .regex(/^\d{11}$/, {
+            message: "Phone number must be exactly 11 digits (e.g., 08012345678)",
+          });
+      } else {
+        schemaFields[field] = z
+          .string()
+          .min(2, { message: `${field.charAt(0).toUpperCase() + field.slice(1)} must be at least 2 characters` });
+      }
     });
     return z.object(schemaFields);
   };
@@ -174,11 +185,15 @@ const JoinMatch = () => {
           throw new Error(response.error.message || "Unknown error in verify-paystack-transaction");
         }
 
-        const { verified, match_id, slug: matchSlug } = response.data;
-        console.log("Verification data:", { verified, match_id, matchSlug });
+        const { verified, match_id, slug: matchSlug, phone: verifiedPhone } = response.data;
+        console.log("Verification data:", { verified, match_id, matchSlug, verifiedPhone });
 
         if (verified && match_id === match.id && matchSlug === slug) {
           setPaymentStatus("success");
+          if (verifiedPhone) {
+            setPhone(verifiedPhone);
+            form.setValue("phone", verifiedPhone); // Prefill phone in registration form
+          }
           toast({
             title: "Payment Successful",
             description: "Your payment was processed successfully. Please complete your registration.",
@@ -206,7 +221,7 @@ const JoinMatch = () => {
     };
 
     verifyPayment();
-  }, [reference, match, slug, toast]);
+  }, [reference, match, slug, toast, form]);
 
   const handlePaymentInitiation = async () => {
     if (!match || !match.is_paid || !match.price) {
@@ -214,12 +229,12 @@ const JoinMatch = () => {
       return;
     }
 
-    // Validate phone number
-    const phoneRegex = /^\+?[1-9]\d{1,14}$/;
+    // Validate phone number (exactly 11 digits)
+    const phoneRegex = /^\d{11}$/;
     if (!phoneRegex.test(phone)) {
       toast({
         title: "Invalid Phone Number",
-        description: "Please enter a valid phone number (e.g., +2341234567890).",
+        description: "Please enter a valid 11-digit Nigerian phone number (e.g., 08012345678).",
         variant: "destructive",
       });
       return;
@@ -234,11 +249,21 @@ const JoinMatch = () => {
       return;
     }
 
+    if (!PAYSTACK_PUBLIC_KEY) {
+      toast({
+        title: "Configuration Error",
+        description: "Paystack configuration is missing. Please contact support.",
+        variant: "destructive",
+      });
+      console.error("Paystack public key is missing");
+      return;
+    }
+
     try {
       setJoining(true);
 
-      // Generate placeholder email
-      const placeholderEmail = `${phone.replace(/\+/g, "")}@example.com`;
+      // Generate placeholder email with +234 prefix
+      const placeholderEmail = `+234${phone}@example.com`;
 
       // Initialize Paystack transaction
       const response = await supabase.functions.invoke("initialize-paystack-transaction", {
@@ -264,13 +289,12 @@ const JoinMatch = () => {
       // Initialize Paystack popup
       const paystack = new window.PaystackPop();
       paystack.newTransaction({
-        key: "pk_test_your_public_key", // Replace with your Paystack public key
+        key: PAYSTACK_PUBLIC_KEY,
         email: placeholderEmail,
         amount: match.price * 100, // Convert to kobo
         reference: txReference,
         callback: (transaction) => {
           console.log("Paystack callback:", transaction);
-          // Redirect handled by callback_url, but reset joining
           setJoining(false);
         },
         onClose: () => {
@@ -370,7 +394,6 @@ const JoinMatch = () => {
         description: "Failed to join the match. Please try again.",
         variant: "destructive",
       });
-    } finally {
       setJoining(false);
     }
   };
@@ -473,7 +496,7 @@ const JoinMatch = () => {
                     <Input
                       id="phone"
                       type="tel"
-                      placeholder="e.g., +2341234567890"
+                      placeholder="e.g., 08012345678"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       required
