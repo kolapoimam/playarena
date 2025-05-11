@@ -9,6 +9,9 @@ import { useToast } from "@/hooks/use-toast";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { format, isToday, isPast, differenceInHours } from "date-fns";
+import { utcToZonedTime } from "date-fns-tz";
 
 // Match type definition based on the existing Supabase schema
 type Match = {
@@ -210,9 +213,37 @@ const Matches = () => {
     setCurrentPage(1);
   };
 
+  const getMatchStatus = (matchDate: string, matchTime: string) => {
+    const timeZone = "Africa/Lagos";
+    const zonedMatchDate = utcToZonedTime(new Date(`${matchDate}T${matchTime}:00Z`), timeZone);
+    const now = utcToZonedTime(new Date(), timeZone);
+    
+    let statusLabel = "Upcoming";
+    let statusClass = "bg-blue-100 text-blue-800";
+    
+    if (isPast(zonedMatchDate) && !isToday(zonedMatchDate)) {
+      statusLabel = "Passed";
+      statusClass = "bg-gray-200 text-gray-600";
+    } else if (isToday(zonedMatchDate)) {
+      const hoursDiff = differenceInHours(zonedMatchDate, now);
+      if (hoursDiff >= 0 && hoursDiff <= 2) {
+        statusLabel = "Live";
+        statusClass = "bg-red-100 text-red-700 animate-pulse";
+      } else if (hoursDiff > 2) {
+        statusLabel = "Today";
+        statusClass = "bg-green-100 text-green-700";
+      } else {
+        statusLabel = "Passed";
+        statusClass = "bg-gray-200 text-gray-600";
+      }
+    }
+    
+    return { statusLabel, statusClass };
+  };
+
   return (
     <div className="min-h-screen pb-20">
-<header className="p-4 flex justify-between items-center">
+      <header className="p-4 flex justify-between items-center">
         <h1 className="text-2xl font-bold">My Matches</h1>
         <Button
           className="bg-playarena-500 hover:bg-playarena-600 text-white"
@@ -338,66 +369,73 @@ const Matches = () => {
         </div>
       ) : matches.length > 0 ? (
         <div className="px-4 space-y-4">
-          {matches.map((match) => (
-            <div 
-              key={match.id} 
-              className="border rounded-lg overflow-hidden shadow-sm bg-card"
-            >
-              <div className="p-4">
-                <h3 className="font-bold text-lg">{match.title}</h3>
-                
-                <div className="mt-2 space-y-2 text-sm">
-                  <div className="flex items-center gap-2">
-                    <Calendar size={16} />
-                    <span>{formatDate(match.match_date)}</span>
+          {matches.map((match) => {
+            const { statusLabel, statusClass } = getMatchStatus(match.match_date, match.match_time);
+            
+            return (
+              <div 
+                key={match.id} 
+                className="border rounded-lg overflow-hidden shadow-sm bg-card"
+              >
+                <div className="p-4">
+                  <div className="flex justify-between items-start">
+                    <h3 className="font-bold text-lg">{match.title}</h3>
+                    <Badge className={statusClass}>{statusLabel}</Badge>
                   </div>
                   
-                  <div className="flex items-center gap-2">
-                    <Clock size={16} />
-                    <span>{formatTime(match.match_time)}</span>
-                  </div>
-                  
-                  {match.venue && (
+                  <div className="mt-2 space-y-2 text-sm">
                     <div className="flex items-center gap-2">
-                      <MapPin size={16} />
-                      <a
-                        href={`/venue/${match.venue.slug}`}
-                        className="text-primary hover:underline"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          navigate(`/venue/${match.venue.slug}`);
-                        }}
-                      >
-                        {match.venue.name}, {match.venue.city}
-                      </a>
+                      <Calendar size={16} />
+                      <span>{formatDate(match.match_date)}</span>
                     </div>
-                  )}
-                  
-                  <div className="flex items-center gap-2">
-                    <Users size={16} />
-                    <span>
-                      {match.players?.length || 0}/{match.total_slots} spots filled
-                    </span>
+                    
+                    <div className="flex items-center gap-2">
+                      <Clock size={16} />
+                      <span>{formatTime(match.match_time)}</span>
+                    </div>
+                    
+                    {match.venue && (
+                      <div className="flex items-center gap-2">
+                        <MapPin size={16} />
+                        <a
+                          href={`/venue/${match.venue.slug}`}
+                          className="text-primary hover:underline"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            navigate(`/venue/${match.venue.slug}`);
+                          }}
+                        >
+                          {match.venue.name}, {match.venue.city}
+                        </a>
+                      </div>
+                    )}
+                    
+                    <div className="flex items-center gap-2">
+                      <Users size={16} />
+                      <span>
+                        {match.players?.length || 0}/{match.total_slots} spots filled
+                      </span>
+                    </div>
                   </div>
-                </div>
-                
-                <div className="mt-4 flex justify-between items-center">
-                  <div>
-                    <span className="text-xs text-muted-foreground">Organized by:</span>
-                    <p className="font-medium">{match.organizer_name}</p>
-                  </div>
                   
-                  <Button 
-                    variant="outline"
-                    size="sm"
-                    onClick={() => navigate(`/match/${match.slug}`)}
-                  >
-                    View Details
-                  </Button>
+                  <div className="mt-4 flex justify-between items-center">
+                    <div>
+                      <span className="text-xs text-muted-foreground">Organized by:</span>
+                      <p className="font-medium">{match.organizer_name}</p>
+                    </div>
+                    
+                    <Button 
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigate(`/match/${match.slug}`)}
+                    >
+                      View Details
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
           
           {/* Pagination Controls */}
           <div className="flex justify-between items-center mt-4">

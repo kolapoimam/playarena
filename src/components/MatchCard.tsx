@@ -1,3 +1,4 @@
+
 import { useNavigate } from "react-router-dom";
 import { format, isToday, isPast, differenceInHours } from "date-fns";
 import { utcToZonedTime } from "date-fns-tz";
@@ -35,7 +36,7 @@ export default function MatchCard({
     statusClass = "bg-gray-200 text-gray-600";
   } else if (isToday(zonedMatchDate)) {
     const hoursDiff = differenceInHours(zonedMatchDate, now);
-    if (hoursDiff >= 0 && hoursDiff <= 4) {
+    if (hoursDiff >= 0 && hoursDiff <= 2) {
       statusLabel = "Live";
       statusClass = "bg-red-100 text-red-700 animate-pulse";
     } else {

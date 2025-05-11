@@ -1,9 +1,9 @@
+
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/Navbar";
-import ThemeToggle from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { 
   Calendar, 
@@ -22,6 +22,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { format, isToday, isPast, differenceInHours, addDays } from "date-fns";
+import { utcToZonedTime } from "date-fns-tz";
+import { Badge } from "@/components/ui/badge";
 
 // Match type definition
 type Match = {
@@ -69,7 +72,7 @@ const MatchDetail = () => {
         .select(`
           *,
           venue:venues(id, slug, name, city, map_link),
-          players(*)
+          players:players(*)
         `)
         .eq("slug", matchSlug)
         .single();
@@ -103,11 +106,24 @@ const MatchDetail = () => {
     return timeString.slice(0, 5); // Format from "14:30:00" to "14:30"
   };
 
-  const isMatchTimePassed = () => {
-    if (!match) return false;
-    const now = new Date();
-    const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
-    return now >= matchDateTime;
+  const getMatchStatus = () => {
+    if (!match) return { isStarted: false, isPassed: false, isFull: false };
+    
+    const timeZone = "Africa/Lagos";
+    const matchDateTime = utcToZonedTime(new Date(`${match.match_date}T${match.match_time}`), timeZone);
+    const now = utcToZonedTime(new Date(), timeZone);
+    const nextDay = addDays(matchDateTime, 1);
+    
+    // Check if match is full
+    const isFull = match.players?.length >= match.total_slots;
+    
+    // Check if match has started
+    const isStarted = now >= matchDateTime;
+    
+    // Check if match has passed (day after)
+    const isPassed = now >= nextDay;
+    
+    return { isStarted, isPassed, isFull };
   };
 
   const copyMatchLink = async () => {
@@ -209,8 +225,7 @@ const MatchDetail = () => {
     );
   }
 
-  const isFull = match.players?.length >= match.total_slots;
-  const matchHasStarted = isMatchTimePassed();
+  const { isStarted, isPassed, isFull } = getMatchStatus();
 
   return (
     <div className="min-h-screen pb-20">
@@ -227,17 +242,20 @@ const MatchDetail = () => {
         <h1 className="text-2xl font-bold mb-2">{match.title}</h1>
         <p className="text-muted-foreground mb-4">Organized by {match.organizer_name}</p>
         
-        {isFull && (
-          <div className="bg-red-100 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
-            This match is completely filled up!
+        {/* Show only one status message based on priority */}
+        {isPassed ? (
+          <div className="bg-gray-100 border border-gray-200 text-gray-700 px-4 py-3 rounded mb-4">
+            This match has passed
           </div>
-        )}
-        
-        {matchHasStarted && (
+        ) : isStarted ? (
           <div className="bg-yellow-100 border border-yellow-200 text-yellow-700 px-4 py-3 rounded mb-4">
             This match has already started!
           </div>
-        )}
+        ) : isFull ? (
+          <div className="bg-red-100 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
+            This match is completely filled up!
+          </div>
+        ) : null}
         
         <div className="space-y-4">
           <div className="border rounded-lg p-4 bg-card">
@@ -323,7 +341,7 @@ const MatchDetail = () => {
               <p className="text-muted-foreground text-sm">No players have joined yet</p>
             )}
             
-            {!isFull && !matchHasStarted && (
+            {!isPassed && !isStarted && !isFull && (
               <Button 
                 className="w-full mt-4"
                 onClick={() => navigate(`/join/${match.slug}`)}
@@ -332,13 +350,23 @@ const MatchDetail = () => {
               </Button>
             )}
             
-            {!isFull && matchHasStarted && (
+            {(isPassed || isStarted) && (
               <Button 
                 className="w-full mt-4"
                 variant="outline"
                 disabled
               >
-                Match Has Started
+                {isPassed ? "Match Has Passed" : "Match Has Started"}
+              </Button>
+            )}
+            
+            {!isPassed && !isStarted && isFull && (
+              <Button 
+                className="w-full mt-4"
+                variant="outline"
+                disabled
+              >
+                Match Is Full
               </Button>
             )}
           </div>

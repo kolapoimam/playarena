@@ -1,11 +1,14 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
 import { Calendar, MapPin, Users, Search as SearchIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import ThemeToggle from "@/components/ThemeToggle";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { format, isToday, isPast, differenceInHours } from "date-fns";
+import { utcToZonedTime } from "date-fns-tz";
 
 type Match = {
   id: string;
@@ -60,10 +63,9 @@ const SearchPage = () => {
         .select(`
           id, slug, title, match_date, match_time, is_paid, price, total_slots,
           venue:venues(slug, name, city),
-          players:match_players(player_name)
+          players:players(player_name)
         `)
         .or(`title.ilike.%${query}%,venues.name.ilike.%${query}%,venues.city.ilike.%${query}%`)
-        .gte('match_date', new Date().toISOString().split('T')[0])
         .order('match_date', { ascending: true });
 
       if (error) throw error;
@@ -91,6 +93,34 @@ const SearchPage = () => {
     const period = hour >= 12 ? 'PM' : 'AM';
     const displayHour = hour % 12 || 12;
     return `${displayHour}:${minutes} ${period}`;
+  };
+
+  const getMatchStatus = (matchDate: string, matchTime: string) => {
+    const timeZone = "Africa/Lagos";
+    const zonedMatchDate = utcToZonedTime(new Date(`${matchDate}T${matchTime}:00Z`), timeZone);
+    const now = utcToZonedTime(new Date(), timeZone);
+    
+    let statusLabel = "Upcoming";
+    let statusClass = "bg-blue-100 text-blue-800";
+    
+    if (isPast(zonedMatchDate) && !isToday(zonedMatchDate)) {
+      statusLabel = "Passed";
+      statusClass = "bg-gray-200 text-gray-600";
+    } else if (isToday(zonedMatchDate)) {
+      const hoursDiff = differenceInHours(zonedMatchDate, now);
+      if (hoursDiff >= 0 && hoursDiff <= 2) {
+        statusLabel = "Live";
+        statusClass = "bg-red-100 text-red-700 animate-pulse";
+      } else if (hoursDiff > 2) {
+        statusLabel = "Today";
+        statusClass = "bg-green-100 text-green-700";
+      } else {
+        statusLabel = "Passed";
+        statusClass = "bg-gray-200 text-gray-600";
+      }
+    }
+    
+    return { statusLabel, statusClass };
   };
 
   return (
@@ -125,40 +155,47 @@ const SearchPage = () => {
         ) : hasSearched ? (
           matches.length > 0 ? (
             <div className="space-y-4">
-              {matches.map((match) => (
-                <div 
-                  key={match.id}
-                  className="border rounded-lg p-4 bg-card hover:border-primary transition-colors cursor-pointer"
-                  onClick={() => navigate(`/match/${match.slug}`)}
-                >
-                  <h3 className="font-semibold text-lg">{match.title}</h3>
-                  
-                  <div className="mt-2 space-y-2">
-                    <div className="flex items-center gap-2 text-sm">
-                      <Calendar size={16} />
-                      <span>{formatDate(match.match_date)} at {formatTime(match.match_time)}</span>
+              {matches.map((match) => {
+                const { statusLabel, statusClass } = getMatchStatus(match.match_date, match.match_time);
+                
+                return (
+                  <div 
+                    key={match.id}
+                    className="border rounded-lg p-4 bg-card hover:border-primary transition-colors cursor-pointer"
+                    onClick={() => navigate(`/match/${match.slug}`)}
+                  >
+                    <div className="flex justify-between items-start">
+                      <h3 className="font-semibold text-lg">{match.title}</h3>
+                      <Badge className={`${statusClass}`}>{statusLabel}</Badge>
                     </div>
                     
-                    {match.venue && (
+                    <div className="mt-2 space-y-2">
                       <div className="flex items-center gap-2 text-sm">
-                        <MapPin size={16} />
-                        <span>{match.venue.name}, {match.venue.city}</span>
-                      </div>
-                    )}
-                    
-                    <div className="flex items-center justify-between mt-2">
-                      <div className="flex items-center gap-2 text-sm">
-                        <Users size={16} />
-                        <span>{match.players?.length || 0}/{match.total_slots} players</span>
+                        <Calendar size={16} />
+                        <span>{formatDate(match.match_date)} at {formatTime(match.match_time)}</span>
                       </div>
                       
-                      <span className="text-sm font-medium">
-                        {match.is_paid ? `₦${match.price?.toFixed(2)}` : 'Free'}
-                      </span>
+                      {match.venue && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <MapPin size={16} />
+                          <span>{match.venue.name}, {match.venue.city}</span>
+                        </div>
+                      )}
+                      
+                      <div className="flex items-center justify-between mt-2">
+                        <div className="flex items-center gap-2 text-sm">
+                          <Users size={16} />
+                          <span>{match.players?.length || 0}/{match.total_slots} players</span>
+                        </div>
+                        
+                        <span className="text-sm font-medium">
+                          {match.is_paid ? `₦${match.price?.toFixed(2)}` : 'Free'}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="text-center py-8">

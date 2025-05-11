@@ -21,6 +21,8 @@ export type Database = {
           organizer_phone: string | null
           player_number_required: boolean | null
           price: number | null
+          slug: string | null
+          super_code: string | null
           title: string
           total_slots: number
           venue_id: string
@@ -36,6 +38,8 @@ export type Database = {
           organizer_phone?: string | null
           player_number_required?: boolean | null
           price?: number | null
+          slug?: string | null
+          super_code?: string | null
           title: string
           total_slots: number
           venue_id: string
@@ -51,6 +55,8 @@ export type Database = {
           organizer_phone?: string | null
           player_number_required?: boolean | null
           price?: number | null
+          slug?: string | null
+          super_code?: string | null
           title?: string
           total_slots?: number
           venue_id?: string
@@ -67,25 +73,31 @@ export type Database = {
       }
       players: {
         Row: {
+          confirmation_code: string | null
           created_at: string
           id: string
           match_id: string
           payment_status: string | null
           player_name: string
+          status: string | null
         }
         Insert: {
+          confirmation_code?: string | null
           created_at?: string
           id?: string
           match_id: string
           payment_status?: string | null
           player_name: string
+          status?: string | null
         }
         Update: {
+          confirmation_code?: string | null
           created_at?: string
           id?: string
           match_id?: string
           payment_status?: string | null
           player_name?: string
+          status?: string | null
         }
         Relationships: [
           {
@@ -136,6 +148,7 @@ export type Database = {
           image_url: string | null
           map_link: string | null
           name: string
+          slug: string | null
           state: string
         }
         Insert: {
@@ -147,6 +160,7 @@ export type Database = {
           image_url?: string | null
           map_link?: string | null
           name: string
+          slug?: string | null
           state: string
         }
         Update: {
@@ -158,6 +172,7 @@ export type Database = {
           image_url?: string | null
           map_link?: string | null
           name?: string
+          slug?: string | null
           state?: string
         }
         Relationships: []
@@ -167,7 +182,36 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      generate_slug: {
+        Args: { input_text: string }
+        Returns: string
+      }
+      search_matches: {
+        Args: { search_term: string }
+        Returns: {
+          id: string
+          title: string
+          match_date: string
+          match_time: string
+          is_paid: boolean
+          price: number
+          total_slots: number
+          venue: Json
+          players: Json
+        }[]
+      }
+      unaccent: {
+        Args: { "": string }
+        Returns: string
+      }
+      unaccent_init: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      update_existing_slugs: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
