@@ -1,7 +1,7 @@
 // supabase/functions/initialize-paystack-transaction/index.ts
 import { serve } from "https://deno.land/std@0.131.0/http/server.ts";
 
-const PAYSTACK_SECRET_KEY = Deno.env.get("PAYSTACK_SECRET_KEY") || "sk_test_your_secret_key";
+const PAYSTACK_SECRET_KEY = Deno.env.get("PAYSTACK_SECRET_KEY") || "sk_test_8ece8bb7320d1d2b738a74b74457f8aa4e937172";
 const PAYSTACK_API_URL = "https://api.paystack.co/transaction/initialize";
 
 serve(async (req) => {
