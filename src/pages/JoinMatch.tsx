@@ -55,7 +55,7 @@ const JoinMatch = () => {
   const [joining, setJoining] = useState(false);
   const [verifyingPayment, setVerifyingPayment] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>("pending");
-  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [paystackLoaded, setPaystackLoaded] = useState(false);
 
   // Load Paystack script dynamically
@@ -201,7 +201,7 @@ const JoinMatch = () => {
         });
       } finally {
         setVerifyingPayment(false);
-        setJoining(false); // Reset joining to prevent "Processing..." hang
+        setJoining(false);
       }
     };
 
@@ -214,12 +214,12 @@ const JoinMatch = () => {
       return;
     }
 
-    // Validate email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    // Validate phone number
+    const phoneRegex = /^\+?[1-9]\d{1,14}$/;
+    if (!phoneRegex.test(phone)) {
       toast({
-        title: "Invalid Email",
-        description: "Please enter a valid email address.",
+        title: "Invalid Phone Number",
+        description: "Please enter a valid phone number (e.g., +2341234567890).",
         variant: "destructive",
       });
       return;
@@ -237,10 +237,14 @@ const JoinMatch = () => {
     try {
       setJoining(true);
 
+      // Generate placeholder email
+      const placeholderEmail = `${phone.replace(/\+/g, "")}@example.com`;
+
       // Initialize Paystack transaction
       const response = await supabase.functions.invoke("initialize-paystack-transaction", {
         body: {
-          email,
+          phone,
+          email: placeholderEmail,
           amount: match.price,
           match_id: match.id,
           slug: match.slug,
@@ -254,31 +258,26 @@ const JoinMatch = () => {
         throw new Error(response.error.message || "Failed to initialize payment");
       }
 
-      const { access_code, reference: txReference } = response.data;
-      console.log("Paystack transaction data:", { access_code, txReference });
+      const { reference: txReference } = response.data;
+      console.log("Paystack transaction data:", { txReference });
 
       // Initialize Paystack popup
       const paystack = new window.PaystackPop();
-      paystack.resumeTransaction(access_code, {
-        onSuccess: (transaction) => {
-          console.log("Paystack onSuccess:", transaction);
-          // Note: Redirect is handled by callback_url, but we can set joining to false
+      paystack.newTransaction({
+        key: "pk_test_your_public_key", // Replace with your Paystack public key
+        email: placeholderEmail,
+        amount: match.price * 100, // Convert to kobo
+        reference: txReference,
+        callback: (transaction) => {
+          console.log("Paystack callback:", transaction);
+          // Redirect handled by callback_url, but reset joining
           setJoining(false);
         },
-        onCancel: () => {
-          console.log("Paystack payment cancelled");
+        onClose: () => {
+          console.log("Paystack payment closed");
           toast({
             title: "Payment Cancelled",
             description: "You've cancelled the payment process.",
-            variant: "destructive",
-          });
-          setJoining(false);
-        },
-        onError: (error) => {
-          console.error("Paystack error:", error);
-          toast({
-            title: "Payment Error",
-            description: "An error occurred during payment. Please try again.",
             variant: "destructive",
           });
           setJoining(false);
@@ -319,9 +318,9 @@ const JoinMatch = () => {
         }
       });
 
-      // Add email to details if payment was made
+      // Add phone to details if payment was made
       if (match.is_paid && paymentStatus === "success") {
-        playerDetails.email = email;
+        playerDetails.phone = phone;
         playerDetails.payment_status = "paid";
       }
 
@@ -344,7 +343,7 @@ const JoinMatch = () => {
       form.reset();
       if (match.is_paid) {
         setPaymentStatus("pending");
-        setEmail("");
+        setPhone("");
       }
 
       // Refresh match data to update players count
@@ -468,19 +467,19 @@ const JoinMatch = () => {
                 </p>
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <label htmlFor="email" className="block text-sm font-medium">
-                      Email Address
+                    <label htmlFor="phone" className="block text-sm font-medium">
+                      Phone Number
                     </label>
                     <Input
-                      id="email"
-                      type="email"
-                      placeholder="Your email address"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      id="phone"
+                      type="tel"
+                      placeholder="e.g., +2341234567890"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
                       required
                     />
                     <p className="text-xs text-muted-foreground">
-                      Your payment receipt will be sent to this email.
+                      Your payment receipt will be sent to this phone number.
                     </p>
                   </div>
 
@@ -488,7 +487,7 @@ const JoinMatch = () => {
                     type="button"
                     className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
                     onClick={handlePaymentInitiation}
-                    disabled={joining || !email || !paystackLoaded}
+                    disabled={joining || !phone || !paystackLoaded}
                   >
                     {joining ? (
                       <>
