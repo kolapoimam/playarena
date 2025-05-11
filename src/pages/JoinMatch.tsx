@@ -18,7 +18,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { PaystackPop } from "@paystack/inline-js";
 import { format, isToday, isPast } from "date-fns";
 
 type Match = {
@@ -57,6 +56,26 @@ const JoinMatch = () => {
   const [verifyingPayment, setVerifyingPayment] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>("pending");
   const [email, setEmail] = useState("");
+  const [paystackLoaded, setPaystackLoaded] = useState(false);
+
+  // Load Paystack script dynamically as fallback
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.src = "https://js.paystack.co/v2/inline.js";
+    script.async = true;
+    script.onload = () => setPaystackLoaded(true);
+    script.onerror = () => {
+      toast({
+        title: "Error",
+        description: "Failed to load Paystack script. Please try again.",
+        variant: "destructive",
+      });
+    };
+    document.body.appendChild(script);
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, [toast]);
 
   // Define the form schema based on required fields
   const createFormSchema = (requiredFields: string[] = ["name", "phone"]) => {
@@ -190,6 +209,15 @@ const JoinMatch = () => {
       return;
     }
 
+    if (!paystackLoaded || !window.PaystackPop) {
+      toast({
+        title: "Error",
+        description: "Paystack is not available. Please try again later.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       setJoining(true);
 
@@ -211,7 +239,7 @@ const JoinMatch = () => {
       const { access_code } = response.data;
 
       // Initialize Paystack popup
-      const paystack = new PaystackPop();
+      const paystack = new window.PaystackPop();
       paystack.resumeTransaction(access_code, {
         onSuccess: () => {
           // Redirect handled by callback_url
@@ -427,7 +455,7 @@ const JoinMatch = () => {
                     type="button"
                     className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
                     onClick={handlePaymentInitiation}
-                    disabled={joining || !email}
+                    disabled={joining || !email || !paystackLoaded}
                   >
                     {joining ? (
                       <>
