@@ -27,7 +27,7 @@ serve(async (req) => {
     });
 
     const data = await response.json();
-    console.log("Paystack verify response:", data);
+    console.log("Paystack verify response:", JSON.stringify(data, null, 2));
 
     if (!response.ok || data.status === false) {
       console.log("Paystack verify failed:", data.message);
@@ -35,6 +35,7 @@ serve(async (req) => {
     }
 
     const { status, amount, metadata } = data.data;
+    console.log("Paystack transaction data:", { status, amount, metadata });
 
     if (status !== "success") {
       console.log("Transaction not successful:", status);
