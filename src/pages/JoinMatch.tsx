@@ -1,4 +1,4 @@
-// src/pages/JoinMatch.tsx
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -174,7 +174,7 @@ const JoinMatch = () => {
     const verifyPayment = async () => {
       setVerifyingPayment(true);
       try {
-        console.log("Verifying payment with reference:", reference);
+        console.log("Starting payment verification", { reference, matchId: match.id, slug });
         const response = await supabase.functions.invoke("verify-paystack-transaction", {
           body: { reference },
         });
@@ -202,21 +202,23 @@ const JoinMatch = () => {
           setPaymentStatus("failed");
           toast({
             title: "Payment Verification Failed",
-            description: "We could not verify your payment. Please try again.",
+            description: "We could not verify your payment. Please try again or contact support.",
             variant: "destructive",
           });
+          console.log("Verification failed: data mismatch", { match_id, matchId: match.id, matchSlug, slug });
         }
       } catch (error) {
         console.error("Error verifying payment:", error);
         setPaymentStatus("failed");
         toast({
           title: "Payment Verification Error",
-          description: "An error occurred while verifying your payment.",
+          description: "An error occurred while verifying your payment. Please try again.",
           variant: "destructive",
         });
       } finally {
         setVerifyingPayment(false);
         setJoining(false);
+        console.log("Payment verification complete", { paymentStatus });
       }
     };
 
@@ -295,6 +297,7 @@ const JoinMatch = () => {
         reference: txReference,
         callback: (transaction) => {
           console.log("Paystack callback:", transaction);
+          // Rely on callback_url for redirect, just log and reset joining
           setJoining(false);
         },
         onClose: () => {
