@@ -1,4 +1,4 @@
-// supabase/functions/verify-paystack-transaction/index.ts
+
 import { serve } from "https://deno.land/std@0.131.0/http/server.ts";
 
 const PAYSTACK_SECRET_KEY = Deno.env.get("PAYSTACK_SECRET_KEY") || "sk_test_your_secret_key";
