@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -43,7 +42,6 @@ type Match = {
 
 type PaymentStatus = "pending" | "success" | "failed";
 
-// Use environment variable for Paystack public key
 const PAYSTACK_PUBLIC_KEY = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY;
 
 const JoinMatch = () => {
@@ -61,7 +59,21 @@ const JoinMatch = () => {
   const [phone, setPhone] = useState("");
   const [paystackLoaded, setPaystackLoaded] = useState(false);
 
-  // Load Paystack script dynamically
+  // Log search params
+  useEffect(() => {
+    console.log("Search params:", Object.fromEntries(searchParams), "Reference:", reference);
+  }, [searchParams, reference]);
+
+  // Restore reference from localStorage if missing
+  useEffect(() => {
+    const storedReference = localStorage.getItem("paymentReference");
+    if (storedReference && !reference && slug) {
+      console.log("Restoring reference from localStorage:", storedReference);
+      navigate(`/join-match/${slug}?reference=${storedReference}`, { replace: true });
+    }
+  }, [reference, slug, navigate]);
+
+  // Load Paystack script
   useEffect(() => {
     const script = document.createElement("script");
     script.src = "https://js.paystack.co/v2/inline.js";
@@ -83,7 +95,7 @@ const JoinMatch = () => {
     };
   }, [toast]);
 
-  // Define the form schema based on required fields
+  // Form schema
   const createFormSchema = (requiredFields: string[] = ["name", "phone"]) => {
     const schemaFields: Record<string, z.ZodType> = {};
     requiredFields.forEach((field) => {
@@ -102,10 +114,7 @@ const JoinMatch = () => {
     return z.object(schemaFields);
   };
 
-  // Default form schema
   const [formSchema, setFormSchema] = useState(createFormSchema());
-
-  // Initialize form with dynamic schema
   const form = useForm<any>({
     resolver: zodResolver(formSchema),
     defaultValues: {},
@@ -135,13 +144,11 @@ const JoinMatch = () => {
 
         console.log("Fetched match:", data);
 
-        // Extract and validate required fields
         const requiredFields = Array.isArray(data?.required_fields)
           ? data.required_fields
           : ["name", "phone"];
         setFormSchema(createFormSchema(requiredFields));
 
-        // Reset form with empty values for each required field
         const defaultValues: Record<string, string> = {};
         requiredFields.forEach((field) => {
           defaultValues[field] = "";
@@ -164,48 +171,55 @@ const JoinMatch = () => {
     fetchMatch();
   }, [slug, toast, form]);
 
-  // Verify payment when reference is present
+  // Verify payment
   useEffect(() => {
-    if (!reference || !match) {
-      console.log("Skipping payment verification: no reference or match", { reference, match });
+    if (!reference || !match || loading) {
+      console.log("Skipping payment verification: incomplete data", { reference, match, loading });
       return;
     }
 
     const verifyPayment = async () => {
       setVerifyingPayment(true);
       try {
-        console.log("Starting payment verification", { reference, matchId: match.id, slug });
+        console.log("Calling verify-paystack-transaction with reference:", reference);
         const response = await supabase.functions.invoke("verify-paystack-transaction", {
           body: { reference },
         });
 
-        console.log("Verify payment response:", response);
+        console.log("Edge Function response:", response);
 
         if (response.error) {
           throw new Error(response.error.message || "Unknown error in verify-paystack-transaction");
         }
 
         const { verified, match_id, slug: matchSlug, phone: verifiedPhone } = response.data;
-        console.log("Verification data:", { verified, match_id, matchSlug, verifiedPhone });
+        console.log("Parsed response data:", { verified, match_id, matchSlug, verifiedPhone });
 
         if (verified && match_id === match.id && matchSlug === slug) {
+          console.log("Verification successful");
           setPaymentStatus("success");
           if (verifiedPhone) {
             setPhone(verifiedPhone);
-            form.setValue("phone", verifiedPhone); // Prefill phone in registration form
+            form.setValue("phone", verifiedPhone);
           }
           toast({
             title: "Payment Successful",
             description: "Your payment was processed successfully. Please complete your registration.",
           });
         } else {
+          console.log("Verification failed", {
+            verified,
+            match_id,
+            matchSlug,
+            expectedMatchId: match.id,
+            expectedSlug: slug,
+          });
           setPaymentStatus("failed");
           toast({
             title: "Payment Verification Failed",
             description: "We could not verify your payment. Please try again or contact support.",
             variant: "destructive",
           });
-          console.log("Verification failed: data mismatch", { match_id, matchId: match.id, matchSlug, slug });
         }
       } catch (error) {
         console.error("Error verifying payment:", error);
@@ -218,12 +232,16 @@ const JoinMatch = () => {
       } finally {
         setVerifyingPayment(false);
         setJoining(false);
-        console.log("Payment verification complete", { paymentStatus });
       }
     };
 
     verifyPayment();
-  }, [reference, match, slug, toast, form]);
+  }, [reference, match, loading, slug, toast, form]);
+
+  // Log paymentStatus changes
+  useEffect(() => {
+    console.log("paymentStatus updated:", paymentStatus);
+  }, [paymentStatus]);
 
   const handlePaymentInitiation = async () => {
     if (!match || !match.is_paid || !match.price) {
@@ -231,7 +249,6 @@ const JoinMatch = () => {
       return;
     }
 
-    // Validate phone number (exactly 11 digits)
     const phoneRegex = /^\d{11}$/;
     if (!phoneRegex.test(phone)) {
       toast({
@@ -264,10 +281,7 @@ const JoinMatch = () => {
     try {
       setJoining(true);
 
-      // Generate placeholder email with +234 prefix
       const placeholderEmail = `+234${phone}@example.com`;
-
-      // Initialize Paystack transaction
       const response = await supabase.functions.invoke("initialize-paystack-transaction", {
         body: {
           phone,
@@ -288,16 +302,19 @@ const JoinMatch = () => {
       const { reference: txReference } = response.data;
       console.log("Paystack transaction data:", { txReference });
 
-      // Initialize Paystack popup
+      localStorage.setItem("paymentReference", txReference);
+
       const paystack = new window.PaystackPop();
       paystack.newTransaction({
         key: PAYSTACK_PUBLIC_KEY,
         email: placeholderEmail,
-        amount: match.price * 100, // Convert to kobo
+        amount: match.price * 100,
         reference: txReference,
         callback: (transaction) => {
           console.log("Paystack callback:", transaction);
-          // Rely on callback_url for redirect, just log and reset joining
+          if (transaction.status === "success") {
+            navigate(`/join-match/${slug}?reference=${transaction.reference}`, { replace: true });
+          }
           setJoining(false);
         },
         onClose: () => {
@@ -324,7 +341,6 @@ const JoinMatch = () => {
   const onSubmit = async (data: any) => {
     if (!match || !slug) return;
 
-    // Check if match is already full
     if (match.players.length >= match.total_slots) {
       toast({
         title: "Match is full",
@@ -337,7 +353,6 @@ const JoinMatch = () => {
     setJoining(true);
 
     try {
-      // Create player details object
       const playerDetails: Record<string, any> = {};
       Object.keys(data).forEach((key) => {
         if (key !== "name") {
@@ -345,13 +360,11 @@ const JoinMatch = () => {
         }
       });
 
-      // Add phone to details if payment was made
       if (match.is_paid && paymentStatus === "success") {
         playerDetails.phone = phone;
         playerDetails.payment_status = "paid";
       }
 
-      // Add player to the match
       const { error } = await supabase.from("players").insert({
         match_id: match.id,
         player_name: data.name,
@@ -366,14 +379,13 @@ const JoinMatch = () => {
         description: "You have joined the match successfully.",
       });
 
-      // Reset form and payment status
       form.reset();
       if (match.is_paid) {
         setPaymentStatus("pending");
         setPhone("");
+        localStorage.removeItem("paymentReference");
       }
 
-      // Refresh match data to update players count
       const { data: updatedMatch } = await supabase
         .from("matches")
         .select(
@@ -434,15 +446,11 @@ const JoinMatch = () => {
     );
   }
 
-  // Check if match is already full
   const isFull = match.players.length >= match.total_slots;
-
-  // Check match time status
   const matchDate = new Date(`${match.match_date}T00:00:00`);
   const isPastMatch = isPast(matchDate) && !isToday(matchDate);
 
-  // Debug payment status and is_paid
-  console.log("Render - Match is_paid:", match.is_paid, "Payment status:", paymentStatus);
+  console.log("Rendering form:", { isPaid: match.is_paid, paymentStatus });
 
   return (
     <div className="min-h-screen pb-20">
@@ -484,8 +492,7 @@ const JoinMatch = () => {
           </div>
         ) : (
           <>
-            {match.is_paid && paymentStatus === "pending" ? (
-              // Payment form for paid matches
+            {match.is_paid && paymentStatus !== "success" ? (
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold">Payment Required</h3>
                 <p className="text-muted-foreground mb-4">
@@ -508,7 +515,6 @@ const JoinMatch = () => {
                       Your payment receipt will be sent to this phone number.
                     </p>
                   </div>
-
                   <Button
                     type="button"
                     className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
@@ -527,8 +533,7 @@ const JoinMatch = () => {
                 </div>
               </div>
             ) : (
-              // Registration form (for free matches or after successful payment)
-              <Form {...form}>
+              <Form {...form} key={paymentStatus}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                   {match.required_fields?.map((field) => (
                     <FormField
@@ -551,7 +556,6 @@ const JoinMatch = () => {
                       )}
                     />
                   ))}
-
                   <Button
                     type="submit"
                     className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
