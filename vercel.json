@@ -1,5 +1,12 @@
 {
   "rewrites": [
-    { "source": "/(.*)", "destination": "/" }
+    {
+      "source": "/join/:slug",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/join-match/:slug",
+      "destination": "/index.html"
+    }
   ]
 }
