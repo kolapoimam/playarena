@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -253,9 +254,11 @@ const JoinMatch = () => {
             pattern="[0-9]*"
             {...field}
             onInput={(e) => {
+              // Ensure e is an HTML input element
+              const inputElement = e.target as HTMLInputElement;
               // Remove non-digits and limit to 11 digits
-              e.target.value = e.target.value.replace(/\D/g, '').slice(0, 11);
-              field.onChange(e);
+              inputElement.value = inputElement.value.replace(/\D/g, '').slice(0, 11);
+              field.onChange(inputElement.value);
             }}
           />
         </FormControl>

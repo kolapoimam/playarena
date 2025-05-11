@@ -23,7 +23,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { format, isToday, isPast, differenceInHours, addDays } from "date-fns";
-import { utcToZonedTime } from "date-fns-tz";
 import { Badge } from "@/components/ui/badge";
 
 // Match type definition
@@ -109,9 +108,8 @@ const MatchDetail = () => {
   const getMatchStatus = () => {
     if (!match) return { isStarted: false, isPassed: false, isFull: false };
     
-    const timeZone = "Africa/Lagos";
-    const matchDateTime = utcToZonedTime(new Date(`${match.match_date}T${match.match_time}`), timeZone);
-    const now = utcToZonedTime(new Date(), timeZone);
+    const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
+    const now = new Date();
     const nextDay = addDays(matchDateTime, 1);
     
     // Check if match is full

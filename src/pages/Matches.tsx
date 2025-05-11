@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
@@ -11,7 +12,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { format, isToday, isPast, differenceInHours } from "date-fns";
-import { utcToZonedTime } from "date-fns-tz";
 
 // Match type definition based on the existing Supabase schema
 type Match = {
@@ -214,18 +214,17 @@ const Matches = () => {
   };
 
   const getMatchStatus = (matchDate: string, matchTime: string) => {
-    const timeZone = "Africa/Lagos";
-    const zonedMatchDate = utcToZonedTime(new Date(`${matchDate}T${matchTime}:00Z`), timeZone);
-    const now = utcToZonedTime(new Date(), timeZone);
+    const matchDateTime = new Date(`${matchDate}T${matchTime}:00Z`);
+    const now = new Date();
     
     let statusLabel = "Upcoming";
     let statusClass = "bg-blue-100 text-blue-800";
     
-    if (isPast(zonedMatchDate) && !isToday(zonedMatchDate)) {
+    if (isPast(matchDateTime) && !isToday(matchDateTime)) {
       statusLabel = "Passed";
       statusClass = "bg-gray-200 text-gray-600";
-    } else if (isToday(zonedMatchDate)) {
-      const hoursDiff = differenceInHours(zonedMatchDate, now);
+    } else if (isToday(matchDateTime)) {
+      const hoursDiff = differenceInHours(matchDateTime, now);
       if (hoursDiff >= 0 && hoursDiff <= 2) {
         statusLabel = "Live";
         statusClass = "bg-red-100 text-red-700 animate-pulse";

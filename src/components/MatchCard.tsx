@@ -1,7 +1,6 @@
 
 import { useNavigate } from "react-router-dom";
 import { format, isToday, isPast, differenceInHours } from "date-fns";
-import { utcToZonedTime } from "date-fns-tz";
 
 interface MatchCardProps {
   title: string;
@@ -24,18 +23,17 @@ export default function MatchCard({
 }: MatchCardProps) {
   const navigate = useNavigate();
 
-  const timeZone = "Africa/Lagos";
-  const zonedMatchDate = utcToZonedTime(new Date(match_time), timeZone);
-  const now = utcToZonedTime(new Date(), timeZone);
+  const matchDate = new Date(match_time);
+  const now = new Date();
 
   let statusLabel = "Upcoming";
   let statusClass = "bg-blue-100 text-blue-800";
 
-  if (isPast(zonedMatchDate) && !isToday(zonedMatchDate)) {
+  if (isPast(matchDate) && !isToday(matchDate)) {
     statusLabel = "Passed";
     statusClass = "bg-gray-200 text-gray-600";
-  } else if (isToday(zonedMatchDate)) {
-    const hoursDiff = differenceInHours(zonedMatchDate, now);
+  } else if (isToday(matchDate)) {
+    const hoursDiff = differenceInHours(matchDate, now);
     if (hoursDiff >= 0 && hoursDiff <= 2) {
       statusLabel = "Live";
       statusClass = "bg-red-100 text-red-700 animate-pulse";
@@ -66,7 +64,7 @@ export default function MatchCard({
         <h3 className="text-lg font-bold">{title}</h3>
         <p className="text-muted-foreground">{details}</p>
         <p className="text-xs text-muted-foreground mt-1">
-          Match time: {format(zonedMatchDate, "PPpp")}
+          Match time: {format(matchDate, "PPpp")}
         </p>
         <div className="mt-2">
           {is_paid ? (
