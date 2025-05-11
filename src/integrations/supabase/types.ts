@@ -21,6 +21,7 @@ export type Database = {
           organizer_phone: string | null
           player_number_required: boolean | null
           price: number | null
+          required_fields: Json | null
           slug: string | null
           super_code: string | null
           title: string
@@ -38,6 +39,7 @@ export type Database = {
           organizer_phone?: string | null
           player_number_required?: boolean | null
           price?: number | null
+          required_fields?: Json | null
           slug?: string | null
           super_code?: string | null
           title: string
@@ -55,6 +57,7 @@ export type Database = {
           organizer_phone?: string | null
           player_number_required?: boolean | null
           price?: number | null
+          required_fields?: Json | null
           slug?: string | null
           super_code?: string | null
           title?: string
@@ -75,6 +78,7 @@ export type Database = {
         Row: {
           confirmation_code: string | null
           created_at: string
+          details: Json | null
           id: string
           match_id: string
           payment_status: string | null
@@ -84,6 +88,7 @@ export type Database = {
         Insert: {
           confirmation_code?: string | null
           created_at?: string
+          details?: Json | null
           id?: string
           match_id: string
           payment_status?: string | null
@@ -93,6 +98,7 @@ export type Database = {
         Update: {
           confirmation_code?: string | null
           created_at?: string
+          details?: Json | null
           id?: string
           match_id?: string
           payment_status?: string | null

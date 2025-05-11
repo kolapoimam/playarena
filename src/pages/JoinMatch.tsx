@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import Navbar from "@/components/Navbar";
 import { z } from "zod";
@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import ThemeToggle from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader } from "lucide-react";
 import {
   Form,
   FormControl,
@@ -20,6 +20,8 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { PaystackPop } from "@paystack/inline-js";
+import { format, isToday, isPast, differenceInHours } from "date-fns";
 
 type Match = {
   id: string;
@@ -31,6 +33,7 @@ type Match = {
   is_paid: boolean;
   price: number | null;
   player_number_required: boolean;
+  required_fields: string[];
   venue: {
     slug: string;
     name: string;
@@ -41,37 +44,54 @@ type Match = {
   }[];
 };
 
-// Define the form schema
-const formSchema = z.object({
-  player_name: z.string().min(2, { message: "Name must be at least 2 characters" }),
-  player_number: z.string().optional(),
-});
+type PaymentStatus = "pending" | "success" | "failed";
 
 const JoinMatch = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
+  const reference = searchParams.get("reference");
+  
   const [match, setMatch] = useState<Match | null>(null);
   const [loading, setLoading] = useState(true);
   const [joining, setJoining] = useState(false);
+  const [verifyingPayment, setVerifyingPayment] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>("pending");
+  const [email, setEmail] = useState("");
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  // Define the form schema based on required fields
+  const createFormSchema = (requiredFields: string[] = ["name", "phone"]) => {
+    const schemaFields: Record<string, z.ZodString> = {};
+    
+    requiredFields.forEach(field => {
+      schemaFields[field] = z.string().min(2, { message: `${field.charAt(0).toUpperCase() + field.slice(1)} must be at least 2 characters` });
+    });
+    
+    return z.object(schemaFields);
+  };
+
+  // Default form schema
+  const [formSchema, setFormSchema] = useState(createFormSchema());
+  
+  // Initialize form with dynamic schema
+  const form = useForm<any>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      player_name: "",
-      player_number: "",
-    },
+    defaultValues: {},
   });
 
+  // Fetch match details
   useEffect(() => {
     if (!slug) return;
 
     const fetchMatch = async () => {
       try {
+        setLoading(true);
         const { data, error } = await supabase
           .from("matches")
           .select(`
-            id, slug, title, match_date, total_slots, organizer_name, is_paid, price, player_number_required,
+            id, slug, title, match_date, match_time, total_slots, organizer_name, 
+            is_paid, price, player_number_required, required_fields,
             venue:venues(slug, name, city),
             players(*)
           `)
@@ -79,6 +99,18 @@ const JoinMatch = () => {
           .single();
 
         if (error) throw error;
+        
+        // Extract required fields from match data
+        const requiredFields = data?.required_fields || ["name", "phone"];
+        setFormSchema(createFormSchema(requiredFields));
+        
+        // Reset form with empty values for each required field
+        const defaultValues: Record<string, string> = {};
+        requiredFields.forEach(field => {
+          defaultValues[field] = "";
+        });
+        form.reset(defaultValues);
+        
         setMatch(data as Match);
       } catch (error) {
         console.error("Error fetching match:", error);
@@ -95,7 +127,119 @@ const JoinMatch = () => {
     fetchMatch();
   }, [slug, toast]);
 
-  const onSubmit = async (data: z.infer<typeof formSchema>) => {
+  // Verify payment when reference is present
+  useEffect(() => {
+    if (!reference || !match) return;
+    
+    const verifyPayment = async () => {
+      setVerifyingPayment(true);
+      try {
+        const response = await supabase.functions.invoke('verify-paystack-transaction', {
+          body: { reference }
+        });
+        
+        if (response.error) {
+          throw new Error(response.error.message);
+        }
+        
+        const { verified, match_id, slug: matchSlug } = response.data;
+        
+        if (verified && matchSlug === slug) {
+          setPaymentStatus("success");
+          toast({
+            title: "Payment Successful",
+            description: "Your payment was processed successfully. Please complete your registration.",
+          });
+        } else {
+          setPaymentStatus("failed");
+          toast({
+            title: "Payment Verification Failed",
+            description: "We could not verify your payment. Please try again.",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error("Error verifying payment:", error);
+        setPaymentStatus("failed");
+        toast({
+          title: "Payment Verification Error",
+          description: "An error occurred while verifying your payment.",
+          variant: "destructive",
+        });
+      } finally {
+        setVerifyingPayment(false);
+      }
+    };
+    
+    verifyPayment();
+  }, [reference, match, slug, toast]);
+
+  const handlePaymentInitiation = async () => {
+    if (!match) return;
+    
+    // Validate email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      toast({
+        title: "Invalid Email",
+        description: "Please enter a valid email address.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      setJoining(true);
+      
+      // Initialize Paystack transaction
+      const response = await supabase.functions.invoke('initialize-paystack-transaction', {
+        body: {
+          email,
+          amount: match.price,
+          match_id: match.id,
+          slug: match.slug,
+          title: match.title
+        }
+      });
+      
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+      
+      const { access_code } = response.data;
+      
+      // Initialize Paystack popup
+      const paystack = new PaystackPop();
+      paystack.newTransaction({
+        key: "pk_test_679f0158d532e05fe97a3c1c4bb6eb42e0f220e2",
+        email,
+        amount: (match.price || 0) * 100, // Convert to kobo
+        access_code,
+        onSuccess: (transaction) => {
+          // Redirect will happen automatically through the callback_url
+          console.log("Payment successful:", transaction);
+        },
+        onCancel: () => {
+          toast({
+            title: "Payment Cancelled",
+            description: "You've cancelled the payment process.",
+            variant: "destructive",
+          });
+          setJoining(false);
+        },
+      });
+    } catch (error) {
+      console.error("Error initiating payment:", error);
+      toast({
+        title: "Payment Error",
+        description: "Failed to initiate payment. Please try again.",
+        variant: "destructive",
+      });
+      setJoining(false);
+    }
+  };
+
+  const onSubmit = async (data: any) => {
     if (!match || !slug) return;
 
     // Check if match is already full
@@ -111,14 +255,28 @@ const JoinMatch = () => {
     setJoining(true);
 
     try {
+      // Create player details object
+      const playerDetails: Record<string, any> = {};
+      Object.keys(data).forEach(key => {
+        if (key !== "name") {
+          playerDetails[key] = data[key];
+        }
+      });
+
+      // Add email to details if payment was made
+      if (match.is_paid && paymentStatus === "success") {
+        playerDetails.email = email;
+        playerDetails.payment_status = "paid";
+      }
+
       // Add player to the match
       const { error } = await supabase
         .from("players")
         .insert({
           match_id: match.id,
-          player_name: match.player_number_required && data.player_number
-            ? `${data.player_name} (#${data.player_number})`
-            : data.player_name,
+          player_name: data.name,
+          details: playerDetails,
+          payment_status: match.is_paid ? (paymentStatus === "success" ? "paid" : "pending") : "free",
         });
 
       if (error) throw error;
@@ -128,8 +286,29 @@ const JoinMatch = () => {
         description: "You have joined the match successfully.",
       });
 
-      // Navigate to the match detail
-      navigate(`/match/${match.slug}`);
+      // Reset form and payment status
+      form.reset();
+      if (match.is_paid) {
+        setPaymentStatus("pending");
+        setEmail("");
+      }
+      
+      // Refresh match data to update players count
+      const { data: updatedMatch } = await supabase
+        .from("matches")
+        .select(`
+          id, slug, title, match_date, match_time, total_slots, organizer_name, 
+          is_paid, price, player_number_required, required_fields,
+          venue:venues(slug, name, city),
+          players(*)
+        `)
+        .eq("slug", slug)
+        .single();
+        
+      if (updatedMatch) {
+        setMatch(updatedMatch as Match);
+      }
+      
     } catch (error) {
       console.error("Error joining match:", error);
       toast({
@@ -152,10 +331,10 @@ const JoinMatch = () => {
     return new Date(dateString).toLocaleDateString("en-NG", options);
   };
 
-  if (loading) {
+  if (loading || verifyingPayment) {
     return (
       <div className="flex justify-center items-center h-[50vh]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-playarena-500"></div>
       </div>
     );
   }
@@ -181,6 +360,11 @@ const JoinMatch = () => {
 
   // Check if match is already full
   const isFull = match.players.length >= match.total_slots;
+
+  // Check match time status
+  const matchDate = new Date(`${match.match_date}T00:00:00`);
+  const now = new Date();
+  const isPastMatch = isPast(matchDate) && !isToday(matchDate);
 
   return (
     <div className="min-h-screen pb-20">
@@ -210,7 +394,18 @@ const JoinMatch = () => {
           )}
         </div>
 
-        {isFull ? (
+        {isPastMatch ? (
+          <div className="text-center py-6 bg-muted rounded-lg">
+            <h2 className="text-lg font-semibold">This match has already passed</h2>
+            <p className="text-muted-foreground mt-2">You cannot join this match anymore.</p>
+            <Button
+              className="mt-4"
+              onClick={() => navigate('/matches')}
+            >
+              Browse Other Matches
+            </Button>
+          </div>
+        ) : isFull ? (
           <div className="text-center py-6 bg-muted rounded-lg">
             <h2 className="text-lg font-semibold">This match is full</h2>
             <p className="text-muted-foreground mt-2">All player slots have been filled.</p>
@@ -222,64 +417,93 @@ const JoinMatch = () => {
             </Button>
           </div>
         ) : (
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <FormField
-                control={form.control}
-                name="player_name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Your Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter your name" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+          <>
+            {match.is_paid && paymentStatus === "pending" ? (
+              // Payment form for paid matches
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Payment Required</h3>
+                <p className="text-muted-foreground mb-4">
+                  This is a paid match. Please complete the payment to join.
+                </p>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label htmlFor="email" className="block text-sm font-medium">
+                      Email Address
+                    </label>
+                    <Input 
+                      id="email"
+                      type="email" 
+                      placeholder="Your email address"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Your payment receipt will be sent to this email.
+                    </p>
+                  </div>
+                  
+                  <Button
+                    type="button"
+                    className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
+                    onClick={handlePaymentInitiation}
+                    disabled={joining}
+                  >
+                    {joining ? (
+                      <>
+                        <Loader size={16} className="mr-2 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      `Pay Now (₦${match.price?.toFixed(2)})`
+                    )}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              // Registration form (for free matches or after successful payment)
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                  {match.required_fields?.map((field) => (
+                    <FormField
+                      key={field}
+                      control={form.control}
+                      name={field}
+                      render={({ field: formField }) => (
+                        <FormItem>
+                          <FormLabel>{field.charAt(0).toUpperCase() + field.slice(1)}</FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder={`Enter your ${field}`} 
+                              {...formField} 
+                              type={field === "phone" ? "tel" : "text"}
+                              inputMode={field === "phone" ? "numeric" : "text"}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  ))}
 
-{match.player_number_required && (
-  <FormField
-    control={form.control}
-    name="player_number"
-    render={({ field }) => (
-      <FormItem>
-        <FormLabel>Phone Number</FormLabel>
-        <FormControl>
-          <Input
-            type="text"
-            placeholder="Enter your phone number"
-            maxLength={11}
-            inputMode="numeric"
-            pattern="[0-9]*"
-            {...field}
-            onInput={(e) => {
-              // Ensure e is an HTML input element
-              const inputElement = e.target as HTMLInputElement;
-              // Remove non-digits and limit to 11 digits
-              inputElement.value = inputElement.value.replace(/\D/g, '').slice(0, 11);
-              field.onChange(inputElement.value);
-            }}
-          />
-        </FormControl>
-        <FormDescription>
-          This match requires players to provide their phone number
-        </FormDescription>
-        <FormMessage />
-      </FormItem>
-    )}
-  />
-)}
-
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={joining}
-              >
-                {joining ? "Joining..." : "Join Match"}
-              </Button>
-            </form>
-          </Form>
+                  <Button
+                    type="submit"
+                    className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
+                    disabled={joining}
+                  >
+                    {joining ? (
+                      <>
+                        <Loader size={16} className="mr-2 animate-spin" />
+                        Joining...
+                      </>
+                    ) : (
+                      "Join Match"
+                    )}
+                  </Button>
+                </form>
+              </Form>
+            )}
+          </>
         )}
       </div>
       <Navbar />
