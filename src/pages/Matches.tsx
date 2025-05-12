@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Calendar, Clock, MapPin, Users, ChevronLeft, ChevronRight, Filter, Lock, ArrowLeft } from "lucide-react"; // Added ArrowLeft
+import { Calendar, Clock, MapPin, Users, ChevronLeft, ChevronRight, Filter, Lock, ArrowLeft } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import { useToast } from "@/hooks/use-toast";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -102,14 +102,12 @@ const Matches = () => {
           { count: "exact" }
         );
 
-      // Apply sorting: newest first on page 1, otherwise by match_date
       if (currentPage === 1) {
         query = query.order("created_at", { ascending: false });
       } else {
         query = query.order("match_date", { ascending: true });
       }
 
-      // Apply filters
       if (isPaidFilter !== null) {
         query = query.eq("is_paid", isPaidFilter);
       }
@@ -188,7 +186,6 @@ const Matches = () => {
         }
       }
 
-      // Apply pagination
       const start = (currentPage - 1) * matchesPerPage;
       const end = start + matchesPerPage - 1;
       query = query.range(start, end);
@@ -303,11 +300,12 @@ const Matches = () => {
             onClick={() => navigate(-1)} 
             className="text-white hover:bg-green-600"
           >
-            <ArrowLeft size={18} className="mr-2" /> {/* Fixed typo from Arrowleft to ArrowLeft */}
+            <ArrowLeft size={18} className="mr-2" />
             Back
           </Button>
           <div className="text-center">
             <h1 className="text-2xl font-bold">My Matches</h1>
+            <p className="text-sm">Manage your matches and player confirmations</p>
           </div>
           <Button
             className="bg-playarena-500 hover:bg-playarena-600 text-white"
@@ -318,132 +316,134 @@ const Matches = () => {
         </div>
       </header>
 
-      <Collapsible
-        open={isFilterOpen}
-        onOpenChange={setIsFilterOpen}
-        className="px-4 mb-4"
-      >
-        <CollapsibleTrigger asChild>
-          <Button variant="outline" className="w-full sm:w-auto">
-            <Filter size={16} className="mr-2" />
-            {isFilterOpen ? "Hide Filters" : "Show Filters"}
-          </Button>
-        </CollapsibleTrigger>
-        <CollapsibleContent className="mt-4 p-4 border rounded-lg bg-card space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="is-paid-filter">Payment Type</Label>
-              <Select
-                value={isPaidFilter === null ? "all" : isPaidFilter ? "paid" : "free"}
-                onValueChange={(value) => {
-                  setIsPaidFilter(value === "all" ? null : value === "paid");
-                  setCurrentPage(1);
-                }}
-              >
-                <SelectTrigger id="is-paid-filter">
-                  <SelectValue placeholder="Select payment type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  <SelectItem value="paid">Paid</SelectItem>
-                  <SelectItem value="free">Free</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+      <div className="mt-6"> {/* Added spacing between header and filter */}
+        <Collapsible
+          open={isFilterOpen}
+          onOpenChange={setIsFilterOpen}
+          className="px-4 mb-4"
+        >
+          <CollapsibleTrigger asChild>
+            <Button variant="outline" className="w-full sm:w-auto">
+              <Filter size={16} className="mr-2" />
+              {isFilterOpen ? "Hide Filters" : "Show Filters"}
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-4 p-4 border rounded-lg bg-card space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="is-paid-filter">Payment Type</Label>
+                <Select
+                  value={isPaidFilter === null ? "all" : isPaidFilter ? "paid" : "free"}
+                  onValueChange={(value) => {
+                    setIsPaidFilter(value === "all" ? null : value === "paid");
+                    setCurrentPage(1);
+                  }}
+                >
+                  <SelectTrigger id="is-paid-filter">
+                    <SelectValue placeholder="Select payment type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="paid">Paid</SelectItem>
+                    <SelectItem value="free">Free</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div>
-              <Label htmlFor="venue-filter">Venue</Label>
-              <Select
-                value={venueFilter || "all"}
-                onValueChange={(value) => {
-                  setVenueFilter(value === "all" ? null : value);
-                  setCurrentPage(1);
-                }}
-              >
-                <SelectTrigger id="venue-filter">
-                  <SelectValue placeholder="Select venue" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Venues</SelectItem>
-                  {venues.map((venue) => (
-                    <SelectItem key={venue.slug} value={venue.slug}>
-                      {venue.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+              <div>
+                <Label htmlFor="venue-filter">Venue</Label>
+                <Select
+                  value={venueFilter || "all"}
+                  onValueChange={(value) => {
+                    setVenueFilter(value === "all" ? null : value);
+                    setCurrentPage(1);
+                  }}
+                >
+                  <SelectTrigger id="venue-filter">
+                    <SelectValue placeholder="Select venue" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Venues</SelectItem>
+                    {venues.map((venue) => (
+                      <SelectItem key={venue.slug} value={venue.slug}>
+                        {venue.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div>
-              <Label htmlFor="duration-filter">Duration</Label>
-              <Select
-                value={durationFilter}
-                onValueChange={(value) => {
-                  setDurationFilter(value);
-                  setCurrentPage(1);
-                }}
-              >
-                <SelectTrigger id="duration-filter">
-                  <SelectValue placeholder="Select duration" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Dates</SelectItem>
-                  <SelectItem value="today">Today</SelectItem>
-                  <SelectItem value="this_week">This Week</SelectItem>
-                  <SelectItem value="next_week">Next Week</SelectItem>
-                  <SelectItem value="this_month">This Month</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+              <div>
+                <Label htmlFor="duration-filter">Duration</Label>
+                <Select
+                  value={durationFilter}
+                  onValueChange={(value) => {
+                    setDurationFilter(value);
+                    setCurrentPage(1);
+                  }}
+                >
+                  <SelectTrigger id="duration-filter">
+                    <SelectValue placeholder="Select duration" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Dates</SelectItem>
+                    <SelectItem value="today">Today</SelectItem>
+                    <SelectItem value="this_week">This Week</SelectItem>
+                    <SelectItem value="next_week">Next Week</SelectItem>
+                    <SelectItem value="this_month">This Month</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div>
-              <Label htmlFor="time-start">Start Time</Label>
-              <Select
-                value={timeStart || "all"}
-                onValueChange={(value) => {
-                  setTimeStart(value === "all" ? "" : value);
-                  setCurrentPage(1);
-                }}
-              >
-                <SelectTrigger id="time-start">
-                  <SelectValue placeholder="Select start time" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Times</SelectItem>
-                  <SelectItem value="morning">Morning (6AM-12PM)</SelectItem>
-                  <SelectItem value="afternoon">Afternoon (12PM-6PM)</SelectItem>
-                  <SelectItem value="evening">Evening (6PM-12AM)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+              <div>
+                <Label htmlFor="time-start">Start Time</Label>
+                <Select
+                  value={timeStart || "all"}
+                  onValueChange={(value) => {
+                    setTimeStart(value === "all" ? "" : value);
+                    setCurrentPage(1);
+                  }}
+                >
+                  <SelectTrigger id="time-start">
+                    <SelectValue placeholder="Select start time" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Times</SelectItem>
+                    <SelectItem value="morning">Morning (6AM-12PM)</SelectItem>
+                    <SelectItem value="afternoon">Afternoon (12PM-6PM)</SelectItem>
+                    <SelectItem value="evening">Evening (6PM-12AM)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div>
-              <Label htmlFor="status-filter">Status</Label>
-              <Select
-                value={statusFilter || "all"}
-                onValueChange={(value) => {
-                  setStatusFilter(value === "all" ? null : value);
-                  setCurrentPage(1);
-                }}
-              >
-                <SelectTrigger id="status-filter">
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="Live Match">Live Match</SelectItem>
-                  <SelectItem value="Today's Match">Today's Match</SelectItem>
-                  <SelectItem value="Upcoming Match">Upcoming Match</SelectItem>
-                  <SelectItem value="Match Passed">Match Passed</SelectItem>
-                </SelectContent>
-              </Select>
+              <div>
+                <Label htmlFor="status-filter">Status</Label>
+                <Select
+                  value={statusFilter || "all"}
+                  onValueChange={(value) => {
+                    setStatusFilter(value === "all" ? null : value);
+                    setCurrentPage(1);
+                  }}
+                >
+                  <SelectTrigger id="status-filter">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="Live Match">Live Match</SelectItem>
+                    <SelectItem value="Today's Match">Today's Match</SelectItem>
+                    <SelectItem value="Upcoming Match">Upcoming Match</SelectItem>
+                    <SelectItem value="Match Passed">Match Passed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-          </div>
-          <Button variant="outline" onClick={resetFilters}>
-            Reset Filters
-          </Button>
-        </CollapsibleContent>
-      </Collapsible>
+            <Button variant="outline" onClick={resetFilters}>
+              Reset Filters
+            </Button>
+          </CollapsibleContent>
+        </Collapsible>
+      </div>
 
       {loading ? (
         <div className="flex justify-center items-center h-[50vh]">
@@ -488,9 +488,6 @@ const Matches = () => {
                       >
                         {match.is_paid ? `₦${match.price?.toFixed(2)}` : "FREE"}
                       </Badge>
-                      {match.is_private && !isAccessible && (
-                        <Badge className="bg-gray-100 text-gray-700">Locked</Badge>
-                      )}
                     </div>
                   </div>
                   
