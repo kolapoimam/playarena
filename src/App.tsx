@@ -32,6 +32,7 @@ const App = () => (
           <Route path="/profile" element={<Profile />} />
           <Route path="/organize" element={<Organize />} />
           <Route path="/venue-create" element={<VenueCreate />} />
+          <Route path="/venues" element={<VenueDirectory />} />
 
           {/* Slug-Based Routes for Matches and Venues */}
           <Route path="/match/:slug" element={<MatchDetail />} />
