@@ -15,6 +15,7 @@ import VenueDetail from "./pages/VenueDetail";
 import VenueCreate from "./pages/VenueCreate";
 import MatchRedirect from "./pages/MatchRedirect";
 import VenueRedirect from "./pages/VenueRedirect";
+import VenueDirectory from "./pages/VenueDirectory"; // Added import
 
 const queryClient = new QueryClient();
 
@@ -32,8 +33,8 @@ const App = () => (
           <Route path="/profile" element={<Profile />} />
           <Route path="/organize" element={<Organize />} />
           <Route path="/venue-create" element={<VenueCreate />} />
-          <Route path="/venues" element={<VenueDirectory />} />
-
+          <Route path="/venues" element={<VenueDirectory />} /> {/* Added route */}
+          
           {/* Slug-Based Routes for Matches and Venues */}
           <Route path="/match/:slug" element={<MatchDetail />} />
           <Route path="/join/:slug" element={<JoinMatch />} />
