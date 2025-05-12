@@ -139,11 +139,6 @@ const Organize = () => {
     setLoading(true);
 
     try {
-      // Validate match_date before formatting
-      if (!(data.match_date instanceof Date) || isNaN(data.match_date.getTime())) {
-        throw new Error("Invalid date selected");
-      }
-
       // Create the match in the database
       const { data: match, error } = await supabase
         .from("matches")
@@ -165,13 +160,13 @@ const Organize = () => {
       if (error) throw error;
 
       // Store the supercode and match slug
-      setSupercode(match.super_code || "N/A");
+      setSupercode(match.super_code || "N/A"); // Default to "N/A" if null (unlikely)
       setMatchSlug(match.slug);
 
       // Show the success dialog
       setSuccessDialogOpen(true);
 
-      // Success toast
+      // Success toast (still shown for redundancy)
       toast({
         title: "Success!",
         description: "Your match has been created.",
@@ -180,7 +175,7 @@ const Organize = () => {
       console.error("Error creating match:", error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to create match. Please try again.",
+        description: "Failed to create match. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -189,9 +184,16 @@ const Organize = () => {
   };
 
   const handleVenueCreated = (venueId: string, venueSlug: string, venueName: string) => {
+    // Add the new venue to the venues list
     setVenues(prev => [{ id: venueId, slug: venueSlug, name: venueName, city: "" }, ...prev]);
+    
+    // Set the venue in the form
     form.setValue("venue_id", venueId);
+    
+    // Close the dialog
     setVenueDialogOpen(false);
+    
+    // Show success toast
     toast({
       title: "Venue created",
       description: `${venueName} has been added to venues.`,
@@ -308,11 +310,7 @@ const Organize = () => {
                         <Calendar
                           mode="single"
                           selected={field.value}
-                          onSelect={(date) => {
-                            if (date) {
-                              field.onChange(date); // Ensure date is valid before setting
-                            }
-                          }}
+                          onSelect={field.onChange}
                           disabled={(date) => {
                             const today = new Date();
                             today.setHours(0, 0, 0, 0);
