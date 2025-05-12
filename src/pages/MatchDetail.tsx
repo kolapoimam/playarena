@@ -438,7 +438,6 @@ const MatchDetail = () => {
           </Button>
           <div className="text-center">
             <h1 className="text-2xl font-bold">Match Details</h1>
-            <p className="text-sm">Manage player confirmations and check-ins</p>
           </div>
           <div className="w-10"></div>
         </div>
