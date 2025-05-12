@@ -16,17 +16,46 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { X } from "lucide-react";
+
+// Nigerian states including FCT
+const nigerianStates = [
+  "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", 
+  "Borno", "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu", 
+  "FCT", "Gombe", "Imo", "Jigawa", "Kaduna", "Kano", "Katsina", "Kebbi", 
+  "Kogi", "Kwara", "Lagos", "Nasarawa", "Niger", "Ogun", "Ondo", "Osun", 
+  "Oyo", "Plateau", "Rivers", "Sokoto", "Taraba", "Yobe", "Zamfara"
+];
 
 // Form schema using zod
 const formSchema = z.object({
   name: z.string().min(3, { message: "Name must be at least 3 characters" }),
   address: z.string().min(5, { message: "Address must be at least 5 characters" }),
   city: z.string().min(2, { message: "City must be at least 2 characters" }),
-  state: z.string().min(2, { message: "State must be at least 2 characters" }),
+  state: z.enum(nigerianStates as [string, ...string[]], { message: "Please select a valid state" }),
   description: z.string().optional(),
   map_link: z.string().optional(),
-  image_url: z.string().optional(),
+  images: z
+    .instanceof(FileList)
+    .optional()
+    .refine((files) => !files || files.length <= 5, { message: "Maximum 5 images allowed" })
+    .refine(
+      (files) =>
+        !files ||
+        Array.from(files).every(
+          (file) =>
+            file.type.startsWith("image/") &&
+            file.size <= 5 * 1024 * 1024 // 5MB max per image
+        ),
+      { message: "Only images up to 5MB each are allowed" }
+    ),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -47,10 +76,10 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
       name: "",
       address: "",
       city: "",
-      state: "",
+      state: undefined,
       description: "",
       map_link: "",
-      image_url: "",
+      images: undefined,
     },
   });
 
@@ -58,6 +87,31 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
     setLoading(true);
 
     try {
+      // Handle image uploads
+      let imageUrls: string[] = [];
+      if (data.images && data.images.length > 0) {
+        for (const file of Array.from(data.images)) {
+          const fileName = `${Date.now()}-${file.name}`;
+          const { error: uploadError, data: uploadData } = await supabase.storage
+            .from("venue-images")
+            .upload(fileName, file, {
+              cacheControl: "3600",
+              upsert: false,
+            });
+
+          if (uploadError) throw uploadError;
+
+          // Get public URL
+          const { data: publicUrlData } = supabase.storage
+            .from("venue-images")
+            .getPublicUrl(fileName);
+
+          if (publicUrlData) {
+            imageUrls.push(publicUrlData.publicUrl);
+          }
+        }
+      }
+
       // Create the venue in the database
       const { data: venue, error } = await supabase
         .from("venues")
@@ -68,9 +122,9 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
           state: data.state,
           description: data.description || null,
           map_link: data.map_link || null,
-          image_url: data.image_url || null,
+          image_urls: imageUrls.length > 0 ? imageUrls : null,
         })
-        .select('id, slug, name')
+        .select("id, slug, name")
         .single();
 
       if (error) throw error;
@@ -102,12 +156,17 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-semibold text-playarena-800">Create New Venue</h2>
         {onCancel && (
-          <Button variant="ghost" size="sm" onClick={onCancel} className="text-playarena-600 hover:text-playarena-700">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onCancel}
+            className="text-playarena-600 hover:text-playarena-700"
+          >
             <X size={18} />
           </Button>
         )}
       </div>
-      
+
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <FormField
@@ -117,9 +176,9 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
               <FormItem>
                 <FormLabel className="text-playarena-700">Venue Name</FormLabel>
                 <FormControl>
-                  <Input 
-                    placeholder="E.g., National Stadium" 
-                    {...field} 
+                  <Input
+                    placeholder="E.g., National Stadium"
+                    {...field}
                     className="focus-visible:ring-playarena-500"
                   />
                 </FormControl>
@@ -135,9 +194,9 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
               <FormItem>
                 <FormLabel className="text-playarena-700">Address</FormLabel>
                 <FormControl>
-                  <Input 
-                    placeholder="Full street address" 
-                    {...field} 
+                  <Input
+                    placeholder="Full street address"
+                    {...field}
                     className="focus-visible:ring-playarena-500"
                   />
                 </FormControl>
@@ -154,9 +213,9 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
                 <FormItem>
                   <FormLabel className="text-playarena-700">City</FormLabel>
                   <FormControl>
-                    <Input 
-                      placeholder="E.g., Lagos" 
-                      {...field} 
+                    <Input
+                      placeholder="E.g., Lagos"
+                      {...field}
                       className="focus-visible:ring-playarena-500"
                     />
                   </FormControl>
@@ -172,11 +231,21 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
                 <FormItem>
                   <FormLabel className="text-playarena-700">State</FormLabel>
                   <FormControl>
-                    <Input 
-                      placeholder="E.g., Lagos State" 
-                      {...field} 
-                      className="focus-visible:ring-playarena-500"
-                    />
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value}
+                    >
+                      <SelectTrigger className="focus:ring-playarena-500">
+                        <SelectValue placeholder="Select a state" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {nigerianStates.map((state) => (
+                          <SelectItem key={state} value={state}>
+                            {state}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </FormControl>
                   <FormMessage className="text-playarena-600" />
                 </FormItem>
@@ -191,7 +260,7 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
               <FormItem>
                 <FormLabel className="text-playarena-700">Description (Optional)</FormLabel>
                 <FormControl>
-                  <Textarea 
+                  <Textarea
                     placeholder="Describe the venue, facilities, etc."
                     {...field}
                     className="focus-visible:ring-playarena-500"
@@ -209,7 +278,7 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
               <FormItem>
                 <FormLabel className="text-playarena-700">Google Maps Link (Optional)</FormLabel>
                 <FormControl>
-                  <Input 
+                  <Input
                     placeholder="Paste Google Maps URL here"
                     {...field}
                     className="focus-visible:ring-playarena-500"
@@ -225,28 +294,31 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
 
           <FormField
             control={form.control}
-            name="image_url"
-            render={({ field }) => (
+            name="images"
+            render={({ field: { onChange, ref, ...field } }) => (
               <FormItem>
-                <FormLabel className="text-playarena-700">Image URL (Optional)</FormLabel>
+                <FormLabel className="text-playarena-700">Images (Optional, up to 5)</FormLabel>
                 <FormControl>
-                  <Input 
-                    placeholder="https://example.com/image.jpg"
-                    {...field}
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={(e) => onChange(e.target.files)}
                     className="focus-visible:ring-playarena-500"
+                    {...field}
                   />
                 </FormControl>
                 <FormDescription className="text-playarena-500">
-                  Add an image URL for the venue
+                  Upload up to 5 images (max 5MB each) to showcase the venue
                 </FormDescription>
                 <FormMessage className="text-playarena-600" />
               </FormItem>
             )}
           />
 
-          <Button 
-            type="submit" 
-            className="w-full bg-playarena-600 hover:bg-playarena-700 text-white" 
+          <Button
+            type="submit"
+            className="w-full bg-playarena-600 hover:bg-playarena-700 text-white"
             disabled={loading}
           >
             {loading ? "Creating..." : "Create Venue"}
