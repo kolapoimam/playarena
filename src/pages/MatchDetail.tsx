@@ -440,6 +440,7 @@ const MatchDetail = () => {
           </Button>
           <div className="text-center">
             <h1 className="text-2xl font-bold">Match Details</h1>
+            <p className="text-sm">Manage player confirmations and check-ins</p>
           </div>
           <div className="w-10"></div>
         </div>
@@ -585,7 +586,7 @@ const MatchDetail = () => {
               <p className="text-muted-foreground text-sm">No players have joined yet</p>
             )}
             
-            <div className="mt-6"> {/* Added spacing */}
+            <div className="mt-6">
               {!isPassed && !isStarted && !isFull && (
                 <Button 
                   className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
@@ -706,7 +707,7 @@ const MatchDetail = () => {
                   <input
                     type="radio"
                     value="black"
-                    checked={backgroundOption === "black"
+                    checked={backgroundOption === "black"}
                     onChange={() => setBackgroundOption("black")}
                     className="form-radio text-playarena-500"
                   />
