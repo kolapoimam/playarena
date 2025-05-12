@@ -221,7 +221,6 @@ const VenueDetail = () => {
               <div className="flex justify-center py-4">
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-500"></div>
               </div>
-(mu
             ) : matches.length > 0 ? (
               <div className="space-y-4">
                 {matches.map((match) => (
@@ -231,7 +230,7 @@ const VenueDetail = () => {
                     onClick={() => navigate(`/match/${match.slug}`)}
                   >
                     <h3 className="font-medium text-gray-900 dark:text-gray-100">{match.title}</h3>
-                    <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    <div className="flex items-center gap-3 text-sem text-gray-600 dark:text-gray-400 mt-1">
                       <Calendar size={16} />
                       <span>{formatDate(match.match_date)}</span>
                       <Clock size={16} />
