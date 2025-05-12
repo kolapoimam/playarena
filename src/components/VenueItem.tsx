@@ -11,7 +11,7 @@ export default function VenueItem({ name, location, image_urls, venue_phone }: V
 
   const handleBookVenue = () => {
     if (venue_phone) {
-      const message = encodeURIComponent(`Hello, I'd like to book ${name} for an event. Can you provide more details on availability and pricing?`);
+      const message = encodeURIComponent(`Hello, I'd like to book ${venue.name} for a match. Can you provide more details on availability and pricing?`);
       window.open(`https://wa.me/+234${venue_phone}?text=${message}`, "_blank");
     }
   };
