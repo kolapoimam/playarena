@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -57,6 +56,7 @@ const JoinMatch = () => {
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>("pending");
   const [email, setEmail] = useState("");
   const [paystackLoaded, setPaystackLoaded] = useState(false);
+  const [paymentCompleted, setPaymentCompleted] = useState(false);
 
   // Load Paystack script dynamically as fallback
   useEffect(() => {
@@ -167,10 +167,14 @@ const JoinMatch = () => {
 
         if (verified && match_id === match.id && matchSlug === slug) {
           setPaymentStatus("success");
+          setPaymentCompleted(true);
           toast({
             title: "Payment Successful",
             description: "Your payment was processed successfully. Please complete your registration.",
           });
+          
+          // Clear the reference from URL to prevent re-verification on refresh
+          navigate(`/join/${slug}`, { replace: true });
         } else {
           setPaymentStatus("failed");
           toast({
@@ -193,7 +197,7 @@ const JoinMatch = () => {
     };
 
     verifyPayment();
-  }, [reference, match, slug, toast]);
+  }, [reference, match, slug, toast, navigate]);
 
   const handlePaymentInitiation = async () => {
     if (!match || !match.is_paid || !match.price) return;
@@ -242,8 +246,8 @@ const JoinMatch = () => {
       const paystack = new window.PaystackPop();
       paystack.resumeTransaction(access_code, {
         onSuccess: () => {
-          // Redirect handled by callback_url
-          console.log("Payment successful");
+          // The redirect will happen automatically via callback_url
+          setJoining(false);
         },
         onCancel: () => {
           toast({
@@ -315,25 +319,11 @@ const JoinMatch = () => {
       if (match.is_paid) {
         setPaymentStatus("pending");
         setEmail("");
+        setPaymentCompleted(false);
       }
 
-      // Refresh match data to update players count
-      const { data: updatedMatch } = await supabase
-        .from("matches")
-        .select(
-          `
-          id, slug, title, match_date, match_time, total_slots, organizer_name, 
-          is_paid, price, player_number_required, required_fields,
-          venue:venues(slug, name, city),
-          players(*)
-        `
-        )
-        .eq("slug", slug)
-        .single();
-
-      if (updatedMatch) {
-        setMatch(updatedMatch as Match);
-      }
+      // Navigate to match details page after successful join
+      navigate(`/match/${slug}`);
     } catch (error) {
       console.error("Error joining match:", error);
       toast({
@@ -426,7 +416,7 @@ const JoinMatch = () => {
           </div>
         ) : (
           <>
-            {match.is_paid && paymentStatus === "pending" ? (
+            {match.is_paid && !paymentCompleted ? (
               // Payment form for paid matches
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold">Payment Required</h3>
