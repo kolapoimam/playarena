@@ -304,8 +304,7 @@ const Matches = () => {
             Back
           </Button>
           <div className="text-center">
-            <h1 className="text-2xl font-bold">My Matches</h1>
-            <p className="text-sm">Manage your matches and player confirmations</p>
+            <h1 className="text-2xl font-bold">Matches</h1>
           </div>
           <Button
             className="bg-playarena-500 hover:bg-playarena-600 text-white"
