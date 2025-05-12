@@ -1,102 +1,184 @@
-import { useEffect, useState, useRef, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
-import { 
-  Calendar, 
-  Clock, 
-  MapPin, 
-  Users, 
-  ArrowLeft, 
-  Share2, 
-  Download, 
-  ChevronDown,
-  ExternalLink,
-  Trophy,
-  DollarSign,
-  CalendarPlus
-} from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Calendar as CalendarIcon, Clock, MapPin, Copy, ArrowLeft, Plus } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { format, isToday, isPast, differenceInHours, addDays } from "date-fns";
-import { Badge } from "@/components/ui/badge";
-import html2canvas from "html2canvas";
-import * as ics from "ics";
+import { Switch } from "@/components/ui/switch";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import VenueForm from "@/components/VenueForm";
+import Navbar from "@/components/Navbar";
 
-// Match type definition
-type Match = {
+const formSchema = z.object({
+  title: z.string().min(3, { message: "Title must be at least 3 characters" }),
+  venue_id: z.string().uuid({ message: "Please select a venue" }),
+  match_date: z.date({ required_error: "Please select a date" }),
+  match_time: z.string().regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, { 
+    message: "Please enter a valid time (HH:MM)" 
+  }),
+  total_slots: z.number().int().min(2, { message: "At least 2 players are required" }),
+  is_paid: z.boolean().default(false),
+  price: z.number().optional().nullable(),
+  notes: z.string().optional(),
+  organizer_name: z.string().min(2, { message: "Name must be at least 2 characters" }),
+  player_number_required: z.boolean().default(false),
+  is_private: z.boolean().default(false),
+  access_password: z.string().optional().nullable(),
+});
+
+type FormValues = z.infer<typeof formSchema>;
+
+type Venue = {
   id: string;
   slug: string;
-  title: string;
-  match_date: string;
-  match_time: string;
-  total_slots: number;
-  is_paid: boolean;
-  price: number | null;
-  notes: string | null;
-  organizer_name: string;
-  player_number_required: boolean;
-  venue: {
-    id: string;
-    slug: string;
-    name: string;
-    city: string;
-    map_link: string | null;
-  } | null;
-  players: {
-    player_name: string;
-  }[];
+  name: string;
+  city: string;
 };
 
-const MatchDetail = () => {
-  const { slug } = useParams<{ slug: string }>();
+const Organize = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [match, setMatch] = useState<Match | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [downloadDialogOpen, setDownloadDialogOpen] = useState(false);
-  const [isImageLoaded, setIsImageLoaded] = useState(false);
-  const [backgroundOption, setBackgroundOption] = useState("field"); // Options: "field", "white", "green", "black"
-  const cardRef = useRef<HTMLDivElement>(null);
+  const [venues, setVenues] = useState<Venue[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [venuesLoading, setVenuesLoading] = useState(true);
+  const [searchParams] = useSearchParams();
+  const preSelectedVenueSlug = searchParams.get('venue');
+  const [venueDialogOpen, setVenueDialogOpen] = useState(false);
+  const [successDialogOpen, setSuccessDialogOpen] = useState(false);
+  const [supercode, setSupercode] = useState<string | null>(null);
+  const [matchSlug, setMatchSlug] = useState<string | null>(null);
+
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      title: "",
+      total_slots: 10,
+      is_paid: false,
+      price: null,
+      notes: "",
+      organizer_name: "",
+      player_number_required: false,
+      is_private: false,
+      access_password: null,
+    },
+  });
+
+  const isPaid = form.watch("is_paid");
+  const isPrivate = form.watch("is_private");
 
   useEffect(() => {
-    if (!slug) return;
-    
-    fetchMatch(slug);
-  }, [slug]);
+    const fetchVenues = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("venues")
+          .select("id, slug, name, city")
+          .order("name");
 
-  const fetchMatch = async (matchSlug: string) => {
+        if (error) throw error;
+        setVenues(data || []);
+        
+        if (preSelectedVenueSlug) {
+          const venue = data?.find(v => v.slug === preSelectedVenueSlug);
+          if (venue) {
+            form.setValue("venue_id", venue.id);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching venues:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load venues. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setVenuesLoading(false);
+      }
+    };
+
+    fetchVenues();
+  }, [toast, form, preSelectedVenueSlug]);
+
+  const generatePassword = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let password = '';
+    for (let i = 0; i < 6; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return password;
+  };
+
+  const onSubmit = async (data: FormValues) => {
+    setLoading(true);
+
     try {
-      const { data, error } = await supabase
+      const { data: match, error } = await supabase
         .from("matches")
-        .select(`
-          *,
-          venue:venues(id, slug, name, city, map_link),
-          players:players(*)
-        `)
-        .eq("slug", matchSlug)
+        .insert({
+          title: data.title,
+          venue_id: data.venue_id,
+          match_date: format(data.match_date, "yyyy-MM-dd"),
+          match_time: data.match_time,
+          total_slots: data.total_slots,
+          is_paid: data.is_paid,
+          price: data.is_paid ? data.price : null,
+          notes: data.notes || null,
+          organizer_name: data.organizer_name,
+          player_number_required: data.player_number_required,
+          is_private: data.is_private,
+          access_password: data.is_private ? data.access_password : null,
+        })
+        .select('id, slug, super_code')
         .single();
 
       if (error) throw error;
 
-      setMatch(data as Match);
+      setSupercode(match.super_code || "N/A");
+      setMatchSlug(match.slug);
+      setSuccessDialogOpen(true);
+
+      toast({
+        title: "Success!",
+        description: "Your match has been created.",
+      });
     } catch (error) {
-      console.error("Error fetching match:", error);
+      console.error("Error creating match:", error);
       toast({
         title: "Error",
-        description: "Failed to load match details. Please try again.",
+        description: "Failed to create match. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -104,246 +186,15 @@ const MatchDetail = () => {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    const options: Intl.DateTimeFormatOptions = {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    };
-    return new Date(dateString).toLocaleDateString("en-NG", options);
+  const handleVenueCreated = (venueId: string, venueSlug: string, venueName: string) => {
+    setVenues(prev => [{ id: venueId, slug: venueSlug, name: venueName, city: "" }, ...prev]);
+    form.setValue("venue_id", venueId);
+    setVenueDialogOpen(false);
+    toast({
+      title: "Venue created",
+      description: `${venueName} has been added to venues.`,
+    });
   };
-
-  const formatTime = (timeString: string) => {
-    return timeString.slice(0, 5); // Format from "14:30:00" to "14:30"
-  };
-
-  const getMatchStatus = () => {
-    if (!match) return { isStarted: false, isPassed: false, isFull: false };
-    
-    const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
-    const now = new Date();
-    const nextDay = addDays(matchDateTime, 1);
-    
-    // Check if match is full
-    const isFull = match.players?.length >= match.total_slots;
-    
-    // Check if match has started
-    const isStarted = now >= matchDateTime;
-    
-    // Check if match has passed (day after)
-    const isPassed = now >= nextDay;
-    
-    return { isStarted, isPassed, isFull };
-  };
-
-  const shareMatch = async () => {
-    if (!match) return;
-    
-    const url = `${window.location.origin}/match/${match.slug}`;
-    const shareText = `Join my Football Match: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. Powered by PlayArena. ${url}`;
-    
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: `Join my Football Match: ${match.title}`,
-          text: shareText,
-          url: url,
-        });
-      } catch (err) {
-        console.error("Share failed:", err);
-      }
-    } else {
-      try {
-        await navigator.clipboard.writeText(shareText);
-        toast({
-          title: "Link copied!",
-          description: "Share it with your friends to join the match.",
-        });
-      } catch (err) {
-        toast({
-          title: "Failed to copy",
-          description: "Please try again or copy the URL manually.",
-          variant: "destructive",
-        });
-      }
-    }
-  };
-
-  const shareToWhatsApp = () => {
-    if (!match) return;
-    
-    const url = `${window.location.origin}/match/${match.slug}`;
-    const shareText = `Join my Football Match: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. Powered by PlayArena. ${url}`;
-    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
-    window.open(whatsappUrl, '_blank');
-  };
-
-  const shareToTwitter = () => {
-    if (!match) return;
-    
-    const url = `${window.location.origin}/match/${match.slug}`;
-    const shareText = `Join my Football Match: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. Powered by PlayArena. ${url}`;
-    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
-    window.open(twitterUrl, '_blank');
-  };
-
-  const shareToFacebook = () => {
-    if (!match) return;
-    
-    const url = `${window.location.origin}/match/${match.slug}`;
-    const shareText = `Join my Football Match: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. Powered by PlayArena.`;
-    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}"e=${encodeURIComponent(shareText)}`;
-    window.open(facebookUrl, '_blank');
-  };
-
-  const handleImageLoad = () => {
-    setIsImageLoaded(true);
-  };
-
-  const handleDownload = useCallback(async () => {
-    if (!cardRef.current || !isImageLoaded) {
-      toast({
-        title: "Error",
-        description: "Card is not ready for download. Please wait a moment and try again.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      const canvas = await html2canvas(cardRef.current, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        scrollX: 0,
-        scrollY: -window.scrollY,
-      });
-
-      const link = document.createElement('a');
-      link.download = `PlayArena-Match-${match?.title.replace(/\s+/g, '-')}.png`;
-      link.href = canvas.toDataURL('image/png');
-      link.click();
-    } catch (error) {
-      console.error("Error generating image:", error);
-      toast({
-        title: "Error",
-        description: "Failed to download match card. Please try again.",
-        variant: "destructive",
-      });
-    }
-  }, [isImageLoaded, match, toast]);
-
-  const downloadICS = () => {
-    if (!match) return;
-
-    const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
-    const endDateTime = new Date(matchDateTime.getTime() + 2 * 60 * 60 * 1000); // Assume 2-hour match duration
-
-    const event: ics.EventAttributes = {
-      start: [
-        matchDateTime.getFullYear(),
-        matchDateTime.getMonth() + 1,
-        matchDateTime.getDate(),
-        matchDateTime.getHours(),
-        matchDateTime.getMinutes(),
-      ],
-      end: [
-        endDateTime.getFullYear(),
-        endDateTime.getMonth() + 1,
-        endDateTime.getDate(),
-        endDateTime.getHours(),
-        endDateTime.getMinutes(),
-      ],
-      title: match.title,
-      description: `Football Match organized by ${match.organizer_name}. Match Slug: ${match.slug}. Venue: ${match.venue?.name || 'Unknown'}, ${match.venue?.city || ''}. Powered by PlayArena.`,
-      location: match.venue ? `${match.venue.name}, ${match.venue.city}` : "Unknown Venue",
-      url: `${window.location.origin}/match/${match.slug}`,
-      status: "CONFIRMED",
-      organizer: { name: match.organizer_name, email: "noreply@playarena.com" },
-    };
-
-    const { error, value } = ics.createEvent(event);
-
-    if (error || !value) {
-      console.error("Error creating calendar event:", error);
-      toast({
-        title: "Error",
-        description: "Failed to create calendar event. Please try again.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const blob = new Blob([value], { type: "text/calendar" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `PlayArena-Match-${match.slug}.ics`;
-    link.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const addToGoogleCalendar = () => {
-    if (!match) return;
-
-    const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
-    const endDateTime = new Date(matchDateTime.getTime() + 2 * 60 * 60 * 1000); // Assume 2-hour match duration
-
-    // Convert dates to Google Calendar's required format: YYYYMMDDTHHMMSSZ (UTC)
-    const formatDateForGoogle = (date: Date) => {
-      const pad = (num: number) => num.toString().padStart(2, '0');
-      const year = date.getUTCFullYear();
-      const month = pad(date.getUTCMonth() + 1);
-      const day = pad(date.getUTCDate());
-      const hours = pad(date.getUTCHours());
-      const minutes = pad(date.getUTCMinutes());
-      const seconds = pad(date.getUTCSeconds());
-      return `${year}${month}${day}T${hours}${minutes}${seconds}Z`;
-    };
-
-    const start = formatDateForGoogle(matchDateTime);
-    const end = formatDateForGoogle(endDateTime);
-    const title = encodeURIComponent(match.title);
-    const description = encodeURIComponent(
-      `Football Match organized by ${match.organizer_name}. Match Slug: ${match.slug}. Venue: ${match.venue?.name || 'Unknown'}, ${match.venue?.city || ''}. Powered by PlayArena.`
-    );
-    const location = encodeURIComponent(match.venue ? `${match.venue.name}, ${match.venue.city}` : "Unknown Venue");
-    const googleCalendarUrl = `https://www.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${start}/${end}&details=${description}&location=${location}`;
-
-    window.open(googleCalendarUrl, "_blank");
-  };
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-[50vh]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-playarena-500"></div>
-      </div>
-    );
-  }
-
-  if (!match) {
-    return (
-      <div className="p-4">
-        <Button 
-          variant="ghost" 
-          onClick={() => navigate(-1)} 
-          className="mb-4"
-        >
-          <ArrowLeft size={18} className="mr-2" />
-          Back
-        </Button>
-        <div className="text-center py-8">
-          <h2 className="text-xl font-semibold mb-2">Match Not Found</h2>
-          <p className="text-muted-foreground">The match you're looking for doesn't exist or has been removed.</p>
-        </div>
-      </div>
-    );
-  }
-
-  const { isStarted, isPassed, isFull } = getMatchStatus();
 
   return (
     <div className="min-h-screen pb-20">
@@ -357,324 +208,388 @@ const MatchDetail = () => {
           Back
         </Button>
         
-        <h1 className="text-2xl font-bold mb-2">{match.title}</h1>
-        <div className="flex justify-between items-center mb-4">
-          <p className="text-muted-foreground">Organized by {match.organizer_name}</p>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="flex items-center gap-1"
-              >
-                <CalendarPlus size={16} className="mr-2" />
-                Add to Calendar
-                <ChevronDown size={16} className="ml-2" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-[200px]">
-              <DropdownMenuItem onClick={addToGoogleCalendar}>
-                Google Calendar
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={downloadICS}>
-                Download .ics
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+        <h1 className="text-2xl font-bold mb-6">Organize a Match</h1>
         
-        {isPassed ? (
-          <div className="bg-gray-100 border border-gray-200 text-gray-700 px-4 py-3 rounded mb-4">
-            This match has passed
-          </div>
-        ) : isStarted ? (
-          <div className="bg-playarena-100 border border-playarena-200 text-playarena-700 px-4 py-3 rounded mb-4">
-            This match has already started!
-          </div>
-        ) : isFull ? (
-          <div className="bg-red-100 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
-            This match is completely filled up!
-          </div>
-        ) : null}
-        
-        <div className="space-y-4">
-          <div className="border rounded-lg p-4 bg-card">
-            <h2 className="font-semibold mb-3">Match Details</h2>
-            
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Calendar size={18} />
-                <span>{formatDate(match.match_date)}</span>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <Clock size={18} />
-                <span>{formatTime(match.match_time)}</span>
-              </div>
-              
-              {match.venue && (
-                <div 
-                  className="flex items-start gap-2 cursor-pointer" 
-                  onClick={() => navigate(`/venue/${match.venue?.slug}`)}
-                >
-                  <MapPin size={18} className="mt-0.5" />
-                  <div>
-                    <span className="text-playarena-600 hover:underline">
-                      {match.venue.name}, {match.venue.city}
-                    </span>
-                    {match.venue.map_link && (
-                      <div className="mt-1">
-                        <a 
-                          href={match.venue.map_link} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-xs flex items-center text-playarena-600 hover:underline"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <ExternalLink size={12} className="mr-1" />
-                          View on Google Maps
-                        </a>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <FormField
+              control={form.control}
+              name="title"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Match Title</FormLabel>
+                  <FormControl>
+                    <Input placeholder="E.g., Saturday Friendly" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="venue_id"
+              render={({ field }) => (
+                <FormItem>
+                  <div className="flex justify-between items-center">
+                    <FormLabel>Venue</FormLabel>
+                    <Dialog open={venueDialogOpen} onOpenChange={setVenueDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm" type="button">
+                          <Plus size={16} className="mr-1" /> Add New Venue
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
+                        <VenueForm 
+                          onSuccess={handleVenueCreated} 
+                          onCancel={() => setVenueDialogOpen(false)} 
+                        />
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select a venue" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {venuesLoading ? (
+                        <SelectItem value="loading" disabled>
+                          Loading venues...
+                        </SelectItem>
+                      ) : venues.length > 0 ? (
+                        venues.map((venue) => (
+                          <SelectItem key={venue.id} value={venue.id}>
+                            {venue.name}{venue.city ? `, ${venue.city}` : ''}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="none" disabled>
+                          No venues available
+                        </SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="match_date"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Date</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value ? (
+                              format(field.value, "PPP")
+                            ) : (
+                              <span>Pick a date</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          disabled={(date) => {
+                            const today = new Date();
+                            today.setHours(0, 0, 0, 0);
+                            return date < today;
+                          }}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="match_time"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Time</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Input
+                          type="time"
+                          placeholder="HH:MM"
+                          {...field}
+                        />
+                        <Clock className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
                       </div>
-                    )}
-                  </div>
-                </div>
-              )}
-              
-              <div className="flex items-center gap-2">
-                <Users size={18} />
-                <span>
-                  {match.players?.length || 0}/{match.total_slots} spots filled
-                  {isFull && " (FULL)"}
-                </span>
-              </div>
-              
-              {match.is_paid && (
-                <div className="font-semibold mt-2">
-                  Price: ₦{match.price?.toFixed(2)}
-                </div>
-              )}
-              
-              {match.notes && (
-                <div className="mt-3">
-                  <h3 className="text-sm font-medium mb-1">Notes:</h3>
-                  <p className="text-sm bg-muted p-2 rounded">{match.notes}</p>
-                </div>
-              )}
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
-          </div>
-          
-          <div className="border rounded-lg p-4 bg-card">
-            <h2 className="font-semibold mb-3">Players ({match.players?.length || 0}/{match.total_slots})</h2>
-            
-            {match.players && match.players.length > 0 ? (
-              <div className="space-y-2">
-                {match.players.map((player, index) => (
-                  <div key={index} className="flex items-center gap-2 p-2 bg-muted rounded-md">
-                    <span className="w-8 h-8 rounded-full bg-playarena-100 flex items-center justify-center">
-                      {player.player_name.charAt(0).toUpperCase()}
-                    </span>
-                    <span>{player.player_name}</span>
+
+            <FormField
+              control={form.control}
+              name="total_slots"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Number of Players</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min={2}
+                      {...field}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value, 10);
+                        field.onChange(isNaN(value) ? 2 : value);
+                      }}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Total number of players needed for this match
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="player_number_required"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-base">
+                      Require Phone Number
+                    </FormLabel>
+                    <FormDescription>
+                      Toggle if players need to provide their phone number when joining
+                    </FormDescription>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-muted-foreground text-sm">No players have joined yet</p>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="is_paid"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-base">
+                      Paid Match
+                    </FormLabel>
+                    <FormDescription>
+                      Toggle if players need to pay to join this match
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            {isPaid && (
+              <FormField
+                control={form.control}
+                name="price"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Price per Player (₦)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        placeholder="0.00"
+                        min={0}
+                        step="0.01"
+                        {...field}
+                        onChange={(e) => {
+                          const value = parseFloat(e.target.value);
+                          field.onChange(isNaN(value) ? 0 : value);
+                        }}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             )}
-            
-            {!isPassed && !isStarted && !isFull && (
-              <Button 
-                className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
-                onClick={() => navigate(`/join/${match.slug}`)}
-              >
-                Join This Match
-              </Button>
+
+            <FormField
+              control={form.control}
+              name="is_private"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-base">
+                      Private Match
+                    </FormLabel>
+                    <FormDescription>
+                      Restrict access to invited players only
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={(checked) => {
+                        field.onChange(checked);
+                        if (checked) {
+                          form.setValue('access_password', generatePassword());
+                        } else {
+                          form.setValue('access_password', null);
+                        }
+                      }}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            {isPrivate && (
+              <FormField
+                control={form.control}
+                name="access_password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Access Password</FormLabel>
+                    <div className="flex items-center gap-2">
+                      <FormControl>
+                        <Input
+                          value={field.value || ''}
+                          readOnly
+                          className="font-mono uppercase"
+                        />
+                      </FormControl>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          navigator.clipboard.writeText(field.value || '');
+                          toast({
+                            title: "Copied!",
+                            description: "Password copied to clipboard",
+                          });
+                        }}
+                      >
+                        <Copy size={16} className="mr-2" />
+                        Copy
+                      </Button>
+                    </div>
+                    <FormDescription>
+                      Share this password with players you want to invite
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             )}
-            
-            {(isPassed || isStarted) && (
-              <Button 
-                className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
-                variant="outline"
-                disabled
-              >
-                {isPassed ? "Match Has Passed" : "Match Has Started"}
-              </Button>
-            )}
-            
-            {!isPassed && !isStarted && isFull && (
-              <Button 
-                className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
-                variant="outline"
-                disabled
-              >
-                Match Is Full
-              </Button>
-            )}
-          </div>
-          
-          <div className="flex gap-3 mt-6">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  className="flex-1"
-                >
-                  <Share2 size={18} className="mr-2" />
-                  Share
-                  <ChevronDown size={16} className="ml-2" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-[200px]">
-                <DropdownMenuItem onClick={shareToWhatsApp}>
-                  Share to WhatsApp
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={shareToTwitter}>
-                  Share to Twitter
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={shareToFacebook}>
-                  Share to Facebook
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={shareMatch}>
-                  Share via Device
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            
+
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Notes (Optional)</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="E.g., Bring boots, parking available, etc."
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="organizer_name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Your Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Your name" {...field} />
+                  </FormControl>
+                  <FormDescription>
+                    This will be displayed as the organizer of the match
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <Button 
-              variant="outline"
-              className="flex-1"
-              onClick={() => setDownloadDialogOpen(true)}
+              type="submit" 
+              className="w-full bg-playarena-500 hover:bg-playarena-600 text-white" 
+              disabled={loading}
             >
-              <Download size={18} className="mr-2" />
-              Download
+              {loading ? "Creating..." : "Create Match"}
             </Button>
-          </div>
-        </div>
+          </form>
+        </Form>
       </div>
       <Navbar />
-
-      <Dialog open={downloadDialogOpen} onOpenChange={(open) => {
-        setDownloadDialogOpen(open);
-        setIsImageLoaded(false); // Reset image load state when dialog closes
-        if (!open) setBackgroundOption("field"); // Reset to default background on close
+      
+      <Dialog open={successDialogOpen} onOpenChange={(open) => {
+        setSuccessDialogOpen(open);
+        if (!open && matchSlug) {
+          navigate(`/match/${matchSlug}`);
+        }
       }}>
-        <DialogContent className="sm:max-w-[425px] max-w-[90vw] rounded-2xl">
-          <DialogTitle>Match Details</DialogTitle>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogTitle>Match Created Successfully!</DialogTitle>
           <DialogDescription>
-            <p className="text-gray-600 dark:text-gray-300 mb-4">
-              Download this card to share your match details with friends. Choose any background below.
-            </p>
-            <div className="mb-4">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Background:</label>
-              <div className="flex items-center space-x-4 mt-2">
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    value="field"
-                    checked={backgroundOption === "field"}
-                    onChange={() => setBackgroundOption("field")}
-                    className="form-radio text-playarena-500"
-                  />
-                  <span>Default</span>
-                </label>
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    value="white"
-                    checked={backgroundOption === "white"}
-                    onChange={() => setBackgroundOption("white")}
-                    className="form-radio text-playarena-500"
-                  />
-                  <span>White</span>
-                </label>
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    value="green"
-                    checked={backgroundOption === "green"}
-                    onChange={() => setBackgroundOption("green")}
-                    className="form-radio text-playarena-500"
-                  />
-                  <span>Green</span>
-                </label>
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    value="black"
-                    checked={backgroundOption === "black"}
-                    onChange={() => setBackgroundOption("black")}
-                    className="form-radio text-playarena-500"
-                  />
-                  <span>Black</span>
-                </label>
-              </div>
-            </div>
-            <div 
-              ref={cardRef}
-              className={`rounded-lg p-6 shadow-lg relative overflow-hidden ${backgroundOption === "field" ? "bg-cover bg-center" : ""}`}
-              style={{
-                backgroundImage: backgroundOption === "field" ? "url('/football-field.jpg')" : "",
-                backgroundColor: backgroundOption !== "field" ? backgroundOption : "transparent",
-                ...(backgroundOption === "field" && {
-                  backgroundBlendMode: "overlay",
-                  backgroundColor: "rgba(0, 0, 0, 0.5)", // Dark overlay for text visibility
-                }),
-              }}
-            >
-              <div className="relative z-10">
-                <div className="flex items-center justify-between mb-4">
-                  <img 
-                    src={backgroundOption === "white" ? "/playarenalight.png" : "/playarenadark.png"}
-                    alt="PlayArena Logo" 
-                    className="h-8 w-auto"
-                    onLoad={handleImageLoad}
-                    onError={() => {
-                      toast({
-                        title: "Error",
-                        description: "Failed to load logo image.",
-                        variant: "destructive",
-                      });
-                      setIsImageLoaded(true); // Proceed anyway
-                    }}
-                  />
-                  <Trophy className={`h-6 w-6 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
+            <div className="space-y-4">
+              {isPrivate && (
+                <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-4 rounded-md">
+                  <h3 className="font-medium">Private Match</h3>
+                  <p className="text-sm mt-1">
+                    Share this password with invited players: <strong>{form.getValues('access_password')}</strong>
+                  </p>
                 </div>
-                <h2 className={`text-xl font-bold mb-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`}>{match.title}</h2>
-                <div className="space-y-2 mb-4">
-                  <div className="flex items-center">
-                    <MapPin className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-                    <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{match.venue?.name || "Venue"}, {match.venue?.city || ""}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <Calendar className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-                    <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{formatDate(match.match_date)} at {formatTime(match.match_time)}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <DollarSign className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-                    <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{match.is_paid ? `Paid (₦${match.price?.toFixed(2)})` : "Free"}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <Users className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-                    <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{match.players?.length || 0}/{match.total_slots} slots booked</span>
-                  </div>
-                </div>
+              )}
+              
+              <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded-md">
+                <p className="text-lg font-semibold text-center">{supercode || "N/A"}</p>
+                <p className="text-center text-sm mt-1">Supercode for check-ins</p>
               </div>
-            </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400 my-4">
-              <strong>Note:</strong> Save or share this card to invite players to your match.
-            </p>
-            <div className="flex gap-2">
+              
               <Button 
                 className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
-                onClick={handleDownload}
-                disabled={!isImageLoaded}
+                onClick={() => {
+                  setSuccessDialogOpen(false);
+                  if (matchSlug) {
+                    navigate(`/match/${matchSlug}`);
+                  }
+                }}
               >
-                Download
-              </Button>
-              <Button 
-                className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
-                onClick={() => setDownloadDialogOpen(false)}
-              >
-                Close
+                Go to Match Details
               </Button>
             </div>
           </DialogDescription>
@@ -684,4 +599,4 @@ const MatchDetail = () => {
   );
 };
 
-export default MatchDetail;
+export default Organize;
