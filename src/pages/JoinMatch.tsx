@@ -220,29 +220,17 @@ const JoinMatch = () => {
     try {
       setJoining(true);
 
-      // Initialize Paystack transaction
-      const response = await supabase.functions.invoke("initialize-paystack-transaction", {
-        body: {
-          email,
-          amount: match.price,
+      // Initialize Paystack popup with newTransaction
+      const paystack = new window.PaystackPop();
+      paystack.newTransaction({
+        key: process.env.REACT_APP_PAYSTACK_PUBLIC_KEY, // Access from .env
+        email,
+        amount: match.price * 100, // Convert to kobo
+        metadata: {
           match_id: match.id,
           slug: match.slug,
           title: match.title,
         },
-      });
-
-      if (response.error) {
-        throw new Error(response.error.message);
-      }
-
-      const { access_code, reference } = response.data;
-
-      // Initialize Paystack popup with callback
-      const paystack = new window.PaystackPop();
-      paystack.newTransaction({
-        access_code,
-        email,
-        amount: match.price * 100, // Convert to kobo
         onSuccess: (response) => {
           // Update payment status on success
           setPaymentStatus("success");
@@ -260,7 +248,8 @@ const JoinMatch = () => {
           });
           setJoining(false);
         },
-        onError: () => {
+        onError: (error) => {
+          console.error("Paystack error:", error);
           toast({
             title: "Payment Error",
             description: "An error occurred during payment. Please try again.",
