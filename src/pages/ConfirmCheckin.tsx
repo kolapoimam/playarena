@@ -13,7 +13,8 @@ import {
   ArrowLeft, 
   CheckCircle, 
   XCircle, 
-  Loader2 
+  Loader2,
+  AlertCircle
 } from "lucide-react";
 import { format } from "date-fns";
 import { differenceInHours } from "date-fns";
@@ -52,6 +53,7 @@ const ConfirmCheckin = () => {
   const [superCode, setSuperCode] = useState("");
   const [superCodeError, setSuperCodeError] = useState<string | null>(null);
   const [match, setMatch] = useState<Match | null>(null);
+  const [matchNotFound, setMatchNotFound] = useState(false);
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<"confirm" | "checkin" | null>(null);
   const [playerStatuses, setPlayerStatuses] = useState<
@@ -69,6 +71,7 @@ const ConfirmCheckin = () => {
       return;
     }
     setSuperCodeError(null);
+    setMatchNotFound(false);
 
     setLoading(true);
     try {
@@ -84,19 +87,32 @@ const ConfirmCheckin = () => {
 
       if (error) throw error;
 
+      if (!data) {
+        setMatchNotFound(true);
+        toast({
+          title: "Match Not Found",
+          description: `No match found with super code ${superCode}. Please check the code and try again.`,
+          variant: "destructive",
+        });
+        return;
+      }
+
       setMatch(data as Match);
       setPlayerStatuses(
-        data.players.map((player) => ({
+        (data.players || []).map((player) => ({
           id: player.id,
           status: player.status,
           checkinCode: "",
         }))
       );
-    } catch (error) {
-      console.error("Error fetching match:", error);
+    } catch (error: any) {
+      console.error("Error fetching match:", error.message, error.details || error);
+      setMatchNotFound(true);
       toast({
         title: "Error",
-        description: "Invalid super code or match not found.",
+        description: error.message.includes("0 rows") 
+          ? `No match found with super code ${superCode}. Please check the code and try again.` 
+          : "An error occurred while fetching the match. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -265,6 +281,7 @@ const ConfirmCheckin = () => {
                   const value = e.target.value.replace(/[^0-9]/g, "").slice(0, 6);
                   setSuperCode(value);
                   setSuperCodeError(null);
+                  setMatchNotFound(false);
                 }}
                 inputMode="numeric"
                 pattern="[0-9]*"
@@ -291,6 +308,16 @@ const ConfirmCheckin = () => {
             </Button>
           </div>
         </div>
+
+        {matchNotFound && !loading && (
+          <div className="bg-white rounded-xl shadow-lg p-6 mb-6 text-center">
+            <AlertCircle size={40} className="text-red-500 mx-auto mb-3" />
+            <h2 className="text-lg font-semibold text-red-600">Match Not Found</h2>
+            <p className="text-muted-foreground mt-2">
+              No match found with super code <strong>{superCode}</strong>. Please check the code and try again.
+            </p>
+          </div>
+        )}
 
         {match && (
           <div className="animate-fade-in">
