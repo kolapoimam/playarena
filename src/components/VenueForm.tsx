@@ -100,9 +100,9 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
   return (
     <div className="bg-background p-4 rounded-lg border">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold">Create New Venue</h2>
+        <h2 className="text-xl font-semibold text-playarena-800">Create New Venue</h2>
         {onCancel && (
-          <Button variant="ghost" size="sm" onClick={onCancel}>
+          <Button variant="ghost" size="sm" onClick={onCancel} className="text-playarena-600 hover:text-playarena-700">
             <X size={18} />
           </Button>
         )}
@@ -115,11 +115,15 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
             name="name"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Venue Name</FormLabel>
+                <FormLabel className="text-playarena-700">Venue Name</FormLabel>
                 <FormControl>
-                  <Input placeholder="E.g., National Stadium" {...field} />
+                  <Input 
+                    placeholder="E.g., National Stadium" 
+                    {...field} 
+                    className="focus-visible:ring-playarena-500"
+                  />
                 </FormControl>
-                <FormMessage />
+                <FormMessage className="text-playarena-600" />
               </FormItem>
             )}
           />
@@ -129,11 +133,15 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
             name="address"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Address</FormLabel>
+                <FormLabel className="text-playarena-700">Address</FormLabel>
                 <FormControl>
-                  <Input placeholder="Full street address" {...field} />
+                  <Input 
+                    placeholder="Full street address" 
+                    {...field} 
+                    className="focus-visible:ring-playarena-500"
+                  />
                 </FormControl>
-                <FormMessage />
+                <FormMessage className="text-playarena-600" />
               </FormItem>
             )}
           />
@@ -144,94 +152,109 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
               name="city"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>City</FormLabel>
+                  <FormLabel className="text-playarena-700">City</FormLabel>
                   <FormControl>
-                    <Input placeholder="E.g., Lagos" {...field} />
+                    <Input 
+                      placeholder="E.g., Lagos" 
+                      {...field} 
+                      className="focus-visible:ring-playarena-500"
+                    />
                   </FormControl>
-                  <FormMessage />
+                  <FormMessage className="text-playarena-600" />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="state"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-playarena-700">State</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="E.g., Lagos State" 
+                      {...field} 
+                      className="focus-visible:ring-playarena-500"
+                    />
+                  </FormControl>
+                  <FormMessage className="text-playarena-600" />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <FormField
+            control={form.control}
+            name="description"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-playarena-700">Description (Optional)</FormLabel>
+                <FormControl>
+                  <Textarea 
+                    placeholder="Describe the venue, facilities, etc."
+                    {...field}
+                    className="focus-visible:ring-playarena-500"
+                  />
+                </FormControl>
+                <FormMessage className="text-playarena-600" />
               </FormItem>
             )}
           />
 
           <FormField
             control={form.control}
-            name="state"
+            name="map_link"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>State</FormLabel>
+                <FormLabel className="text-playarena-700">Google Maps Link (Optional)</FormLabel>
                 <FormControl>
-                  <Input placeholder="E.g., Lagos State" {...field} />
+                  <Input 
+                    placeholder="Paste Google Maps URL here"
+                    {...field}
+                    className="focus-visible:ring-playarena-500"
+                  />
                 </FormControl>
-                <FormMessage />
+                <FormDescription className="text-playarena-500">
+                  Add a Google Maps link to help players find the venue easily
+                </FormDescription>
+                <FormMessage className="text-playarena-600" />
               </FormItem>
             )}
           />
-        </div>
 
-        <FormField
-          control={form.control}
-          name="description"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Description (Optional)</FormLabel>
-              <FormControl>
-                <Textarea 
-                  placeholder="Describe the venue, facilities, etc."
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+          <FormField
+            control={form.control}
+            name="image_url"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-playarena-700">Image URL (Optional)</FormLabel>
+                <FormControl>
+                  <Input 
+                    placeholder="https://example.com/image.jpg"
+                    {...field}
+                    className="focus-visible:ring-playarena-500"
+                  />
+                </FormControl>
+                <FormDescription className="text-playarena-500">
+                  Add an image URL for the venue
+                </FormDescription>
+                <FormMessage className="text-playarena-600" />
+              </FormItem>
+            )}
+          />
 
-        <FormField
-          control={form.control}
-          name="map_link"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Google Maps Link (Optional)</FormLabel>
-              <FormControl>
-                <Input 
-                  placeholder="Paste Google Maps URL here"
-                  {...field}
-                />
-              </FormControl>
-              <FormDescription>
-                Add a Google Maps link to help players find the venue easily
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="image_url"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Image URL (Optional)</FormLabel>
-              <FormControl>
-                <Input 
-                  placeholder="https://example.com/image.jpg"
-                  {...field}
-                />
-              </FormControl>
-              <FormDescription>
-                Add an image URL for the venue
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? "Creating..." : "Create Venue"}
-        </Button>
-      </form>
-    </Form>
-  </div>
-);
+          <Button 
+            type="submit" 
+            className="w-full bg-playarena-600 hover:bg-playarena-700 text-white" 
+            disabled={loading}
+          >
+            {loading ? "Creating..." : "Create Venue"}
+          </Button>
+        </form>
+      </Form>
+    </div>
+  );
 };
 
 export default VenueForm;
