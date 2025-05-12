@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Calendar as CalendarIcon, Clock, MapPin, ArrowLeft, Plus } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, MapPin, ArrowLeft, Plus, User, Trophy } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Form,
@@ -35,7 +35,6 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogTrigger,
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
@@ -44,6 +43,7 @@ import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
 import VenueForm from "@/components/VenueForm";
 import Navbar from "@/components/Navbar";
+import html2canvas from "html2canvas";
 
 // Form schema using zod
 const formSchema = z.object({
@@ -82,6 +82,7 @@ const Organize = () => {
   const [successDialogOpen, setSuccessDialogOpen] = useState(false);
   const [supercode, setSupercode] = useState<string | null>(null);
   const [matchSlug, setMatchSlug] = useState<string | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
 
   // Initialize the form
   const form = useForm<FormValues>({
@@ -99,6 +100,11 @@ const Organize = () => {
 
   // Watch the is_paid field to conditionally show price input
   const isPaid = form.watch("is_paid");
+  const selectedVenueId = form.watch("venue_id");
+  const matchTitle = form.watch("title");
+  const matchDate = form.watch("match_date");
+  const matchTime = form.watch("match_time");
+  const organizerName = form.watch("organizer_name");
 
   // Load venues from Supabase
   useEffect(() => {
@@ -112,7 +118,6 @@ const Organize = () => {
         if (error) throw error;
         setVenues(data || []);
         
-        // If a venue slug was provided in the URL, find its ID and set it
         if (preSelectedVenueSlug) {
           const venue = data?.find(v => v.slug === preSelectedVenueSlug);
           if (venue) {
@@ -138,7 +143,6 @@ const Organize = () => {
     setLoading(true);
 
     try {
-      // Create the match in the database
       const { data: match, error } = await supabase
         .from("matches")
         .insert({
@@ -158,14 +162,10 @@ const Organize = () => {
 
       if (error) throw error;
 
-      // Store the supercode and match slug
-      setSupercode(match.super_code || "N/A"); // Default to "N/A" if null (unlikely)
+      setSupercode(match.super_code || "N/A");
       setMatchSlug(match.slug);
-
-      // Show the success dialog
       setSuccessDialogOpen(true);
 
-      // Success toast (still shown for redundancy)
       toast({
         title: "Success!",
         description: "Your match has been created.",
@@ -183,21 +183,35 @@ const Organize = () => {
   };
 
   const handleVenueCreated = (venueId: string, venueSlug: string, venueName: string) => {
-    // Add the new venue to the venues list
     setVenues(prev => [{ id: venueId, slug: venueSlug, name: venueName, city: "" }, ...prev]);
-    
-    // Set the venue in the form
     form.setValue("venue_id", venueId);
-    
-    // Close the dialog
     setVenueDialogOpen(false);
-    
-    // Show success toast
     toast({
       title: "Venue created",
       description: `${venueName} has been added to venues.`,
     });
   };
+
+  const handleDownload = async () => {
+    if (cardRef.current) {
+      try {
+        const canvas = await html2canvas(cardRef.current, { scale: 2 });
+        const link = document.createElement('a');
+        link.download = `PlayArena-Supercode-${matchTitle.replace(/\s+/g, '-')}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      } catch (error) {
+        console.error("Error generating image:", error);
+        toast({
+          title: "Error",
+          description: "Failed to download supercode card.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  const selectedVenue = venues.find(venue => venue.id === selectedVenueId);
 
   return (
     <div className="min-h-screen pb-20">
@@ -486,7 +500,6 @@ const Organize = () => {
       </div>
       <Navbar />
       
-      {/* Success Dialog with Supercode */}
       <Dialog open={successDialogOpen} onOpenChange={(open) => {
         setSuccessDialogOpen(open);
         if (!open && matchSlug) {
@@ -499,23 +512,60 @@ const Organize = () => {
             <p className="text-gray-600 dark:text-gray-300 mb-4">
               Your match has been created. Below is your unique 6-digit supercode for check-ins on match day.
             </p>
-            <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded-md mb-4">
-              <p className="text-lg font-semibold text-center">{supercode || "N/A"}</p>
-            </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-              <strong>Note:</strong> Please save or download this code. You will need it to confirm and check in players on match day.
-            </p>
-            <Button 
-              className="w-full bg-green-500 hover:bg-green-600 text-white"
-              onClick={() => {
-                setSuccessDialogOpen(false);
-                if (matchSlug) {
-                  navigate(`/match/${matchSlug}`);
-                }
-              }}
+            <div 
+              ref={cardRef}
+              className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg p-6 text-white shadow-lg"
             >
-              Go to Match Details
-            </Button>
+              <div className="flex items-center justify-between mb-4">
+                <img 
+                  src="/playarenalight.png" 
+                  alt="PlayArena Logo" 
+                  className="h-8 w-auto"
+                />
+                <Trophy className="h-6 w-6" />
+              </div>
+              <h2 className="text-xl font-bold mb-2">{matchTitle}</h2>
+              <div className="space-y-2 mb-4">
+                <div className="flex items-center">
+                  <MapPin className="h-4 w-4 mr-2" />
+                  <span>{selectedVenue?.name || "Venue"}</span>
+                </div>
+                <div className="flex items-center">
+                  <CalendarIcon className="h-4 w-4 mr-2" />
+                  <span>{matchDate ? format(matchDate, "PPP") : "Date"} at {matchTime || "Time"}</span>
+                </div>
+                <div className="flex items-center">
+                  <User className="h-4 w-4 mr-2" />
+                  <span>Organized by {organizerName}</span>
+                </div>
+              </div>
+              <div className="bg-white text-green-600 rounded-md p-4 text-center">
+                <p className="text-sm font-medium">Supercode</p>
+                <p className="text-3xl font-bold tracking-wider">{supercode || "N/A"}</p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400 my-4">
+              <strong>Note:</strong> Save or download this code. You'll need it to confirm and check in players on match day.
+            </p>
+            <div className="flex gap-2">
+              <Button 
+                className="flex-1 bg-green-500 hover:bg-green-600 text-white"
+                onClick={handleDownload}
+              >
+                Download Supercode
+              </Button>
+              <Button 
+                className="flex-1 bg-green-500 hover:bg-green-600 text-white"
+                onClick={() => {
+                  setSuccessDialogOpen(false);
+                  if (matchSlug) {
+                    navigate(`/match/${matchSlug}`);
+                  }
+                }}
+              >
+                Go to Match Details
+              </Button>
+            </div>
           </DialogDescription>
         </DialogContent>
       </Dialog>
