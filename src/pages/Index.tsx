@@ -35,6 +35,8 @@ type Venue = {
   match_count: number;
 };
 
+const [activeFaqTab, setActiveFaqTab] = useState('general');
+
 const formatDate = (dateString: string) => {
   const options: Intl.DateTimeFormatOptions = { weekday: "short", month: "short", day: "numeric" };
   return new Date(dateString).toLocaleDateString("en-US", options);
@@ -315,80 +317,95 @@ const Index = () => {
           </section>
 
           {/* FAQ Section */}
-          <section className="px-4 py-6 bg-gray-100 dark:bg-gray-800 rounded-lg mt-8">
-            <h2 className="text-2xl font-bold mb-4">Frequently Asked Questions</h2>
-            <div className="flex space-x-4 mb-4">
-              <button className="px-4 py-2 bg-white dark:bg-gray-700 rounded-md">General</button>
-              <button className="px-4 py-2 bg-white dark:bg-gray-700 rounded-md">Venues</button>
-              <button className="px-4 py-2 bg-white dark:bg-gray-700 rounded-md">Matches</button>
-            </div>
-            <div className="space-y-4">
-              <details className="bg-white dark:bg-gray-700 rounded-md p-4">
-                <summary className="font-semibold cursor-pointer">What is PlayArena?</summary>
-                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">PlayArena is a platform for organizing and joining football matches and venues across Nigeria.</p>
-              </details>
-              <details className="bg-white dark:bg-gray-700 rounded-md p-4">
-                <summary className="font-semibold cursor-pointer">How do I get started?</summary>
-                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">No account needed! You can browse matches immediately. To organize a match or add a venue, simply use the 'Organize' or 'Add Venue' buttons.</p>
-              </details>
-              <details className="bg-white dark:bg-gray-700 rounded-md p-4">
-                <summary className="font-semibold cursor-pointer">Is there a cost to use PlayArena?</summary>
-                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Basic features are free, but some matches may have a fee set by organizers.</p>
-              </details>
-              <details className="bg-white dark:bg-gray-700 rounded-md p-4">
-                <summary className="font-semibold cursor-pointer">How can I contact support?</summary>
-                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">You can reach us directly on social media @PIousGeek</p>
-              </details>
-              <details className="bg-white dark:bg-gray-700 rounded-md p-4">
-                <summary className="font-semibold cursor-pointer">What devices support PlayArena?</summary>
-                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">PlayArena works on web browsers on desktops, tablets, and mobile devices.</p>
-              </details>
-            </div>
-            <div className="space-y-4 hidden">
-              <details className="bg-white dark:bg-gray-700 rounded-md p-4">
-                <summary className="font-semibold cursor-pointer">How do I add a venue?</summary>
-                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Click 'Add Venue', fill in the details, and upload images to list your venue.</p>
-              </details>
-              <details className="bg-white dark:bg-gray-700 rounded-md p-4">
-                <summary className="font-semibold cursor-pointer">Can I edit my venue details?</summary>
-                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Yes, go to your venue page and use the edit option to update details.</p>
-              </details>
-              <details className="bg-white dark:bg-gray-700 rounded-md p-4">
-                <summary className="font-semibold cursor-pointer">What images should I upload?</summary>
-                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Upload clear photos of the venue, up to 3 images under 2MB each.</p>
-              </details>
-              <details className="bg-white dark:bg-gray-700 rounded-md p-4">
-                <summary className="font-semibold cursor-pointer">How are venues ranked?</summary>
-                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Venues are ranked by the number of matches hosted, shown as 'Match Count'.</p>
-              </details>
-              <details className="bg-white dark:bg-gray-700 rounded-md p-4">
-                <summary className="font-semibold cursor-pointer">Can I remove my venue?</summary>
-                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Contact support to request venue removal if needed.</p>
-              </details>
-            </div>
-            <div className="space-y-4 hidden">
-              <details className="bg-white dark:bg-gray-700 rounded-md p-4">
-                <summary className="font-semibold cursor-pointer">How do I join a match?</summary>
-                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Use the 'Join Match' button on the match card to participate.</p>
-              </details>
-              <details className="bg-white dark:bg-gray-700 rounded-md p-4">
-                <summary className="font-semibold cursor-pointer">Can I organize a paid match?</summary>
-                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Yes, set the price when organizing via the 'Organize' page.</p>
-              </details>
-              <details className="bg-white dark:bg-gray-700 rounded-md p-4">
-                <summary className="font-semibold cursor-pointer">What if a match is canceled?</summary>
-                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Organizers will notify participants; refunds are handled case-by-case.</p>
-              </details>
-              <details className="bg-white dark:bg-gray-700 rounded-md p-4">
-                <summary className="font-semibold cursor-pointer">How are match times set?</summary>
-                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Organizers set the date and time in their local timezone.</p>
-              </details>
-              <details className="bg-white dark:bg-gray-700 rounded-md p-4">
-                <summary className="font-semibold cursor-pointer">Can I see past matches?</summary>
-                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Yes, use the 'See All' button on the Matches section and filter to view history.</p>
-              </details>
-            </div>
-          </section>
+<section className="px-4 py-6 bg-gray-100 dark:bg-gray-800 rounded-lg mt-8">
+  <h2 className="text-2xl font-bold mb-4 text-center">Frequently Asked Questions</h2>
+  <div className="flex space-x-4 mb-4">
+    <button 
+      className={`px-4 py-2 rounded-md ${activeFaqTab === 'general' ? 'bg-green-500 text-white' : 'bg-white dark:bg-gray-700'}`}
+      onClick={() => setActiveFaqTab('general')}
+    >
+      General
+    </button>
+    <button 
+      className={`px-4 py-2 rounded-md ${activeFaqTab === 'venues' ? 'bg-green-500 text-white' : 'bg-white dark:bg-gray-700'}`}
+      onClick={() => setActiveFaqTab('venues')}
+    >
+      Venues
+    </button>
+    <button 
+      className={`px-4 py-2 rounded-md ${activeFaqTab === 'matches' ? 'bg-green-500 text-white' : 'bg-white dark:bg-gray-700'}`}
+      onClick={() => setActiveFaqTab('matches')}
+    >
+      Matches
+    </button>
+  </div>
+  <div className={`space-y-4 ${activeFaqTab === 'general' ? 'block' : 'hidden'}`}>
+    <details className="bg-white dark:bg-gray-700 rounded-md p-4">
+      <summary className="font-semibold cursor-pointer">What is PlayArena?</summary>
+      <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">PlayArena is a platform for organizing and joining football matches and venues across Nigeria.</p>
+    </details>
+    <details className="bg-white dark:bg-gray-700 rounded-md p-4">
+      <summary className="font-semibold cursor-pointer">How do I get started?</summary>
+      <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">No account needed! You can browse matches immediately. To organize a match or add a venue, simply use the 'Organize' or 'Add Venue' buttons.</p>
+    </details>
+    <details className="bg-white dark:bg-gray-700 rounded-md p-4">
+      <summary className="font-semibold cursor-pointer">Is there a cost to use PlayArena?</summary>
+      <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Basic features are free, but some matches may have a fee set by organizers.</p>
+    </details>
+    <details className="bg-white dark:bg-gray-700 rounded-md p-4">
+      <summary className="font-semibold cursor-pointer">How can I contact support?</summary>
+      <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">You can reach us directly on social media @PIousGeek</p>
+    </details>
+    <details className="bg-white dark:bg-gray-700 rounded-md p-4">
+      <summary className="font-semibold cursor-pointer">What devices support PlayArena?</summary>
+      <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">PlayArena works on web browsers on desktops, tablets, and mobile devices.</p>
+    </details>
+  </div>
+  <div className={`space-y-4 ${activeFaqTab === 'venues' ? 'block' : 'hidden'}`}>
+    <details className="bg-white dark:bg-gray-700 rounded-md p-4">
+      <summary className="font-semibold cursor-pointer">How do I add a venue?</summary>
+      <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Click 'Add Venue', fill in the details, and upload images to list your venue.</p>
+    </details>
+    <details className="bg-white dark:bg-gray-700 rounded-md p-4">
+      <summary className="font-semibold cursor-pointer">Can I edit my venue details?</summary>
+      <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Yes, go to your venue page and use the edit option to update details.</p>
+    </details>
+    <details className="bg-white dark:bg-gray-700 rounded-md p-4">
+      <summary className="font-semibold cursor-pointer">What images should I upload?</summary>
+      <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Upload clear photos of the venue, up to 3 images under 2MB each.</p>
+    </details>
+    <details className="bg-white dark:bg-gray-700 rounded-md p-4">
+      <summary className="font-semibold cursor-pointer">How are venues ranked?</summary>
+      <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Venues are ranked by the number of matches hosted, shown as 'Match Count'.</p>
+    </details>
+    <details className="bg-white dark:bg-gray-700 rounded-md p-4">
+      <summary className="font-semibold cursor-pointer">Can I remove my venue?</summary>
+      <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Contact support to request venue removal if needed.</p>
+    </details>
+  </div>
+  <div className={`space-y-4 ${activeFaqTab === 'matches' ? 'block' : 'hidden'}`}>
+    <details className="bg-white dark:bg-gray-700 rounded-md p-4">
+      <summary className="font-semibold cursor-pointer">How do I join a match?</summary>
+      <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Use the 'Join Match' button on the match card to participate.</p>
+    </details>
+    <details className="bg-white dark:bg-gray-700 rounded-md p-4">
+      <summary className="font-semibold cursor-pointer">Can I organize a paid match?</summary>
+      <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Yes, set the price when organizing via the 'Organize' page.</p>
+    </details>
+    <details className="bg-white dark:bg-gray-700 rounded-md p-4">
+      <summary className="font-semibold cursor-pointer">What if a match is canceled?</summary>
+      <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Organizers will notify participants; refunds are handled case-by-case.</p>
+    </details>
+    <details className="bg-white dark:bg-gray-700 rounded-md p-4">
+      <summary className="font-semibold cursor-pointer">How are match times set?</summary>
+      <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Organizers set the date and time in their local timezone.</p>
+    </details>
+    <details className="bg-white dark:bg-gray-700 rounded-md p-4">
+      <summary className="font-semibold cursor-pointer">Can I see past matches?</summary>
+      <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Yes, use the 'See All' button on the Matches section and filter to view history.</p>
+    </details>
+  </div>
+</section>
         </>
       )}
 
