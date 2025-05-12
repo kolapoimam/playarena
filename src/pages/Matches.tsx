@@ -32,6 +32,7 @@ type Match = {
   players: {
     player_name: string;
   }[];
+  created_at: string; // Added for sorting within status groups
 };
 
 // Venue type for filter dropdown
@@ -92,7 +93,8 @@ const Matches = () => {
           `
           id, slug, title, match_date, match_time, total_slots, is_paid, price, notes, organizer_name,
           venue:venues(slug, name, city),
-          players(*)
+          players(*),
+          created_at
         `,
           { count: "exact" }
         );
@@ -195,7 +197,19 @@ const Matches = () => {
 
       if (error) throw error;
 
-      setMatches(data as Match[]);
+      // Sort matches by status: Live, Today, Upcoming, Passed
+      const sortedMatches = data as Match[];
+      sortedMatches.sort((a, b) => {
+        const statusA = getMatchStatus(a.match_date, a.match_time).statusLabel;
+        const statusB = getMatchStatus(b.match_date, b.match_time).statusLabel;
+        const statusOrder = { "Live Match": 0, "Today's Match": 1, "Upcoming Match": 2, "Match Passed": 3 };
+        return statusOrder[statusA] - statusOrder[statusB] || 
+               (currentPage === 1 ? new Date(b.created_at).getTime() - new Date(a.created_at).getTime() : 
+               DateTime.fromISO(`${a.match_date}T${a.match_time}Z`).toMillis() - 
+               DateTime.fromISO(`${b.match_date}T${b.match_time}Z`).toMillis());
+      });
+
+      setMatches(sortedMatches);
       setTotalMatches(count || 0);
     } catch (error: any) {
       console.error("Error fetching matches:", error.message);
@@ -249,7 +263,7 @@ const Matches = () => {
   const getMatchStatus = (matchDate: string, matchTime: string) => {
     const matchDateTime = DateTime.fromISO(`${matchDate}T${matchTime}Z`, { zone: "utc" }).setZone(LAGOS_TIMEZONE);
     const now = DateTime.now().setZone(LAGOS_TIMEZONE);
-    const tomorrow = now.plus({ days: 1 }).startOf("day");
+    const twoHoursLater = now.plus({ hours: 2 });
 
     let statusLabel = "Upcoming Match";
     let statusClass = "bg-blue-100 text-blue-800";
@@ -269,7 +283,7 @@ const Matches = () => {
         statusLabel = "Match Passed";
         statusClass = "bg-gray-200 text-gray-600";
       }
-    } else if (matchDateTime > tomorrow) {
+    } else if (matchDateTime > twoHoursLater) {
       statusLabel = "Upcoming Match";
       statusClass = "bg-blue-100 text-blue-800";
     }
@@ -408,9 +422,9 @@ const Matches = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="Upcoming Match">Upcoming Match</SelectItem>
-                  <SelectItem value="Today's Match">Today's Match</SelectItem>
                   <SelectItem value="Live Match">Live Match</SelectItem>
+                  <SelectItem value="Today's Match">Today's Match</SelectItem>
+                  <SelectItem value="Upcoming Match">Upcoming Match</SelectItem>
                   <SelectItem value="Match Passed">Match Passed</SelectItem>
                 </SelectContent>
               </Select>
