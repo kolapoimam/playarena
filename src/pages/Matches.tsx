@@ -154,29 +154,33 @@ const Matches = () => {
       }
       if (statusFilter) {
         const today = DateTime.now().setZone(LAGOS_TIMEZONE).startOf("day");
-        const todayStr = today.toUTC().toISODate();
+        const todayStr = today.toISODate(); // e.g., "2025-05-12"
         const now = DateTime.now().setZone(LAGOS_TIMEZONE);
         const twoHoursLater = now.plus({ hours: 2 });
         const twoHoursLaterTime = twoHoursLater.toFormat("HH:mm:ss");
+        const nowTime = now.toFormat("HH:mm:ss");
 
         switch (statusFilter) {
           case "Upcoming Match":
             query = query.gt("match_date", todayStr!);
             break;
           case "Today's Match":
+            // Matches on today, starting more than 2 hours from now
             query = query
               .eq("match_date", todayStr!)
               .gt("match_time", twoHoursLaterTime);
             break;
           case "Live Match":
+            // Matches on today, within 2 hours from now
             query = query
               .eq("match_date", todayStr!)
               .lte("match_time", twoHoursLaterTime)
-              .gte("match_time", now.toFormat("HH:mm:ss"));
+              .gte("match_time", nowTime);
             break;
           case "Match Passed":
+            // Matches before today or today but past
             query = query.or(
-              `match_date.lt.${todayStr!},and(match_date.eq.${todayStr!},match_time.lt.${now.toFormat("HH:mm:ss")})`
+              `match_date.lt.${todayStr!},and(match_date.eq.${todayStr!},match_time.lt.${nowTime})`
             );
             break;
         }
@@ -435,7 +439,18 @@ const Matches = () => {
                 <div className="p-4">
                   <div className="flex justify-between items-start">
                     <h3 className="font-bold text-lg">{match.title}</h3>
-                    <Badge className={statusClass}>{statusLabel}</Badge>
+                    <div className="flex flex-col gap-1">
+                      <Badge className={statusClass}>{statusLabel}</Badge>
+                      <Badge
+                        className={
+                          match.is_paid
+                            ? "bg-red-100 text-red-700"
+                            : "bg-green-100 text-green-700"
+                        }
+                      >
+                        {match.is_paid ? `₦${match.price?.toFixed(2)}` : "FREE"}
+                      </Badge>
+                    </div>
                   </div>
                   
                   <div className="mt-2 space-y-2 text-sm">
