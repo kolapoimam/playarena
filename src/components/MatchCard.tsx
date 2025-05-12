@@ -1,6 +1,5 @@
-
 import { useNavigate } from "react-router-dom";
-import { format, isToday, isPast, differenceInHours } from "date-fns";
+import { format, isToday, isPast, differenceInHours, isAfter } from "date-fns";
 
 interface MatchCardProps {
   title: string;
@@ -25,22 +24,33 @@ export default function MatchCard({
 
   const matchDate = new Date(match_time);
   const now = new Date();
+  
+  // Create a date for tomorrow at midnight to check if match is "upcoming" (future date, not today)
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  tomorrow.setHours(0, 0, 0, 0);
 
-  let statusLabel = "Upcoming";
+  let statusLabel = "Upcoming Match";
   let statusClass = "bg-blue-100 text-blue-800";
 
-  if (isPast(matchDate) && !isToday(matchDate)) {
-    statusLabel = "Passed";
+  if (isPast(matchDate)) {
+    statusLabel = "Match Passed";
     statusClass = "bg-gray-200 text-gray-600";
   } else if (isToday(matchDate)) {
     const hoursDiff = differenceInHours(matchDate, now);
     if (hoursDiff >= 0 && hoursDiff <= 2) {
-      statusLabel = "Live";
+      statusLabel = "Live Match";
       statusClass = "bg-red-100 text-red-700 animate-pulse";
-    } else {
-      statusLabel = "Today";
+    } else if (hoursDiff > 2) {
+      statusLabel = "Today's Match";
       statusClass = "bg-green-100 text-green-700";
+    } else {
+      statusLabel = "Match Passed";
+      statusClass = "bg-gray-200 text-gray-600";
     }
+  } else if (isAfter(matchDate, tomorrow)) {
+    statusLabel = "Upcoming Match";
+    statusClass = "bg-blue-100 text-blue-800";
   }
 
   return (
