@@ -37,6 +37,7 @@ import {
   DialogContent,
   DialogTitle,
   DialogDescription,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -84,9 +85,9 @@ const Organize = () => {
   const [successDialogOpen, setSuccessDialogOpen] = useState(false);
   const [supercode, setSupercode] = useState<string | null>(null);
   const [matchSlug, setMatchSlug] = useState<string | null>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
-  // Initialize the form
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -102,7 +103,6 @@ const Organize = () => {
     },
   });
 
-  // Watch fields
   const isPaid = form.watch("is_paid");
   const isPrivate = form.watch("is_private");
   const selectedVenueId = form.watch("venue_id");
@@ -112,7 +112,6 @@ const Organize = () => {
   const organizerName = form.watch("organizer_name");
   const accessPassword = form.watch("access_password");
 
-  // Load venues from Supabase
   useEffect(() => {
     const fetchVenues = async () => {
       try {
@@ -145,7 +144,6 @@ const Organize = () => {
     fetchVenues();
   }, [toast, form, preSelectedVenueSlug]);
 
-  // Generate random password when is_private is toggled on
   useEffect(() => {
     if (isPrivate && !accessPassword) {
       const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -215,21 +213,30 @@ const Organize = () => {
   };
 
   const handleDownload = async () => {
-    if (cardRef.current) {
-      try {
-        const canvas = await html2canvas(cardRef.current, { scale: 2 });
-        const link = document.createElement('a');
-        link.download = `PlayArena-Supercode-${matchTitle.replace(/\s+/g, '-')}.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-      } catch (error) {
-        console.error("Error generating image:", error);
-        toast({
-          title: "Error",
-          description: "Failed to download supercode card.",
-          variant: "destructive",
-        });
-      }
+    if (!cardRef.current) {
+      toast({
+        title: "Error",
+        description: "Card element is not ready. Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setIsDownloading(true);
+    try {
+      const canvas = await html2canvas(cardRef.current, { scale: 2 });
+      const link = document.createElement('a');
+      link.download = `PlayArena-Supercode-${matchTitle.replace(/\s+/g, '-')}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } catch (error) {
+      console.error("Error generating image:", error);
+      toast({
+        title: "Error",
+        description: "Failed to download supercode card.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -585,10 +592,10 @@ const Organize = () => {
       <Navbar />
       
       <Dialog open={successDialogOpen} onOpenChange={(open) => {
-        setSuccessDialogOpen(open);
         if (!open && matchSlug) {
           navigate(`/match/${matchSlug}`);
         }
+        setSuccessDialogOpen(open);
       }}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogTitle>Match Created Successfully!</DialogTitle>
@@ -643,17 +650,21 @@ const Organize = () => {
               <Button 
                 className="flex-1 bg-green-500 hover:bg-green-600 text-white"
                 onClick={handleDownload}
+                disabled={isDownloading}
               >
-                Download Supercode
+                {isDownloading ? "Downloading..." : "Download Supercode"}
               </Button>
               <Button 
                 className="flex-1 bg-green-500 hover:bg-green-600 text-white"
                 onClick={() => {
-                  setSuccessDialogOpen(false);
-                  if (matchSlug) {
-                    navigate(`/match/${matchSlug}`);
+                  if (!isDownloading) {
+                    setSuccessDialogOpen(false);
+                    if (matchSlug) {
+                      navigate(`/match/${matchSlug}`);
+                    }
                   }
                 }}
+                disabled={isDownloading}
               >
                 Go to Match Details
               </Button>
