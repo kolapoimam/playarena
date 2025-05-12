@@ -224,7 +224,7 @@ const VenueDetail = () => {
     <div className="flex justify-center py-4">
       <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-500"></div>
     </div>
-  ) : matches.length > 0 ? (
+  ) : (
     <div className="space-y-4">
       {matches.map((match) => (
         <div
@@ -244,10 +244,6 @@ const VenueDetail = () => {
           </div>
         </div>
       ))}
-    </div>
-  ) : (
-    <div className="text-center py-4 text-gray-500 dark:text-gray-400">
-      No recent matches found at this venue
     </div>
   )}
 </div>
