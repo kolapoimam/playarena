@@ -106,9 +106,9 @@ const MatchDetail = () => {
       if (error) throw error;
 
       const matchData = data as Match;
-      if (matchData.is_private && !localStorage.getItem(`match_access_${matchSlug}`)) {
+      if (matchData.is_private) {
         setPasswordDialogOpen(true);
-        setLoading(false); // Ensure loading is false while dialog is shown
+        setLoading(false);
       } else {
         setMatch(matchData);
         setLoading(false);
@@ -143,7 +143,6 @@ const MatchDetail = () => {
     }
 
     if (!data.is_private) {
-      // If match is no longer private, proceed without password
       fetchMatch(slug);
       setPasswordDialogOpen(false);
       return;
@@ -395,26 +394,29 @@ const MatchDetail = () => {
   if (passwordDialogOpen) {
     return (
       <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="max-w-md rounded-2xl bg-white dark:bg-gray-800 p-6 shadow-xl border border-gray-200 dark:border-gray-700">
           <DialogHeader>
-            <DialogTitle>Enter Access Password</DialogTitle>
-            <DialogDescription>This is a private match. Please enter the access password to view details.</DialogDescription>
+            <DialogTitle className="text-xl font-bold text-gray-900 dark:text-white text-center">Access Required</DialogTitle>
+            <DialogDescription className="text-gray-600 dark:text-gray-300 text-center mt-2">
+              This is a private match. Please enter the 6-character access password to view details.
+            </DialogDescription>
           </DialogHeader>
           <div className="py-4">
             <Input
               type="text"
-              placeholder="Enter 6-character password"
+              placeholder="Enter password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full"
+              className="w-full px-4 py-2 rounded-lg border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-700"
+              maxLength={6}
             />
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex justify-center">
             <Button 
-              className="bg-green-500 hover:bg-green-600 text-white"
+              className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg transition-colors"
               onClick={verifyPassword}
             >
-              Verify Password
+              Verify
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -487,7 +489,7 @@ const MatchDetail = () => {
         ) : null}
         
         <div className="space-y-4">
-          <div className="border rounded-lg p-4 bg-card">
+          <div className="border rounded-lg p-4 bg-card shadow-md">
             <h2 className="font-semibold mb-3">Match Details</h2>
             
             <div className="space-y-3">
@@ -552,7 +554,7 @@ const MatchDetail = () => {
             </div>
           </div>
           
-          <div className="border rounded-lg p-4 bg-card">
+          <div className="border rounded-lg p-4 bg-card shadow-md">
             <h2 className="font-semibold mb-3">Players ({match.players?.length || 0}/{match.total_slots})</h2>
             
             {match.players && match.players.length > 0 ? (
@@ -583,34 +585,36 @@ const MatchDetail = () => {
               <p className="text-muted-foreground text-sm">No players have joined yet</p>
             )}
             
-            {!isPassed && !isStarted && !isFull && (
-              <Button 
-                className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
-                onClick={() => navigate(`/join/${match.slug}`)}
-              >
-                Join This Match
-              </Button>
-            )}
-            
-            {(isPassed || isStarted) && (
-              <Button 
-                className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
-                variant="outline"
-                disabled
-              >
-                {isPassed ? "Match Has Passed" : "Match Has Started"}
-              </Button>
-            )}
-            
-            {!isPassed && !isStarted && isFull && (
-              <Button 
-                className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
-                variant="outline"
-                disabled
-              >
-                Match Is Full
-              </Button>
-            )}
+            <div className="mt-6"> {/* Added spacing */}
+              {!isPassed && !isStarted && !isFull && (
+                <Button 
+                  className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
+                  onClick={() => navigate(`/join/${match.slug}`)}
+                >
+                  Join This Match
+                </Button>
+              )}
+              
+              {(isPassed || isStarted) && (
+                <Button 
+                  className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
+                  variant="outline"
+                  disabled
+                >
+                  {isPassed ? "Match Has Passed" : "Match Has Started"}
+                </Button>
+              )}
+              
+              {!isPassed && !isStarted && isFull && (
+                <Button 
+                  className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
+                  variant="outline"
+                  disabled
+                >
+                  Match Is Full
+                </Button>
+              )}
+            </div>
           </div>
           
           <div className="flex gap-3 mt-6">
@@ -702,7 +706,7 @@ const MatchDetail = () => {
                   <input
                     type="radio"
                     value="black"
-                    checked={backgroundOption === "black"}
+                    checked={backgroundOption === "black"
                     onChange={() => setBackgroundOption("black")}
                     className="form-radio text-playarena-500"
                   />
