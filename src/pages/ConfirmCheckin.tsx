@@ -5,7 +5,6 @@ import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { 
   Calendar, 
   Clock, 
@@ -14,10 +13,11 @@ import {
   ArrowLeft, 
   CheckCircle, 
   XCircle, 
-  Loader 
+  Loader2 
 } from "lucide-react";
 import { format } from "date-fns";
 import { differenceInHours } from "date-fns";
+import { z } from "zod";
 
 type Match = {
   id: string;
@@ -41,10 +41,16 @@ type Match = {
   }[];
 };
 
+// Validation schema for 6-digit numeric codes
+const codeSchema = z
+  .string()
+  .regex(/^\d{6}$/, { message: "Code must be exactly 6 digits" });
+
 const ConfirmCheckin = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [superCode, setSuperCode] = useState("");
+  const [superCodeError, setSuperCodeError] = useState<string | null>(null);
   const [match, setMatch] = useState<Match | null>(null);
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<"confirm" | "checkin" | null>(null);
@@ -52,10 +58,18 @@ const ConfirmCheckin = () => {
     { id: string; status: string; checkinCode: string }[]
   >([]);
   const [checkinCodes, setCheckinCodes] = useState<{ [key: string]: string }>({});
+  const [checkinCodeErrors, setCheckinCodeErrors] = useState<{ [key: string]: string | null }>({});
   const codeInputRef = useRef<HTMLInputElement>(null);
 
   const fetchMatch = async () => {
-    if (!superCode) return;
+    // Validate super code
+    const validation = codeSchema.safeParse(superCode);
+    if (!validation.success) {
+      setSuperCodeError(validation.error.errors[0].message);
+      return;
+    }
+    setSuperCodeError(null);
+
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -118,15 +132,29 @@ const ConfirmCheckin = () => {
   };
 
   const handleCheckinCodeChange = (playerId: string, code: string) => {
-    setCheckinCodes((prev) => ({ ...prev, [playerId]: code }));
+    // Allow only numbers
+    const numericCode = code.replace(/[^0-9]/g, "").slice(0, 6);
+    setCheckinCodes((prev) => ({ ...prev, [playerId]: numericCode }));
+    // Validate in real-time
+    const validation = codeSchema.safeParse(numericCode);
+    setCheckinCodeErrors((prev) => ({
+      ...prev,
+      [playerId]: validation.success ? null : validation.error?.errors[0].message,
+    }));
   };
 
   const validateCheckinCode = async (playerId: string) => {
     const code = checkinCodes[playerId];
-    if (!code) {
+    // Validate code format
+    const validation = codeSchema.safeParse(code);
+    if (!validation.success) {
+      setCheckinCodeErrors((prev) => ({
+        ...prev,
+        [playerId]: validation.error.errors[0].message,
+      }));
       toast({
         title: "Error",
-        description: "Please enter a confirmation code.",
+        description: validation.error.errors[0].message,
         variant: "destructive",
       });
       return;
@@ -140,7 +168,12 @@ const ConfirmCheckin = () => {
         description: `${player.player_name} has been checked in.`,
       });
       setCheckinCodes((prev) => ({ ...prev, [playerId]: "" }));
+      setCheckinCodeErrors((prev) => ({ ...prev, [playerId]: null }));
     } else {
+      setCheckinCodeErrors((prev) => ({
+        ...prev,
+        [playerId]: "Invalid confirmation code",
+      }));
       toast({
         title: "Error",
         description: "Invalid confirmation code.",
@@ -163,7 +196,6 @@ const ConfirmCheckin = () => {
         title: "Success",
         description: "Player statuses updated successfully.",
       });
-      // Refresh match data
       await fetchMatch();
     } catch (error) {
       console.error("Error saving statuses:", error);
@@ -191,113 +223,150 @@ const ConfirmCheckin = () => {
     return timeString.slice(0, 5);
   };
 
+  const getStatusStyles = (status: string) => {
+    switch (status) {
+      case "confirmed":
+        return "bg-green-100 text-green-700 border-green-300";
+      case "pending":
+        return "bg-red-100 text-red-700 border-red-300";
+      case "checked_in":
+        return "bg-blue-100 text-blue-700 border-blue-300";
+      case "absent":
+        return "bg-gray-100 text-gray-700 border-gray-300";
+      default:
+        return "bg-yellow-100 text-yellow-700 border-yellow-300";
+    }
+  };
+
   return (
-    <div className="min-h-screen pb-20">
-      <div className="p-4">
+    <div className="min-h-screen bg-gray-50">
+      <div className="bg-gradient-to-r from-playarena-500 to-playarena-700 text-white py-6 px-4">
         <Button
           variant="ghost"
           onClick={() => navigate(-1)}
-          className="mb-4"
+          className="text-white hover:bg-white/20 mb-4"
         >
           <ArrowLeft size={18} className="mr-2" />
           Back
         </Button>
+        <h1 className="text-3xl font-bold">Organizer Dashboard</h1>
+        <p className="text-sm mt-1 opacity-80">Manage player confirmations and check-ins</p>
+      </div>
 
-        <h1 className="text-2xl font-bold mb-4">Confirm & Check-in Players</h1>
-
-        <div className="mb-6">
-          <Input
-            placeholder="Enter match super code"
-            value={superCode}
-            onChange={(e) => setSuperCode(e.target.value)}
-            className="mb-2"
-          />
-          <Button
-            className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
-            onClick={fetchMatch}
-            disabled={loading}
-          >
-            {loading ? (
-              <>
-                <Loader size={16} className="mr-2 animate-spin" />
-                Loading...
-              </>
-            ) : (
-              "Fetch Match"
-            )}
-          </Button>
+      <div className="max-w-4xl mx-auto p-4 -mt-8">
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+          <h2 className="text-xl font-semibold mb-4">Enter Match Super Code</h2>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex-1">
+              <Input
+                placeholder="Enter 6-digit super code"
+                value={superCode}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/[^0-9]/g, "").slice(0, 6);
+                  setSuperCode(value);
+                  setSuperCodeError(null);
+                }}
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={6}
+                className="w-full"
+              />
+              {superCodeError && (
+                <p className="text-sm text-red-600 mt-1">{superCodeError}</p>
+              )}
+            </div>
+            <Button
+              className="bg-playarena-500 hover:bg-playarena-600 text-white px-6"
+              onClick={fetchMatch}
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <Loader2 size={16} className="mr-2 animate-spin" />
+                  Loading...
+                </>
+              ) : (
+                "Load Match"
+              )}
+            </Button>
+          </div>
         </div>
 
         {match && (
-          <div className="space-y-4">
-            <div className="border rounded-lg p-4 bg-card">
-              <h2 className="font-semibold mb-3">Match Details</h2>
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">{match.title}</span>
+          <div className="animate-fade-in">
+            <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+              <h2 className="text-xl font-semibold mb-4">Match Details</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="flex items-center gap-3">
+                  <Trophy size={20} className="text-playarena-500" />
+                  <div>
+                    <p className="font-medium">{match.title}</p>
+                    <p className="text-sm text-muted-foreground">Organized by {match.organizer_name}</p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <MapPin size={18} />
+                <div className="flex items-center gap-3">
+                  <MapPin size={20} className="text-playarena-500" />
                   <span>{match.venue?.name || "Venue"}, {match.venue?.city || ""}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Calendar size={18} />
+                <div className="flex items-center gap-3">
+                  <Calendar size={20} className="text-playarena-500" />
                   <span>{formatDate(match.match_date)}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Clock size={18} />
+                <div className="flex items-center gap-3">
+                  <Clock size={20} className="text-playarena-500" />
                   <span>{formatTime(match.match_time)}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Users size={18} />
+                <div className="flex items-center gap-3">
+                  <Users size={20} className="text-playarena-500" />
                   <span>{match.players.length}/{match.total_slots} players</span>
                 </div>
               </div>
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-4 mb-6">
               <Button
                 className="flex-1 bg-playarena-500 hover:bg-playarena-600 text-white"
                 onClick={handleConfirmMode}
               >
+                <CheckCircle size={18} className="mr-2" />
                 Confirm Players
               </Button>
               <Button
                 className="flex-1 bg-playarena-500 hover:bg-playarena-600 text-white"
                 onClick={handleCheckinMode}
               >
+                <Users size={18} className="mr-2" />
                 Check-in Players
               </Button>
             </div>
 
             {mode === "confirm" && (
-              <div className="border rounded-lg p-4 bg-card">
-                <h2 className="font-semibold mb-3">Confirm Players</h2>
+              <div className="bg-white rounded-xl shadow-lg p-6">
+                <h2 className="text-xl font-semibold mb-4">Confirm Players</h2>
                 {match.players.length > 0 ? (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {match.players.map((player) => {
                       const currentStatus = playerStatuses.find((p) => p.id === player.id)?.status || player.status;
                       return (
                         <div
                           key={player.id}
-                          className="flex items-center justify-between p-2 bg-muted rounded-md"
+                          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
                         >
-                          <div>
-                            <span>{player.player_name}</span>
-                            <p className="text-sm text-muted-foreground">
-                              Phone: {player.details?.phone || "N/A"}
-                            </p>
-                            <Badge
-                              variant={
-                                currentStatus === "confirmed" ? "default" :
-                                currentStatus === "pending" ? "destructive" :
-                                currentStatus === "checked_in" ? "secondary" :
-                                currentStatus === "absent" ? "outline" :
-                                "default"
-                              }
-                            >
-                              {currentStatus}
-                            </Badge>
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-playarena-100 flex items-center justify-center text-playarena-600 font-semibold">
+                              {player.player_name.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <span className="font-medium">{player.player_name}</span>
+                              <p className="text-sm text-muted-foreground">
+                                Phone: {player.details?.phone || "N/A"}
+                              </p>
+                              <span
+                                className={`inline-block px-2 py-1 text-xs font-medium rounded border ${getStatusStyles(currentStatus)}`}
+                              >
+                                {currentStatus.charAt(0).toUpperCase() + currentStatus.slice(1)}
+                              </span>
+                            </div>
                           </div>
                           <div className="flex gap-2">
                             <Button
@@ -305,10 +374,11 @@ const ConfirmCheckin = () => {
                               size="sm"
                               onClick={() => handleStatusChange(player.id, "confirmed")}
                               disabled={currentStatus === "checked_in"}
+                              className="hover:bg-green-100"
                             >
                               <CheckCircle
-                                size={18}
-                                className={currentStatus === "confirmed" ? "text-green-500" : ""}
+                                size={20}
+                                className={currentStatus === "confirmed" ? "text-green-500" : "text-gray-500"}
                               />
                             </Button>
                             <Button
@@ -316,10 +386,11 @@ const ConfirmCheckin = () => {
                               size="sm"
                               onClick={() => handleStatusChange(player.id, "pending")}
                               disabled={currentStatus === "checked_in"}
+                              className="hover:bg-red-100"
                             >
                               <XCircle
-                                size={18}
-                                className={currentStatus === "pending" ? "text-red-500" : ""}
+                                size={20}
+                                className={currentStatus === "pending" ? "text-red-500" : "text-gray-500"}
                               />
                             </Button>
                           </div>
@@ -327,10 +398,11 @@ const ConfirmCheckin = () => {
                       );
                     })}
                     <Button
-                      className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
+                      className="w-full bg-playarena-500 hover:bg-playarena-600 text-white mt-4"
                       onClick={handleSave}
                       disabled={loading}
                     >
+                      <CheckCircle size={18} className="mr-2" />
                       Save Changes
                     </Button>
                   </div>
@@ -341,10 +413,10 @@ const ConfirmCheckin = () => {
             )}
 
             {mode === "checkin" && (
-              <div className="border rounded-lg p-4 bg-card">
-                <h2 className="font-semibold mb-3">Check-in Players</h2>
+              <div className="bg-white rounded-xl shadow-lg p-6">
+                <h2 className="text-xl font-semibold mb-4">Check-in Players</h2>
                 {match.players.filter((p) => p.status === "confirmed").length > 0 ? (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {match.players
                       .filter((p) => p.status === "confirmed")
                       .map((player) => {
@@ -352,40 +424,51 @@ const ConfirmCheckin = () => {
                         return (
                           <div
                             key={player.id}
-                            className="flex items-center justify-between p-2 bg-muted rounded-md"
+                            className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
                           >
-                            <div>
-                              <span>{player.player_name}</span>
-                              <p className="text-sm text-muted-foreground">
-                                Phone: {player.details?.phone || "N/A"}
-                              </p>
-                              <Badge
-                                variant={
-                                  currentStatus === "checked_in" ? "secondary" :
-                                  currentStatus === "absent" ? "outline" :
-                                  "default"
-                                }
-                              >
-                                {currentStatus}
-                              </Badge>
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-full bg-playarena-100 flex items-center justify-center text-playarena-600 font-semibold">
+                                {player.player_name.charAt(0).toUpperCase()}
+                              </div>
+                              <div>
+                                <span className="font-medium">{player.player_name}</span>
+                                <p className="text-sm text-muted-foreground">
+                                  Phone: {player.details?.phone || "N/A"}
+                                </p>
+                                <span
+                                  className={`inline-block px-2 py-1 text-xs font-medium rounded border ${getStatusStyles(currentStatus)}`}
+                                >
+                                  {currentStatus.charAt(0).toUpperCase() + currentStatus.slice(1)}
+                                </span>
+                              </div>
                             </div>
                             {currentStatus !== "checked_in" && (
-                              <div className="flex gap-2 items-center">
-                                <Input
-                                  placeholder="Enter code"
-                                  value={checkinCodes[player.id] || ""}
-                                  onChange={(e) =>
-                                    handleCheckinCodeChange(player.id, e.target.value)
-                                  }
-                                  className="w-24"
-                                  ref={codeInputRef}
-                                />
+                              <div className="flex items-center gap-2">
+                                <div className="w-28">
+                                  <Input
+                                    placeholder="6-digit code"
+                                    value={checkinCodes[player.id] || ""}
+                                    onChange={(e) =>
+                                      handleCheckinCodeChange(player.id, e.target.value)
+                                    }
+                                    inputMode="numeric"
+                                    pattern="[0-9]*"
+                                    maxLength={6}
+                                    className="h-9"
+                                  />
+                                  {checkinCodeErrors[player.id] && (
+                                    <p className="text-xs text-red-600 mt-1">
+                                      {checkinCodeErrors[player.id]}
+                                    </p>
+                                  )}
+                                </div>
                                 <Button
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => validateCheckinCode(player.id)}
+                                  className="hover:bg-blue-100"
                                 >
-                                  <CheckCircle size={18} />
+                                  <CheckCircle size={20} className="text-blue-500" />
                                 </Button>
                               </div>
                             )}
@@ -393,10 +476,11 @@ const ConfirmCheckin = () => {
                         );
                       })}
                     <Button
-                      className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
+                      className="w-full bg-playarena-500 hover:bg-playarena-600 text-white mt-4"
                       onClick={handleSave}
                       disabled={loading}
                     >
+                      <Users size={18} className="mr-2" />
                       Save Check-ins
                     </Button>
                   </div>
