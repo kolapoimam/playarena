@@ -224,7 +224,7 @@ const VenueDetail = () => {
               <div className="flex justify-center py-4">
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-500"></div>
               </div>
-            ) : matches.count ) 0 ? (
+            ) : matches.count } 0 ? (
               <div className="space-y-4">
                 {matches.map((match) => (
                   <div
