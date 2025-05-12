@@ -519,7 +519,7 @@ const MatchDetail = () => {
           <DialogTitle>Match Details</DialogTitle>
           <DialogDescription>
             <p className="text-gray-600 dark:text-gray-300 mb-4">
-              Download this card to share your match details with friends. Choose a background below.
+              Download this card to share your match details with friends. Choose any background below.
             </p>
             <div className="mb-4">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Background:</label>
@@ -532,7 +532,7 @@ const MatchDetail = () => {
                     onChange={() => setBackgroundOption("field")}
                     className="form-radio text-playarena-500"
                   />
-                  <span>Football Field</span>
+                  <span>Default</span>
                 </label>
                 <label className="flex items-center space-x-2">
                   <input
