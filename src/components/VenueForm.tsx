@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -27,10 +27,10 @@ import { X } from "lucide-react";
 
 // Nigerian states including FCT
 const nigerianStates = [
-  "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", 
-  "Borno", "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu", 
-  "FCT", "Gombe", "Imo", "Jigawa", "Kaduna", "Kano", "Katsina", "Kebbi", 
-  "Kogi", "Kwara", "Lagos", "Nasarawa", "Niger", "Ogun", "Ondo", "Osun", 
+  "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue",
+  "Borno", "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu",
+  "FCT", "Gombe", "Imo", "Jigawa", "Kaduna", "Kano", "Katsina", "Kebbi",
+  "Kogi", "Kwara", "Lagos", "Nasarawa", "Niger", "Ogun", "Ondo", "Osun",
   "Oyo", "Plateau", "Rivers", "Sokoto", "Taraba", "Yobe", "Zamfara"
 ];
 
@@ -42,21 +42,16 @@ const formSchema = z.object({
   state: z.enum(nigerianStates as [string, ...string[]], { message: "Please select a valid state" }),
   description: z.string().optional(),
   map_link: z.string().optional(),
-  images: z
-    .instanceof(FileList)
-    .optional()
-    .refine((files) => !files || files.length <= 5, { message: "Maximum 5 images allowed" })
-    .refine(
-      (files) =>
-        !files ||
-        Array.from(files).every(
-          (file) =>
-            file.type.startsWith("image/") &&
-            file.size <= 5 * 1024 * 1024 // 5MB max per image
-        ),
-      { message: "Only images up to 5MB each are allowed" }
-    ),
 });
+
+// Add a separate schema for files to validate manually
+const fileSchema = z
+  .array(z.instanceof(File))
+  .max(5, { message: "Maximum 5 images allowed" })
+  .refine(
+    (files) => files.every((file) => file.type.startsWith("image/") && file.size <= 5 * 1024 * 1024),
+    { message: "Only images up to 5MB each are allowed" }
+  );
 
 type FormValues = z.infer<typeof formSchema>;
 
@@ -68,6 +63,8 @@ interface VenueFormProps {
 const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [fileError, setFileError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Initialize the form
   const form = useForm<FormValues>({
@@ -79,18 +76,39 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
       state: undefined,
       description: "",
       map_link: "",
-      images: undefined,
     },
   });
 
+  const handleFileChange = (files: FileList | null) => {
+    setFileError(null);
+    if (!files || files.length === 0) return;
+
+    const fileArray = Array.from(files);
+    const result = fileSchema.safeParse(fileArray);
+    if (!result.success) {
+      setFileError(result.error.errors[0].message);
+    }
+  };
+
   const onSubmit = async (data: FormValues) => {
     setLoading(true);
+    setFileError(null);
 
     try {
-      // Handle image uploads
+      // Validate and get files
       let imageUrls: string[] = [];
-      if (data.images && data.images.length > 0) {
-        for (const file of Array.from(data.images)) {
+      const files = fileInputRef.current?.files;
+      if (files && files.length > 0) {
+        const fileArray = Array.from(files);
+        const fileValidation = fileSchema.safeParse(fileArray);
+        if (!fileValidation.success) {
+          setFileError(fileValidation.error.errors[0].message);
+          setLoading(false);
+          return;
+        }
+
+        // Upload each file to Supabase Storage
+        for (const file of fileArray) {
           const fileName = `${Date.now()}-${file.name}`;
           const { error: uploadError, data: uploadData } = await supabase.storage
             .from("venue-images")
@@ -134,6 +152,12 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
         title: "Venue created!",
         description: "Your venue has been successfully added.",
       });
+
+      // Reset the form and file input
+      form.reset();
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ""; // Clear the file input
+      }
 
       // Call onSuccess if provided
       if (onSuccess && venue) {
@@ -220,113 +244,107 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
                     />
                   </FormControl>
                   <FormMessage className="text-playarena-600" />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="state"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-playarena-700">State</FormLabel>
-                  <FormControl>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
-                    >
-                      <SelectTrigger className="focus:ring-playarena-500">
-                        <SelectValue placeholder="Select a state" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {nigerianStates.map((state) => (
-                          <SelectItem key={state} value={state}>
-                            {state}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FormControl>
-                  <FormMessage className="text-playarena-600" />
-                </FormItem>
-              )}
-            />
-          </div>
+              </FormItem>
+            )}
+          />
 
           <FormField
             control={form.control}
-            name="description"
+            name="state"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-playarena-700">Description (Optional)</FormLabel>
+                <FormLabel className="text-playarena-700">State</FormLabel>
                 <FormControl>
-                  <Textarea
-                    placeholder="Describe the venue, facilities, etc."
-                    {...field}
-                    className="focus-visible:ring-playarena-500"
-                  />
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value}
+                  >
+                    <SelectTrigger className="focus:ring-playarena-500">
+                      <SelectValue placeholder="Select a state" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {nigerianStates.map((state) => (
+                        <SelectItem key={state} value={state}>
+                          {state}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </FormControl>
                 <FormMessage className="text-playarena-600" />
               </FormItem>
             )}
           />
+        </div>
 
-          <FormField
-            control={form.control}
-            name="map_link"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-playarena-700">Google Maps Link (Optional)</FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder="Paste Google Maps URL here"
-                    {...field}
-                    className="focus-visible:ring-playarena-500"
-                  />
-                </FormControl>
-                <FormDescription className="text-playarena-500">
-                  Add a Google Maps link to help players find the venue easily
-                </FormDescription>
-                <FormMessage className="text-playarena-600" />
-              </FormItem>
-            )}
-          />
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-playarena-700">Description (Optional)</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="Describe the venue, facilities, etc."
+                  {...field}
+                  className="focus-visible:ring-playarena-500"
+                />
+              </FormControl>
+              <FormMessage className="text-playarena-600" />
+            </FormItem>
+          )}
+        />
 
-          <FormField
-            control={form.control}
-            name="images"
-            render={({ field: { onChange, ref, ...field } }) => (
-              <FormItem>
-                <FormLabel className="text-playarena-700">Images (Optional, up to 5)</FormLabel>
-                <FormControl>
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={(e) => onChange(e.target.files)}
-                    className="focus-visible:ring-playarena-500"
-                    {...field}
-                  />
-                </FormControl>
-                <FormDescription className="text-playarena-500">
-                  Upload up to 5 images (max 5MB each) to showcase the venue
-                </FormDescription>
-                <FormMessage className="text-playarena-600" />
-              </FormItem>
-            )}
-          />
+        <FormField
+          control={form.control}
+          name="map_link"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-playarena-700">Google Maps Link (Optional)</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Paste Google Maps URL here"
+                  {...field}
+                  className="focus-visible:ring-playarena-500"
+                />
+              </FormControl>
+              <FormDescription className="text-playarena-500">
+                Add a Google Maps link to help players find the venue easily
+              </FormDescription>
+              <FormMessage className="text-playarena-600" />
+            </FormItem>
+          )}
+        />
 
-          <Button
-            type="submit"
-            className="w-full bg-playarena-600 hover:bg-playarena-700 text-white"
-            disabled={loading}
-          >
-            {loading ? "Creating..." : "Create Venue"}
-          </Button>
-        </form>
-      </Form>
-    </div>
-  );
+        <FormItem>
+          <FormLabel className="text-playarena-700">Images (Optional, up to 5)</FormLabel>
+          <FormControl>
+            <Input
+              type="file"
+              accept="image/*"
+              multiple
+              ref={fileInputRef}
+              onChange={(e) => handleFileChange(e.target.files)}
+              className="focus-visible:ring-playarena-500"
+            />
+          </FormControl>
+          <FormDescription className="text-playarena-500">
+            Upload up to 5 images (max 5MB each) to showcase the venue
+          </FormDescription>
+          {fileError && <p className="text-playarena-600 text-sm">{fileError}</p>}
+        </FormItem>
+
+        <Button
+          type="submit"
+          className="w-full bg-playarena-600 hover:bg-playarena-700 text-white"
+          disabled={loading}
+        >
+          {loading ? "Creating..." : "Create Venue"}
+        </Button>
+      </form>
+    </Form>
+  </div>
+);
 };
 
 export default VenueForm;
