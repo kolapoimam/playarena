@@ -8,8 +8,6 @@ import ThemeToggle from "@/components/ThemeToggle";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
-import { format, isToday, isPast, differenceInHours, addDays } from "date-fns";
-import PageHeader from "@/components/PageHeader";
 
 type Match = {
   id: string;
@@ -65,6 +63,11 @@ const Index = () => {
         // Get current time in Africa/Lagos timezone
         const now = new Date().toLocaleString("en-US", { timeZone: "Africa/Lagos" });
         const currentDateTime = new Date(now);
+        const currentDate = currentDateTime.toISOString().split("T")[0];
+        const currentTime = currentDateTime.toTimeString().slice(0, 5); // HH:MM format
+
+        console.log("Current Date (Africa/Lagos):", currentDate);
+        console.log("Current Time (Africa/Lagos):", currentTime);
 
         // Fetch upcoming matches
         const { data: matchesData, error: matchesError } = await supabase
@@ -79,18 +82,24 @@ const Index = () => {
             price,
             venue:venues(slug, name, city, image_urls)
           `)
-          .gte("match_date", format(currentDateTime, "yyyy-MM-dd")) // Matches from today onward
+          .gte("match_date", currentDate) // Matches from today onward
           .order("match_date", { ascending: true })
           .order("match_time", { ascending: true })
           .limit(5);
 
         if (matchesError) throw matchesError;
 
-        // Filter matches to include only future matches
+        console.log("Raw Matches Data:", matchesData);
+
+        // Filter matches to exclude those where time has passed today
         const filteredMatches = matchesData.filter((match: Match) => {
           const matchDateTime = new Date(`${match.match_date}T${match.match_time}:00`);
-          return matchDateTime > currentDateTime && !isPast(matchDateTime);
+          const isToday = match.match_date === currentDate;
+          const isTimePassed = isToday && match.match_time < currentTime;
+          return !isTimePassed || match.match_date > currentDate;
         });
+
+        console.log("Filtered Matches:", filteredMatches);
 
         // Get popular venues with match count
         const { data: venuesData, error: venuesError } = await supabase
@@ -135,11 +144,14 @@ const Index = () => {
   return (
     <div className="min-h-screen pb-20">
       {/* Header */}
-      <PageHeader
-        title="PlayArena"
-        subtitle="Discover and join football matches"
-        actions={<ThemeToggle />}
-      />
+      <header className="sticky top-0 z-50 p-4 flex justify-between items-center bg-white dark:bg-gray-900 shadow-sm">
+        <img
+          src={theme === "dark" ? "/playarenadark.png" : "/playarenalight.png"}
+          alt="PlayArena Logo"
+          className="h-12 w-auto object-contain"
+        />
+        <ThemeToggle />
+      </header>
 
       {/* Search Bar */}
       <div className="px-4 mb-6">
@@ -192,7 +204,7 @@ const Index = () => {
 
             {upcomingMatches.length > 0 ? (
               <div className="flex gap-4 overflow-x-auto px-4 pb-4">
-                {upcomingMatches.slice(0, 5).map((match) => (
+                {upcomingMatches.map((match) => (
                   <div
                     key={match.id}
                     className="min-w-[280px] bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 border border-gray-200 dark:border-gray-700"
@@ -307,19 +319,19 @@ const Index = () => {
           <section className="px-4 py-6 bg-gray-100 dark:bg-gray-800 rounded-lg mt-8">
             <h2 className="text-2xl font-bold mb-4 text-center">Frequently Asked Questions</h2>
             <div className="flex space-x-4 mb-4 justify-center">
-              <button
+              <button 
                 className={`px-4 py-2 rounded-md ${activeFaqTab === 'general' ? 'bg-green-500 text-white' : 'bg-white dark:bg-gray-700'}`}
                 onClick={() => setActiveFaqTab('general')}
               >
                 General
               </button>
-              <button
+              <button 
                 className={`px-4 py-2 rounded-md ${activeFaqTab === 'venues' ? 'bg-green-500 text-white' : 'bg-white dark:bg-gray-700'}`}
                 onClick={() => setActiveFaqTab('venues')}
               >
                 Venues
               </button>
-              <button
+              <button 
                 className={`px-4 py-2 rounded-md ${activeFaqTab === 'matches' ? 'bg-green-500 text-white' : 'bg-white dark:bg-gray-700'}`}
                 onClick={() => setActiveFaqTab('matches')}
               >
