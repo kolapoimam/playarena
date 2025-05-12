@@ -2,24 +2,41 @@ interface VenueItemProps {
   name: string;
   location: string;
   image_urls: string[] | null;
+  venue_phone: string | null;
 }
 
-export default function VenueItem({ name, location, image_urls }: VenueItemProps) {
+export default function VenueItem({ name, location, image_urls, venue_phone }: VenueItemProps) {
   const defaultImage = "https://dailytrust.com/wp-content/uploads/2023/12/football-488714_1280.jpg";
   const image = image_urls && image_urls.length > 0 ? image_urls[0] : defaultImage;
 
+  const handleBookVenue = () => {
+    if (venue_phone) {
+      const message = encodeURIComponent(`Hello, I'd like to book ${name} for an event. Can you provide more details on availability and pricing?`);
+      window.open(`https://wa.me/+234${venue_phone}?text=${message}`, "_blank");
+    }
+  };
+
   return (
-    <div className="flex items-center gap-4 p-2 hover:bg-secondary rounded-lg transition-colors duration-200">
-      <div className="h-20 w-20 rounded-lg overflow-hidden flex-shrink-0">
+    <div className="flex items-center gap-4 p-3 bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 border border-gray-200 dark:border-gray-700">
+      <div className="h-24 w-24 rounded-lg overflow-hidden flex-shrink-0">
         <img
           src={image}
           alt={name}
           className="w-full h-full object-cover"
         />
       </div>
-      <div>
-        <h3 className="font-bold">{name}</h3>
-        <p className="text-muted-foreground text-sm">{location}</p>
+      <div className="flex-1">
+        <h3 className="font-bold text-gray-900 dark:text-gray-100">{name}</h3>
+        <p className="text-sm text-gray-600 dark:text-gray-400">{location}</p>
+        {venue_phone && (
+          <button
+            onClick={handleBookVenue}
+            className="mt-2 text-sm text-green-500 hover:text-green-600 flex items-center"
+          >
+            <MessageCircle size={14} className="mr-1" />
+            Book via WhatsApp
+          </button>
+        )}
       </div>
     </div>
   );
