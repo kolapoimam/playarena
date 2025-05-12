@@ -267,11 +267,11 @@ const Index = () => {
             <div className="flex justify-between items-center px-4 mb-3">
               <h2 className="text-2xl font-bold">Venues</h2>
               <Button
-                className="bg-green-500 hover:bg-green-600 text-white"
-                onClick={() => navigate("/venue-create")}
+                variant="outline"
+                className="text-primary hover:bg-primary hover:text-white transition-colors"
+                onClick={() => navigate("/venues")}
               >
-                <Plus size={16} className="mr-2" />
-                Add Venue
+                See All
               </Button>
             </div>
 
@@ -318,7 +318,7 @@ const Index = () => {
           {/* FAQ Section */}
           <section className="px-4 py-6 bg-gray-100 dark:bg-gray-800 rounded-lg mt-8">
             <h2 className="text-2xl font-bold mb-4 text-center">Frequently Asked Questions</h2>
-            <div className="flex space-x-4 mb-4">
+            <div className="flex space-x-4 mb-4 justify-center">
               <button 
                 className={`px-4 py-2 rounded-md ${activeFaqTab === 'general' ? 'bg-green-500 text-white' : 'bg-white dark:bg-gray-700'}`}
                 onClick={() => setActiveFaqTab('general')}
