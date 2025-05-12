@@ -64,10 +64,9 @@ const Index = () => {
         const now = new Date().toLocaleString("en-US", { timeZone: "Africa/Lagos" });
         const currentDateTime = new Date(now);
         const currentDate = currentDateTime.toISOString().split("T")[0];
-        const currentTime = currentDateTime.toTimeString().slice(0, 5); // HH:MM format
 
+        console.log("Current DateTime (Africa/Lagos):", currentDateTime);
         console.log("Current Date (Africa/Lagos):", currentDate);
-        console.log("Current Time (Africa/Lagos):", currentTime);
 
         // Fetch upcoming matches
         const { data: matchesData, error: matchesError } = await supabase
@@ -91,12 +90,10 @@ const Index = () => {
 
         console.log("Raw Matches Data:", matchesData);
 
-        // Filter matches to exclude those where time has passed today
+        // Filter matches to exclude past matches
         const filteredMatches = matchesData.filter((match: Match) => {
           const matchDateTime = new Date(`${match.match_date}T${match.match_time}:00`);
-          const isToday = match.match_date === currentDate;
-          const isTimePassed = isToday && match.match_time < currentTime;
-          return !isTimePassed || match.match_date > currentDate;
+          return matchDateTime >= currentDateTime;
         });
 
         console.log("Filtered Matches:", filteredMatches);
