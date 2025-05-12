@@ -214,18 +214,16 @@ const VenueDetail = () => {
             </div>
           </div>
 
-       <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-200 dark:border-gray-700">
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-200 dark:border-gray-700">
   <h2 className="font-semibold text-lg mb-4 text-gray-900 dark:text-gray-100">Recent Matches</h2>
 
-{matchesLoading ? (
-  <div>Loading...</div>
-) : (
-  matches.length > 0 ? (
-    <div>Show matches</div>
-  ) : (
-    <div>No matches</div>
-  )
-)}
+  {matchesLoading ? (
+    <div className="flex justify-center py-4">
+      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-500"></div>
+    </div>
+  ) : matches.length > 0 ? (
+    <div className="space-y-4">
+      {matches.map((match) => (
         <div
           key={match.id}
           className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer transition-colors"
