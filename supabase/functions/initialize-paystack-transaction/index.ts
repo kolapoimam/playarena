@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
@@ -8,6 +7,7 @@ const corsHeaders = {
 
 const PAYSTACK_SECRET_KEY = Deno.env.get('PAYSTACK_SECRET_KEY');
 const PAYSTACK_API_URL = 'https://api.paystack.co';
+const FRONTEND_URL = Deno.env.get('FRONTEND_URL') || 'https://playarenagames.vercel.app';
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -48,7 +48,7 @@ serve(async (req) => {
       body: JSON.stringify({
         email,
         amount: amountInKobo,
-        callback_url: `https://playarenagames.vercel.app/join/${slug}`,
+        callback_url: `${FRONTEND_URL}/join/${slug}`,
         metadata: {
           match_id,
           slug,
@@ -71,6 +71,7 @@ serve(async (req) => {
       JSON.stringify({
         access_code: data.data.access_code,
         reference: data.data.reference,
+        authorization_url: data.data.authorization_url,
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
