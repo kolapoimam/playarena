@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -11,9 +11,11 @@ import {
   Users, 
   ArrowLeft, 
   Share2, 
-  Copy, 
+  Download, 
   ChevronDown,
-  ExternalLink
+  ExternalLink,
+  Trophy,
+  DollarSign
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -21,8 +23,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { format, isToday, isPast, differenceInHours, addDays } from "date-fns";
 import { Badge } from "@/components/ui/badge";
+import html2canvas from "html2canvas";
 
 // Match type definition
 type Match = {
@@ -55,7 +64,9 @@ const MatchDetail = () => {
   const { toast } = useToast();
   const [match, setMatch] = useState<Match | null>(null);
   const [loading, setLoading] = useState(true);
-  const [copying, setCopying] = useState(false);
+  const [downloadDialogOpen, setDownloadDialogOpen] = useState(false);
+  const [isImageLoaded, setIsImageLoaded] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!slug) return;
@@ -123,30 +134,6 @@ const MatchDetail = () => {
     return { isStarted, isPassed, isFull };
   };
 
-  const copyMatchLink = async () => {
-    if (!match) return;
-    
-    setCopying(true);
-    const url = `${window.location.origin}/match/${match.slug}`;
-    const shareText = `Join my Football Match: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. Powered by PlayArena. ${url}`;
-    
-    try {
-      await navigator.clipboard.writeText(shareText);
-      toast({
-        title: "Link copied!",
-        description: "Share it with your friends to join the match.",
-      });
-    } catch (err) {
-      toast({
-        title: "Failed to copy",
-        description: "Please try again or copy the URL manually.",
-        variant: "destructive",
-      });
-    } finally {
-      setCopying(false);
-    }
-  };
-
   const shareMatch = async () => {
     if (!match) return;
     
@@ -164,7 +151,20 @@ const MatchDetail = () => {
         console.error("Share failed:", err);
       }
     } else {
-      copyMatchLink();
+      // Fallback to clipboard copy
+      try {
+        await navigator.clipboard.writeText(shareText);
+        toast({
+          title: "Link copied!",
+          description: "Share it with your friends to join the match.",
+        });
+      } catch (err) {
+        toast({
+          title: "Failed to copy",
+          description: "Please try again or copy the URL manually.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -194,6 +194,51 @@ const MatchDetail = () => {
     const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(shareText)}`;
     window.open(facebookUrl, '_blank');
   };
+
+  const handleImageLoad = () => {
+    setIsImageLoaded(true);
+  };
+
+  const handleDownload = useCallback(async () => {
+    if (!cardRef.current || !isImageLoaded) {
+      toast({
+        title: "Error",
+        description: "Card is not ready for download. Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Ensure the dialog is fully rendered
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      const canvas = await html2canvas(cardRef.current, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+      });
+
+      const link = document.createElement('a');
+      link.download = `PlayArena-Match-${match?.title.replace(/\s+/g, '-')}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } catch (error) {
+      console.error("Error generating image:", error);
+      toast({
+        title: "Error",
+        description: "Failed to download match card. Please try again.",
+        variant: "destructive",
+      });
+    }
+  }, [isImageLoaded, match, toast]);
+
+  // Trigger download automatically when dialog opens and image is loaded
+  useEffect(() => {
+    if (downloadDialogOpen && isImageLoaded) {
+      handleDownload();
+    }
+  }, [downloadDialogOpen, isImageLoaded, handleDownload]);
 
   if (loading) {
     return (
@@ -239,7 +284,6 @@ const MatchDetail = () => {
         <h1 className="text-2xl font-bold mb-2">{match.title}</h1>
         <p className="text-muted-foreground mb-4">Organized by {match.organizer_name}</p>
         
-        {/* Show only one status message based on priority */}
         {isPassed ? (
           <div className="bg-gray-100 border border-gray-200 text-gray-700 px-4 py-3 rounded mb-4">
             This match has passed
@@ -399,16 +443,88 @@ const MatchDetail = () => {
             <Button 
               variant="outline"
               className="flex-1"
-              onClick={copyMatchLink}
-              disabled={copying}
+              onClick={() => setDownloadDialogOpen(true)}
             >
-              <Copy size={18} className="mr-2" />
-              {copying ? "Copying..." : "Copy Link"}
+              <Download size={18} className="mr-2" />
+              Download Card
             </Button>
           </div>
         </div>
       </div>
       <Navbar />
+
+      <Dialog open={downloadDialogOpen} onOpenChange={(open) => {
+        setDownloadDialogOpen(open);
+        setIsImageLoaded(false); // Reset image load state when dialog closes
+      }}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogTitle>Match Details Card</DialogTitle>
+          <DialogDescription>
+            <p className="text-gray-600 dark:text-gray-300 mb-4">
+              Download this card to share your match details with friends.
+            </p>
+            <div 
+              ref={cardRef}
+              className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg p-6 text-white shadow-lg"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <img 
+                  src="/playarenalight.jpg" 
+                  alt="PlayArena Logo" 
+                  className="h-8 w-auto"
+                  onLoad={handleImageLoad}
+                  onError={() => {
+                    toast({
+                      title: "Error",
+                      description: "Failed to load logo image.",
+                      variant: "destructive",
+                    });
+                    setIsImageLoaded(true); // Proceed anyway
+                  }}
+                />
+                <Trophy className="h-6 w-6" />
+              </div>
+              <h2 className="text-xl font-bold mb-2">{match.title}</h2>
+              <div className="space-y-2 mb-4">
+                <div className="flex items-center">
+                  <MapPin className="h-4 w-4 mr-2" />
+                  <span>{match.venue?.name || "Venue"}, {match.venue?.city || ""}</span>
+                </div>
+                <div className="flex items-center">
+                  <Calendar className="h-4 w-4 mr-2" />
+                  <span>{formatDate(match.match_date)} at {formatTime(match.match_time)}</span>
+                </div>
+                <div className="flex items-center">
+                  <DollarSign className="h-4 w-4 mr-2" />
+                  <span>{match.is_paid ? `Paid (₦${match.price?.toFixed(2)})` : "Free"}</span>
+                </div>
+                <div className="flex items-center">
+                  <Users className="h-4 w-4 mr-2" />
+                  <span>{match.players?.length || 0}/{match.total_slots} slots booked</span>
+                </div>
+              </div>
+            </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400 my-4">
+              <strong>Note:</strong> Save or share this card to invite players to your match.
+            </p>
+            <div className="flex gap-2">
+              <Button 
+                className="flex-1 bg-blue-500 hover:bg-blue-600 text-white"
+                onClick={handleDownload}
+                disabled={!isImageLoaded}
+              >
+                Download Card
+              </Button>
+              <Button 
+                className="flex-1 bg-blue-500 hover:bg-blue-600 text-white"
+                onClick={() => setDownloadDialogOpen(false)}
+              >
+                Close
+              </Button>
+            </div>
+          </DialogDescription>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
