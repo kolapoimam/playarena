@@ -10,8 +10,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { format, isToday, isPast, differenceInHours, isAfter, utcToZonedTime } from "date-fns";
-import { zonedTimeToUtc } from "date-fns-tz";
+import { DateTime } from "luxon";
 
 // Match type definition based on the existing Supabase schema
 type Match = {
@@ -116,9 +115,8 @@ const Matches = () => {
         }
       }
       if (durationFilter !== "all") {
-        const today = utcToZonedTime(new Date(), LAGOS_TIMEZONE);
-        today.setHours(0, 0, 0, 0); // Normalize to start of day in Lagos
-        let startDate: Date, endDate: Date;
+        const today = DateTime.now().setZone(LAGOS_TIMEZONE).startOf("day");
+        let startDate: DateTime, endDate: DateTime;
 
         switch (durationFilter) {
           case "today":
@@ -126,29 +124,25 @@ const Matches = () => {
             endDate = today;
             break;
           case "this_week":
-            startDate = new Date(today);
-            startDate.setDate(today.getDate() - today.getDay() + (today.getDay() === 0 ? -6 : 1)); // Monday
-            endDate = new Date(startDate);
-            endDate.setDate(startDate.getDate() + 6); // Sunday
+            startDate = today.startOf("week"); // Monday
+            endDate = startDate.plus({ days: 6 }); // Sunday
             break;
           case "next_week":
-            startDate = new Date(today);
-            startDate.setDate(today.getDate() - today.getDay() + 8); // Next Monday
-            endDate = new Date(startDate);
-            endDate.setDate(startDate.getDate() + 6); // Next Sunday
+            startDate = today.startOf("week").plus({ weeks: 1 }); // Next Monday
+            endDate = startDate.plus({ days: 6 }); // Next Sunday
             break;
           case "this_month":
-            startDate = new Date(today.getFullYear(), today.getMonth(), 1);
-            endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+            startDate = today.startOf("month");
+            endDate = today.endOf("month");
             break;
           default:
             startDate = today;
             endDate = today;
         }
 
-        const startDateStr = zonedTimeToUtc(startDate, LAGOS_TIMEZONE).toISOString().split("T")[0];
-        const endDateStr = zonedTimeToUtc(endDate, LAGOS_TIMEZONE).toISOString().split("T")[0];
-        query = query.gte("match_date", startDateStr).lte("match_date", endDateStr);
+        const startDateStr = startDate.toUTC().toISODate();
+        const endDateStr = endDate.toUTC().toISODate();
+        query = query.gte("match_date", startDateStr!).lte("match_date", endDateStr!);
       }
       if (timeStart) {
         const timeRanges: { [key: string]: { start: string; end: string } } = {
@@ -159,31 +153,30 @@ const Matches = () => {
         query = query.gte("match_time", timeRanges[timeStart].start).lte("match_time", timeRanges[timeStart].end);
       }
       if (statusFilter) {
-        const today = utcToZonedTime(new Date(), LAGOS_TIMEZONE);
-        today.setHours(0, 0, 0, 0);
-        const todayStr = zonedTimeToUtc(today, LAGOS_TIMEZONE).toISOString().split("T")[0];
-        const now = utcToZonedTime(new Date(), LAGOS_TIMEZONE);
-        const twoHoursLater = new Date(now.getTime() + 2 * 60 * 60 * 1000);
-        const twoHoursLaterTime = twoHoursLater.toISOString().slice(11, 19);
+        const today = DateTime.now().setZone(LAGOS_TIMEZONE).startOf("day");
+        const todayStr = today.toUTC().toISODate();
+        const now = DateTime.now().setZone(LAGOS_TIMEZONE);
+        const twoHoursLater = now.plus({ hours: 2 });
+        const twoHoursLaterTime = twoHoursLater.toFormat("HH:mm:ss");
 
         switch (statusFilter) {
           case "Upcoming Match":
-            query = query.gt("match_date", todayStr);
+            query = query.gt("match_date", todayStr!);
             break;
           case "Today's Match":
             query = query
-              .eq("match_date", todayStr)
+              .eq("match_date", todayStr!)
               .gt("match_time", twoHoursLaterTime);
             break;
           case "Live Match":
             query = query
-              .eq("match_date", todayStr)
+              .eq("match_date", todayStr!)
               .lte("match_time", twoHoursLaterTime)
-              .gte("match_time", now.toISOString().slice(11, 19));
+              .gte("match_time", now.toFormat("HH:mm:ss"));
             break;
           case "Match Passed":
             query = query.or(
-              `match_date.lt.${todayStr},and(match_date.eq.${todayStr},match_time.lt.${now.toISOString().slice(11, 19)})`
+              `match_date.lt.${todayStr!},and(match_date.eq.${todayStr!},match_time.lt.${now.toFormat("HH:mm:ss")})`
             );
             break;
         }
@@ -217,17 +210,13 @@ const Matches = () => {
   };
 
   const formatDate = (dateString: string) => {
-    const options: Intl.DateTimeFormatOptions = {
-      weekday: "short",
-      day: "numeric",
-      month: "short",
-    };
-    return utcToZonedTime(new Date(dateString), LAGOS_TIMEZONE).toLocaleDateString("en-NG", options);
+    const date = DateTime.fromISO(dateString, { zone: "utc" }).setZone(LAGOS_TIMEZONE);
+    return date.toFormat("ccc, d LLL");
   };
 
   const formatTime = (timeString: string) => {
-    const date = utcToZonedTime(new Date(`2000-01-01T${timeString}Z`), LAGOS_TIMEZONE);
-    return date.toLocaleTimeString("en-NG", { hour: "2-digit", minute: "2-digit" });
+    const time = DateTime.fromISO(`2000-01-01T${timeString}Z`, { zone: "utc" }).setZone(LAGOS_TIMEZONE);
+    return time.toFormat("HH:mm");
   };
 
   const totalPages = Math.ceil(totalMatches / matchesPerPage);
@@ -254,20 +243,18 @@ const Matches = () => {
   };
 
   const getMatchStatus = (matchDate: string, matchTime: string) => {
-    const matchDateTime = utcToZonedTime(new Date(`${matchDate}T${matchTime}:00Z`), LAGOS_TIMEZONE);
-    const now = utcToZonedTime(new Date(), LAGOS_TIMEZONE);
-    const tomorrow = new Date(now);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(0, 0, 0, 0);
+    const matchDateTime = DateTime.fromISO(`${matchDate}T${matchTime}Z`, { zone: "utc" }).setZone(LAGOS_TIMEZONE);
+    const now = DateTime.now().setZone(LAGOS_TIMEZONE);
+    const tomorrow = now.plus({ days: 1 }).startOf("day");
 
     let statusLabel = "Upcoming Match";
     let statusClass = "bg-blue-100 text-blue-800";
 
-    if (isPast(matchDateTime)) {
+    if (matchDateTime < now) {
       statusLabel = "Match Passed";
       statusClass = "bg-gray-200 text-gray-600";
-    } else if (isToday(matchDateTime)) {
-      const hoursDiff = differenceInHours(matchDateTime, now);
+    } else if (matchDateTime.hasSame(now, "day")) {
+      const hoursDiff = matchDateTime.diff(now, "hours").hours;
       if (hoursDiff >= 0 && hoursDiff <= 2) {
         statusLabel = "Live Match";
         statusClass = "bg-red-100 text-red-700 animate-pulse";
@@ -278,7 +265,7 @@ const Matches = () => {
         statusLabel = "Match Passed";
         statusClass = "bg-gray-200 text-gray-600";
       }
-    } else if (isAfter(matchDateTime, tomorrow)) {
+    } else if (matchDateTime > tomorrow) {
       statusLabel = "Upcoming Match";
       statusClass = "bg-blue-100 text-blue-800";
     }
