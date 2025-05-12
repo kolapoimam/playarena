@@ -57,8 +57,8 @@ const JoinMatch = () => {
   const [joining, setJoining] = useState(false);
   const [verifyingPayment, setVerifyingPayment] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>("pending");
-  const [email, setEmail] = useState("kolapoimam1@gmail.com");
   const [paystackLoaded, setPaystackLoaded] = useState(false);
+  const defaultEmail = "kolapoimam1@gmail.com";
 
   // Load Paystack script dynamically as fallback
   useEffect(() => {
@@ -127,13 +127,11 @@ const JoinMatch = () => {
 
         if (error) throw error;
 
-        // Extract and validate required fields
         const requiredFields = Array.isArray(data?.required_fields)
           ? data.required_fields
           : ["name", "phone"];
         setFormSchema(createFormSchema(requiredFields));
 
-        // Reset form with empty values for each required field
         const defaultValues: Record<string, string> = {};
         requiredFields.forEach((field) => {
           defaultValues[field] = "";
@@ -171,13 +169,10 @@ const JoinMatch = () => {
           throw new Error(response.error.message);
         }
 
-        const { verified, email: customerEmail, match_id, slug: matchSlug } = response.data;
+        const { verified, match_id, slug: matchSlug } = response.data;
 
         if (verified && match_id === match.id && matchSlug === slug) {
           setPaymentStatus("success");
-          if (customerEmail) {
-            setEmail(customerEmail);
-          }
           toast({
             title: "Payment Successful",
             description: "Your payment was processed successfully. Please complete your registration.",
@@ -209,17 +204,6 @@ const JoinMatch = () => {
   const handlePaymentInitiation = async () => {
     if (!match || !match.is_paid || !match.price) return;
 
-    // Validate email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      toast({
-        title: "Invalid Email",
-        description: "Please enter a valid email address.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     if (!paystackLoaded || !window.PaystackPop) {
       toast({
         title: "Error",
@@ -232,10 +216,9 @@ const JoinMatch = () => {
     try {
       setJoining(true);
 
-      // Initialize Paystack transaction
       const response = await supabase.functions.invoke("initialize-paystack-transaction", {
         body: {
-          email,
+          email: defaultEmail,
           amount: match.price,
           match_id: match.id,
           slug: match.slug,
@@ -249,7 +232,6 @@ const JoinMatch = () => {
 
       const { access_code } = response.data;
 
-      // Initialize Paystack popup
       const paystack = new window.PaystackPop();
       paystack.resumeTransaction(access_code, {
         onSuccess: (transaction) => {
@@ -283,7 +265,6 @@ const JoinMatch = () => {
   const onSubmit = async (data: any) => {
     if (!match || !slug) return;
 
-    // Check if match is already full
     if (match.players.length >= match.total_slots) {
       toast({
         title: "Match is full",
@@ -296,7 +277,6 @@ const JoinMatch = () => {
     setJoining(true);
 
     try {
-      // Create player details object
       const playerDetails: Record<string, any> = {};
       Object.keys(data).forEach((key) => {
         if (key !== "name") {
@@ -304,14 +284,12 @@ const JoinMatch = () => {
         }
       });
 
-      // Add email to details if payment was made
       if (match.is_paid && paymentStatus === "success") {
-        playerDetails.email = email;
+        playerDetails.email = defaultEmail;
         playerDetails.payment_reference = paymentReference;
         playerDetails.payment_status = "paid";
       }
 
-      // Add player to the match
       const { error } = await supabase.from("players").insert({
         match_id: match.id,
         player_name: data.name,
@@ -326,12 +304,9 @@ const JoinMatch = () => {
         description: "You have joined the match successfully.",
       });
 
-      // Reset form and payment status
       form.reset();
       setPaymentStatus("pending");
-      setEmail("kolapoimam1@gmail.com");
 
-      // Refresh match data to update players count
       const { data: updatedMatch } = await supabase
         .from("matches")
         .select(
@@ -349,7 +324,6 @@ const JoinMatch = () => {
         setMatch(updatedMatch as Match);
       }
       
-      // Navigate to match details page after successful join
       navigate(`/match/${slug}`);
       
     } catch (error) {
@@ -448,28 +422,11 @@ const JoinMatch = () => {
                   This is a paid match. Please complete the payment to join.
                 </p>
                 <div className="space-y-4">
-                  <div className="space-y-2">
-                    <label htmlFor="email" className="block text-sm font-medium">
-                      Email Address
-                    </label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="Your email address"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Your payment receipt will be sent to this email.
-                    </p>
-                  </div>
-
                   <Button
                     type="button"
                     className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
                     onClick={handlePaymentInitiation}
-                    disabled={joining || !email || !paystackLoaded}
+                    disabled={joining || !paystackLoaded}
                   >
                     {joining ? (
                       <>
