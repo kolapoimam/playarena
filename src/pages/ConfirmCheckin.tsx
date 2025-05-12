@@ -65,7 +65,6 @@ const ConfirmCheckin = () => {
   const codeInputRef = useRef<HTMLInputElement>(null);
 
   const fetchMatch = async () => {
-    // Validate super code
     const validation = codeSchema.safeParse(superCode);
     if (!validation.success) {
       setSuperCodeError(validation.error.errors[0].message);
@@ -98,10 +97,8 @@ const ConfirmCheckin = () => {
         return;
       }
 
-      // Log the raw data for debugging
       console.log("Fetched match data:", data);
 
-      // Ensure the data matches the Match type
       const matchData: Match = {
         ...data,
         venue: data.venue ? { name: data.venue.name ?? "Unknown Venue", city: data.venue.city ?? "Unknown City" } : null,
@@ -277,7 +274,7 @@ const ConfirmCheckin = () => {
         <p className="text-sm mt-1 opacity-80">Manage player confirmations and check-ins</p>
       </div>
 
-      <div className="max-w-4xl mx-auto p-4 -mt-8">
+      <div className="max-w-4xl mx-auto p-4 -mt-8 pb-20">
         <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
           <h2 className="text-xl font-semibold mb-4">Enter Match Super Code</h2>
           <div className="flex flex-col sm:flex-row gap-3">
@@ -383,7 +380,7 @@ const ConfirmCheckin = () => {
               <div className="bg-white rounded-xl shadow-lg p-6">
                 <h2 className="text-xl font-semibold mb-4">Confirm Players</h2>
                 {(match.players || []).length > 0 ? (
-                  <div className="space-y-3">
+                  <div className="space-y-3 max-h-[50vh] overflow-y-auto">
                     {(match.players || []).map((player) => {
                       const currentStatus = playerStatuses.find((p) => p.id === player.id)?.status || player.status;
                       return (
@@ -437,7 +434,7 @@ const ConfirmCheckin = () => {
                       );
                     })}
                     <Button
-                      className="w-full bg-playarena-500 hover:bg-playarena-600 text-white mt-4"
+                      className="w-full bg-playarena-500 hover:bg-playarena-600 text-white mt-4 sticky bottom-0"
                       onClick={handleSave}
                       disabled={loading}
                     >
@@ -455,7 +452,7 @@ const ConfirmCheckin = () => {
               <div className="bg-white rounded-xl shadow-lg p-6">
                 <h2 className="text-xl font-semibold mb-4">Check-in Players</h2>
                 {(match.players || []).filter((p) => p.status === "confirmed").length > 0 ? (
-                  <div className="space-y-3">
+                  <div className="space-y-3 max-h-[50vh] overflow-y-auto">
                     {(match.players || [])
                       .filter((p) => p.status === "confirmed")
                       .map((player) => {
@@ -515,7 +512,7 @@ const ConfirmCheckin = () => {
                         );
                       })}
                     <Button
-                      className="w-full bg-playarena-500 hover:bg-playarena-600 text-white mt-4"
+                      className="w-full bg-playarena-500 hover:bg-playarena-600 text-white mt-4 sticky bottom-0"
                       onClick={handleSave}
                       disabled={loading}
                     >
