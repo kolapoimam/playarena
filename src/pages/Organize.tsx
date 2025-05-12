@@ -36,6 +36,8 @@ import {
   Dialog,
   DialogContent,
   DialogTrigger,
+  DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -77,6 +79,9 @@ const Organize = () => {
   const [searchParams] = useSearchParams();
   const preSelectedVenueSlug = searchParams.get('venue');
   const [venueDialogOpen, setVenueDialogOpen] = useState(false);
+  const [successDialogOpen, setSuccessDialogOpen] = useState(false);
+  const [supercode, setSupercode] = useState<string | null>(null);
+  const [matchSlug, setMatchSlug] = useState<string | null>(null);
 
   // Initialize the form
   const form = useForm<FormValues>({
@@ -148,19 +153,23 @@ const Organize = () => {
           organizer_name: data.organizer_name,
           player_number_required: data.player_number_required,
         })
-        .select('id, slug')
+        .select('id, slug, supercode')
         .single();
 
       if (error) throw error;
 
-      // Success! Show toast and navigate to the match detail page
+      // Store the supercode and match slug
+      setSupercode(match.supercode);
+      setMatchSlug(match.slug);
+
+      // Show the success dialog
+      setSuccessDialogOpen(true);
+
+      // Success toast (still shown for redundancy)
       toast({
         title: "Success!",
         description: "Your match has been created.",
       });
-
-      // Navigate to the match detail page using slug
-      navigate(`/match/${match.slug}`);
     } catch (error) {
       console.error("Error creating match:", error);
       toast({
@@ -362,28 +371,28 @@ const Organize = () => {
               )}
             />
 
-<FormField
-  control={form.control}
-  name="player_number_required"
-  render={({ field }) => (
-    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-      <div className="space-y-0.5">
-        <FormLabel className="text-base">
-          Require Phone Number
-        </FormLabel>
-        <FormDescription>
-          Toggle if players need to provide their phone number when joining
-        </FormDescription>
-      </div>
-      <FormControl>
-        <Switch
-          checked={field.value}
-          onCheckedChange={field.onChange}
-        />
-      </FormControl>
-    </FormItem>
-  )}
-/>
+            <FormField
+              control={form.control}
+              name="player_number_required"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-base">
+                      Require Phone Number
+                    </FormLabel>
+                    <FormDescription>
+                      Toggle if players need to provide their phone number when joining
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}
@@ -469,13 +478,47 @@ const Organize = () => {
               )}
             />
 
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className="w-full bg-green-500 hover:bg-green-600 text-white" disabled={loading}>
               {loading ? "Creating..." : "Create Match"}
             </Button>
           </form>
         </Form>
       </div>
       <Navbar />
+      
+      {/* Success Dialog with Supercode */}
+      <Dialog open={successDialogOpen} onOpenChange={(open) => {
+        setSuccessDialogOpen(open);
+        if (!open && matchSlug) {
+          navigate(`/match/${matchSlug}`);
+        }
+      }}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogTitle>Match Created Successfully!</DialogTitle>
+          <DialogDescription>
+            <p className="text-gray-600 dark:text-gray-300 mb-4">
+              Your match has been created. Below is your unique supercode for check-ins on match day.
+            </p>
+            <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded-md mb-4">
+              <p className="text-lg font-semibold text-center">{supercode || "Loading..."}</p>
+            </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+              <strong>Note:</strong> Please save or download this code. You will need it to confirm and check in players on match day.
+            </p>
+            <Button 
+              className="w-full bg-green-500 hover:bg-green-600 text-white"
+              onClick={() => {
+                setSuccessDialogOpen(false);
+                if (matchSlug) {
+                  navigate(`/match/${matchSlug}`);
+                }
+              }}
+            >
+              Go to Match Details
+            </Button>
+          </DialogDescription>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
