@@ -139,6 +139,11 @@ const Organize = () => {
     setLoading(true);
 
     try {
+      // Validate match_date before formatting
+      if (!(data.match_date instanceof Date) || isNaN(data.match_date.getTime())) {
+        throw new Error("Invalid date selected");
+      }
+
       // Create the match in the database
       const { data: match, error } = await supabase
         .from("matches")
@@ -160,13 +165,13 @@ const Organize = () => {
       if (error) throw error;
 
       // Store the supercode and match slug
-      setSupercode(match.super_code || "N/A"); // Default to "N/A" if null (unlikely)
+      setSupercode(match.super_code || "N/A");
       setMatchSlug(match.slug);
 
       // Show the success dialog
       setSuccessDialogOpen(true);
 
-      // Success toast (still shown for redundancy)
+      // Success toast
       toast({
         title: "Success!",
         description: "Your match has been created.",
@@ -175,7 +180,7 @@ const Organize = () => {
       console.error("Error creating match:", error);
       toast({
         title: "Error",
-        description: "Failed to create match. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to create match. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -184,16 +189,9 @@ const Organize = () => {
   };
 
   const handleVenueCreated = (venueId: string, venueSlug: string, venueName: string) => {
-    // Add the new venue to the venues list
     setVenues(prev => [{ id: venueId, slug: venueSlug, name: venueName, city: "" }, ...prev]);
-    
-    // Set the venue in the form
     form.setValue("venue_id", venueId);
-    
-    // Close the dialog
     setVenueDialogOpen(false);
-    
-    // Show success toast
     toast({
       title: "Venue created",
       description: `${venueName} has been added to venues.`,
@@ -310,7 +308,11 @@ const Organize = () => {
                         <Calendar
                           mode="single"
                           selected={field.value}
-                          onSelect={field.onChange}
+                          onSelect={(date) => {
+                            if (date) {
+                              field.onChange(date); // Ensure date is valid before setting
+                            }
+                          }}
                           disabled={(date) => {
                             const today = new Date();
                             today.setHours(0, 0, 0, 0);
@@ -434,9 +436,7 @@ const Organize = () => {
                         {...field}
                         onChange={(e) => {
                           const value = parseFloat(e.target.value);
-                          field.onChange(isNaN(value)
-
-                                         ? 0 : value);
+                          field.onChange(isNaN(value) ? 0 : value);
                         }}
                         value={field.value ?? ""}
                       />
