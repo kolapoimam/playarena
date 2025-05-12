@@ -443,7 +443,6 @@ const JoinMatch = () => {
           </Button>
           <div className="text-center">
             <h1 className="text-2xl font-bold">Join Match</h1>
-            <p className="text-sm">Register to secure your spot</p>
           </div>
           <div className="w-10"></div>
         </div>
