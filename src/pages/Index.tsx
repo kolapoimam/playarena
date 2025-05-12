@@ -205,7 +205,8 @@ const Index = () => {
         .filter((match) => {
           const now = new Date().toLocaleString("en-US", { timeZone: "Africa/Lagos" });
           const currentDateTime = new Date(now);
-          const matchDateTime = new Date(`${match.match_date}T${match.match_time}:00`);
+          const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
+          console.log(`Match: ${match.title}, DateTime: ${matchDateTime}, Current: ${currentDateTime}, Is Future: ${matchDateTime >= currentDateTime}`);
           return matchDateTime >= currentDateTime;
         })
         .slice(0, 5)
