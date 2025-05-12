@@ -15,7 +15,8 @@ import {
   ChevronDown,
   ExternalLink,
   Trophy,
-  DollarSign
+  DollarSign,
+  CalendarPlus
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -32,6 +33,7 @@ import {
 import { format, isToday, isPast, differenceInHours, addDays } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import html2canvas from "html2canvas";
+import * as ics from "ics";
 
 // Match type definition
 type Match = {
@@ -234,6 +236,56 @@ const MatchDetail = () => {
     }
   }, [isImageLoaded, match, toast]);
 
+  const addToCalendar = () => {
+    if (!match) return;
+
+    const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
+    const endDateTime = new Date(matchDateTime.getTime() + 2 * 60 * 60 * 1000); // Assume 2-hour match duration
+
+    const event: ics.EventAttributes = {
+      start: [
+        matchDateTime.getFullYear(),
+        matchDateTime.getMonth() + 1,
+        matchDateTime.getDate(),
+        matchDateTime.getHours(),
+        matchDateTime.getMinutes(),
+      ],
+      end: [
+        endDateTime.getFullYear(),
+        endDateTime.getMonth() + 1,
+        endDateTime.getDate(),
+        endDateTime.getHours(),
+        endDateTime.getMinutes(),
+      ],
+      title: match.title,
+      description: `Football Match organized by ${match.organizer_name}. Match Slug: ${match.slug}. Venue: ${match.venue?.name || 'Unknown'}, ${match.venue?.city || ''}. Powered by PlayArena.`,
+      location: match.venue ? `${match.venue.name}, ${match.venue.city}` : "Unknown Venue",
+      url: `${window.location.origin}/match/${match.slug}`,
+      status: "CONFIRMED",
+      organizer: { name: match.organizer_name, email: "noreply@playarena.com" },
+    };
+
+    const { error, value } = ics.createEvent(event);
+
+    if (error || !value) {
+      console.error("Error creating calendar event:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create calendar event. Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const blob = new Blob([value], { type: "text/calendar" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `PlayArena-Match-${match.slug}.ics`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-[50vh]">
@@ -276,7 +328,18 @@ const MatchDetail = () => {
         </Button>
         
         <h1 className="text-2xl font-bold mb-2">{match.title}</h1>
-        <p className="text-muted-foreground mb-4">Organized by {match.organizer_name}</p>
+        <div className="flex justify-between items-center mb-4">
+          <p className="text-muted-foreground">Organized by {match.organizer_name}</p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={addToCalendar}
+            className="flex items-center gap-1"
+          >
+            <CalendarPlus size={16} />
+            Add to Calendar
+          </Button>
+        </div>
         
         {isPassed ? (
           <div className="bg-gray-100 border border-gray-200 text-gray-700 px-4 py-3 rounded mb-4">
@@ -440,7 +503,7 @@ const MatchDetail = () => {
               onClick={() => setDownloadDialogOpen(true)}
             >
               <Download size={18} className="mr-2" />
-              Download Card
+              Download
             </Button>
           </div>
         </div>
@@ -452,8 +515,8 @@ const MatchDetail = () => {
         setIsImageLoaded(false); // Reset image load state when dialog closes
         if (!open) setBackgroundOption("field"); // Reset to default background on close
       }}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogTitle>Match Details Card</DialogTitle>
+        <DialogContent className="sm:max-w-[425px] max-w-[90vw] rounded-2xl">
+          <DialogTitle>Match Details</DialogTitle>
           <DialogDescription>
             <p className="text-gray-600 dark:text-gray-300 mb-4">
               Download this card to share your match details with friends. Choose a background below.
@@ -518,7 +581,7 @@ const MatchDetail = () => {
               <div className="relative z-10">
                 <div className="flex items-center justify-between mb-4">
                   <img 
-                    src="/playarenadark.png" 
+                    src={backgroundOption === "white" ? "/playarenalight.png" : "/playarenadark.png"}
                     alt="PlayArena Logo" 
                     className="h-8 w-auto"
                     onLoad={handleImageLoad}
@@ -563,7 +626,7 @@ const MatchDetail = () => {
                 onClick={handleDownload}
                 disabled={!isImageLoaded}
               >
-                Download Card
+                Download
               </Button>
               <Button 
                 className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
