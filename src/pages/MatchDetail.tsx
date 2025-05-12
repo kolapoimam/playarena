@@ -61,6 +61,11 @@ type Match = {
   }[];
 };
 
+// Helper function to capitalize status
+const formatStatus = (status: string) => {
+  return status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, " ");
+};
+
 const MatchDetail = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
@@ -194,7 +199,7 @@ const MatchDetail = () => {
     
     const url = `${window.location.origin}/match/${match.slug}`;
     const shareText = `Join my Football Match: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. Powered by PlayArena.`;
-    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}"e=${encodeURIComponent(shareText)}`;
+    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(shareText)}`;
     window.open(facebookUrl, '_blank');
   };
 
@@ -444,7 +449,7 @@ const MatchDetail = () => {
                         "default"
                       }
                     >
-                      {player.status}
+                      {formatStatus(player.status)}
                     </Badge>
                   </div>
                 ))}
@@ -517,6 +522,7 @@ const MatchDetail = () => {
               onClick={() => setDownloadDialogOpen(true)}
             >
               <Download size={18} className="mr-2" />
+              Download                         
               Download
             </Button>
           </div>
