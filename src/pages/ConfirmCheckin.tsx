@@ -14,7 +14,8 @@ import {
   CheckCircle, 
   XCircle, 
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Trophy
 } from "lucide-react";
 import { format } from "date-fns";
 import { differenceInHours } from "date-fns";
@@ -30,8 +31,8 @@ type Match = {
   organizer_name: string;
   super_code: string;
   venue: {
-    name: string;
-    city: string;
+    name?: string;
+    city?: string;
   } | null;
   players: {
     id: string;
@@ -39,7 +40,7 @@ type Match = {
     status: string;
     confirmation_code: string;
     details: { phone: string } | null;
-  }[];
+  }[] | null;
 };
 
 // Validation schema for 6-digit numeric codes
@@ -97,9 +98,19 @@ const ConfirmCheckin = () => {
         return;
       }
 
-      setMatch(data as Match);
+      // Log the raw data for debugging
+      console.log("Fetched match data:", data);
+
+      // Ensure the data matches the Match type
+      const matchData: Match = {
+        ...data,
+        venue: data.venue ? { name: data.venue.name ?? "Unknown Venue", city: data.venue.city ?? "Unknown City" } : null,
+        players: Array.isArray(data.players) ? data.players : [],
+      };
+
+      setMatch(matchData);
       setPlayerStatuses(
-        (data.players || []).map((player) => ({
+        (matchData.players || []).map((player) => ({
           id: player.id,
           status: player.status,
           checkinCode: "",
@@ -148,10 +159,8 @@ const ConfirmCheckin = () => {
   };
 
   const handleCheckinCodeChange = (playerId: string, code: string) => {
-    // Allow only numbers
     const numericCode = code.replace(/[^0-9]/g, "").slice(0, 6);
     setCheckinCodes((prev) => ({ ...prev, [playerId]: numericCode }));
-    // Validate in real-time
     const validation = codeSchema.safeParse(numericCode);
     setCheckinCodeErrors((prev) => ({
       ...prev,
@@ -161,7 +170,6 @@ const ConfirmCheckin = () => {
 
   const validateCheckinCode = async (playerId: string) => {
     const code = checkinCodes[playerId];
-    // Validate code format
     const validation = codeSchema.safeParse(code);
     if (!validation.success) {
       setCheckinCodeErrors((prev) => ({
@@ -176,7 +184,7 @@ const ConfirmCheckin = () => {
       return;
     }
 
-    const player = match?.players.find((p) => p.id === playerId);
+    const player = match?.players?.find((p) => p.id === playerId);
     if (player?.confirmation_code === code) {
       handleStatusChange(playerId, "checked_in");
       toast({
@@ -327,25 +335,29 @@ const ConfirmCheckin = () => {
                 <div className="flex items-center gap-3">
                   <Trophy size={20} className="text-playarena-500" />
                   <div>
-                    <p className="font-medium">{match.title}</p>
-                    <p className="text-sm text-muted-foreground">Organized by {match.organizer_name}</p>
+                    <p className="font-medium">{match.title || "Untitled Match"}</p>
+                    <p className="text-sm text-muted-foreground">
+                      Organized by {match.organizer_name || "Unknown Organizer"}
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <MapPin size={20} className="text-playarena-500" />
-                  <span>{match.venue?.name || "Venue"}, {match.venue?.city || ""}</span>
+                  <span>
+                    {match.venue?.name || "Unknown Venue"}, {match.venue?.city || "Unknown City"}
+                  </span>
                 </div>
                 <div className="flex items-center gap-3">
                   <Calendar size={20} className="text-playarena-500" />
-                  <span>{formatDate(match.match_date)}</span>
+                  <span>{match.match_date ? formatDate(match.match_date) : "Date TBD"}</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <Clock size={20} className="text-playarena-500" />
-                  <span>{formatTime(match.match_time)}</span>
+                  <span>{match.match_time ? formatTime(match.match_time) : "Time TBD"}</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <Users size={20} className="text-playarena-500" />
-                  <span>{match.players.length}/{match.total_slots} players</span>
+                  <span>{(match.players || []).length}/{match.total_slots || 0} players</span>
                 </div>
               </div>
             </div>
@@ -370,9 +382,9 @@ const ConfirmCheckin = () => {
             {mode === "confirm" && (
               <div className="bg-white rounded-xl shadow-lg p-6">
                 <h2 className="text-xl font-semibold mb-4">Confirm Players</h2>
-                {match.players.length > 0 ? (
+                {(match.players || []).length > 0 ? (
                   <div className="space-y-3">
-                    {match.players.map((player) => {
+                    {(match.players || []).map((player) => {
                       const currentStatus = playerStatuses.find((p) => p.id === player.id)?.status || player.status;
                       return (
                         <div
@@ -381,10 +393,10 @@ const ConfirmCheckin = () => {
                         >
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-playarena-100 flex items-center justify-center text-playarena-600 font-semibold">
-                              {player.player_name.charAt(0).toUpperCase()}
+                              {(player.player_name || "Unknown").charAt(0).toUpperCase()}
                             </div>
                             <div>
-                              <span className="font-medium">{player.player_name}</span>
+                              <span className="font-medium">{player.player_name || "Unknown Player"}</span>
                               <p className="text-sm text-muted-foreground">
                                 Phone: {player.details?.phone || "N/A"}
                               </p>
@@ -442,9 +454,9 @@ const ConfirmCheckin = () => {
             {mode === "checkin" && (
               <div className="bg-white rounded-xl shadow-lg p-6">
                 <h2 className="text-xl font-semibold mb-4">Check-in Players</h2>
-                {match.players.filter((p) => p.status === "confirmed").length > 0 ? (
+                {(match.players || []).filter((p) => p.status === "confirmed").length > 0 ? (
                   <div className="space-y-3">
-                    {match.players
+                    {(match.players || [])
                       .filter((p) => p.status === "confirmed")
                       .map((player) => {
                         const currentStatus = playerStatuses.find((p) => p.id === player.id)?.status || player.status;
@@ -455,10 +467,10 @@ const ConfirmCheckin = () => {
                           >
                             <div className="flex items-center gap-3">
                               <div className="w-10 h-10 rounded-full bg-playarena-100 flex items-center justify-center text-playarena-600 font-semibold">
-                                {player.player_name.charAt(0).toUpperCase()}
+                                {(player.player_name || "Unknown").charAt(0).toUpperCase()}
                               </div>
                               <div>
-                                <span className="font-medium">{player.player_name}</span>
+                                <span className="font-medium">{player.player_name || "Unknown Player"}</span>
                                 <p className="text-sm text-muted-foreground">
                                   Phone: {player.details?.phone || "N/A"}
                                 </p>
