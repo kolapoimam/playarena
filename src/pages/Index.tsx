@@ -8,6 +8,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
+import { format, isToday, isPast, differenceInHours, addDays } from "date-fns";
 
 type Match = {
   id: string;
@@ -63,10 +64,6 @@ const Index = () => {
         // Get current time in Africa/Lagos timezone
         const now = new Date().toLocaleString("en-US", { timeZone: "Africa/Lagos" });
         const currentDateTime = new Date(now);
-        const currentDate = currentDateTime.toISOString().split("T")[0];
-
-        console.log("Current DateTime (Africa/Lagos):", currentDateTime);
-        console.log("Current Date (Africa/Lagos):", currentDate);
 
         // Fetch upcoming matches
         const { data: matchesData, error: matchesError } = await supabase
@@ -78,25 +75,20 @@ const Index = () => {
             match_date,
             match_time,
             is_paid,
-            price,
-            venue:venues(slug, name, city, image_urls)
+            jobs:venues(slug, name, city, image_urls)
           `)
-          .gte("match_date", currentDate) // Matches from today onward
+          .gte("match_date", format(currentDateTime, "yyyy-MM-dd")) // Matches from today onward
           .order("match_date", { ascending: true })
           .order("match_time", { ascending: true })
           .limit(5);
 
         if (matchesError) throw matchesError;
 
-        console.log("Raw Matches Data:", matchesData);
-
-        // Filter matches to exclude past matches
+        // Filter matches to include only future matches
         const filteredMatches = matchesData.filter((match: Match) => {
           const matchDateTime = new Date(`${match.match_date}T${match.match_time}:00`);
-          return matchDateTime >= currentDateTime;
+          return matchDateTime > currentDateTime && !isPast(matchDateTime);
         });
-
-        console.log("Filtered Matches:", filteredMatches);
 
         // Get popular venues with match count
         const { data: venuesData, error: venuesError } = await supabase
@@ -202,13 +194,6 @@ const Index = () => {
   {upcomingMatches.length > 0 ? (
     <div className="flex gap-4 overflow-x-auto px-4 pb-4">
       {upcomingMatches
-        .filter((match) => {
-          const now = new Date().toLocaleString("en-US", { timeZone: "Africa/Lagos" });
-          const currentDateTime = new Date(now);
-          const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
-          console.log(`Match: ${match.title}, DateTime: ${matchDateTime}, Current: ${currentDateTime}, Is Future: ${matchDateTime >= currentDateTime}`);
-          return matchDateTime >= currentDateTime;
-        })
         .slice(0, 5)
         .map((match) => (
           <div
