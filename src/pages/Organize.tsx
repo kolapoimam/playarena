@@ -159,7 +159,7 @@ const Organize = () => {
       if (error) throw error;
 
       // Store the supercode and match slug
-      setSupercode(matches.super_code);
+      setSupercode(match.super_code || "N/A"); // Default to "N/A" if null (unlikely)
       setMatchSlug(match.slug);
 
       // Show the success dialog
@@ -497,10 +497,10 @@ const Organize = () => {
           <DialogTitle>Match Created Successfully!</DialogTitle>
           <DialogDescription>
             <p className="text-gray-600 dark:text-gray-300 mb-4">
-              Your match has been created. Below is your unique supercode for check-ins on match day.
+              Your match has been created. Below is your unique 6-digit supercode for check-ins on match day.
             </p>
             <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded-md mb-4">
-              <p className="text-lg font-semibold text-center">{supercode || "Loading..."}</p>
+              <p className="text-lg font-semibold text-center">{supercode || "N/A"}</p>
             </div>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
               <strong>Note:</strong> Please save or download this code. You will need it to confirm and check in players on match day.
