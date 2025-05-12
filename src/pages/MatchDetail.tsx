@@ -203,20 +203,23 @@ const MatchDetail = () => {
     if (!cardRef.current || !isImageLoaded) {
       toast({
         title: "Error",
-        description: "Card is not ready for download. Please try again.",
+        description: "Card is not ready for download. Please wait a moment and try again.",
         variant: "destructive",
       });
       return;
     }
 
     try {
-      // Ensure the dialog is fully rendered
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Increase delay to ensure dialog is fully rendered
+      await new Promise(resolve => setTimeout(resolve, 300));
       
       const canvas = await html2canvas(cardRef.current, {
         scale: 2,
         useCORS: true,
         logging: false,
+        // Ensure the element is in the viewport
+        scrollX: 0,
+        scrollY: -window.scrollY,
       });
 
       const link = document.createElement('a');
@@ -233,12 +236,12 @@ const MatchDetail = () => {
     }
   }, [isImageLoaded, match, toast]);
 
-  // Trigger download automatically when dialog opens and image is loaded
-  useEffect(() => {
-    if (downloadDialogOpen && isImageLoaded) {
-      handleDownload();
-    }
-  }, [downloadDialogOpen, isImageLoaded, handleDownload]);
+  // Removed automatic download to avoid timing issues; let user trigger manually
+  // useEffect(() => {
+  //   if (downloadDialogOpen && isImageLoaded) {
+  //     handleDownload();
+  //   }
+  // }, [downloadDialogOpen, isImageLoaded, handleDownload]);
 
   if (loading) {
     return (
@@ -469,7 +472,7 @@ const MatchDetail = () => {
             >
               <div className="flex items-center justify-between mb-4">
                 <img 
-                  src="/playarenalight.jpg" 
+                  src="/playarenadark.png" 
                   alt="PlayArena Logo" 
                   className="h-8 w-auto"
                   onLoad={handleImageLoad}
