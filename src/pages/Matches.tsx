@@ -10,7 +10,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { format, isToday, isPast, differenceInHours, isAfter } from "date-fns";
+import { format, isToday, isPast, differenceInHours, isAfter, utcToZonedTime } from "date-fns";
+import { zonedTimeToUtc } from "date-fns-tz";
 
 // Match type definition based on the existing Supabase schema
 type Match = {
@@ -51,12 +52,13 @@ const Matches = () => {
   const [venueFilter, setVenueFilter] = useState<string | null>(null);
   const [durationFilter, setDurationFilter] = useState<string>("all");
   const [timeStart, setTimeStart] = useState<string>("");
-  const [statusFilter, setStatusFilter] = useState<string | null>(null); // New state for status filter
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
   const matchesPerPage = 4;
+  const LAGOS_TIMEZONE = "Africa/Lagos";
 
   useEffect(() => {
     fetchVenues();
@@ -114,8 +116,8 @@ const Matches = () => {
         }
       }
       if (durationFilter !== "all") {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0); // Normalize to start of day
+        const today = utcToZonedTime(new Date(), LAGOS_TIMEZONE);
+        today.setHours(0, 0, 0, 0); // Normalize to start of day in Lagos
         let startDate: Date, endDate: Date;
 
         switch (durationFilter) {
@@ -144,8 +146,8 @@ const Matches = () => {
             endDate = today;
         }
 
-        const startDateStr = startDate.toISOString().split("T")[0];
-        const endDateStr = endDate.toISOString().split("T")[0];
+        const startDateStr = zonedTimeToUtc(startDate, LAGOS_TIMEZONE).toISOString().split("T")[0];
+        const endDateStr = zonedTimeToUtc(endDate, LAGOS_TIMEZONE).toISOString().split("T")[0];
         query = query.gte("match_date", startDateStr).lte("match_date", endDateStr);
       }
       if (timeStart) {
@@ -157,33 +159,29 @@ const Matches = () => {
         query = query.gte("match_time", timeRanges[timeStart].start).lte("match_time", timeRanges[timeStart].end);
       }
       if (statusFilter) {
-        const today = new Date();
+        const today = utcToZonedTime(new Date(), LAGOS_TIMEZONE);
         today.setHours(0, 0, 0, 0);
-        const todayStr = today.toISOString().split("T")[0];
-        const now = new Date();
+        const todayStr = zonedTimeToUtc(today, LAGOS_TIMEZONE).toISOString().split("T")[0];
+        const now = utcToZonedTime(new Date(), LAGOS_TIMEZONE);
         const twoHoursLater = new Date(now.getTime() + 2 * 60 * 60 * 1000);
-        const twoHoursLaterTime = twoHoursLater.toISOString().slice(11, 19); // HH:mm:ss
+        const twoHoursLaterTime = twoHoursLater.toISOString().slice(11, 19);
 
         switch (statusFilter) {
           case "Upcoming Match":
-            // Matches after today
             query = query.gt("match_date", todayStr);
             break;
           case "Today's Match":
-            // Matches today, not within 2 hours
             query = query
               .eq("match_date", todayStr)
               .gt("match_time", twoHoursLaterTime);
             break;
           case "Live Match":
-            // Matches today, within 2 hours
             query = query
               .eq("match_date", todayStr)
               .lte("match_time", twoHoursLaterTime)
               .gte("match_time", now.toISOString().slice(11, 19));
             break;
           case "Match Passed":
-            // Matches before today or today but past
             query = query.or(
               `match_date.lt.${todayStr},and(match_date.eq.${todayStr},match_time.lt.${now.toISOString().slice(11, 19)})`
             );
@@ -224,11 +222,12 @@ const Matches = () => {
       day: "numeric",
       month: "short",
     };
-    return new Date(dateString).toLocaleDateString("en-NG", options);
+    return utcToZonedTime(new Date(dateString), LAGOS_TIMEZONE).toLocaleDateString("en-NG", options);
   };
 
   const formatTime = (timeString: string) => {
-    return timeString.slice(0, 5); // Format from "14:30:00" to "14:30"
+    const date = utcToZonedTime(new Date(`2000-01-01T${timeString}Z`), LAGOS_TIMEZONE);
+    return date.toLocaleTimeString("en-NG", { hour: "2-digit", minute: "2-digit" });
   };
 
   const totalPages = Math.ceil(totalMatches / matchesPerPage);
@@ -250,22 +249,20 @@ const Matches = () => {
     setVenueFilter(null);
     setDurationFilter("all");
     setTimeStart("");
-    setStatusFilter(null); // Reset status filter
+    setStatusFilter(null);
     setCurrentPage(1);
   };
 
   const getMatchStatus = (matchDate: string, matchTime: string) => {
-    const matchDateTime = new Date(`${matchDate}T${matchTime}:00Z`);
-    const now = new Date();
-    
-    // Create a date for tomorrow at midnight to check if match is "upcoming" (future date, not today)
+    const matchDateTime = utcToZonedTime(new Date(`${matchDate}T${matchTime}:00Z`), LAGOS_TIMEZONE);
+    const now = utcToZonedTime(new Date(), LAGOS_TIMEZONE);
     const tomorrow = new Date(now);
     tomorrow.setDate(tomorrow.getDate() + 1);
     tomorrow.setHours(0, 0, 0, 0);
-    
+
     let statusLabel = "Upcoming Match";
     let statusClass = "bg-blue-100 text-blue-800";
-    
+
     if (isPast(matchDateTime)) {
       statusLabel = "Match Passed";
       statusClass = "bg-gray-200 text-gray-600";
@@ -285,7 +282,7 @@ const Matches = () => {
       statusLabel = "Upcoming Match";
       statusClass = "bg-blue-100 text-blue-800";
     }
-    
+
     return { statusLabel, statusClass };
   };
 
