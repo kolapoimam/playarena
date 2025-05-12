@@ -36,6 +36,7 @@ import {
 import { format, isToday, isPast, differenceInHours, addDays } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import html2canvas from "html2canvas";
 import * as ics from "ics";
 
@@ -211,7 +212,7 @@ const MatchDetail = () => {
     if (!match) return;
     
     const url = `${window.location.origin}/match/${match.slug}`;
-    const shareText = `Join my Football Match: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. Powered by PlayArena. ${url}`;
+    const shareText = `Join my Football Match: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. Powered by PlayArena. ${url}${match.is_private ? ` (Access Password: ${match.access_password})` : ''}`;
     
     if (navigator.share) {
       try {
@@ -244,7 +245,7 @@ const MatchDetail = () => {
     if (!match) return;
     
     const url = `${window.location.origin}/match/${match.slug}`;
-    const shareText = `Join my Football Match: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. Powered by PlayArena. ${url}`;
+    const shareText = `Join my Football Match: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. Powered by PlayArena. ${url}${match.is_private ? ` (Access Password: ${match.access_password})` : ''}`;
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
     window.open(whatsappUrl, '_blank');
   };
@@ -253,7 +254,7 @@ const MatchDetail = () => {
     if (!match) return;
     
     const url = `${window.location.origin}/match/${match.slug}`;
-    const shareText = `Join my Football Match: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. Powered by PlayArena. ${url}`;
+    const shareText = `Join my Football Match: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. Powered by PlayArena. ${url}${match.is_private ? ` (Access Password: ${match.access_password})` : ''}`;
     const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
     window.open(twitterUrl, '_blank');
   };
@@ -262,7 +263,7 @@ const MatchDetail = () => {
     if (!match) return;
     
     const url = `${window.location.origin}/match/${match.slug}`;
-    const shareText = `Join my Football Match: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. Powered by PlayArena.`;
+    const shareText = `Join my Football Match: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. Powered by PlayArena. ${match.is_private ? ` (Access Password: ${match.access_password})` : ''}`;
     const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(shareText)}`;
     window.open(facebookUrl, '_blank');
   };
@@ -328,7 +329,7 @@ const MatchDetail = () => {
         endDateTime.getMinutes(),
       ],
       title: match.title,
-      description: `Football Match organized by ${match.organizer_name}. Match Slug: ${match.slug}. Venue: ${match.venue?.name || 'Unknown'}, ${match.venue?.city || ''}. Powered by PlayArena.`,
+      description: `Football Match organized by ${match.organizer_name}. Match Slug: ${match.slug}. Venue: ${match.venue?.name || 'Unknown'}, ${match.venue?.city || ''}. Powered by PlayArena.${match.is_private ? ` (Access Password: ${match.access_password})` : ''}`,
       location: match.venue ? `${match.venue.name}, ${match.venue.city}` : "Unknown Venue",
       url: `${window.location.origin}/match/${match.slug}`,
       status: "CONFIRMED",
@@ -401,12 +402,26 @@ const MatchDetail = () => {
             <h1 className="text-2xl font-bold">Match Details</h1>
             <p className="text-sm">Manage player confirmations and check-ins</p>
           </div>
-          <div className="w-10"></div> {/* Spacer for symmetry */}
+          <div className="w-10"></div>
         </div>
       </header>
 
       <div className="p-4">
-        <h1 className="text-2xl font-bold mb-2">{match.title} {match.is_private && <Lock size={16} className="inline text-gray-500" />}</h1>
+        <h1 className="text-2xl font-bold mb-2">
+          {match.title}{" "}
+          {match.is_private && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Lock size={16} className="inline text-gray-500" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>This is a private match</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+        </h1>
         <div className="flex justify-between items-center mb-4">
           <p className="text-muted-foreground">Organized by {match.organizer_name}</p>
           <Button
@@ -595,7 +610,6 @@ const MatchDetail = () => {
               onClick={() => setDownloadDialogOpen(true)}
             >
               <Download size={18} className="mr-2" />
-              Download                         
               Download
             </Button>
           </div>
@@ -735,13 +749,13 @@ const MatchDetail = () => {
       <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Enter Match Super Code</DialogTitle>
-            <DialogDescription>Manage player confirmations and check-ins</DialogDescription>
+            <DialogTitle>Enter Access Password</DialogTitle>
+            <DialogDescription>This is a private match. Please enter the access password to view details.</DialogDescription>
           </DialogHeader>
           <div className="py-4">
             <Input
               type="text"
-              placeholder="Enter 6-digit super code"
+              placeholder="Enter 6-character password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full"
@@ -752,7 +766,7 @@ const MatchDetail = () => {
               className="bg-green-500 hover:bg-green-600 text-white"
               onClick={verifyPassword}
             >
-              Load Match
+              Verify Password
             </Button>
           </DialogFooter>
         </DialogContent>
