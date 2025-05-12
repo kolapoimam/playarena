@@ -1,6 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { format, isToday, isPast, differenceInHours, isAfter, utcToZonedTime } from "date-fns";
-import { zonedTimeToUtc } from "date-fns-tz";
+import { DateTime } from "luxon";
 
 interface MatchCardProps {
   title: string;
@@ -23,20 +22,18 @@ export default function MatchCard({
 }: MatchCardProps) {
   const navigate = useNavigate();
 
-  const matchDate = utcToZonedTime(new Date(match_time), "Africa/Lagos");
-  const now = utcToZonedTime(new Date(), "Africa/Lagos");
-  const tomorrow = new Date(now);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  tomorrow.setHours(0, 0, 0, 0);
+  const matchDate = DateTime.fromISO(match_time, { zone: "utc" }).setZone("Africa/Lagos");
+  const now = DateTime.now().setZone("Africa/Lagos");
+  const tomorrow = now.plus({ days: 1 }).startOf("day");
 
   let statusLabel = "Upcoming Match";
   let statusClass = "bg-blue-100 text-blue-800";
 
-  if (isPast(matchDate)) {
+  if (matchDate < now) {
     statusLabel = "Match Passed";
     statusClass = "bg-gray-200 text-gray-600";
-  } else if (isToday(matchDate)) {
-    const hoursDiff = differenceInHours(matchDate, now);
+  } else if (matchDate.hasSame(now, "day")) {
+    const hoursDiff = matchDate.diff(now, "hours").hours;
     if (hoursDiff >= 0 && hoursDiff <= 2) {
       statusLabel = "Live Match";
       statusClass = "bg-red-100 text-red-700 animate-pulse";
@@ -47,7 +44,7 @@ export default function MatchCard({
       statusLabel = "Match Passed";
       statusClass = "bg-gray-200 text-gray-600";
     }
-  } else if (isAfter(matchDate, tomorrow)) {
+  } else if (matchDate > tomorrow) {
     statusLabel = "Upcoming Match";
     statusClass = "bg-blue-100 text-blue-800";
   }
@@ -73,7 +70,7 @@ export default function MatchCard({
         <h3 className="text-lg font-bold">{title}</h3>
         <p className="text-muted-foreground">{details}</p>
         <p className="text-xs text-muted-foreground mt-1">
-          Match time: {format(matchDate, "PPpp")}
+          Match time: {matchDate.toFormat("DDDD 'at' HH:mm")}
         </p>
         <div className="mt-2">
           {is_paid ? (
