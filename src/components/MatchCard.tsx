@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
-import { format, isToday, isPast, differenceInHours, isAfter } from "date-fns";
+import { format, isToday, isPast, differenceInHours, isAfter, utcToZonedTime } from "date-fns";
+import { zonedTimeToUtc } from "date-fns-tz";
 
 interface MatchCardProps {
   title: string;
@@ -22,10 +23,8 @@ export default function MatchCard({
 }: MatchCardProps) {
   const navigate = useNavigate();
 
-  const matchDate = new Date(match_time);
-  const now = new Date();
-  
-  // Create a date for tomorrow at midnight to check if match is "upcoming" (future date, not today)
+  const matchDate = utcToZonedTime(new Date(match_time), "Africa/Lagos");
+  const now = utcToZonedTime(new Date(), "Africa/Lagos");
   const tomorrow = new Date(now);
   tomorrow.setDate(tomorrow.getDate() + 1);
   tomorrow.setHours(0, 0, 0, 0);
