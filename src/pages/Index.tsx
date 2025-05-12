@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
 import { format, isToday, isPast, differenceInHours, addDays } from "date-fns";
+import PageHeader from "@/components/PageHeader";
 
 type Match = {
   id: string;
@@ -134,14 +135,11 @@ const Index = () => {
   return (
     <div className="min-h-screen pb-20">
       {/* Header */}
-      <header className="sticky top-0 z-50 p-4 flex justify-between items-center bg-white dark:bg-gray-900 shadow-sm">
-        <img
-          src={theme === "dark" ? "/playarenadark.png" : "/playarenalight.png"}
-          alt="PlayArena Logo"
-          className="h-12 w-auto object-contain"
-        />
-        <ThemeToggle />
-      </header>
+      <PageHeader
+        title="PlayArena"
+        subtitle="Discover and join football matches"
+        actions={<ThemeToggle />}
+      />
 
       {/* Search Bar */}
       <div className="px-4 mb-6">
