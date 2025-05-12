@@ -44,7 +44,6 @@ import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
 import VenueForm from "@/components/VenueForm";
 import Navbar from "@/components/Navbar";
-import html2canvas from "html2canvas";
 
 // Form schema using zod
 const formSchema = z.object({
@@ -500,99 +499,23 @@ const Organize = () => {
             <p className="text-gray-600 dark:text-gray-300 mb-4">
               Your match has been created. Below is your unique 6-digit supercode for check-ins on match day.
             </p>
-            
-            {/* Hidden div for capturing as image */}
-            <div id="supercode-card" className="hidden">
-              <div className="bg-gradient-to-r from-green-500 to-green-600 p-6 rounded-lg shadow-lg text-white text-center">
-                <h2 className="text-2xl font-bold mb-2">{form.getValues("title")}</h2>
-                <div className="space-y-1 mb-4">
-                  <p className="text-lg">
-                    <MapPin className="inline mr-2" size={18} />
-                    {venues.find(v => v.id === form.getValues("venue_id"))?.name || "Venue"}
-                  </p>
-                  <p className="text-lg">
-                    <CalendarIcon className="inline mr-2" size={18} />
-                    {format(form.getValues("match_date"), "PPP")}
-                  </p>
-                  <p className="text-lg">
-                    <Clock className="inline mr-2" size={18} />
-                    {form.getValues("match_time")}
-                  </p>
-                  <p className="text-lg">
-                    Organizer: {form.getValues("organizer_name")}
-                  </p>
-                </div>
-                <div className="bg-white/20 p-4 rounded-md">
-                  <p className="text-sm uppercase tracking-wider mb-1">Supercode</p>
-                  <p className="text-4xl font-bold tracking-wider">{supercode || "N/A"}</p>
-                </div>
-                <div className="mt-4 text-xs opacity-80">
-                  <p>Present this code to verify players on match day</p>
-                  <p className="mt-1">Powered by PlayArena</p>
-                </div>
-              </div>
+            <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded-md mb-4">
+              <p className="text-lg font-semibold text-center">{supercode || "N/A"}</p>
             </div>
-            
-            {/* Visible preview */}
-            <div className="bg-gradient-to-r from-green-500 to-green-600 p-6 rounded-lg shadow-lg text-white text-center mb-4">
-              <h2 className="text-2xl font-bold mb-2">{form.getValues("title")}</h2>
-              <div className="space-y-1 mb-4">
-                <p className="text-lg">
-                  <MapPin className="inline mr-2" size={18} />
-                  {venues.find(v => v.id === form.getValues("venue_id"))?.name || "Venue"}
-                </p>
-                <p className="text-lg">
-                  <CalendarIcon className="inline mr-2" size={18} />
-                  {format(form.getValues("match_date"), "PPP")}
-                </p>
-                <p className="text-lg">
-                  <Clock className="inline mr-2" size={18} />
-                  {form.getValues("match_time")}
-                </p>
-                <p className="text-lg">
-                  Organizer: {form.getValues("organizer_name")}
-                </p>
-              </div>
-              <div className="bg-white/20 p-4 rounded-md">
-                <p className="text-sm uppercase tracking-wider mb-1">Supercode</p>
-                <p className="text-4xl font-bold tracking-wider">{supercode || "N/A"}</p>
-              </div>
-              <div className="mt-4 text-xs opacity-80">
-                <p>Present this code to verify players on match day</p>
-                <p className="mt-1">Powered by PlayArena</p>
-              </div>
-            </div>
-
-            <div className="flex gap-2">
-              <Button 
-                variant="outline"
-                className="flex-1"
-                onClick={async () => {
-                  const element = document.getElementById("supercode-card");
-                  if (element) {
-                    const canvas = await html2canvas(element);
-                    const data = canvas.toDataURL("image/png");
-                    const link = document.createElement("a");
-                    link.download = `PlayArena-Supercode-${form.getValues("title").replace(/\s+/g, '-')}.png`;
-                    link.href = data;
-                    link.click();
-                  }
-                }}
-              >
-                Download Code
-              </Button>
-              <Button 
-                className="flex-1 bg-green-500 hover:bg-green-600 text-white"
-                onClick={() => {
-                  setSuccessDialogOpen(false);
-                  if (matchSlug) {
-                    navigate(`/match/${matchSlug}`);
-                  }
-                }}
-              >
-                Go to Match
-              </Button>
-            </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+              <strong>Note:</strong> Please save or download this code. You will need it to confirm and check in players on match day.
+            </p>
+            <Button 
+              className="w-full bg-green-500 hover:bg-green-600 text-white"
+              onClick={() => {
+                setSuccessDialogOpen(false);
+                if (matchSlug) {
+                  navigate(`/match/${matchSlug}`);
+                }
+              }}
+            >
+              Go to Match Details
+            </Button>
           </DialogDescription>
         </DialogContent>
       </Dialog>
