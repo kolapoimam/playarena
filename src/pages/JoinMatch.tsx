@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -235,35 +236,19 @@ const JoinMatch = () => {
         throw new Error(response.error.message);
       }
 
-      const { access_code, reference } = response.data;
+      const { access_code } = response.data;
 
-      // Initialize Paystack popup with callback
+      // Initialize Paystack popup
       const paystack = new window.PaystackPop();
-      paystack.newTransaction({
-        access_code,
-        email,
-        amount: match.price * 100, // Convert to kobo
-        onSuccess: (response) => {
-          // Update payment status on success
-          setPaymentStatus("success");
-          setJoining(false);
-          toast({
-            title: "Payment Successful",
-            description: "Your payment was processed successfully. Please complete your registration.",
-          });
+      paystack.resumeTransaction(access_code, {
+        onSuccess: () => {
+          // Redirect handled by callback_url
+          console.log("Payment successful");
         },
         onCancel: () => {
           toast({
             title: "Payment Cancelled",
             description: "You've cancelled the payment process.",
-            variant: "destructive",
-          });
-          setJoining(false);
-        },
-        onError: () => {
-          toast({
-            title: "Payment Error",
-            description: "An error occurred during payment. Please try again.",
             variant: "destructive",
           });
           setJoining(false);
@@ -325,7 +310,7 @@ const JoinMatch = () => {
         description: "You have joined the match successfully.",
       });
 
-      // Reset form and payment status immediately for paid matches to revert to "Pay Now"
+      // Reset form and payment status
       form.reset();
       if (match.is_paid) {
         setPaymentStatus("pending");
