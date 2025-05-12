@@ -66,6 +66,7 @@ const MatchDetail = () => {
   const [loading, setLoading] = useState(true);
   const [downloadDialogOpen, setDownloadDialogOpen] = useState(false);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
+  const [backgroundOption, setBackgroundOption] = useState("field"); // Options: "field", "white", "green", "black"
   const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -151,7 +152,6 @@ const MatchDetail = () => {
         console.error("Share failed:", err);
       }
     } else {
-      // Fallback to clipboard copy
       try {
         await navigator.clipboard.writeText(shareText);
         toast({
@@ -191,7 +191,7 @@ const MatchDetail = () => {
     
     const url = `${window.location.origin}/match/${match.slug}`;
     const shareText = `Join my Football Match: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. Powered by PlayArena.`;
-    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(shareText)}`;
+    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}"e=${encodeURIComponent(shareText)}`;
     window.open(facebookUrl, '_blank');
   };
 
@@ -210,14 +210,12 @@ const MatchDetail = () => {
     }
 
     try {
-      // Increase delay to ensure dialog is fully rendered
       await new Promise(resolve => setTimeout(resolve, 300));
       
       const canvas = await html2canvas(cardRef.current, {
         scale: 2,
         useCORS: true,
         logging: false,
-        // Ensure the element is in the viewport
         scrollX: 0,
         scrollY: -window.scrollY,
       });
@@ -235,13 +233,6 @@ const MatchDetail = () => {
       });
     }
   }, [isImageLoaded, match, toast]);
-
-  // Removed automatic download to avoid timing issues; let user trigger manually
-  // useEffect(() => {
-  //   if (downloadDialogOpen && isImageLoaded) {
-  //     handleDownload();
-  //   }
-  // }, [downloadDialogOpen, isImageLoaded, handleDownload]);
 
   if (loading) {
     return (
@@ -387,7 +378,7 @@ const MatchDetail = () => {
             
             {!isPassed && !isStarted && !isFull && (
               <Button 
-                className="w-full mt-4 bg-playarena-500 hover:bg-playarena-600 text-white"
+                className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
                 onClick={() => navigate(`/join/${match.slug}`)}
               >
                 Join This Match
@@ -396,7 +387,7 @@ const MatchDetail = () => {
             
             {(isPassed || isStarted) && (
               <Button 
-                className="w-full mt-4"
+                className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
                 variant="outline"
                 disabled
               >
@@ -406,7 +397,7 @@ const MatchDetail = () => {
             
             {!isPassed && !isStarted && isFull && (
               <Button 
-                className="w-full mt-4"
+                className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
                 variant="outline"
                 disabled
               >
@@ -459,51 +450,107 @@ const MatchDetail = () => {
       <Dialog open={downloadDialogOpen} onOpenChange={(open) => {
         setDownloadDialogOpen(open);
         setIsImageLoaded(false); // Reset image load state when dialog closes
+        if (!open) setBackgroundOption("field"); // Reset to default background on close
       }}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogTitle>Match Details Card</DialogTitle>
           <DialogDescription>
             <p className="text-gray-600 dark:text-gray-300 mb-4">
-              Download this card to share your match details with friends.
+              Download this card to share your match details with friends. Choose a background below.
             </p>
+            <div className="mb-4">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Background:</label>
+              <div className="flex items-center space-x-4 mt-2">
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="radio"
+                    value="field"
+                    checked={backgroundOption === "field"}
+                    onChange={() => setBackgroundOption("field")}
+                    className="form-radio text-playarena-500"
+                  />
+                  <span>Football Field</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="radio"
+                    value="white"
+                    checked={backgroundOption === "white"}
+                    onChange={() => setBackgroundOption("white")}
+                    className="form-radio text-playarena-500"
+                  />
+                  <span>White</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="radio"
+                    value="green"
+                    checked={backgroundOption === "green"}
+                    onChange={() => setBackgroundOption("green")}
+                    className="form-radio text-playarena-500"
+                  />
+                  <span>Green</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="radio"
+                    value="black"
+                    checked={backgroundOption === "black"}
+                    onChange={() => setBackgroundOption("black")}
+                    className="form-radio text-playarena-500"
+                  />
+                  <span>Black</span>
+                </label>
+              </div>
+            </div>
             <div 
               ref={cardRef}
-              className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg p-6 text-white shadow-lg"
+              className={`rounded-lg p-6 shadow-lg relative overflow-hidden ${backgroundOption === "field" ? "bg-cover bg-center" : ""}`}
+              style={{
+                backgroundImage: backgroundOption === "field" ? "url('/football-field.jpg')" : "",
+                backgroundColor: backgroundOption !== "field" ? backgroundOption : "transparent",
+                ...(backgroundOption === "field" && {
+                  backgroundBlendMode: "overlay",
+                  backgroundColor: "rgba(0, 0, 0, 0.5)", // Dark overlay for text visibility
+                }),
+              }}
             >
-              <div className="flex items-center justify-between mb-4">
-                <img 
-                  src="/playarenadark.png" 
-                  alt="PlayArena Logo" 
-                  className="h-8 w-auto"
-                  onLoad={handleImageLoad}
-                  onError={() => {
-                    toast({
-                      title: "Error",
-                      description: "Failed to load logo image.",
-                      variant: "destructive",
-                    });
-                    setIsImageLoaded(true); // Proceed anyway
-                  }}
-                />
-                <Trophy className="h-6 w-6" />
-              </div>
-              <h2 className="text-xl font-bold mb-2">{match.title}</h2>
-              <div className="space-y-2 mb-4">
-                <div className="flex items-center">
-                  <MapPin className="h-4 w-4 mr-2" />
-                  <span>{match.venue?.name || "Venue"}, {match.venue?.city || ""}</span>
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-4">
+                  <img 
+                    src="/playarenadark.png" 
+                    alt="PlayArena Logo" 
+                    className="h-8 w-auto"
+                    onLoad={handleImageLoad}
+                    onError={() => {
+                      toast({
+                        title: "Error",
+                        description: "Failed to load logo image.",
+                        variant: "destructive",
+                      });
+                      setIsImageLoaded(true); // Proceed anyway
+                    }}
+                  />
+                  <Trophy className={`h-6 w-6 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
                 </div>
-                <div className="flex items-center">
-                  <Calendar className="h-4 w-4 mr-2" />
-                  <span>{formatDate(match.match_date)} at {formatTime(match.match_time)}</span>
-                </div>
-                <div className="flex items-center">
-                  <DollarSign className="h-4 w-4 mr-2" />
-                  <span>{match.is_paid ? `Paid (₦${match.price?.toFixed(2)})` : "Free"}</span>
-                </div>
-                <div className="flex items-center">
-                  <Users className="h-4 w-4 mr-2" />
-                  <span>{match.players?.length || 0}/{match.total_slots} slots booked</span>
+                <h2 className={`text-xl font-bold mb-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`}>{match.title}</h2>
+                <div className="space-y-2 mb-4">
+                  <div className="flex items-center">
+                    <MapPin className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
+                    <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{match.venue?.name || "Venue"}, {match.venue?.city || ""}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <Calendar className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
+                    <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{formatDate(match.match_date)} at {formatTime(match.match_time)}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <DollarSign className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
+                    <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{match.is_paid ? `Paid (₦${match.price?.toFixed(2)})` : "Free"}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <Users className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
+                    <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{match.players?.length || 0}/{match.total_slots} slots booked</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -512,14 +559,14 @@ const MatchDetail = () => {
             </p>
             <div className="flex gap-2">
               <Button 
-                className="flex-1 bg-blue-500 hover:bg-blue-600 text-white"
+                className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
                 onClick={handleDownload}
                 disabled={!isImageLoaded}
               >
                 Download Card
               </Button>
               <Button 
-                className="flex-1 bg-blue-500 hover:bg-blue-600 text-white"
+                className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
                 onClick={() => setDownloadDialogOpen(false)}
               >
                 Close
