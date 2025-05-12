@@ -48,6 +48,10 @@ const JoinMatch = () => {
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
   const reference = searchParams.get("reference");
+  const trxref = searchParams.get("trxref");
+  
+  // Use either reference from URL params
+  const paymentReference = reference || trxref;
 
   const [match, setMatch] = useState<Match | null>(null);
   const [loading, setLoading] = useState(true);
@@ -56,7 +60,6 @@ const JoinMatch = () => {
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>("pending");
   const [email, setEmail] = useState("");
   const [paystackLoaded, setPaystackLoaded] = useState(false);
-  const [paymentCompleted, setPaymentCompleted] = useState(false);
 
   // Load Paystack script dynamically as fallback
   useEffect(() => {
@@ -150,31 +153,30 @@ const JoinMatch = () => {
 
   // Verify payment when reference is present
   useEffect(() => {
-    if (!reference || !match) return;
+    if (!paymentReference || !match) return;
 
     const verifyPayment = async () => {
       setVerifyingPayment(true);
       try {
         const response = await supabase.functions.invoke("verify-paystack-transaction", {
-          body: { reference },
+          body: { reference: paymentReference },
         });
 
         if (response.error) {
           throw new Error(response.error.message);
         }
 
-        const { verified, match_id, slug: matchSlug } = response.data;
+        const { verified, email: customerEmail, match_id, slug: matchSlug } = response.data;
 
         if (verified && match_id === match.id && matchSlug === slug) {
           setPaymentStatus("success");
-          setPaymentCompleted(true);
+          if (customerEmail) {
+            setEmail(customerEmail);
+          }
           toast({
             title: "Payment Successful",
             description: "Your payment was processed successfully. Please complete your registration.",
           });
-          
-          // Clear the reference from URL to prevent re-verification on refresh
-          navigate(`/join/${slug}`, { replace: true });
         } else {
           setPaymentStatus("failed");
           toast({
@@ -197,7 +199,7 @@ const JoinMatch = () => {
     };
 
     verifyPayment();
-  }, [reference, match, slug, toast, navigate]);
+  }, [paymentReference, match, slug, toast]);
 
   const handlePaymentInitiation = async () => {
     if (!match || !match.is_paid || !match.price) return;
@@ -245,8 +247,13 @@ const JoinMatch = () => {
       // Initialize Paystack popup
       const paystack = new window.PaystackPop();
       paystack.resumeTransaction(access_code, {
-        onSuccess: () => {
-          // The redirect will happen automatically via callback_url
+        onSuccess: (transaction) => {
+          // Manually set payment status to success and show the form
+          setPaymentStatus("success");
+          toast({
+            title: "Payment Successful",
+            description: "Your payment was processed successfully. Please complete your registration.",
+          });
           setJoining(false);
         },
         onCancel: () => {
@@ -296,6 +303,7 @@ const JoinMatch = () => {
       // Add email to details if payment was made
       if (match.is_paid && paymentStatus === "success") {
         playerDetails.email = email;
+        playerDetails.payment_reference = paymentReference;
         playerDetails.payment_status = "paid";
       }
 
@@ -316,14 +324,30 @@ const JoinMatch = () => {
 
       // Reset form and payment status
       form.reset();
-      if (match.is_paid) {
-        setPaymentStatus("pending");
-        setEmail("");
-        setPaymentCompleted(false);
-      }
+      setPaymentStatus("pending");
+      setEmail("");
 
+      // Refresh match data to update players count
+      const { data: updatedMatch } = await supabase
+        .from("matches")
+        .select(
+          `
+          id, slug, title, match_date, match_time, total_slots, organizer_name, 
+          is_paid, price, player_number_required, required_fields,
+          venue:venues(slug, name, city),
+          players(*)
+        `
+        )
+        .eq("slug", slug)
+        .single();
+
+      if (updatedMatch) {
+        setMatch(updatedMatch as Match);
+      }
+      
       // Navigate to match details page after successful join
       navigate(`/match/${slug}`);
+      
     } catch (error) {
       console.error("Error joining match:", error);
       toast({
@@ -416,7 +440,7 @@ const JoinMatch = () => {
           </div>
         ) : (
           <>
-            {match.is_paid && !paymentCompleted ? (
+            {match.is_paid && paymentStatus === "pending" ? (
               // Payment form for paid matches
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold">Payment Required</h3>
@@ -462,6 +486,17 @@ const JoinMatch = () => {
               // Registration form (for free matches or after successful payment)
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                  {/* Show payment confirmation message if payment was successful */}
+                  {match.is_paid && paymentStatus === "success" && (
+                    <div className="bg-green-50 p-4 mb-4 rounded-md border border-green-200">
+                      <p className="text-green-700 font-medium">Payment Successful!</p>
+                      <p className="text-green-600 text-sm">Please complete your registration below.</p>
+                      {paymentReference && (
+                        <p className="text-sm text-green-600 mt-1">Reference: {paymentReference}</p>
+                      )}
+                    </div>
+                  )}
+                  
                   {match.required_fields?.map((field) => (
                     <FormField
                       key={field}
