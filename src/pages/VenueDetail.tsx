@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { MapPin, ArrowLeft, ExternalLink, Calendar, Clock } from "lucide-react";
+import { MapPin, ArrowLeft, ExternalLink, Calendar, Clock, MessageCircle } from "lucide-react";
 import Navbar from "@/components/Navbar";
 
 type Venue = {
@@ -15,7 +15,9 @@ type Venue = {
   state: string;
   description: string | null;
   map_link: string | null;
+  venue_phone: string | null;
   image_urls: string[] | null;
+  match_count?: number;
 };
 
 type Match = {
@@ -57,7 +59,7 @@ const VenueDetail = () => {
       try {
         const { data, error } = await supabase
           .from("venues")
-          .select("id, slug, name, address, city, state, description, map_link, image_urls")
+          .select("id, slug, name, address, city, state, description, map_link, venue_phone, image_urls")
           .eq("slug", slug)
           .single();
 
@@ -104,6 +106,8 @@ const VenueDetail = () => {
         if (venueData) {
           await fetchMatches(venueData.id);
         }
+      } catch (error) {
+        console.error("Error in fetchData:", error);
       } finally {
         setLoading(false);
       }
@@ -112,28 +116,35 @@ const VenueDetail = () => {
     fetchData();
   }, [slug, toast]);
 
+  const handleBookVenue = () => {
+    if (venue?.venue_phone) {
+      const message = encodeURIComponent(`Hello, I'd like to book ${venue.name} for a match. Can you provide more details on availability and pricing?`);
+      window.open(`https://wa.me/+234${venue.venue_phone}?text=${message}`, "_blank");
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-[50vh]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-playarena-500"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
       </div>
     );
   }
 
   if (!venue) {
     return (
-      <div className="p-4">
+      <div className="p-4 bg-gray-50 dark:bg-gray-900 min-h-screen">
         <Button
           variant="ghost"
           onClick={() => navigate(-1)}
-          className="mb-4"
+          className="mb-4 text-gray-700 dark:text-gray-300"
         >
           <ArrowLeft size={18} className="mr-2" />
           Back
         </Button>
         <div className="text-center py-8">
-          <h2 className="text-xl font-semibold mb-2">Venue Not Found</h2>
-          <p className="text-muted-foreground">The venue you're looking for doesn't exist or has been removed.</p>
+          <h2 className="text-xl font-semibold mb-2 text-gray-900 dark:text-gray-100">Venue Not Found</h2>
+          <p className="text-gray-500 dark:text-gray-400">The venue you're looking for doesn't exist or has been removed.</p>
         </div>
       </div>
     );
@@ -143,18 +154,23 @@ const VenueDetail = () => {
   const venueImage = venue.image_urls && venue.image_urls.length > 0 ? venue.image_urls[0] : defaultImage;
 
   return (
-    <div className="min-h-screen pb-20">
-      <div className="p-4">
-        <Button
-          variant="ghost"
-          onClick={() => navigate(-1)}
-          className="mb-4"
-        >
-          <ArrowLeft size={18} className="mr-2" />
-          Back
-        </Button>
+    <div className="min-h-screen pb-20 bg-gray-50 dark:bg-gray-900">
+      <header className="sticky top-0 z-50 bg-green-500 text-white shadow-md">
+        <div className="p-4 flex items-center">
+          <Button
+            variant="ghost"
+            onClick={() => navigate(-1)}
+            className="text-white hover:text-gray-200"
+          >
+            <ArrowLeft size={18} className="mr-2" />
+            Back
+          </Button>
+          <h1 className="text-xl font-semibold ml-2">Venue Details</h1>
+        </div>
+      </header>
 
-        <div className="rounded-lg overflow-hidden mb-4 h-48">
+      <div className="p-4 max-w-3xl mx-auto">
+        <div className="rounded-xl overflow-hidden mb-6 h-64 shadow-md">
           <img
             src={venueImage}
             alt={venue.name}
@@ -162,26 +178,26 @@ const VenueDetail = () => {
           />
         </div>
 
-        <h1 className="text-2xl font-bold mb-1">{venue.name}</h1>
-        <div className="flex items-center text-muted-foreground mb-4">
-          <MapPin size={16} className="mr-1" />
+        <h1 className="text-3xl font-bold mb-2 text-gray-900 dark:text-gray-100">{venue.name}</h1>
+        <div className="flex items-center text-gray-600 dark:text-gray-400 mb-6">
+          <MapPin size={18} className="mr-2" />
           <span>{venue.city}, {venue.state}</span>
         </div>
 
-        <div className="space-y-4">
-          <div className="border rounded-lg p-4 bg-card">
-            <h2 className="font-semibold mb-3">Venue Details</h2>
+        <div className="space-y-6">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-200 dark:border-gray-700">
+            <h2 className="font-semibold text-lg mb-4 text-gray-900 dark:text-gray-100">Venue Details</h2>
 
-            <div className="space-y-2">
+            <div className="space-y-4">
               <div>
-                <h3 className="text-sm font-medium">Address:</h3>
-                <p className="text-sm">{venue.address}</p>
+                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Address:</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{venue.address}</p>
               </div>
 
               {venue.description && (
                 <div>
-                  <h3 className="text-sm font-medium">Description:</h3>
-                  <p className="text-sm">{venue.description}</p>
+                  <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Description:</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{venue.description}</p>
                 </div>
               )}
 
@@ -191,9 +207,9 @@ const VenueDetail = () => {
                     href={venue.map_link}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center text-playarena-500 hover:text-playarena-600"
+                    className="inline-flex items-center text-green-500 hover:text-green-600"
                   >
-                    <ExternalLink size={16} className="mr-1" />
+                    <ExternalLink size={16} className="mr-2" />
                     View on Google Maps
                   </a>
                 </div>
@@ -201,48 +217,57 @@ const VenueDetail = () => {
             </div>
           </div>
 
-          {/* Recent Matches Section */}
-          <div className="border rounded-lg p-4 bg-card">
-            <h2 className="font-semibold mb-3">Recent Matches</h2>
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-200 dark:border-gray-700">
+            <h2 className="font-semibold text-lg mb-4 text-gray-900 dark:text-gray-100">Recent Matches</h2>
 
             {matchesLoading ? (
               <div className="flex justify-center py-4">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-playarena-500"></div>
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-500"></div>
               </div>
             ) : matches.length > 0 ? (
               <div className="space-y-4">
                 {matches.map((match) => (
                   <div
                     key={match.id}
-                    className="border rounded-lg p-3 hover:bg-accent cursor-pointer transition-colors"
+                    className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer transition-colors"
                     onClick={() => navigate(`/match/${match.slug}`)}
                   >
-                    <h3 className="font-medium">{match.title}</h3>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                      <Calendar size={14} />
+                    <h3 className="font-medium text-gray-900 dark:text-gray-100">{match.title}</h3>
+                    <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400 mt-1">
+                      <Calendar size={16} />
                       <span>{formatDate(match.match_date)}</span>
-                      <Clock size={14} />
+                      <Clock size={16} />
                       <span>{formatTime(match.match_time)}</span>
                     </div>
-                    <div className="mt-1 text-sm">
+                    <div className="mt-1 text-sm font-medium text-green-600 dark:text-green-400">
                       {match.is_paid ? `₦${match.price?.toFixed(2)}` : "Free"}
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="text-center py-4 text-muted-foreground">
+              <div className="text-center py-4 text-gray-500 dark:text-gray-400">
                 No recent matches found at this venue
               </div>
             )}
           </div>
 
-          <Button
-            className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
-            onClick={() => navigate(`/organize?venue=${venue.slug}`)}
-          >
-            Organize Match at This Venue
-          </Button>
+          <div className="flex gap-4">
+            <Button
+              className="flex-1 bg-green-500 hover:bg-green-600 text-white"
+              onClick={() => navigate(`/organize?venue=${venue.slug}`)}
+            >
+              Organize Match at This Venue
+            </Button>
+            <Button
+              className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+              onClick={handleBookVenue}
+              disabled={!venue.venue_phone}
+            >
+              <MessageCircle size={16} className="mr-2" />
+              Book Venue
+            </Button>
+          </div>
         </div>
       </div>
 
