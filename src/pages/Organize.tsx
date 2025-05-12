@@ -546,7 +546,7 @@ const Organize = () => {
             >
               <div className="flex items-center justify-between mb-4">
                 <img 
-                  src="/playarenalight.jpg" 
+                  src="/playarenadark.png" 
                   alt="PlayArena Logo" 
                   className="h-8 w-auto"
                   onLoad={handleImageLoad}
