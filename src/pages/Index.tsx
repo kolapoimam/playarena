@@ -21,7 +21,7 @@ type Match = {
     slug: string;
     name: string;
     city: string;
-    image_url: string | null;
+    image_urls: string[] | null;
   } | null;
 };
 
@@ -31,7 +31,7 @@ type Venue = {
   name: string;
   city: string;
   state: string;
-  image_url: string | null;
+  image_urls: string[] | null;
   match_count: number;
 };
 
@@ -79,7 +79,7 @@ const Index = () => {
             match_time,
             is_paid,
             price,
-            venue:venues(slug, name, city, image_url)
+            venue:venues(slug, name, city, image_urls)
           `)
           .gte("match_date", currentDate) // Matches from today onward
           .order("match_date", { ascending: true })
@@ -109,7 +109,7 @@ const Index = () => {
             name,
             city,
             state,
-            image_url,
+            image_urls,
             matches:matches!venue_id(count)
           `)
           .order("created_at", { ascending: false })
@@ -276,24 +276,29 @@ const Index = () => {
 
             {popularVenues.length > 0 ? (
               <div className="flex gap-4 overflow-x-auto px-4 pb-4">
-                {popularVenues.map((venue) => (
-                  <div
-                    key={venue.id}
-                    className="min-w-[280px] bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 cursor-pointer"
-                    onClick={() => navigate(`/venue/${venue.slug}`)}
-                  >
-                    <img
-                      src="https://dailytrust.com/wp-content/uploads/2023/12/football-488714_1280.jpg"
-                      alt={venue.name}
-                      className="w-full h-40 object-cover rounded-t-lg"
-                    />
-                    <div className="p-4">
-                      <h3 className="font-bold text-lg mb-2">{venue.name}</h3>
-                      <p className="text-sm text-muted-foreground mb-1">{`${venue.city}, ${venue.state}`}</p>
-                      <p className="text-sm font-medium">{`${venue.match_count} Match${venue.match_count !== 1 ? "es" : ""}`}</p>
+                {popularVenues.map((venue) => {
+                  const defaultImage = "https://dailytrust.com/wp-content/uploads/2023/12/football-488714_1280.jpg";
+                  const venueImage = venue.image_urls && venue.image_urls.length > 0 ? venue.image_urls[0] : defaultImage;
+
+                  return (
+                    <div
+                      key={venue.id}
+                      className="min-w-[280px] bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 cursor-pointer"
+                      onClick={() => navigate(`/venue/${venue.slug}`)}
+                    >
+                      <img
+                        src={venueImage}
+                        alt={venue.name}
+                        className="w-full h-40 object-cover rounded-t-lg"
+                      />
+                      <div className="p-4">
+                        <h3 className="font-bold text-lg mb-2">{venue.name}</h3>
+                        <p className="text-sm text-muted-foreground mb-1">{`${venue.city}, ${venue.state}`}</p>
+                        <p className="text-sm font-medium">{`${venue.match_count} Match${venue.match_count !== 1 ? "es" : ""}`}</p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="px-4 py-8 text-center">
@@ -307,6 +312,82 @@ const Index = () => {
                 </Button>
               </div>
             )}
+          </section>
+
+          {/* FAQ Section */}
+          <section className="px-4 py-6 bg-gray-100 dark:bg-gray-800 rounded-lg mt-8">
+            <h2 className="text-2xl font-bold mb-4">Frequently Asked Questions</h2>
+            <div className="flex space-x-4 mb-4">
+              <button className="px-4 py-2 bg-white dark:bg-gray-700 rounded-md">General</button>
+              <button className="px-4 py-2 bg-white dark:bg-gray-700 rounded-md">Venues</button>
+              <button className="px-4 py-2 bg-white dark:bg-gray-700 rounded-md">Matches</button>
+            </div>
+            <div className="space-y-4">
+              <details className="bg-white dark:bg-gray-700 rounded-md p-4">
+                <summary className="font-semibold cursor-pointer">What is PlayArena?</summary>
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">PlayArena is a platform for organizing and joining football matches and venues across Nigeria.</p>
+              </details>
+              <details className="bg-white dark:bg-gray-700 rounded-md p-4">
+                <summary className="font-semibold cursor-pointer">How do I get started?</summary>
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">No account needed! You can browse matches immediately. To organize a match or add a venue, simply use the 'Organize' or 'Add Venue' buttons.</p>
+              </details>
+              <details className="bg-white dark:bg-gray-700 rounded-md p-4">
+                <summary className="font-semibold cursor-pointer">Is there a cost to use PlayArena?</summary>
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Basic features are free, but some matches may have a fee set by organizers.</p>
+              </details>
+              <details className="bg-white dark:bg-gray-700 rounded-md p-4">
+                <summary className="font-semibold cursor-pointer">How can I contact support?</summary>
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">You can reach us directly on social media @PIousGeek</p>
+              </details>
+              <details className="bg-white dark:bg-gray-700 rounded-md p-4">
+                <summary className="font-semibold cursor-pointer">What devices support PlayArena?</summary>
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">PlayArena works on web browsers on desktops, tablets, and mobile devices.</p>
+              </details>
+            </div>
+            <div className="space-y-4 hidden">
+              <details className="bg-white dark:bg-gray-700 rounded-md p-4">
+                <summary className="font-semibold cursor-pointer">How do I add a venue?</summary>
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Click 'Add Venue', fill in the details, and upload images to list your venue.</p>
+              </details>
+              <details className="bg-white dark:bg-gray-700 rounded-md p-4">
+                <summary className="font-semibold cursor-pointer">Can I edit my venue details?</summary>
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Yes, go to your venue page and use the edit option to update details.</p>
+              </details>
+              <details className="bg-white dark:bg-gray-700 rounded-md p-4">
+                <summary className="font-semibold cursor-pointer">What images should I upload?</summary>
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Upload clear photos of the venue, up to 3 images under 2MB each.</p>
+              </details>
+              <details className="bg-white dark:bg-gray-700 rounded-md p-4">
+                <summary className="font-semibold cursor-pointer">How are venues ranked?</summary>
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Venues are ranked by the number of matches hosted, shown as 'Match Count'.</p>
+              </details>
+              <details className="bg-white dark:bg-gray-700 rounded-md p-4">
+                <summary className="font-semibold cursor-pointer">Can I remove my venue?</summary>
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Contact support to request venue removal if needed.</p>
+              </details>
+            </div>
+            <div className="space-y-4 hidden">
+              <details className="bg-white dark:bg-gray-700 rounded-md p-4">
+                <summary className="font-semibold cursor-pointer">How do I join a match?</summary>
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Use the 'Join Match' button on the match card to participate.</p>
+              </details>
+              <details className="bg-white dark:bg-gray-700 rounded-md p-4">
+                <summary className="font-semibold cursor-pointer">Can I organize a paid match?</summary>
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Yes, set the price when organizing via the 'Organize' page.</p>
+              </details>
+              <details className="bg-white dark:bg-gray-700 rounded-md p-4">
+                <summary className="font-semibold cursor-pointer">What if a match is canceled?</summary>
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Organizers will notify participants; refunds are handled case-by-case.</p>
+              </details>
+              <details className="bg-white dark:bg-gray-700 rounded-md p-4">
+                <summary className="font-semibold cursor-pointer">How are match times set?</summary>
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Organizers set the date and time in their local timezone.</p>
+              </details>
+              <details className="bg-white dark:bg-gray-700 rounded-md p-4">
+                <summary className="font-semibold cursor-pointer">Can I see past matches?</summary>
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Yes, use the 'See All' button on the Matches section and filter to view history.</p>
+              </details>
+            </div>
           </section>
         </>
       )}
