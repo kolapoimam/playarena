@@ -115,7 +115,7 @@ const VenueDetail = () => {
 
   const handleBookVenue = () => {
     if (venue?.venue_phone) {
-      const message = encodeURIComponent(`Hello, I'd like to book ${venue.name} for an event. Can you provide more details on availability and pricing?`);
+      const message = encodeURIComponent(`Hello, I'd like to book ${venue.name} for a match. Can you provide more details on availability and pricing?`);
       window.open(`https://wa.me/+234${venue.venue_phone}?text=${message}`, "_blank");
     }
   };
