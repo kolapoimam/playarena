@@ -57,6 +57,7 @@ type Match = {
   } | null;
   players: {
     player_name: string;
+    status: string;
   }[];
 };
 
@@ -84,7 +85,7 @@ const MatchDetail = () => {
         .select(`
           *,
           venue:venues(id, slug, name, city, map_link),
-          players:players(*)
+          players(player_name, status)
         `)
         .eq("slug", matchSlug)
         .single();
@@ -427,11 +428,24 @@ const MatchDetail = () => {
             {match.players && match.players.length > 0 ? (
               <div className="space-y-2">
                 {match.players.map((player, index) => (
-                  <div key={index} className="flex items-center gap-2 p-2 bg-muted rounded-md">
-                    <span className="w-8 h-8 rounded-full bg-playarena-100 flex items-center justify-center">
-                      {player.player_name.charAt(0).toUpperCase()}
-                    </span>
-                    <span>{player.player_name}</span>
+                  <div key={index} className="flex items-center gap-2 p-2 bg-muted rounded-md justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="w-8 h-8 rounded-full bg-playarena-100 flex items-center justify-center">
+                        {player.player_name.charAt(0).toUpperCase()}
+                      </span>
+                      <span>{player.player_name}</span>
+                    </div>
+                    <Badge
+                      variant={
+                        player.status === "confirmed" ? "default" :
+                        player.status === "pending" ? "destructive" :
+                        player.status === "checked_in" ? "secondary" :
+                        player.status === "absent" ? "outline" :
+                        "default"
+                      }
+                    >
+                      {player.status}
+                    </Badge>
                   </div>
                 ))}
               </div>
