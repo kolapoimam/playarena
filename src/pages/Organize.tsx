@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -35,6 +35,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogTrigger,
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
@@ -82,6 +83,7 @@ const Organize = () => {
   const [successDialogOpen, setSuccessDialogOpen] = useState(false);
   const [supercode, setSupercode] = useState<string | null>(null);
   const [matchSlug, setMatchSlug] = useState<string | null>(null);
+  const [isImageLoaded, setIsImageLoaded] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
   // Initialize the form
@@ -192,24 +194,50 @@ const Organize = () => {
     });
   };
 
-  const handleDownload = async () => {
-    if (cardRef.current) {
-      try {
-        const canvas = await html2canvas(cardRef.current, { scale: 2 });
-        const link = document.createElement('a');
-        link.download = `PlayArena-Supercode-${matchTitle.replace(/\s+/g, '-')}.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-      } catch (error) {
-        console.error("Error generating image:", error);
-        toast({
-          title: "Error",
-          description: "Failed to download supercode card.",
-          variant: "destructive",
-        });
-      }
-    }
+  const handleImageLoad = () => {
+    setIsImageLoaded(true);
   };
+
+  const handleDownload = useCallback(async () => {
+    if (!cardRef.current || !isImageLoaded) {
+      toast({
+        title: "Error",
+        description: "Card is not ready for download. Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Ensure the dialog is fully rendered by waiting for the next tick
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      const canvas = await html2canvas(cardRef.current, {
+        scale: 2,
+        useCORS: true, // Helps with cross-origin images
+        logging: false,
+      });
+
+      const link = document.createElement('a');
+      link.download = `PlayArena-Supercode-${matchTitle.replace(/\s+/g, '-')}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } catch (error) {
+      console.error("Error generating image:", error);
+      toast({
+        title: "Error",
+        description: "Failed to download supercode card. Please try again.",
+        variant: "destructive",
+      });
+    }
+  }, [isImageLoaded, matchTitle, toast]);
+
+  // Trigger download automatically when dialog opens and image is loaded
+  useEffect(() => {
+    if (successDialogOpen && isImageLoaded) {
+      handleDownload();
+    }
+  }, [successDialogOpen, isImageLoaded, handleDownload]);
 
   const selectedVenue = venues.find(venue => venue.id === selectedVenueId);
 
@@ -518,9 +546,18 @@ const Organize = () => {
             >
               <div className="flex items-center justify-between mb-4">
                 <img 
-                  src="/playarenalight.png" 
+                  src="/playarenalight.jpg" 
                   alt="PlayArena Logo" 
                   className="h-8 w-auto"
+                  onLoad={handleImageLoad}
+                  onError={() => {
+                    toast({
+                      title: "Error",
+                      description: "Failed to load logo image.",
+                      variant: "destructive",
+                    });
+                    setIsImageLoaded(true); // Proceed anyway
+                  }}
                 />
                 <Trophy className="h-6 w-6" />
               </div>
@@ -551,6 +588,7 @@ const Organize = () => {
               <Button 
                 className="flex-1 bg-green-500 hover:bg-green-600 text-white"
                 onClick={handleDownload}
+                disabled={!isImageLoaded}
               >
                 Download Supercode
               </Button>
