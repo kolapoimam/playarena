@@ -59,6 +59,8 @@ const formSchema = z.object({
   price: z.number().optional().nullable(),
   notes: z.string().optional(),
   organizer_name: z.string().min(2, { message: "Name must be at least 2 characters" }),
+  organizer_phone: z.string().regex(/^\d{11}$/, { message: "Phone number must be exactly 11 digits" }).optional().nullable(),
+  disclose_phone: z.boolean().default(false),
   player_number_required: z.boolean().default(false),
   is_private: z.boolean().default(false),
   access_password: z.string().nullable().optional(),
@@ -97,6 +99,8 @@ const Organize = () => {
       price: null,
       notes: "",
       organizer_name: "",
+      organizer_phone: null,
+      disclose_phone: false,
       player_number_required: false,
       is_private: false,
       access_password: null,
@@ -173,6 +177,8 @@ const Organize = () => {
           price: data.is_paid ? data.price : null,
           notes: data.notes || null,
           organizer_name: data.organizer_name,
+          organizer_phone: data.organizer_phone || null,
+          disclose_phone: data.disclose_phone,
           player_number_required: data.player_number_required,
           is_private: data.is_private,
           access_password: data.is_private ? data.access_password : null,
@@ -416,29 +422,6 @@ const Organize = () => {
 
             <FormField
               control={form.control}
-              name="player_number_required"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                  <div className="space-y-0.5">
-                    <FormLabel className="text-base">
-                      Require Phone Number
-                    </FormLabel>
-                    <FormDescription>
-                      Toggle if players need to provide their phone number when joining
-                    </FormDescription>
-                  </div>
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
               name="is_paid"
               render={({ field }) => (
                 <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
@@ -579,6 +562,54 @@ const Organize = () => {
                     This will be displayed as the organizer of the match
                   </FormDescription>
                   <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="organizer_phone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Your Phone Number (Optional)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="tel"
+                      placeholder="Enter 11-digit phone number"
+                      {...field}
+                      value={field.value ?? ""}
+                      onChange={(e) => {
+                        field.onChange(e.target.value || null);
+                      }}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Provide your phone number for contact purposes
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="disclose_phone"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-base">
+                      Disclose Phone Number
+                    </FormLabel>
+                    <FormDescription>
+                      Toggle to share your phone number with players
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
                 </FormItem>
               )}
             />
