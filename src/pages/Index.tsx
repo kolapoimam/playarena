@@ -142,11 +142,11 @@ const Index = () => {
     <div className="min-h-screen pb-20">
       {/* Header */}
       <header className="sticky top-0 z-50 p-4 flex justify-between items-center bg-white dark:bg-gray-900 shadow-sm">
-        <img
-          src={theme === "dark" ? "/playarenadark.png" : "/playarenalight.png"}
-          alt="PlayArena Logo"
-          className="h-12 w-auto object-contain"
-        />
+<img
+  src={theme === "dark" ? "/playarenadark.png" : "/playarenalight.png"}
+  alt="PlayArena Logo"
+  className="h-12 w-auto object-contain"
+/>
         <ThemeToggle />
       </header>
 
@@ -187,77 +187,85 @@ const Index = () => {
       ) : (
         <>
           {/* Upcoming Matches */}
-          <section className="mb-8">
-            <div className="flex justify-between items-center px-4 mb-3">
-              <h2 className="text-2xl font-bold">Upcoming Matches</h2>
-              <Button
-                variant="outline"
-                className="text-primary hover:bg-primary hover:text-white transition-colors"
-                onClick={() => navigate("/matches")}
-              >
-                See All
-              </Button>
+<section className="mb-8">
+  <div className="flex justify-between items-center px-4 mb-3">
+    <h2 className="text-2xl font-bold">Upcoming Matches</h2>
+    <Button
+      variant="outline"
+      className="text-primary hover:bg-primary hover:text-white transition-colors"
+      onClick={() => navigate("/matches")}
+    >
+      See All
+    </Button>
+  </div>
+
+  {upcomingMatches.length > 0 ? (
+    <div className="flex gap-4 overflow-x-auto px-4 pb-4">
+      {upcomingMatches
+        .filter((match) => {
+          const now = new Date().toLocaleString("en-US", { timeZone: "Africa/Lagos" });
+          const currentDateTime = new Date(now);
+          const matchDateTime = new Date(`${match.match_date}T${match.match_time}:00`);
+          return matchDateTime >= currentDateTime;
+        })
+        .slice(0, 5)
+        .map((match) => (
+          <div
+            key={match.id}
+            className="min-w-[280px] bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 border border-gray-200 dark:border-gray-700"
+          >
+            <h3 className="font-bold text-lg mb-2">{match.title}</h3>
+
+            <div className="space-y-3 mb-4">
+              <div className="flex items-center gap-2">
+                <Calendar size={18} />
+                <span>{formatDate(match.match_date)}</span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Clock size={18} />
+                <span>{formatTime(match.match_time)}</span>
+              </div>
+
+              {match.venue && (
+                <div
+                  className="flex items-start gap-2 cursor-pointer"
+                  onClick={() => navigate(`/venue/${match.venue?.slug}`)}
+                >
+                  <Store size={18} />
+                  <span>{match.venue.name}</span>
+                </div>
+              )}
+
+              <div className="flex items-center gap-2">
+                <span className="font-medium">
+                  {match.is_paid ? `₦${match.price?.toFixed(2)}` : "Free"}
+                </span>
+              </div>
             </div>
 
-            {upcomingMatches.length > 0 ? (
-              <div className="flex gap-4 overflow-x-auto px-4 pb-4">
-                {upcomingMatches.map((match) => (
-                  <div
-                    key={match.id}
-                    className="min-w-[280px] bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 border border-gray-200 dark:border-gray-700"
-                  >
-                    <h3 className="font-bold text-lg mb-2">{match.title}</h3>
-
-                    <div className="space-y-3 mb-4">
-                      <div className="flex items-center gap-2">
-                        <Calendar size={18} />
-                        <span>{formatDate(match.match_date)}</span>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <Clock size={18} />
-                        <span>{formatTime(match.match_time)}</span>
-                      </div>
-
-                      {match.venue && (
-                        <div
-                          className="flex items-start gap-2 cursor-pointer"
-                          onClick={() => navigate(`/venue/${match.venue?.slug}`)}
-                        >
-                          <Store size={18} />
-                          <span>{match.venue.name}</span>
-                        </div>
-                      )}
-
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">
-                          {match.is_paid ? `₦${match.price?.toFixed(2)}` : "Free"}
-                        </span>
-                      </div>
-                    </div>
-
-                    <Button
-                      onClick={() => navigate(`/match/${match.slug}`)}
-                      className="w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-md font-medium transition-colors"
-                    >
-                      Join Match
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="px-4 py-8 text-center">
-                <p className="text-muted-foreground">No upcoming matches yet.</p>
-                <Button
-                  variant="link"
-                  className="mt-2 text-primary"
-                  onClick={() => navigate("/organize")}
-                >
-                  Create the first match!
-                </Button>
-              </div>
-            )}
-          </section>
+            <Button
+              onClick={() => navigate(`/match/${match.slug}`)}
+              className="w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-md font-medium transition-colors"
+            >
+              Join Match
+            </Button>
+          </div>
+        ))}
+    </div>
+  ) : (
+    <div className="px-4 py-8 text-center">
+      <p className="text-muted-foreground">No upcoming matches yet.</p>
+      <Button
+        variant="link"
+        className="mt-2 text-primary"
+        onClick={() => navigate("/organize")}
+      >
+        Create the first match!
+      </Button>
+    </div>
+  )}
+</section>
 
           {/* Popular Venues */}
           <section>
