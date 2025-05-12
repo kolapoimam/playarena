@@ -73,7 +73,6 @@ const JoinMatch = () => {
   const cardRef = useRef<HTMLDivElement>(null);
   const defaultEmail = "kolapoimam1@gmail.com";
 
-  // Load Paystack script dynamically as fallback
   useEffect(() => {
     const script = document.createElement("script");
     script.src = "https://js.paystack.co/v2/inline.js";
@@ -92,7 +91,6 @@ const JoinMatch = () => {
     };
   }, [toast]);
 
-  // Define the form schema based on required fields
   const createFormSchema = (requiredFields: string[] = ["name", "phone"]) => {
     const schemaFields: Record<string, any> = {};
     requiredFields.forEach((field) => {
@@ -118,7 +116,6 @@ const JoinMatch = () => {
     defaultValues: {},
   });
 
-  // Fetch match details
   useEffect(() => {
     if (!slug) return;
 
@@ -167,7 +164,6 @@ const JoinMatch = () => {
     fetchMatch();
   }, [slug, toast, form]);
 
-  // Verify payment when reference is present
   useEffect(() => {
     if (!paymentReference || !match) return;
 
@@ -439,77 +435,84 @@ const JoinMatch = () => {
 
   return (
     <div className="min-h-screen pb-20">
-      <div className="p-4">
-        <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4">
-          <ArrowLeft size={18} className="mr-2" />
-          Back
-        </Button>
+      <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg">
+        <div className="flex items-center justify-between">
+          <Button variant="ghost" onClick={() => navigate(-1)} className="text-white hover:bg-green-600">
+            <ArrowLeft size={18} className="mr-2" />
+            Back
+          </Button>
+          <div className="text-center">
+            <h1 className="text-2xl font-bold">Join Match</h1>
+            <p className="text-sm">Register to secure your spot</p>
+          </div>
+          <div className="w-10"></div>
+        </div>
+      </header>
 
-        <h1 className="text-2xl font-bold mb-2">Join Match</h1>
-        <div className="mb-6">
-          <h2 className="font-semibold text-xl">{match.title}</h2>
-          <p className="text-muted-foreground">
-            {formatDate(match.match_date)} · {match.venue?.name}, {match.venue?.city}
+      <div className="p-6">
+        <div className="bg-card rounded-lg shadow-md p-6 mb-6">
+          <h2 className="text-xl font-semibold mb-2">{match.title}</h2>
+          <p className="text-muted-foreground mb-2">
+            {formatDate(match.match_date)} · {formatTime(match.match_time)} · {match.venue?.name}, {match.venue?.city}
           </p>
-          <p className="mt-2">
-            Spots available: {match.total_slots - match.players.length} / {match.total_slots}
-          </p>
+          <div className="flex items-center gap-2 text-sm">
+            <Users size={16} />
+            <span>Spots available: {match.total_slots - match.players.length} / {match.total_slots}</span>
+          </div>
           {match.is_paid && (
-            <p className="font-medium mt-2">Price: ₦{match.price?.toFixed(2)}</p>
+            <div className="mt-2 font-medium text-green-600">Price: ₦{match.price?.toFixed(2)}</div>
           )}
         </div>
 
         {isPastMatch ? (
-          <div className="text-center py-6 bg-muted rounded-lg">
-            <h2 className="text-lg font-semibold">This match has already passed</h2>
+          <div className="text-center py-6 bg-muted rounded-lg shadow-sm">
+            <h2 className="text-lg font-semibold text-gray-700">This match has already passed</h2>
             <p className="text-muted-foreground mt-2">You cannot join this match anymore.</p>
-            <Button className="mt-4" onClick={() => navigate("/matches")}>
+            <Button className="mt-4 bg-green-500 hover:bg-green-600 text-white" onClick={() => navigate("/matches")}>
               Browse Other Matches
             </Button>
           </div>
         ) : isFull ? (
-          <div className="text-center py-6 bg-muted rounded-lg">
-            <h2 className="text-lg font-semibold">This match is full</h2>
+          <div className="text-center py-6 bg-muted rounded-lg shadow-sm">
+            <h2 className="text-lg font-semibold text-gray-700">This match is full</h2>
             <p className="text-muted-foreground mt-2">All player slots have been filled.</p>
-            <Button className="mt-4" onClick={() => navigate(`/match/${match.slug}`)}>
+            <Button className="mt-4 bg-green-500 hover:bg-green-600 text-white" onClick={() => navigate(`/match/${match.slug}`)}>
               View Match Details
             </Button>
           </div>
         ) : (
           <>
             {match.is_paid && paymentStatus === "pending" ? (
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Payment Required</h3>
-                <p className="text-muted-foreground mb-4">
+              <div className="bg-card rounded-lg shadow-md p-6 space-y-4">
+                <h3 className="text-lg font-semibold text-gray-800">Payment Required</h3>
+                <p className="text-muted-foreground">
                   This is a paid match. Please complete the payment to join.
                 </p>
-                <div className="space-y-4">
-                  <Button
-                    type="button"
-                    className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
-                    onClick={handlePaymentInitiation}
-                    disabled={joining || !paystackLoaded}
-                  >
-                    {joining ? (
-                      <>
-                        <Loader size={16} className="mr-2 animate-spin" />
-                        Processing...
-                      </>
-                    ) : (
-                      `Pay Now (₦${match.price?.toFixed(2)})`
-                    )}
-                  </Button>
-                </div>
+                <Button
+                  type="button"
+                  className="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg transition-colors"
+                  onClick={handlePaymentInitiation}
+                  disabled={joining || !paystackLoaded}
+                >
+                  {joining ? (
+                    <>
+                      <Loader size={16} className="mr-2 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    `Pay Now (₦${match.price?.toFixed(2)})`
+                  )}
+                </Button>
               </div>
             ) : (
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 bg-card rounded-lg shadow-md p-6">
                   {match.is_paid && paymentStatus === "success" && (
-                    <div className="bg-green-50 p-4 mb-4 rounded-md border border-green-200">
-                      <p className="text-green-700 font-medium">Payment Successful!</p>
-                      <p className="text-green-600 text-sm">Please complete your registration below.</p>
+                    <div className="bg-green-50 p-4 rounded-md border border-green-200 text-green-700">
+                      <p className="font-medium">Payment Successful!</p>
+                      <p className="text-sm">Please complete your registration below.</p>
                       {paymentReference && (
-                        <p className="text-sm text-green-600 mt-1">Reference: {paymentReference}</p>
+                        <p className="text-sm mt-1">Reference: {paymentReference}</p>
                       )}
                     </div>
                   )}
@@ -521,13 +524,14 @@ const JoinMatch = () => {
                       name={field}
                       render={({ field: formField }) => (
                         <FormItem>
-                          <FormLabel>{field.charAt(0).toUpperCase() + field.slice(1)}</FormLabel>
+                          <FormLabel className="text-gray-700">{field.charAt(0).toUpperCase() + field.slice(1)}</FormLabel>
                           <FormControl>
                             <Input
                               placeholder={`Enter your ${field}`}
                               {...formField}
                               type={field === "phone" ? "tel" : "text"}
                               inputMode={field === "phone" ? "numeric" : "text"}
+                              className="border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
                               {...(field === "phone" && {
                                 pattern: "[0-9]*",
                                 maxLength: 11,
@@ -538,7 +542,7 @@ const JoinMatch = () => {
                               })}
                             />
                           </FormControl>
-                          <FormMessage />
+                          <FormMessage className="text-red-500" />
                         </FormItem>
                       )}
                     />
@@ -546,7 +550,7 @@ const JoinMatch = () => {
 
                   <Button
                     type="submit"
-                    className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
+                    className="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg transition-colors"
                     disabled={joining}
                   >
                     {joining ? (
@@ -682,14 +686,14 @@ const JoinMatch = () => {
             </p>
             <div className="flex gap-2">
               <Button 
-                className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
+                className="w-full bg-green-500 hover:bg-green-600 text-white"
                 onClick={handleDownload}
                 disabled={!isImageLoaded}
               >
                 Download
               </Button>
               <Button 
-                className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
+                className="w-full bg-green-500 hover:bg-green-600 text-white"
                 onClick={() => {
                   setSuccessDialogOpen(false);
                   navigate(`/match/${match.slug}`);
