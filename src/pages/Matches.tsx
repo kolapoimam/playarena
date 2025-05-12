@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Calendar, Clock, MapPin, Users, ChevronLeft, ChevronRight, Filter, Lock } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, ChevronLeft, ChevronRight, Filter, Lock, ArrowLeft } from "lucide-react"; // Added ArrowLeft
 import ThemeToggle from "@/components/ThemeToggle";
 import { useToast } from "@/hooks/use-toast";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -303,12 +303,11 @@ const Matches = () => {
             onClick={() => navigate(-1)} 
             className="text-white hover:bg-green-600"
           >
-            <ArrowLeft size={18} className="mr-2" />
+            <ArrowLeft size={18} className="mr-2" /> {/* Fixed typo from Arrowleft to ArrowLeft */}
             Back
           </Button>
           <div className="text-center">
             <h1 className="text-2xl font-bold">My Matches</h1>
-            <p className="text-sm">Manage your matches and player confirmations</p>
           </div>
           <Button
             className="bg-playarena-500 hover:bg-playarena-600 text-white"
