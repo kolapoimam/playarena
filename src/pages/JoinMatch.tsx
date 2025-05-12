@@ -175,7 +175,7 @@ const JoinMatch = () => {
           setPaymentStatus("success");
           toast({
             title: "Payment Successful",
-            description: "Your payment was processed successfully. Please complete your registration.",
+            description: "Your payment was processed successfully. Please complete your registration. Do not close this page",
           });
         } else {
           setPaymentStatus("failed");
