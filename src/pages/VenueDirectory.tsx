@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-// Define the Venue type (consistent with Index.tsx)
+// Define the Venue type
 type Venue = {
   id: string;
   slug: string;
@@ -76,10 +76,10 @@ const VenueDirectory = () => {
 
         if (venuesError) throw venuesError;
 
-        // Map venues to include match_count and match_dates
+        // Map venues to include match_count and match_dates, ensuring match_count is a number
         const venuesWithDetails = venuesData.map((venue: any) => ({
           ...venue,
-          match_count: venue.match_count || 0,
+          match_count: Number(venue.match_count) || 0, // Ensure match_count is a number
           match_dates: venue.match_dates?.map((m: any) => m.match_date) || [],
         }));
 
@@ -118,6 +118,8 @@ const VenueDirectory = () => {
     weekEnd.setDate(weekStart.getDate() + 6); // Sunday
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const nextMonthEnd = new Date(now.getFullYear(), now.getMonth() + 2, 0);
 
     if (activityFilter !== "All") {
       filtered = filtered.filter((venue) => {
@@ -131,6 +133,8 @@ const VenueDirectory = () => {
               return date >= weekStart && date <= weekEnd;
             case "This Month":
               return date >= monthStart && date <= monthEnd;
+            case "Next Month":
+              return date >= nextMonthStart && date <= nextMonthEnd;
             default:
               return true;
           }
@@ -208,6 +212,7 @@ const VenueDirectory = () => {
                 <SelectItem value="Today">Today</SelectItem>
                 <SelectItem value="This Week">This Week</SelectItem>
                 <SelectItem value="This Month">This Month</SelectItem>
+                <SelectItem value="Next Month">Next Month</SelectItem> {/* Added */}
               </SelectContent>
             </Select>
           </div>
