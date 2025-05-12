@@ -1,14 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import ThemeToggle from "@/components/ThemeToggle";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Calendar as CalendarIcon, Clock, MapPin, Copy, ArrowLeft, Plus } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, MapPin, ArrowLeft, Plus, User, Trophy, Copy } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Form,
@@ -37,12 +38,14 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Switch } from "@/components/ui/switch";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { Switch } from "@/components/ui/switch";
 import VenueForm from "@/components/VenueForm";
 import Navbar from "@/components/Navbar";
+import html2canvas from "html2canvas";
 
+// Form schema using zod
 const formSchema = z.object({
   title: z.string().min(3, { message: "Title must be at least 3 characters" }),
   venue_id: z.string().uuid({ message: "Please select a venue" }),
@@ -57,7 +60,7 @@ const formSchema = z.object({
   organizer_name: z.string().min(2, { message: "Name must be at least 2 characters" }),
   player_number_required: z.boolean().default(false),
   is_private: z.boolean().default(false),
-  access_password: z.string().optional().nullable(),
+  access_password: z.string().nullable().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -81,7 +84,9 @@ const Organize = () => {
   const [successDialogOpen, setSuccessDialogOpen] = useState(false);
   const [supercode, setSupercode] = useState<string | null>(null);
   const [matchSlug, setMatchSlug] = useState<string | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
 
+  // Initialize the form
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -97,9 +102,17 @@ const Organize = () => {
     },
   });
 
+  // Watch fields
   const isPaid = form.watch("is_paid");
   const isPrivate = form.watch("is_private");
+  const selectedVenueId = form.watch("venue_id");
+  const matchTitle = form.watch("title");
+  const matchDate = form.watch("match_date");
+  const matchTime = form.watch("match_time");
+  const organizerName = form.watch("organizer_name");
+  const accessPassword = form.watch("access_password");
 
+  // Load venues from Supabase
   useEffect(() => {
     const fetchVenues = async () => {
       try {
@@ -132,14 +145,19 @@ const Organize = () => {
     fetchVenues();
   }, [toast, form, preSelectedVenueSlug]);
 
-  const generatePassword = () => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    let password = '';
-    for (let i = 0; i < 6; i++) {
-      password += chars.charAt(Math.floor(Math.random() * chars.length));
+  // Generate random password when is_private is toggled on
+  useEffect(() => {
+    if (isPrivate && !accessPassword) {
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+      let password = '';
+      for (let i = 0; i < 6; i++) {
+        password += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      form.setValue('access_password', password);
+    } else if (!isPrivate) {
+      form.setValue('access_password', null);
     }
-    return password;
-  };
+  }, [isPrivate, accessPassword, form]);
 
   const onSubmit = async (data: FormValues) => {
     setLoading(true);
@@ -196,13 +214,34 @@ const Organize = () => {
     });
   };
 
+  const handleDownload = async () => {
+    if (cardRef.current) {
+      try {
+        const canvas = await html2canvas(cardRef.current, { scale: 2 });
+        const link = document.createElement('a');
+        link.download = `PlayArena-Supercode-${matchTitle.replace(/\s+/g, '-')}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      } catch (error) {
+        console.error("Error generating image:", error);
+        toast({
+          title: "Error",
+          description: "Failed to download supercode card.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  const selectedVenue = venues.find(venue => venue.id === selectedVenueId);
+
   return (
     <div className="min-h-screen pb-20">
       <div className="p-4">
         <Button 
           variant="ghost" 
-          onClick={() => navigate(-1)} 
-          className="mb-4"
+          className="mb-4" 
+          onClick={() => navigate(-1)}
         >
           <ArrowLeft size={18} className="mr-2" />
           Back
@@ -451,20 +490,13 @@ const Organize = () => {
                       Private Match
                     </FormLabel>
                     <FormDescription>
-                      Restrict access to invited players only
+                      Toggle to restrict access to invited players only
                     </FormDescription>
                   </div>
                   <FormControl>
                     <Switch
                       checked={field.value}
-                      onCheckedChange={(checked) => {
-                        field.onChange(checked);
-                        if (checked) {
-                          form.setValue('access_password', generatePassword());
-                        } else {
-                          form.setValue('access_password', null);
-                        }
-                      }}
+                      onCheckedChange={field.onChange}
                     />
                   </FormControl>
                 </FormItem>
@@ -483,7 +515,7 @@ const Organize = () => {
                         <Input
                           value={field.value || ''}
                           readOnly
-                          className="font-mono uppercase"
+                          className="font-mono"
                         />
                       </FormControl>
                       <Button
@@ -518,7 +550,7 @@ const Organize = () => {
                   <FormLabel>Notes (Optional)</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="E.g., Bring boots, parking available, etc."
+                      placeholder="E.g., Bring Boots, parking available, etc."
                       {...field}
                     />
                   </FormControl>
@@ -544,11 +576,7 @@ const Organize = () => {
               )}
             />
 
-            <Button 
-              type="submit" 
-              className="w-full bg-playarena-500 hover:bg-playarena-600 text-white" 
-              disabled={loading}
-            >
+            <Button type="submit" className="w-full bg-green-500 hover:bg-green-600 text-white" disabled={loading}>
               {loading ? "Creating..." : "Create Match"}
             </Button>
           </form>
@@ -565,23 +593,61 @@ const Organize = () => {
         <DialogContent className="sm:max-w-[425px]">
           <DialogTitle>Match Created Successfully!</DialogTitle>
           <DialogDescription>
-            <div className="space-y-4">
-              {isPrivate && (
-                <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-4 rounded-md">
-                  <h3 className="font-medium">Private Match</h3>
-                  <p className="text-sm mt-1">
-                    Share this password with invited players: <strong>{form.getValues('access_password')}</strong>
-                  </p>
-                </div>
-              )}
-              
-              <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded-md">
-                <p className="text-lg font-semibold text-center">{supercode || "N/A"}</p>
-                <p className="text-center text-sm mt-1">Supercode for check-ins</p>
+            <p className="text-gray-600 dark:text-gray-300 mb-4">
+              Your match has been created. Below is your unique 6-digit supercode for check-ins on match day.
+              {isPrivate && " Also, note the access password to share with invited players."}
+            </p>
+            <div 
+              ref={cardRef}
+              className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg p-6 text-white shadow-lg"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <img 
+                  src="/playarenalight.png" 
+                  alt="PlayArena Logo" 
+                  className="h-8 w-auto"
+                />
+                <Trophy className="h-6 w-6" />
               </div>
-              
+              <h2 className="text-xl font-bold mb-2">{matchTitle}</h2>
+              <div className="space-y-2 mb-4">
+                <div className="flex items-center">
+                  <MapPin className="h-4 w-4 mr-2" />
+                  <span>{selectedVenue?.name || "Venue"}</span>
+                </div>
+                <div className="flex items-center">
+                  <CalendarIcon className="h-4 w-4 mr-2" />
+                  <span>{matchDate ? format(matchDate, "PPP") : "Date"} at {matchTime || "Time"}</span>
+                </div>
+                <div className="flex items-center">
+                  <User className="h-4 w-4 mr-2" />
+                  <span>Organized by {organizerName}</span>
+                </div>
+                {isPrivate && (
+                  <div className="flex items-center">
+                    <span className="font-semibold">Access Password: </span>
+                    <span className="ml-2 font-mono">{accessPassword || "N/A"}</span>
+                  </div>
+                )}
+              </div>
+              <div className="bg-white text-green-600 rounded-md p-4 text-center">
+                <p className="text-sm font-medium">Supercode</p>
+                <p className="text-3xl font-bold tracking-wider">{supercode || "N/A"}</p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400 my-4">
+              <strong>Note:</strong> Save or download this code. You'll need it to confirm and check in players on match day.
+              {isPrivate && " Share the access password with invited players to allow them to join."}
+            </p>
+            <div className="flex gap-2">
               <Button 
-                className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
+                className="flex-1 bg-green-500 hover:bg-green-600 text-white"
+                onClick={handleDownload}
+              >
+                Download Supercode
+              </Button>
+              <Button 
+                className="flex-1 bg-green-500 hover:bg-green-600 text-white"
                 onClick={() => {
                   setSuccessDialogOpen(false);
                   if (matchSlug) {
