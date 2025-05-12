@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import ThemeToggle from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { MapPin, ArrowLeft, ExternalLink, Calendar, Clock } from "lucide-react";
 import Navbar from "@/components/Navbar";
@@ -16,7 +15,7 @@ type Venue = {
   state: string;
   description: string | null;
   map_link: string | null;
-  image_url: string | null;
+  image_urls: string[] | null;
 };
 
 type Match = {
@@ -58,7 +57,7 @@ const VenueDetail = () => {
       try {
         const { data, error } = await supabase
           .from("venues")
-          .select("id, slug, name, address, city, state, description, map_link, image_url")
+          .select("id, slug, name, address, city, state, description, map_link, image_urls")
           .eq("slug", slug)
           .single();
 
@@ -140,6 +139,9 @@ const VenueDetail = () => {
     );
   }
 
+  const defaultImage = "https://dailytrust.com/wp-content/uploads/2023/12/football-488714_1280.jpg";
+  const venueImage = venue.image_urls && venue.image_urls.length > 0 ? venue.image_urls[0] : defaultImage;
+
   return (
     <div className="min-h-screen pb-20">
       <div className="p-4">
@@ -154,7 +156,7 @@ const VenueDetail = () => {
 
         <div className="rounded-lg overflow-hidden mb-4 h-48">
           <img
-            src={venue.image_url || "https://dailytrust.com/wp-content/uploads/2023/12/football-488714_1280.jpg"}
+            src={venueImage}
             alt={venue.name}
             className="w-full h-full object-cover"
           />
