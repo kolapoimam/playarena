@@ -24,7 +24,7 @@ type Venue = {
   state: string;
   image_urls: string[] | null;
   match_count: number;
-  matches?: { match_date: string }[]; // For activity filtering
+  match_dates?: string[]; // For activity filtering
 };
 
 // List of Nigerian states
@@ -54,12 +54,12 @@ const VenueDirectory = () => {
   useEffect(() => {
     const fetchVenues = async () => {
       try {
-        // Fetch current date for activity filtering
+        // Get current date for activity filtering
         const now = new Date().toLocaleString("en-US", { timeZone: "Africa/Lagos" });
         const currentDate = new Date(now);
         const currentDateString = currentDate.toISOString().split("T")[0];
 
-        // Fetch all venues with their matches
+        // Fetch all venues with match count and match dates
         const { data: venuesData, error: venuesError } = await supabase
           .from("venues")
           .select(`
@@ -69,19 +69,22 @@ const VenueDirectory = () => {
             city,
             state,
             image_urls,
-            matches:matches!venue_id(id, match_date, count)
-          `);
+            match_count:matches!venue_id(count),
+            match_dates:matches!venue_id(match_date)
+          `)
+          .order("created_at", { ascending: false });
 
         if (venuesError) throw venuesError;
 
-        // Map venues to include match_count
-        const venuesWithMatchCount = venuesData.map((venue: any) => ({
+        // Map venues to include match_count and match_dates
+        const venuesWithDetails = venuesData.map((venue: any) => ({
           ...venue,
-          match_count: venue.matches[0]?.count || 0,
+          match_count: venue.match_count || 0,
+          match_dates: venue.match_dates?.map((m: any) => m.match_date) || [],
         }));
 
-        setVenues(venuesWithMatchCount as Venue[]);
-        setFilteredVenues(venuesWithMatchCount as Venue[]);
+        setVenues(venuesWithDetails as Venue[]);
+        setFilteredVenues(venuesWithDetails as Venue[]);
       } catch (error) {
         console.error("Error fetching venues:", error);
         toast({
@@ -118,16 +121,16 @@ const VenueDirectory = () => {
 
     if (activityFilter !== "All") {
       filtered = filtered.filter((venue) => {
-        if (!venue.matches || venue.matches.length === 0) return false;
-        return venue.matches.some((match) => {
-          const matchDate = new Date(match.match_date);
+        if (!venue.match_dates || venue.match_dates.length === 0) return false;
+        return venue.match_dates.some((matchDate: string) => {
+          const date = new Date(matchDate);
           switch (activityFilter) {
             case "Today":
-              return match.match_date === currentDateString;
+              return matchDate === currentDateString;
             case "This Week":
-              return matchDate >= weekStart && matchDate <= weekEnd;
+              return date >= weekStart && date <= weekEnd;
             case "This Month":
-              return matchDate >= monthStart && matchDate <= monthEnd;
+              return date >= monthStart && date <= monthEnd;
             default:
               return true;
           }
