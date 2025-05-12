@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import Navbar from "@/components/Navbar";
@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Loader } from "lucide-react";
+import { ArrowLeft, Loader, Calendar, MapPin, Users, DollarSign, Trophy } from "lucide-react";
 import {
   Form,
   FormControl,
@@ -17,13 +17,21 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { format, isToday, isPast } from "date-fns";
+import html2canvas from "html2canvas";
 
 type Match = {
   id: string;
   slug: string;
   title: string;
   match_date: string;
+  match_time: string;
   total_slots: number;
   organizer_name: string;
   is_paid: boolean;
@@ -58,6 +66,11 @@ const JoinMatch = () => {
   const [verifyingPayment, setVerifyingPayment] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>("pending");
   const [paystackLoaded, setPaystackLoaded] = useState(false);
+  const [successDialogOpen, setSuccessDialogOpen] = useState(false);
+  const [confirmationCode, setConfirmationCode] = useState<string | null>(null);
+  const [isImageLoaded, setIsImageLoaded] = useState(false);
+  const [backgroundOption, setBackgroundOption] = useState("field");
+  const cardRef = useRef<HTMLDivElement>(null);
   const defaultEmail = "kolapoimam1@gmail.com";
 
   // Load Paystack script dynamically as fallback
@@ -262,6 +275,45 @@ const JoinMatch = () => {
     }
   };
 
+  const handleImageLoad = () => {
+    setIsImageLoaded(true);
+  };
+
+  const handleDownload = useCallback(async () => {
+    if (!cardRef.current || !isImageLoaded) {
+      toast({
+        title: "Error",
+        description: "Card is not ready for download. Please wait a moment and try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      const canvas = await html2canvas(cardRef.current, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        scrollX: 0,
+        scrollY: -window.scrollY,
+      });
+
+      const link = document.createElement('a');
+      link.download = `PlayArena-Registration-${match?.title.replace(/\s+/g, '-')}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } catch (error) {
+      console.error("Error generating image:", error);
+      toast({
+        title: "Error",
+        description: "Failed to download registration card. Please try again.",
+        variant: "destructive",
+      });
+    }
+  }, [isImageLoaded, match, toast]);
+
   const onSubmit = async (data: any) => {
     if (!match || !slug) return;
 
@@ -290,14 +342,21 @@ const JoinMatch = () => {
         playerDetails.payment_status = "paid";
       }
 
-      const { error } = await supabase.from("players").insert({
-        match_id: match.id,
-        player_name: data.name,
-        details: Object.keys(playerDetails).length > 0 ? playerDetails : undefined,
-        payment_status: match.is_paid ? (paymentStatus === "success" ? "paid" : "pending") : "free",
-      });
+      const { data: playerData, error } = await supabase
+        .from("players")
+        .insert({
+          match_id: match.id,
+          player_name: data.name,
+          details: Object.keys(playerDetails).length > 0 ? playerDetails : undefined,
+          payment_status: match.is_paid ? (paymentStatus === "success" ? "paid" : "pending") : "free",
+          status: "registered",
+        })
+        .select("confirmation_code")
+        .single();
 
       if (error) throw error;
+
+      setConfirmationCode(playerData.confirmation_code);
 
       toast({
         title: "Success!",
@@ -306,6 +365,7 @@ const JoinMatch = () => {
 
       form.reset();
       setPaymentStatus("pending");
+      setSuccessDialogOpen(true);
 
       const { data: updatedMatch } = await supabase
         .from("matches")
@@ -323,8 +383,6 @@ const JoinMatch = () => {
       if (updatedMatch) {
         setMatch(updatedMatch as Match);
       }
-      
-      navigate(`/match/${slug}`);
       
     } catch (error) {
       console.error("Error joining match:", error);
@@ -346,6 +404,10 @@ const JoinMatch = () => {
       year: "numeric",
     };
     return new Date(dateString).toLocaleDateString("en-NG", options);
+  };
+
+  const formatTime = (timeString: string) => {
+    return timeString.slice(0, 5);
   };
 
   if (loading || verifyingPayment) {
@@ -503,6 +565,142 @@ const JoinMatch = () => {
         )}
       </div>
       <Navbar />
+
+      <Dialog open={successDialogOpen} onOpenChange={(open) => {
+        setSuccessDialogOpen(open);
+        setIsImageLoaded(false);
+        if (!open) setBackgroundOption("field");
+      }}>
+        <DialogContent className="sm:max-w-[425px] max-w-[90vw] rounded-2xl">
+          <DialogTitle>Registration Successful</DialogTitle>
+          <DialogDescription>
+            <p className="text-gray-600 dark:text-gray-300 mb-4">
+              You have successfully registered for the match. Save or share this card with your confirmation code.
+            </p>
+            <div className="mb-4">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Background:</label>
+              <div className="flex items-center space-x-4 mt-2">
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="radio"
+                    value="field"
+                    checked={backgroundOption === "field"}
+                    onChange={() => setBackgroundOption("field")}
+                    className="form-radio text-playarena-500"
+                  />
+                  <span>Default</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="radio"
+                    value="white"
+                    checked={backgroundOption === "white"}
+                    onChange={() => setBackgroundOption("white")}
+                    className="form-radio text-playarena-500"
+                  />
+                  <span>White</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="radio"
+                    value="green"
+                    checked={backgroundOption === "green"}
+                    onChange={() => setBackgroundOption("green")}
+                    className="form-radio text-playarena-500"
+                  />
+                  <span>Green</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="radio"
+                    value="black"
+                    checked={backgroundOption === "black"}
+                    onChange={() => setBackgroundOption("black")}
+                    className="form-radio text-playarena-500"
+                  />
+                  <span>Black</span>
+                </label>
+              </div>
+            </div>
+            <div 
+              ref={cardRef}
+              className={`rounded-lg p-6 shadow-lg relative overflow-hidden ${backgroundOption === "field" ? "bg-cover bg-center" : ""}`}
+              style={{
+                backgroundImage: backgroundOption === "field" ? "url('/football-field.jpg')" : "",
+                backgroundColor: backgroundOption !== "field" ? backgroundOption : "transparent",
+                ...(backgroundOption === "field" && {
+                  backgroundBlendMode: "overlay",
+                  backgroundColor: "rgba(0, 0, 0, 0.5)",
+                }),
+              }}
+            >
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-4">
+                  <img 
+                    src={backgroundOption === "white" ? "/playarenalight.png" : "/playarenadark.png"}
+                    alt="PlayArena Logo" 
+                    className="h-8 w-auto"
+                    onLoad={handleImageLoad}
+                    onError={() => {
+                      toast({
+                        title: "Error",
+                        description: "Failed to load logo image.",
+                        variant: "destructive",
+                      });
+                      setIsImageLoaded(true);
+                    }}
+                  />
+                  <Trophy className={`h-6 w-6 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
+                </div>
+                <h2 className={`text-xl font-bold mb-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`}>{match?.title}</h2>
+                <div className="space-y-2 mb-4">
+                  <div className="flex items-center">
+                    <MapPin className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
+                    <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{match?.venue?.name || "Venue"}, {match?.venue?.city || ""}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <Calendar className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
+                    <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{match && formatDate(match.match_date)} at {match && formatTime(match.match_time)}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <DollarSign className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
+                    <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{match?.is_paid ? `Paid (₦${match?.price?.toFixed(2)})` : "Free"}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <Users className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
+                    <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{match?.players?.length || 0}/{match?.total_slots} slots booked</span>
+                  </div>
+                  <div className="flex items-center">
+                    <span className={`font-bold ${backgroundOption === "white" ? "text-black" : "text-white"}`}>Confirmation Code:</span>
+                    <span className={`ml-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`}>{confirmationCode}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400 my-4">
+              <strong>Note:</strong> Save this card to present your confirmation code at check-in.
+            </p>
+            <div className="flex gap-2">
+              <Button 
+                className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
+                onClick={handleDownload}
+                disabled={!isImageLoaded}
+              >
+                Download
+              </Button>
+              <Button 
+                className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
+                onClick={() => {
+                  setSuccessDialogOpen(false);
+                  navigate(`/match/${match.slug}`);
+                }}
+              >
+                Close
+              </Button>
+            </div>
+          </DialogDescription>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
