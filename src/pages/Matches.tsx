@@ -10,6 +10,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DateTime } from "luxon";
 
 // Match type definition based on the existing Supabase schema
@@ -289,6 +290,10 @@ const Matches = () => {
     return { statusLabel, statusClass };
   };
 
+  const hasAccess = (matchSlug: string) => {
+    return !!localStorage.getItem(`match_access_${matchSlug}`);
+  };
+
   return (
     <div className="min-h-screen pb-20">
       <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg">
@@ -314,7 +319,6 @@ const Matches = () => {
         </div>
       </header>
 
-      {/* Filters */}
       <Collapsible
         open={isFilterOpen}
         onOpenChange={setIsFilterOpen}
@@ -328,7 +332,6 @@ const Matches = () => {
         </CollapsibleTrigger>
         <CollapsibleContent className="mt-4 p-4 border rounded-lg bg-card space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Paid/Free Filter */}
             <div>
               <Label htmlFor="is-paid-filter">Payment Type</Label>
               <Select
@@ -349,7 +352,6 @@ const Matches = () => {
               </Select>
             </div>
 
-            {/* Venue Filter */}
             <div>
               <Label htmlFor="venue-filter">Venue</Label>
               <Select
@@ -373,7 +375,6 @@ const Matches = () => {
               </Select>
             </div>
 
-            {/* Duration Filter */}
             <div>
               <Label htmlFor="duration-filter">Duration</Label>
               <Select
@@ -396,7 +397,6 @@ const Matches = () => {
               </Select>
             </div>
 
-            {/* Start Time Filter */}
             <div>
               <Label htmlFor="time-start">Start Time</Label>
               <Select
@@ -418,7 +418,6 @@ const Matches = () => {
               </Select>
             </div>
 
-            {/* Status Filter */}
             <div>
               <Label htmlFor="status-filter">Status</Label>
               <Select
@@ -455,6 +454,7 @@ const Matches = () => {
         <div className="px-4 space-y-4">
           {matches.map((match) => {
             const { statusLabel, statusClass } = getMatchStatus(match.match_date, match.match_time);
+            const isAccessible = !match.is_private || hasAccess(match.slug);
             
             return (
               <div 
@@ -463,7 +463,21 @@ const Matches = () => {
               >
                 <div className="p-4">
                   <div className="flex justify-between items-start">
-                    <h3 className="font-bold text-lg">{match.title} {match.is_private && <Lock size={16} className="inline text-gray-500" />}</h3>
+                    <h3 className="font-bold text-lg">
+                      {match.title}{" "}
+                      {match.is_private && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Lock size={16} className="inline text-gray-500" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>This is a private match</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                    </h3>
                     <div className="flex flex-col gap-1">
                       <Badge className={statusClass}>{statusLabel}</Badge>
                       <Badge
@@ -475,6 +489,9 @@ const Matches = () => {
                       >
                         {match.is_paid ? `₦${match.price?.toFixed(2)}` : "FREE"}
                       </Badge>
+                      {match.is_private && !isAccessible && (
+                        <Badge className="bg-gray-100 text-gray-700">Locked</Badge>
+                      )}
                     </div>
                   </div>
                   
@@ -532,7 +549,6 @@ const Matches = () => {
             );
           })}
           
-          {/* Pagination Controls */}
           <div className="flex justify-between items-center mt-4">
             <Button
               variant="outline"
