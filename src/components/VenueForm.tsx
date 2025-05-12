@@ -40,6 +40,7 @@ const formSchema = z.object({
   address: z.string().min(5, { message: "Address must be at least 5 characters" }),
   city: z.string().min(2, { message: "City must be at least 2 characters" }),
   state: z.enum(nigerianStates as [string, ...string[]], { message: "Please select a valid state" }),
+  venue_phone: z.string().regex(/^\d{11}$/, { message: "Phone number must be exactly 11 digits" }),
   description: z.string().optional(),
   map_link: z.string().optional(),
 });
@@ -66,7 +67,6 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
   const [fileError, setFileError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Initialize the form
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -74,6 +74,7 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
       address: "",
       city: "",
       state: undefined,
+      venue_phone: "",
       description: "",
       map_link: "",
     },
@@ -95,7 +96,6 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
     setFileError(null);
 
     try {
-      // Validate and get files
       let imageUrls: string[] = [];
       const files = fileInputRef.current?.files;
       if (files && files.length > 0) {
@@ -107,7 +107,6 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
           return;
         }
 
-        // Upload each file to Supabase Storage
         for (const file of fileArray) {
           const fileName = `${Date.now()}-${file.name}`;
           const { error: uploadError, data: uploadData } = await supabase.storage
@@ -119,7 +118,6 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
 
           if (uploadError) throw uploadError;
 
-          // Get public URL
           const { data: publicUrlData } = supabase.storage
             .from("venue-images")
             .getPublicUrl(fileName);
@@ -130,7 +128,6 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
         }
       }
 
-      // Create the venue in the database
       const { data: venue, error } = await supabase
         .from("venues")
         .insert({
@@ -138,6 +135,7 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
           address: data.address,
           city: data.city,
           state: data.state,
+          venue_phone: data.venue_phone,
           description: data.description || null,
           map_link: data.map_link || null,
           image_urls: imageUrls.length > 0 ? imageUrls : null,
@@ -147,19 +145,16 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
 
       if (error) throw error;
 
-      // Success! Show toast
       toast({
         title: "Venue created!",
         description: "Your venue has been successfully added.",
       });
 
-      // Reset the form and file input
       form.reset();
       if (fileInputRef.current) {
-        fileInputRef.current.value = ""; // Clear the file input
+        fileInputRef.current.value = "";
       }
 
-      // Call onSuccess if provided
       if (onSuccess && venue) {
         onSuccess(venue.id, venue.slug, venue.name);
       }
@@ -176,37 +171,37 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
   };
 
   return (
-    <div className="bg-background p-4 rounded-lg border">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold text-playarena-800">Create New Venue</h2>
+    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md border border-gray-200 dark:border-gray-700">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Create New Venue</h2>
         {onCancel && (
           <Button
             variant="ghost"
             size="sm"
             onClick={onCancel}
-            className="text-playarena-600 hover:text-playarena-700"
+            className="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
           >
-            <X size={18} />
+            <X size={20} />
           </Button>
         )}
       </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <FormField
             control={form.control}
             name="name"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-playarena-700">Venue Name</FormLabel>
+                <FormLabel className="text-gray-700 dark:text-gray-300">Venue Name</FormLabel>
                 <FormControl>
                   <Input
                     placeholder="E.g., National Stadium"
                     {...field}
-                    className="focus-visible:ring-playarena-500"
+                    className="border-gray-300 dark:border-gray-600 focus:ring-green-500"
                   />
                 </FormControl>
-                <FormMessage className="text-playarena-600" />
+                <FormMessage className="text-red-500" />
               </FormItem>
             )}
           />
@@ -216,34 +211,34 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
             name="address"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-playarena-700">Address</FormLabel>
+                <FormLabel className="text-gray-700 dark:text-gray-300">Address</FormLabel>
                 <FormControl>
                   <Input
                     placeholder="Full street address"
                     {...field}
-                    className="focus-visible:ring-playarena-500"
+                    className="border-gray-300 dark:border-gray-600 focus:ring-green-500"
                   />
                 </FormControl>
-                <FormMessage className="text-playarena-600" />
+                <FormMessage className="text-red-500" />
               </FormItem>
             )}
           />
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField
               control={form.control}
               name="city"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-playarena-700">City</FormLabel>
+                  <FormLabel className="text-gray-700 dark:text-gray-300">City</FormLabel>
                   <FormControl>
                     <Input
                       placeholder="E.g., Lagos"
                       {...field}
-                      className="focus-visible:ring-playarena-500"
+                      className="border-gray-300 dark:border-gray-600 focus:ring-green-500"
                     />
                   </FormControl>
-                  <FormMessage className="text-playarena-600" />
+                  <FormMessage className="text-red-500" />
               </FormItem>
             )}
           />
@@ -253,13 +248,13 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
             name="state"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-playarena-700">State</FormLabel>
+                <FormLabel className="text-gray-700 dark:text-gray-300">State</FormLabel>
                 <FormControl>
                   <Select
                     onValueChange={field.onChange}
                     value={field.value}
                   >
-                    <SelectTrigger className="focus:ring-playarena-500">
+                    <SelectTrigger className="border-gray-300 dark:border-gray-600 focus:ring-green-500">
                       <SelectValue placeholder="Select a state" />
                     </SelectTrigger>
                     <SelectContent>
@@ -271,7 +266,7 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
                     </SelectContent>
                   </Select>
                 </FormControl>
-                <FormMessage className="text-playarena-600" />
+                <FormMessage className="text-red-500" />
               </FormItem>
             )}
           />
@@ -279,18 +274,40 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
 
         <FormField
           control={form.control}
+          name="venue_phone"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-gray-700 dark:text-gray-300">Venue Phone Number</FormLabel>
+              <FormControl>
+                <Input
+                  type="tel"
+                  placeholder="Enter 11-digit phone number"
+                  {...field}
+                  className="border-gray-300 dark:border-gray-600 focus:ring-green-500"
+                />
+              </FormControl>
+              <FormDescription className="text-gray-500 dark:text-gray-400">
+                Provide a WhatsApp-enabled phone number for booking inquiries
+              </FormDescription>
+              <FormMessage className="text-red-500" />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
           name="description"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-playarena-700">Description (Optional)</FormLabel>
+              <FormLabel className="text-gray-700 dark:text-gray-300">Description (Optional)</FormLabel>
               <FormControl>
                 <Textarea
                   placeholder="Describe the venue, facilities, etc."
                   {...field}
-                  className="focus-visible:ring-playarena-500"
+                  className="border-gray-300 dark:border-gray-600 focus:ring-green-500"
                 />
               </FormControl>
-              <FormMessage className="text-playarena-600" />
+              <FormMessage className="text-red-500" />
             </FormItem>
           )}
         />
@@ -300,24 +317,24 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
           name="map_link"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-playarena-700">Google Maps Link (Optional)</FormLabel>
+              <FormLabel className="text-gray-700 dark:text-gray-300">Google Maps Link (Optional)</FormLabel>
               <FormControl>
                 <Input
                   placeholder="Paste Google Maps URL here"
                   {...field}
-                  className="focus-visible:ring-playarena-500"
+                  className="border-gray-300 dark:border-gray-600 focus:ring-green-500"
                 />
               </FormControl>
-              <FormDescription className="text-playarena-500">
+              <FormDescription className="text-gray-500 dark:text-gray-400">
                 Add a Google Maps link to help players find the venue easily
               </FormDescription>
-              <FormMessage className="text-playarena-600" />
+              <FormMessage className="text-red-500" />
             </FormItem>
           )}
         />
 
         <FormItem>
-          <FormLabel className="text-playarena-700">Images (Optional, up to 5)</FormLabel>
+          <FormLabel className="text-gray-700 dark:text-gray-300">Images (Optional, up to 5)</FormLabel>
           <FormControl>
             <Input
               type="file"
@@ -325,18 +342,18 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
               multiple
               ref={fileInputRef}
               onChange={(e) => handleFileChange(e.target.files)}
-              className="focus-visible:ring-playarena-500"
+              className="border-gray-300 dark:border-gray-600 focus:ring-green-500"
             />
           </FormControl>
-          <FormDescription className="text-playarena-500">
-            Upload up to 5 images (max 5MB each) to showcase the venue
+          <FormDescription className="text-gray-500 dark:text-gray-400">
+            Upload up to 3 images (max 2MB each) to showcase the venue
           </FormDescription>
-          {fileError && <p className="text-playarena-600 text-sm">{fileError}</p>}
+          {fileError && <p className="text-red-500 text-sm">{fileError}</p>}
         </FormItem>
 
         <Button
           type="submit"
-          className="w-full bg-playarena-600 hover:bg-playarena-700 text-white"
+          className="w-full bg-green-500 hover:bg-green-600 text-white"
           disabled={loading}
         >
           {loading ? "Creating..." : "Create Venue"}
