@@ -16,7 +16,8 @@ import {
   ExternalLink,
   Trophy,
   DollarSign,
-  CalendarPlus
+  CalendarPlus,
+  Lock
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -29,9 +30,12 @@ import {
   DialogContent,
   DialogTitle,
   DialogDescription,
+  DialogFooter,
+  DialogHeader,
 } from "@/components/ui/dialog";
 import { format, isToday, isPast, differenceInHours, addDays } from "date-fns";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import html2canvas from "html2canvas";
 import * as ics from "ics";
 
@@ -48,6 +52,8 @@ type Match = {
   notes: string | null;
   organizer_name: string;
   player_number_required: boolean;
+  is_private: boolean;
+  access_password: string | null;
   venue: {
     id: string;
     slug: string;
@@ -74,14 +80,79 @@ const MatchDetail = () => {
   const [loading, setLoading] = useState(true);
   const [downloadDialogOpen, setDownloadDialogOpen] = useState(false);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
-  const [backgroundOption, setBackgroundOption] = useState("field"); // Options: "field", "white", "green", "black"
+  const [backgroundOption, setBackgroundOption] = useState("field");
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [password, setPassword] = useState("");
   const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!slug) return;
-    
-    fetchMatch(slug);
+    checkMatchAccess(slug);
   }, [slug]);
+
+  const checkMatchAccess = async (matchSlug: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("matches")
+        .select(`
+          *,
+          venue:venues(id, slug, name, city, map_link),
+          players(player_name, status)
+        `)
+        .eq("slug", matchSlug)
+        .single();
+
+      if (error) throw error;
+
+      const matchData = data as Match;
+      if (matchData.is_private && !localStorage.getItem(`match_access_${matchSlug}`)) {
+        setPasswordDialogOpen(true);
+      } else {
+        setMatch(matchData);
+      }
+    } catch (error) {
+      console.error("Error fetching match:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load match details. Please try again.",
+        variant: "destructive",
+      });
+      navigate("/matches");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const verifyPassword = async () => {
+    if (!slug) return;
+
+    const { data, error } = await supabase
+      .from("matches")
+      .select("access_password")
+      .eq("slug", slug)
+      .single();
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to verify access. Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (data.access_password === password) {
+      localStorage.setItem(`match_access_${slug}`, "true");
+      setPasswordDialogOpen(false);
+      fetchMatch(slug);
+    } else {
+      toast({
+        title: "Error",
+        description: "Incorrect password. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const fetchMatch = async (matchSlug: string) => {
     try {
@@ -105,8 +176,6 @@ const MatchDetail = () => {
         description: "Failed to load match details. Please try again.",
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -121,7 +190,7 @@ const MatchDetail = () => {
   };
 
   const formatTime = (timeString: string) => {
-    return timeString.slice(0, 5); // Format from "14:30:00" to "14:30"
+    return timeString.slice(0, 5);
   };
 
   const getMatchStatus = () => {
@@ -131,13 +200,8 @@ const MatchDetail = () => {
     const now = new Date();
     const nextDay = addDays(matchDateTime, 1);
     
-    // Check if match is full
     const isFull = match.players?.length >= match.total_slots;
-    
-    // Check if match has started
     const isStarted = now >= matchDateTime;
-    
-    // Check if match has passed (day after)
     const isPassed = now >= nextDay;
     
     return { isStarted, isPassed, isFull };
@@ -246,7 +310,7 @@ const MatchDetail = () => {
     if (!match) return;
 
     const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
-    const endDateTime = new Date(matchDateTime.getTime() + 2 * 60 * 60 * 1000); // Assume 2-hour match duration
+    const endDateTime = new Date(matchDateTime.getTime() + 2 * 60 * 60 * 1000);
 
     const event: ics.EventAttributes = {
       start: [
@@ -323,17 +387,26 @@ const MatchDetail = () => {
 
   return (
     <div className="min-h-screen pb-20">
+      <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg">
+        <div className="flex items-center justify-between">
+          <Button 
+            variant="ghost" 
+            onClick={() => navigate(-1)} 
+            className="text-white hover:bg-green-600"
+          >
+            <ArrowLeft size={18} className="mr-2" />
+            Back
+          </Button>
+          <div className="text-center">
+            <h1 className="text-2xl font-bold">Match Details</h1>
+            <p className="text-sm">Manage player confirmations and check-ins</p>
+          </div>
+          <div className="w-10"></div> {/* Spacer for symmetry */}
+        </div>
+      </header>
+
       <div className="p-4">
-        <Button 
-          variant="ghost" 
-          onClick={() => navigate(-1)} 
-          className="mb-4"
-        >
-          <ArrowLeft size={18} className="mr-2" />
-          Back
-        </Button>
-        
-        <h1 className="text-2xl font-bold mb-2">{match.title}</h1>
+        <h1 className="text-2xl font-bold mb-2">{match.title} {match.is_private && <Lock size={16} className="inline text-gray-500" />}</h1>
         <div className="flex justify-between items-center mb-4">
           <p className="text-muted-foreground">Organized by {match.organizer_name}</p>
           <Button
@@ -532,8 +605,8 @@ const MatchDetail = () => {
 
       <Dialog open={downloadDialogOpen} onOpenChange={(open) => {
         setDownloadDialogOpen(open);
-        setIsImageLoaded(false); // Reset image load state when dialog closes
-        if (!open) setBackgroundOption("field"); // Reset to default background on close
+        setIsImageLoaded(false);
+        if (!open) setBackgroundOption("field");
       }}>
         <DialogContent className="sm:max-w-[425px] max-w-[90vw] rounded-2xl">
           <DialogTitle>Match Details</DialogTitle>
@@ -594,7 +667,7 @@ const MatchDetail = () => {
                 backgroundColor: backgroundOption !== "field" ? backgroundOption : "transparent",
                 ...(backgroundOption === "field" && {
                   backgroundBlendMode: "overlay",
-                  backgroundColor: "rgba(0, 0, 0, 0.5)", // Dark overlay for text visibility
+                  backgroundColor: "rgba(0, 0, 0, 0.5)",
                 }),
               }}
             >
@@ -611,7 +684,7 @@ const MatchDetail = () => {
                         description: "Failed to load logo image.",
                         variant: "destructive",
                       });
-                      setIsImageLoaded(true); // Proceed anyway
+                      setIsImageLoaded(true);
                     }}
                   />
                   <Trophy className={`h-6 w-6 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
@@ -656,6 +729,32 @@ const MatchDetail = () => {
               </Button>
             </div>
           </DialogDescription>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Enter Match Super Code</DialogTitle>
+            <DialogDescription>Manage player confirmations and check-ins</DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Input
+              type="text"
+              placeholder="Enter 6-digit super code"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full"
+            />
+          </div>
+          <DialogFooter>
+            <Button 
+              className="bg-green-500 hover:bg-green-600 text-white"
+              onClick={verifyPassword}
+            >
+              Load Match
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
