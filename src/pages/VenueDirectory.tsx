@@ -66,7 +66,7 @@ const VenueDirectory = () => {
             city,
             state,
             image_urls,
-            matches!venue_id(count, match_date)
+            matches:matches!venue_id (match_date)
           `)
           .order("created_at", { ascending: false });
 
@@ -74,8 +74,8 @@ const VenueDirectory = () => {
 
         const venuesWithDetails = venuesData.map((venue: any) => ({
           ...venue,
-          match_count: venue.matches?.length || 0,
-          match_dates: venue.matches?.map((m: any) => m.match_date) || [],
+          match_count: venue.matches ? venue.matches.length : 0,
+          match_dates: venue.matches ? venue.matches.map((m: any) => m.match_date).filter((date: string) => date) : [],
         }));
 
         setVenues(venuesWithDetails as Venue[]);
