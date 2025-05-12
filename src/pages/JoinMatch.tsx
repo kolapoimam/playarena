@@ -50,7 +50,6 @@ const JoinMatch = () => {
   const reference = searchParams.get("reference");
   const trxref = searchParams.get("trxref");
   
-  // Use either reference from URL params
   const paymentReference = reference || trxref;
 
   const [match, setMatch] = useState<Match | null>(null);
@@ -58,7 +57,7 @@ const JoinMatch = () => {
   const [joining, setJoining] = useState(false);
   const [verifyingPayment, setVerifyingPayment] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>("pending");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState("kolapoimam1@gmail.com");
   const [paystackLoaded, setPaystackLoaded] = useState(false);
 
   // Load Paystack script dynamically as fallback
@@ -82,19 +81,25 @@ const JoinMatch = () => {
 
   // Define the form schema based on required fields
   const createFormSchema = (requiredFields: string[] = ["name", "phone"]) => {
-    const schemaFields: Record<string, z.ZodString> = {};
+    const schemaFields: Record<string, any> = {};
     requiredFields.forEach((field) => {
-      schemaFields[field] = z
-        .string()
-        .min(2, { message: `${field.charAt(0).toUpperCase() + field.slice(1)} must be at least 2 characters` });
+      if (field === "phone") {
+        schemaFields[field] = z
+          .string()
+          .regex(/^\d{11}$/, { message: "Phone number must be exactly 11 digits" })
+          .min(11, { message: "Phone number must be exactly 11 digits" })
+          .max(11, { message: "Phone number must be exactly 11 digits" });
+      } else {
+        schemaFields[field] = z
+          .string()
+          .min(2, { message: `${field.charAt(0).toUpperCase() + field.slice(1)} must be at least 2 characters` });
+      }
     });
     return z.object(schemaFields);
   };
 
-  // Default form schema
   const [formSchema, setFormSchema] = useState(createFormSchema());
 
-  // Initialize form with dynamic schema
   const form = useForm<any>({
     resolver: zodResolver(formSchema),
     defaultValues: {},
@@ -248,7 +253,6 @@ const JoinMatch = () => {
       const paystack = new window.PaystackPop();
       paystack.resumeTransaction(access_code, {
         onSuccess: (transaction) => {
-          // Manually set payment status to success and show the form
           setPaymentStatus("success");
           toast({
             title: "Payment Successful",
@@ -325,7 +329,7 @@ const JoinMatch = () => {
       // Reset form and payment status
       form.reset();
       setPaymentStatus("pending");
-      setEmail("");
+      setEmail("kolapoimam1@gmail.com");
 
       // Refresh match data to update players count
       const { data: updatedMatch } = await supabase
@@ -393,10 +397,7 @@ const JoinMatch = () => {
     );
   }
 
-  // Check if match is already full
   const isFull = match.players.length >= match.total_slots;
-
-  // Check match time status
   const matchDate = new Date(`${match.match_date}T00:00:00`);
   const isPastMatch = isPast(matchDate) && !isToday(matchDate);
 
@@ -441,7 +442,6 @@ const JoinMatch = () => {
         ) : (
           <>
             {match.is_paid && paymentStatus === "pending" ? (
-              // Payment form for paid matches
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold">Payment Required</h3>
                 <p className="text-muted-foreground mb-4">
@@ -483,10 +483,8 @@ const JoinMatch = () => {
                 </div>
               </div>
             ) : (
-              // Registration form (for free matches or after successful payment)
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                  {/* Show payment confirmation message if payment was successful */}
                   {match.is_paid && paymentStatus === "success" && (
                     <div className="bg-green-50 p-4 mb-4 rounded-md border border-green-200">
                       <p className="text-green-700 font-medium">Payment Successful!</p>
@@ -511,6 +509,14 @@ const JoinMatch = () => {
                               {...formField}
                               type={field === "phone" ? "tel" : "text"}
                               inputMode={field === "phone" ? "numeric" : "text"}
+                              {...(field === "phone" && {
+                                pattern: "[0-9]*",
+                                maxLength: 11,
+                                onChange: (e) => {
+                                  const value = e.target.value.replace(/[^0-9]/g, '');
+                                  formField.onChange(value);
+                                },
+                              })}
                             />
                           </FormControl>
                           <FormMessage />
