@@ -108,8 +108,10 @@ const MatchDetail = () => {
       const matchData = data as Match;
       if (matchData.is_private && !localStorage.getItem(`match_access_${matchSlug}`)) {
         setPasswordDialogOpen(true);
+        setLoading(false); // Ensure loading is false while dialog is shown
       } else {
         setMatch(matchData);
+        setLoading(false);
       }
     } catch (error) {
       console.error("Error fetching match:", error);
@@ -119,8 +121,6 @@ const MatchDetail = () => {
         variant: "destructive",
       });
       navigate("/matches");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -129,7 +129,7 @@ const MatchDetail = () => {
 
     const { data, error } = await supabase
       .from("matches")
-      .select("access_password")
+      .select("access_password, is_private")
       .eq("slug", slug)
       .single();
 
@@ -139,6 +139,13 @@ const MatchDetail = () => {
         description: "Failed to verify access. Please try again.",
         variant: "destructive",
       });
+      return;
+    }
+
+    if (!data.is_private) {
+      // If match is no longer private, proceed without password
+      fetchMatch(slug);
+      setPasswordDialogOpen(false);
       return;
     }
 
@@ -177,6 +184,7 @@ const MatchDetail = () => {
         description: "Failed to load match details. Please try again.",
         variant: "destructive",
       });
+      navigate("/matches");
     }
   };
 
@@ -365,7 +373,7 @@ const MatchDetail = () => {
     );
   }
 
-  if (!match) {
+  if (!match && !passwordDialogOpen) {
     return (
       <div className="p-4">
         <Button 
@@ -381,6 +389,36 @@ const MatchDetail = () => {
           <p className="text-muted-foreground">The match you're looking for doesn't exist or has been removed.</p>
         </div>
       </div>
+    );
+  }
+
+  if (passwordDialogOpen) {
+    return (
+      <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Enter Access Password</DialogTitle>
+            <DialogDescription>This is a private match. Please enter the access password to view details.</DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Input
+              type="text"
+              placeholder="Enter 6-character password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full"
+            />
+          </div>
+          <DialogFooter>
+            <Button 
+              className="bg-green-500 hover:bg-green-600 text-white"
+              onClick={verifyPassword}
+            >
+              Verify Password
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     );
   }
 
@@ -400,6 +438,7 @@ const MatchDetail = () => {
           </Button>
           <div className="text-center">
             <h1 className="text-2xl font-bold">Match Details</h1>
+            <p className="text-sm">Manage player confirmations and check-ins</p>
           </div>
           <div className="w-10"></div>
         </div>
@@ -742,32 +781,6 @@ const MatchDetail = () => {
               </Button>
             </div>
           </DialogDescription>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Enter Access Password</DialogTitle>
-            <DialogDescription>This is a private match. Please enter the access password to view details.</DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <Input
-              type="text"
-              placeholder="Enter 6-character password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full"
-            />
-          </div>
-          <DialogFooter>
-            <Button 
-              className="bg-green-500 hover:bg-green-600 text-white"
-              onClick={verifyPassword}
-            >
-              Verify Password
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
