@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Calendar, Clock, MapPin, Users, ChevronLeft, ChevronRight, Filter } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, ChevronLeft, ChevronRight, Filter, Lock } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import { useToast } from "@/hooks/use-toast";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -24,6 +24,8 @@ type Match = {
   price: number | null;
   notes: string | null;
   organizer_name: string;
+  is_private: boolean;
+  access_password: string | null;
   venue: {
     slug: string;
     name: string;
@@ -32,7 +34,7 @@ type Match = {
   players: {
     player_name: string;
   }[];
-  created_at: string; // Added for sorting within status groups
+  created_at: string;
 };
 
 // Venue type for filter dropdown
@@ -91,7 +93,7 @@ const Matches = () => {
         .from("matches")
         .select(
           `
-          id, slug, title, match_date, match_time, total_slots, is_paid, price, notes, organizer_name,
+          id, slug, title, match_date, match_time, total_slots, is_paid, price, notes, organizer_name, is_private, access_password,
           venue:venues(slug, name, city),
           players(*),
           created_at
@@ -126,12 +128,12 @@ const Matches = () => {
             endDate = today;
             break;
           case "this_week":
-            startDate = today.startOf("week"); // Monday
-            endDate = startDate.plus({ days: 6 }); // Sunday
+            startDate = today.startOf("week");
+            endDate = startDate.plus({ days: 6 });
             break;
           case "next_week":
-            startDate = today.startOf("week").plus({ weeks: 1 }); // Next Monday
-            endDate = startDate.plus({ days: 6 }); // Next Sunday
+            startDate = today.startOf("week").plus({ weeks: 1 });
+            endDate = startDate.plus({ days: 6 });
             break;
           case "this_month":
             startDate = today.startOf("month");
@@ -156,7 +158,7 @@ const Matches = () => {
       }
       if (statusFilter) {
         const today = DateTime.now().setZone(LAGOS_TIMEZONE).startOf("day");
-        const todayStr = today.toISODate(); // e.g., "2025-05-12"
+        const todayStr = today.toISODate();
         const now = DateTime.now().setZone(LAGOS_TIMEZONE);
         const twoHoursLater = now.plus({ hours: 2 });
         const twoHoursLaterTime = twoHoursLater.toFormat("HH:mm:ss");
@@ -167,20 +169,17 @@ const Matches = () => {
             query = query.gt("match_date", todayStr!);
             break;
           case "Today's Match":
-            // Matches on today, starting more than 2 hours from now
             query = query
               .eq("match_date", todayStr!)
               .gt("match_time", twoHoursLaterTime);
             break;
           case "Live Match":
-            // Matches on today, within 2 hours from now
             query = query
               .eq("match_date", todayStr!)
               .lte("match_time", twoHoursLaterTime)
               .gte("match_time", nowTime);
             break;
           case "Match Passed":
-            // Matches before today or today but past
             query = query.or(
               `match_date.lt.${todayStr!},and(match_date.eq.${todayStr!},match_time.lt.${nowTime})`
             );
@@ -197,7 +196,6 @@ const Matches = () => {
 
       if (error) throw error;
 
-      // Sort matches by status: Live, Today, Upcoming, Passed
       const sortedMatches = data as Match[];
       sortedMatches.sort((a, b) => {
         const statusA = getMatchStatus(a.match_date, a.match_time).statusLabel;
@@ -293,14 +291,27 @@ const Matches = () => {
 
   return (
     <div className="min-h-screen pb-20">
-      <header className="p-4 flex justify-between items-center">
-        <h1 className="text-2xl font-bold">My Matches</h1>
-        <Button
-          className="bg-playarena-500 hover:bg-playarena-600 text-white"
-          onClick={() => navigate("/organize")}
-        >
-          Organize Match
-        </Button>
+      <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg">
+        <div className="flex items-center justify-between">
+          <Button 
+            variant="ghost" 
+            onClick={() => navigate(-1)} 
+            className="text-white hover:bg-green-600"
+          >
+            <ArrowLeft size={18} className="mr-2" />
+            Back
+          </Button>
+          <div className="text-center">
+            <h1 className="text-2xl font-bold">My Matches</h1>
+            <p className="text-sm">Manage your matches and player confirmations</p>
+          </div>
+          <Button
+            className="bg-playarena-500 hover:bg-playarena-600 text-white"
+            onClick={() => navigate("/organize")}
+          >
+            Organize Match
+          </Button>
+        </div>
       </header>
 
       {/* Filters */}
@@ -452,7 +463,7 @@ const Matches = () => {
               >
                 <div className="p-4">
                   <div className="flex justify-between items-start">
-                    <h3 className="font-bold text-lg">{match.title}</h3>
+                    <h3 className="font-bold text-lg">{match.title} {match.is_private && <Lock size={16} className="inline text-gray-500" />}</h3>
                     <div className="flex flex-col gap-1">
                       <Badge className={statusClass}>{statusLabel}</Badge>
                       <Badge
