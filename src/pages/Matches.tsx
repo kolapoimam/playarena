@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
@@ -11,7 +10,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { format, isToday, isPast, differenceInHours } from "date-fns";
+import { format, isToday, isPast, differenceInHours, isAfter } from "date-fns";
 
 // Match type definition based on the existing Supabase schema
 type Match = {
@@ -52,6 +51,7 @@ const Matches = () => {
   const [venueFilter, setVenueFilter] = useState<string | null>(null);
   const [durationFilter, setDurationFilter] = useState<string>("all");
   const [timeStart, setTimeStart] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string | null>(null); // New state for status filter
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -61,7 +61,7 @@ const Matches = () => {
   useEffect(() => {
     fetchVenues();
     fetchMatches();
-  }, [currentPage, isPaidFilter, venueFilter, durationFilter, timeStart]);
+  }, [currentPage, isPaidFilter, venueFilter, durationFilter, timeStart, statusFilter]);
 
   const fetchVenues = async () => {
     try {
@@ -94,8 +94,14 @@ const Matches = () => {
           players(*)
         `,
           { count: "exact" }
-        )
-        .order("match_date", { ascending: true });
+        );
+
+      // Apply sorting: newest first on page 1, otherwise by match_date
+      if (currentPage === 1) {
+        query = query.order("created_at", { ascending: false });
+      } else {
+        query = query.order("match_date", { ascending: true });
+      }
 
       // Apply filters
       if (isPaidFilter !== null) {
@@ -149,6 +155,40 @@ const Matches = () => {
           evening: { start: "18:00:00", end: "23:59:59" },
         };
         query = query.gte("match_time", timeRanges[timeStart].start).lte("match_time", timeRanges[timeStart].end);
+      }
+      if (statusFilter) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const todayStr = today.toISOString().split("T")[0];
+        const now = new Date();
+        const twoHoursLater = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+        const twoHoursLaterTime = twoHoursLater.toISOString().slice(11, 19); // HH:mm:ss
+
+        switch (statusFilter) {
+          case "Upcoming Match":
+            // Matches after today
+            query = query.gt("match_date", todayStr);
+            break;
+          case "Today's Match":
+            // Matches today, not within 2 hours
+            query = query
+              .eq("match_date", todayStr)
+              .gt("match_time", twoHoursLaterTime);
+            break;
+          case "Live Match":
+            // Matches today, within 2 hours
+            query = query
+              .eq("match_date", todayStr)
+              .lte("match_time", twoHoursLaterTime)
+              .gte("match_time", now.toISOString().slice(11, 19));
+            break;
+          case "Match Passed":
+            // Matches before today or today but past
+            query = query.or(
+              `match_date.lt.${todayStr},and(match_date.eq.${todayStr},match_time.lt.${now.toISOString().slice(11, 19)})`
+            );
+            break;
+        }
       }
 
       // Apply pagination
@@ -210,6 +250,7 @@ const Matches = () => {
     setVenueFilter(null);
     setDurationFilter("all");
     setTimeStart("");
+    setStatusFilter(null); // Reset status filter
     setCurrentPage(1);
   };
 
@@ -217,24 +258,32 @@ const Matches = () => {
     const matchDateTime = new Date(`${matchDate}T${matchTime}:00Z`);
     const now = new Date();
     
-    let statusLabel = "Upcoming";
+    // Create a date for tomorrow at midnight to check if match is "upcoming" (future date, not today)
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+    
+    let statusLabel = "Upcoming Match";
     let statusClass = "bg-blue-100 text-blue-800";
     
-    if (isPast(matchDateTime) && !isToday(matchDateTime)) {
-      statusLabel = "Passed";
+    if (isPast(matchDateTime)) {
+      statusLabel = "Match Passed";
       statusClass = "bg-gray-200 text-gray-600";
     } else if (isToday(matchDateTime)) {
       const hoursDiff = differenceInHours(matchDateTime, now);
       if (hoursDiff >= 0 && hoursDiff <= 2) {
-        statusLabel = "Live";
+        statusLabel = "Live Match";
         statusClass = "bg-red-100 text-red-700 animate-pulse";
       } else if (hoursDiff > 2) {
-        statusLabel = "Today";
+        statusLabel = "Today's Match";
         statusClass = "bg-green-100 text-green-700";
       } else {
-        statusLabel = "Passed";
+        statusLabel = "Match Passed";
         statusClass = "bg-gray-200 text-gray-600";
       }
+    } else if (isAfter(matchDateTime, tomorrow)) {
+      statusLabel = "Upcoming Match";
+      statusClass = "bg-blue-100 text-blue-800";
     }
     
     return { statusLabel, statusClass };
@@ -352,6 +401,29 @@ const Matches = () => {
                   <SelectItem value="morning">Morning (6AM-12PM)</SelectItem>
                   <SelectItem value="afternoon">Afternoon (12PM-6PM)</SelectItem>
                   <SelectItem value="evening">Evening (6PM-12AM)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Status Filter */}
+            <div>
+              <Label htmlFor="status-filter">Status</Label>
+              <Select
+                value={statusFilter || "all"}
+                onValueChange={(value) => {
+                  setStatusFilter(value === "all" ? null : value);
+                  setCurrentPage(1);
+                }}
+              >
+                <SelectTrigger id="status-filter">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="Upcoming Match">Upcoming Match</SelectItem>
+                  <SelectItem value="Today's Match">Today's Match</SelectItem>
+                  <SelectItem value="Live Match">Live Match</SelectItem>
+                  <SelectItem value="Match Passed">Match Passed</SelectItem>
                 </SelectContent>
               </Select>
             </div>
