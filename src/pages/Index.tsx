@@ -37,6 +37,8 @@ type Venue = {
 
 const [activeFaqTab, setActiveFaqTab] = useState('general');
 
+);
+
 const formatDate = (dateString: string) => {
   const options: Intl.DateTimeFormatOptions = { weekday: "short", month: "short", day: "numeric" };
   return new Date(dateString).toLocaleDateString("en-US", options);
