@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { DateTime } from "luxon";
+import PageHeader from "@/components/PageHeader";
 
 // Match type definition based on the existing Supabase schema
 type Match = {
@@ -293,15 +294,17 @@ const Matches = () => {
 
   return (
     <div className="min-h-screen pb-20">
-      <header className="p-4 flex justify-between items-center">
-        <h1 className="text-2xl font-bold">My Matches</h1>
-        <Button
-          className="bg-playarena-500 hover:bg-playarena-600 text-white"
-          onClick={() => navigate("/organize")}
-        >
-          Organize Match
-        </Button>
-      </header>
+      <PageHeader
+        title="My Matches"
+        actions={
+          <Button
+            className="bg-playarena-500 hover:bg-playarena-600 text-white"
+            onClick={() => navigate("/organize")}
+          >
+            Organize Match
+          </Button>
+        }
+      />
 
       {/* Filters */}
       <Collapsible
