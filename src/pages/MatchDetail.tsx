@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -199,7 +198,7 @@ const MatchDetail = () => {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-[50vh]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-playarena-500"></div>
       </div>
     );
   }
@@ -246,7 +245,7 @@ const MatchDetail = () => {
             This match has passed
           </div>
         ) : isStarted ? (
-          <div className="bg-yellow-100 border border-yellow-200 text-yellow-700 px-4 py-3 rounded mb-4">
+          <div className="bg-playarena-100 border border-playarena-200 text-playarena-700 px-4 py-3 rounded mb-4">
             This match has already started!
           </div>
         ) : isFull ? (
@@ -277,7 +276,7 @@ const MatchDetail = () => {
                 >
                   <MapPin size={18} className="mt-0.5" />
                   <div>
-                    <span className="text-primary hover:underline">
+                    <span className="text-playarena-600 hover:underline">
                       {match.venue.name}, {match.venue.city}
                     </span>
                     {match.venue.map_link && (
@@ -286,7 +285,7 @@ const MatchDetail = () => {
                           href={match.venue.map_link} 
                           target="_blank" 
                           rel="noopener noreferrer"
-                          className="text-xs flex items-center text-primary hover:underline"
+                          className="text-xs flex items-center text-playarena-600 hover:underline"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <ExternalLink size={12} className="mr-1" />
@@ -328,7 +327,7 @@ const MatchDetail = () => {
               <div className="space-y-2">
                 {match.players.map((player, index) => (
                   <div key={index} className="flex items-center gap-2 p-2 bg-muted rounded-md">
-                    <span className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                    <span className="w-8 h-8 rounded-full bg-playarena-100 flex items-center justify-center">
                       {player.player_name.charAt(0).toUpperCase()}
                     </span>
                     <span>{player.player_name}</span>
@@ -341,7 +340,7 @@ const MatchDetail = () => {
             
             {!isPassed && !isStarted && !isFull && (
               <Button 
-                className="w-full mt-4"
+                className="w-full mt-4 bg-playarena-500 hover:bg-playarena-600 text-white"
                 onClick={() => navigate(`/join/${match.slug}`)}
               >
                 Join This Match
