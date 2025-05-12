@@ -153,13 +153,13 @@ const Organize = () => {
           organizer_name: data.organizer_name,
           player_number_required: data.player_number_required,
         })
-        .select('id, slug, supercode')
+        .select('id, slug, super_code')
         .single();
 
       if (error) throw error;
 
       // Store the supercode and match slug
-      setSupercode(match.supercode);
+      setSupercode(matches.super_code);
       setMatchSlug(match.slug);
 
       // Show the success dialog
