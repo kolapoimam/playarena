@@ -23,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { X } from "lucide-react";
+import { X, Trash2 } from "lucide-react";
 
 // Nigerian states including FCT
 const nigerianStates = [
@@ -40,18 +40,23 @@ const formSchema = z.object({
   address: z.string().min(5, { message: "Address must be at least 5 characters" }),
   city: z.string().min(2, { message: "City must be at least 2 characters" }),
   state: z.enum(nigerianStates as [string, ...string[]], { message: "Please select a valid state" }),
-  venue_phone: z.string().regex(/^\d{11}$/, { message: "Phone number must be exactly 11 digits" }),
+  venue_phone: z.string()
+    .regex(/^[0-9]+$/, { message: "Phone number must contain only numbers" })
+    .length(11, { message: "Phone number must be exactly 11 digits" }),
   description: z.string().optional(),
-  map_link: z.string().optional(),
+  map_link: z.string().url({ message: "Please enter a valid URL" }).or(z.literal("")),
 });
 
-// Add a separate schema for files to validate manually
+// File schema for single image validation
 const fileSchema = z
-  .array(z.instanceof(File))
-  .max(5, { message: "Maximum 5 images allowed" })
+  .instanceof(File)
   .refine(
-    (files) => files.every((file) => file.type.startsWith("image/") && file.size <= 5 * 1024 * 1024),
-    { message: "Only images up to 5MB each are allowed" }
+    (file) => file.type.startsWith("image/"),
+    { message: "Only image files are allowed" }
+  )
+  .refine(
+    (file) => file.size <= 5 * 1024 * 1024,
+    { message: "Image must be less than 5MB" }
   );
 
 type FormValues = z.infer<typeof formSchema>;
@@ -65,6 +70,7 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<FormValues>({
@@ -84,10 +90,21 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
     setFileError(null);
     if (!files || files.length === 0) return;
 
-    const fileArray = Array.from(files);
-    const result = fileSchema.safeParse(fileArray);
+    const file = files[0];
+    const result = fileSchema.safeParse(file);
+    
     if (!result.success) {
       setFileError(result.error.errors[0].message);
+      return;
+    }
+
+    setSelectedFile(file);
+  };
+
+  const removeSelectedFile = () => {
+    setSelectedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
     }
   };
 
@@ -96,35 +113,25 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
     setFileError(null);
 
     try {
-      let imageUrls: string[] = [];
-      const files = fileInputRef.current?.files;
-      if (files && files.length > 0) {
-        const fileArray = Array.from(files);
-        const fileValidation = fileSchema.safeParse(fileArray);
-        if (!fileValidation.success) {
-          setFileError(fileValidation.error.errors[0].message);
-          setLoading(false);
-          return;
-        }
+      let imageUrl: string | null = null;
+      
+      if (selectedFile) {
+        const fileName = `${Date.now()}-${selectedFile.name}`;
+        const { error: uploadError } = await supabase.storage
+          .from("venue-images")
+          .upload(fileName, selectedFile, {
+            cacheControl: "3600",
+            upsert: false,
+          });
 
-        for (const file of fileArray) {
-          const fileName = `${Date.now()}-${file.name}`;
-          const { error: uploadError, data: uploadData } = await supabase.storage
-            .from("venue-images")
-            .upload(fileName, file, {
-              cacheControl: "3600",
-              upsert: false,
-            });
+        if (uploadError) throw uploadError;
 
-          if (uploadError) throw uploadError;
+        const { data: publicUrlData } = supabase.storage
+          .from("venue-images")
+          .getPublicUrl(fileName);
 
-          const { data: publicUrlData } = supabase.storage
-            .from("venue-images")
-            .getPublicUrl(fileName);
-
-          if (publicUrlData) {
-            imageUrls.push(publicUrlData.publicUrl);
-          }
+        if (publicUrlData) {
+          imageUrl = publicUrlData.publicUrl;
         }
       }
 
@@ -138,7 +145,7 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
           venue_phone: data.venue_phone,
           description: data.description || null,
           map_link: data.map_link || null,
-          image_urls: imageUrls.length > 0 ? imageUrls : null,
+          image_urls: imageUrl ? [imageUrl] : null,
         })
         .select("id, slug, name")
         .single();
@@ -151,6 +158,7 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
       });
 
       form.reset();
+      setSelectedFile(null);
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -239,129 +247,149 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
                     />
                   </FormControl>
                   <FormMessage className="text-red-500" />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="state"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-gray-700 dark:text-gray-300">State</FormLabel>
+                  <FormControl>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value}
+                    >
+                      <SelectTrigger className="border-gray-300 dark:border-gray-600 focus:ring-green-500">
+                        <SelectValue placeholder="Select a state" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {nigerianStates.map((state) => (
+                          <SelectItem key={state} value={state}>
+                            {state}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormControl>
+                  <FormMessage className="text-red-500" />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <FormField
+            control={form.control}
+            name="venue_phone"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-gray-700 dark:text-gray-300">Venue Phone Number</FormLabel>
+                <FormControl>
+                  <Input
+                    type="tel"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    placeholder="Enter 11-digit phone number"
+                    {...field}
+                    className="border-gray-300 dark:border-gray-600 focus:ring-green-500"
+                  />
+                </FormControl>
+                <FormDescription className="text-gray-500 dark:text-gray-400">
+                  Provide a WhatsApp-enabled phone number for booking inquiries (numbers only)
+                </FormDescription>
+                <FormMessage className="text-red-500" />
               </FormItem>
             )}
           />
 
           <FormField
             control={form.control}
-            name="state"
+            name="description"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-gray-700 dark:text-gray-300">State</FormLabel>
+                <FormLabel className="text-gray-700 dark:text-gray-300">Description (Optional)</FormLabel>
                 <FormControl>
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value}
-                  >
-                    <SelectTrigger className="border-gray-300 dark:border-gray-600 focus:ring-green-500">
-                      <SelectValue placeholder="Select a state" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {nigerianStates.map((state) => (
-                        <SelectItem key={state} value={state}>
-                          {state}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Textarea
+                    placeholder="Describe the venue, facilities, etc."
+                    {...field}
+                    className="border-gray-300 dark:border-gray-600 focus:ring-green-500"
+                  />
                 </FormControl>
                 <FormMessage className="text-red-500" />
               </FormItem>
             )}
           />
-        </div>
 
-        <FormField
-          control={form.control}
-          name="venue_phone"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-gray-700 dark:text-gray-300">Venue Phone Number</FormLabel>
-              <FormControl>
-                <Input
-                  type="tel"
-                  placeholder="Enter 11-digit phone number"
-                  {...field}
-                  className="border-gray-300 dark:border-gray-600 focus:ring-green-500"
-                />
-              </FormControl>
-              <FormDescription className="text-gray-500 dark:text-gray-400">
-                Provide a WhatsApp-enabled phone number for booking inquiries
-              </FormDescription>
-              <FormMessage className="text-red-500" />
-            </FormItem>
-          )}
-        />
+          <FormField
+            control={form.control}
+            name="map_link"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-gray-700 dark:text-gray-300">Google Maps Link (Optional)</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Paste Google Maps URL here"
+                    {...field}
+                    className="border-gray-300 dark:border-gray-600 focus:ring-green-500"
+                  />
+                </FormControl>
+                <FormDescription className="text-gray-500 dark:text-gray-400">
+                  Add a Google Maps link to help players find the venue easily
+                </FormDescription>
+                <FormMessage className="text-red-500" />
+              </FormItem>
+            )}
+          />
 
-        <FormField
-          control={form.control}
-          name="description"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-gray-700 dark:text-gray-300">Description (Optional)</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder="Describe the venue, facilities, etc."
-                  {...field}
-                  className="border-gray-300 dark:border-gray-600 focus:ring-green-500"
-                />
-              </FormControl>
-              <FormMessage className="text-red-500" />
-            </FormItem>
-          )}
-        />
+          <FormItem>
+            <FormLabel className="text-gray-700 dark:text-gray-300">Image (Optional)</FormLabel>
+            <div className="space-y-2">
+              {selectedFile ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-700 dark:text-gray-300">
+                    {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)}MB)
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={removeSelectedFile}
+                    className="text-red-500 hover:text-red-700"
+                  >
+                    <Trash2 size={16} />
+                  </Button>
+                </div>
+              ) : (
+                <FormControl>
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    ref={fileInputRef}
+                    onChange={(e) => handleFileChange(e.target.files)}
+                    className="border-gray-300 dark:border-gray-600 focus:ring-green-500"
+                  />
+                </FormControl>
+              )}
+            </div>
+            <FormDescription className="text-gray-500 dark:text-gray-400">
+              Upload 1 image (max 5MB) to showcase the venue
+            </FormDescription>
+            {fileError && <p className="text-red-500 text-sm">{fileError}</p>}
+          </FormItem>
 
-        <FormField
-          control={form.control}
-          name="map_link"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-gray-700 dark:text-gray-300">Google Maps Link (Optional)</FormLabel>
-              <FormControl>
-                <Input
-                  placeholder="Paste Google Maps URL here"
-                  {...field}
-                  className="border-gray-300 dark:border-gray-600 focus:ring-green-500"
-                />
-              </FormControl>
-              <FormDescription className="text-gray-500 dark:text-gray-400">
-                Add a Google Maps link to help players find the venue easily
-              </FormDescription>
-              <FormMessage className="text-red-500" />
-            </FormItem>
-          )}
-        />
-
-        <FormItem>
-          <FormLabel className="text-gray-700 dark:text-gray-300">Images (Optional, up to 5)</FormLabel>
-          <FormControl>
-            <Input
-              type="file"
-              accept="image/*"
-              multiple
-              ref={fileInputRef}
-              onChange={(e) => handleFileChange(e.target.files)}
-              className="border-gray-300 dark:border-gray-600 focus:ring-green-500"
-            />
-          </FormControl>
-          <FormDescription className="text-gray-500 dark:text-gray-400">
-            Upload up to 3 images (max 2MB each) to showcase the venue
-          </FormDescription>
-          {fileError && <p className="text-red-500 text-sm">{fileError}</p>}
-        </FormItem>
-
-        <Button
-          type="submit"
-          className="w-full bg-green-500 hover:bg-green-600 text-white"
-          disabled={loading}
-        >
-          {loading ? "Creating..." : "Create Venue"}
-        </Button>
-      </form>
-    </Form>
-  </div>
-);
+          <Button
+            type="submit"
+            className="w-full bg-green-500 hover:bg-green-600 text-white"
+            disabled={loading}
+          >
+            {loading ? "Creating..." : "Create Venue"}
+          </Button>
+        </form>
+      </Form>
+    </div>
+  );
 };
 
 export default VenueForm;
