@@ -102,7 +102,7 @@ const Feedback = () => {
   const isFeedbackExpired = () => {
     if (!match?.match_date || !match?.match_time) return true;
     const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
-    const now = new Date("2025-05-13T21:44:00+01:00"); // 09:44 PM WAT, May 13, 2025
+    const now = new Date("2025-05-13T22:02:00+01:00"); // 10:02 PM WAT, May 13, 2025
     const hoursSinceMatch = (now.getTime() - matchDateTime.getTime()) / (1000 * 60 * 60);
     return hoursSinceMatch > 48;
   };
@@ -116,6 +116,7 @@ const Feedback = () => {
     setHasSubmitted(false);
     setCode("");
     setCodeError(null);
+    setSummaryDialogOpen(false); // Prevent dialog from opening on page load
   }, [matchSlug]);
 
   const validateCode = async () => {
@@ -181,7 +182,26 @@ const Feedback = () => {
           .single();
 
         if (summaryData && !summaryError) {
-          setSummary(summaryData.summary);
+          const rawSummary = summaryData.summary;
+          // Normalize the summary format: convert strings to arrays if necessary
+          const normalizedSummary: FeedbackSummary = {
+            what_went_well: Array.isArray(rawSummary.what_went_well)
+              ? rawSummary.what_went_well
+              : typeof rawSummary.what_went_well === "string"
+              ? rawSummary.what_went_well.split("\n").filter(Boolean)
+              : [],
+            major_concerns: Array.isArray(rawSummary.major_concerns)
+              ? rawSummary.major_concerns
+              : typeof rawSummary.major_concerns === "string"
+              ? rawSummary.major_concerns.split("\n").filter(Boolean)
+              : [],
+            action_items: Array.isArray(rawSummary.action_items)
+              ? rawSummary.action_items
+              : typeof rawSummary.action_items === "string"
+              ? rawSummary.action_items.split("\n").filter(Boolean)
+              : [],
+          };
+          setSummary(normalizedSummary);
         }
 
         return;
@@ -294,8 +314,8 @@ const Feedback = () => {
       doc.rect(10, 10, 190, 40, "F");
       doc.setTextColor(255, 255, 255); // White text
       doc.setFontSize(20);
-      doc.text("PlayArena Feedback Report", 105, 30, { align: "center" });
-      const now = new Date("2025-05-13T21:44:00+01:00");
+      doc.text(`${match.title} Report`, 105, 30, { align: "center" });
+      const now = new Date("2025-05-13T22:02:00+01:00"); // 10:02 PM WAT, May 13, 2025
       doc.setFontSize(10);
       doc.text(`Generated: ${now.toLocaleString("en-NG", { timeZone: "Africa/Lagos" })}`, 105, 40, { align: "center" });
 
@@ -589,10 +609,10 @@ ${summary.action_items.map((item, i) => `${i + 1}. ${item}`).join("\n")}
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-sm font-medium">Referee Performance</FormLabel>
-<Select
-  onValueChange={(value) => field.onChange(parseInt(value))}
-  value={field.value.toString()}
->
+                      <Select
+                        onValueChange={(value) => field.onChange(parseInt(value))}
+                        value={field.value.toString()}
+                      >
                         <FormControl>
                           <SelectTrigger className="text-base">
                             <SelectValue placeholder="Select rating" />
@@ -858,7 +878,7 @@ ${summary.action_items.map((item, i) => `${i + 1}. ${item}`).join("\n")}
                       doc.setTextColor(255, 255, 255);
                       doc.setFontSize(24);
                       doc.text("PlayArena Feedback Summary", 105, 30, { align: "center" });
-                      const now = new Date("2025-05-13T21:44:00+01:00");
+                      const now = new Date("2025-05-13T22:02:00+01:00"); // 10:02 PM WAT, May 13, 2025
                       doc.setFontSize(12);
                       doc.text(`Date: ${now.toLocaleString("en-NG", { timeZone: "Africa/Lagos" })}`, 105, 40, { align: "center" });
 
