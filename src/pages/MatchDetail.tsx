@@ -601,39 +601,40 @@ const MatchDetail = () => {
               <p className="text-muted-foreground text-sm">No players have joined yet</p>
             )}
             
-<div className="mt-6">
-  {isFeedbackWindow ? (
-    <Button 
+            <div className="mt-6">
+              {isFeedbackWindow ? (
+<Button 
       className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
       onClick={() => navigate(`/feedback?matchSlug=${match.slug}`)}
     >
       Give Feedback
     </Button>
-  ) : (isPassed || isStarted) ? (
-    <Button 
-      className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
-      variant="outline"
-      disabled
-    >
-      {isPassed ? "Match Has Passed" : "Match Has Started"}
-    </Button>
-  ) : !isFull ? (
-    <Button 
-      className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
-      onClick={() => navigate(`/join/${match.slug}`)}
-    >
-      Join This Match
-    </Button>
-  ) : (
-    <Button 
-      className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
-      variant="outline"
-      disabled
-    >
-      Match Is Full
-    </Button>
-  )}
-</div>
+              ) : (isPassed || isStarted) ? (
+                <Button 
+                  className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
+                  variant="outline"
+                  disabled
+                >
+                  {isPassed ? "Match Has Passed" : "Match Has Started"}
+                </Button>
+              ) : !isFull ? (
+                <Button 
+                  className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
+                  onClick={() => navigate(`/join/${match.slug}`)}
+                >
+                  Join This Match
+                </Button>
+              ) : (
+                <Button 
+                  className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
+                  variant="outline"
+                  disabled
+                >
+                  Match Is Full
+                </Button>
+              )}
+            </div>
+          </div>
           
           <div className="flex gap-3 mt-6">
             <DropdownMenu>
@@ -786,7 +787,7 @@ const MatchDetail = () => {
             <p className="text-sm text-gray-500 dark:text-gray-400 my-4">
               <strong>Note:</strong> Save or share this card to invite players to your match.
             </p>
-<div className="flex gap-2">
+            <div className="flex gap-2">
               <Button 
                 className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
                 onClick={handleDownload}
@@ -804,10 +805,6 @@ const MatchDetail = () => {
           </DialogDescription>
         </DialogContent>
       </Dialog>
-    </div>
-    {/* Close the div from the earlier snippet (e.g., className="mt-6") */}
-    </div>
-    {/* Close the outer div wrapping the entire component */}
     </div>
   );
 };
