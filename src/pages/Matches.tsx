@@ -4,7 +4,6 @@ import Navbar from "@/components/Navbar";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Calendar, Clock, MapPin, Users, ChevronLeft, ChevronRight, Filter, Lock, ArrowLeft } from "lucide-react";
-import ThemeToggle from "@/components/ThemeToggle";
 import { useToast } from "@/hooks/use-toast";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -31,7 +30,7 @@ type Match = {
     slug: string;
     name: string;
     city: string;
-    state: string; // Added state to venue type
+    state: string;
   } | null;
   players: {
     player_name: string;
@@ -57,7 +56,7 @@ const Matches = () => {
   const [durationFilter, setDurationFilter] = useState<string>("all");
   const [timeStart, setTimeStart] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
-  const [stateFilter, setStateFilter] = useState<string | null>(null); // New state filter
+  const [stateFilter, setStateFilter] = useState<string | null>(null);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -79,8 +78,8 @@ const Matches = () => {
 
       if (error) throw error;
       setVenues(data as Venue[]);
-    } catch (error) {
-      console.error("Error fetching venues:", error);
+    } catch (error: any) {
+      console.error("Error fetching venues:", error.message);
       toast({
         title: "Error",
         description: "Failed to load venues for filter. Please try again.",
@@ -97,19 +96,14 @@ const Matches = () => {
         .select(
           `
           id, slug, title, match_date, match_time, total_slots, is_paid, price, notes, organizer_name, is_private, access_password,
-          venue:venues(slug, name, city, state), // Updated to include state
+          venue:venues(slug, name, city, state),
           players(*),
           created_at
         `,
           { count: "exact" }
         );
 
-      if (currentPage === 1) {
-        query = query.order("created_at", { ascending: false });
-      } else {
-        query = query.order("match_date", { ascending: true });
-      }
-
+      // Apply filters
       if (isPaidFilter !== null) {
         query = query.eq("is_paid", isPaidFilter);
       }
@@ -145,52 +139,30 @@ const Matches = () => {
             endDate = today;
         }
 
-        const startDateStr = startDate.toUTC().toISODate();
-        const endDateStr = endDate.toUTC().toISODate();
+        const startDateStr = startDate.toISODate();
+        const endDateStr = endDate.toISODate();
         query = query.gte("match_date", startDateStr!).lte("match_date", endDateStr!);
       }
       if (timeStart) {
         const timeRanges: { [key: string]: { start: string; end: string } } = {
-          morning: { start: "06:00:00", end: "12:00:00" },
-          afternoon: { start: "12:00:00", end: "18:00:00" },
+          morning: { start: "06:00:00", end: "11:59:59" },
+          afternoon: { start: "12:00:00", end: "17:59:59" },
           evening: { start: "18:00:00", end: "23:59:59" },
         };
         query = query.gte("match_time", timeRanges[timeStart].start).lte("match_time", timeRanges[timeStart].end);
-      }
-      if (statusFilter) {
-        const today = DateTime.now().setZone(LAGOS_TIMEZONE).startOf("day");
-        const todayStr = today.toISODate();
-        const now = DateTime.now().setZone(LAGOS_TIMEZONE);
-        const twoHoursLater = now.plus({ hours: 2 });
-        const twoHoursLaterTime = twoHoursLater.toFormat("HH:mm:ss");
-        const nowTime = now.toFormat("HH:mm:ss");
-
-        switch (statusFilter) {
-          case "Upcoming Match":
-            query = query.gt("match_date", todayStr!);
-            break;
-          case "Today's Match":
-            query = query
-              .eq("match_date", todayStr!)
-              .gt("match_time", twoHoursLaterTime);
-            break;
-          case "Live Match":
-            query = query
-              .eq("match_date", todayStr!)
-              .lte("match_time", twoHoursLaterTime)
-              .gte("match_time", nowTime);
-            break;
-          case "Match Passed":
-            query = query.or(
-              `match_date.lt.${todayStr!},and(match_date.eq.${todayStr!},match_time.lt.${nowTime})`
-            );
-            break;
-        }
       }
       if (stateFilter && stateFilter !== "all") {
         query = query.eq("venue.state", stateFilter);
       }
 
+      // Sorting logic
+      if (currentPage === 1) {
+        query = query.order("created_at", { ascending: false });
+      } else {
+        query = query.order("match_date", { ascending: true }).order("match_time", { ascending: true });
+      }
+
+      // Pagination
       const start = (currentPage - 1) * matchesPerPage;
       const end = start + matchesPerPage - 1;
       query = query.range(start, end);
@@ -199,30 +171,18 @@ const Matches = () => {
 
       if (error) throw error;
 
-      const sortedMatches = data as Match[];
-      sortedMatches.sort((a, b) => {
-        const statusA = getMatchStatus(a.match_date, a.match_time).statusLabel;
-        const statusB = getMatchStatus(b.match_date, b.match_time).statusLabel;
-        const statusOrder = { "Live Match": 0, "Today's Match": 1, "Upcoming Match": 2, "Match Passed": 3 };
-        return statusOrder[statusA] - statusOrder[statusB] || 
-               (currentPage === 1 ? new Date(b.created_at).getTime() - new Date(a.created_at).getTime() : 
-               DateTime.fromISO(`${a.match_date}T${a.match_time}Z`).toMillis() - 
-               DateTime.fromISO(`${b.match_date}T${b.match_time}Z`).toMillis());
-      });
-
-      setMatches(sortedMatches);
+      const fetchedMatches = data as Match[];
+      setMatches(fetchedMatches);
       setTotalMatches(count || 0);
     } catch (error: any) {
       console.error("Error fetching matches:", error.message);
       setMatches([]);
       setTotalMatches(0);
-      if (error.code !== "PGRST116" && error.message !== "JSON object requested, multiple (or no) rows returned") {
-        toast({
-          title: "Error",
-          description: "Failed to load matches. Please try again.",
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Error",
+        description: "Failed to load matches. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -236,6 +196,35 @@ const Matches = () => {
   const formatTime = (timeString: string) => {
     const time = DateTime.fromISO(`2000-01-01T${timeString}Z`, { zone: "utc" }).setZone(LAGOS_TIMEZONE);
     return time.toFormat("hh:mm a");
+  };
+
+  const getMatchStatus = (matchDate: string, matchTime: string) => {
+    const matchDateTime = DateTime.fromISO(`${matchDate}T${matchTime}`, { zone: "utc" }).setZone(LAGOS_TIMEZONE);
+    const now = DateTime.now().setZone(LAGOS_TIMEZONE);
+    const twoHoursLater = now.plus({ hours: 2 });
+
+    let statusLabel = "Upcoming Match";
+    let statusClass = "bg-blue-100 text-blue-800";
+
+    if (matchDateTime < now) {
+      statusLabel = "Match Passed";
+      statusClass = "bg-gray-200 text-gray-600";
+    } else if (matchDateTime.hasSame(now, "day")) {
+      const hoursDiff = matchDateTime.diff(now, "hours").hours;
+      if (hoursDiff >= 0 && hoursDiff <= 2) {
+        statusLabel = "Live Match";
+        statusClass = "bg-red-100 text-red-700 animate-pulse";
+      } else if (hoursDiff > 2) {
+        statusLabel = "Today's Match";
+        statusClass = "bg-green-100 text-green-700";
+      }
+    }
+
+    return { statusLabel, statusClass };
+  };
+
+  const hasAccess = (matchSlug: string) => {
+    return !!localStorage.getItem(`match_access_${matchSlug}`);
   };
 
   const totalPages = Math.ceil(totalMatches / matchesPerPage);
@@ -258,58 +247,22 @@ const Matches = () => {
     setDurationFilter("all");
     setTimeStart("");
     setStatusFilter(null);
-    setStateFilter(null); // Reset state filter
+    setStateFilter(null);
     setCurrentPage(1);
   };
 
-  const getMatchStatus = (matchDate: string, matchTime: string) => {
-    const matchDateTime = DateTime.fromISO(`${matchDate}T${matchTime}Z`, { zone: "utc" }).setZone(LAGOS_TIMEZONE);
-    const now = DateTime.now().setZone(LAGOS_TIMEZONE);
-    const twoHoursLater = now.plus({ hours: 2 });
-
-    let statusLabel = "Upcoming Match";
-    let statusClass = "bg-blue-100 text-blue-800";
-
-    if (matchDateTime < now) {
-      statusLabel = "Match Passed";
-      statusClass = "bg-gray-200 text-gray-600";
-    } else if (matchDateTime.hasSame(now, "day")) {
-      const hoursDiff = matchDateTime.diff(now, "hours").hours;
-      if (hoursDiff >= 0 && hoursDiff <= 2) {
-        statusLabel = "Live Match";
-        statusClass = "bg-red-100 text-red-700 animate-pulse";
-      } else if (hoursDiff > 2) {
-        statusLabel = "Today's Match";
-        statusClass = "bg-green-100 text-green-700";
-      } else {
-        statusLabel = "Match Passed";
-        statusClass = "bg-gray-200 text-gray-600";
-      }
-    } else if (matchDateTime > twoHoursLater) {
-      statusLabel = "Upcoming Match";
-      statusClass = "bg-blue-100 text-blue-800";
-    }
-
-    return { statusLabel, statusClass };
-  };
-
-  const hasAccess = (matchSlug: string) => {
-    return !!localStorage.getItem(`match_access_${matchSlug}`);
-  };
-
-  // Nigerian states including FCT
   const nigerianStates = [
-    "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", "Borno", 
-    "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu", "FCT", "Gombe", 
-    "Imo", "Jigawa", "Kaduna", "Kano", "Katsina", "Kebbi", "Kogi", "Kwara", 
-    "Lagos", "Nasarawa", "Niger", "Ogun", "Ondo", "Osun", "Oyo", "Plateau", 
+    "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", "Borno",
+    "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu", "FCT", "Gombe",
+    "Imo", "Jigawa", "Kaduna", "Kano", "Katsina", "Kebbi", "Kogi", "Kwara",
+    "Lagos", "Nasarawa", "Niger", "Ogun", "Ondo", "Osun", "Oyo", "Plateau",
     "Rivers", "Sokoto", "Taraba", "Yobe", "Zamfara"
   ];
 
   return (
-    <div className="min-h-screen pb-20">
+    <div className="min-h-screen pb-20 bg-gray-100 dark:bg-gray-900">
       <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between max-w-7xl mx-auto">
           <Button 
             variant="ghost" 
             onClick={() => navigate(-1)} 
@@ -330,11 +283,11 @@ const Matches = () => {
         </div>
       </header>
 
-      <div className="mt-6"> {/* Added spacing between header and filter */}
+      <div className="mt-6 px-4">
         <Collapsible
           open={isFilterOpen}
           onOpenChange={setIsFilterOpen}
-          className="px-4 mb-4"
+          className="mb-4"
         >
           <CollapsibleTrigger asChild>
             <Button variant="outline" className="w-full sm:w-auto">
@@ -342,10 +295,10 @@ const Matches = () => {
               {isFilterOpen ? "Hide Filters" : "Show Filters"}
             </Button>
           </CollapsibleTrigger>
-          <CollapsibleContent className="mt-4 p-4 border rounded-lg bg-card space-y-4">
+          <CollapsibleContent className="mt-4 p-4 border rounded-lg bg-white dark:bg-gray-800 space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="is-paid-filter">Payment Type</Label>
+                <Label htmlFor="is-paid-filter" className="text-gray-700 dark:text-gray-300">Payment Type</Label>
                 <Select
                   value={isPaidFilter === null ? "all" : isPaidFilter ? "paid" : "free"}
                   onValueChange={(value) => {
@@ -353,7 +306,7 @@ const Matches = () => {
                     setCurrentPage(1);
                   }}
                 >
-                  <SelectTrigger id="is-paid-filter">
+                  <SelectTrigger id="is-paid-filter" className="border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                     <SelectValue placeholder="Select payment type" />
                   </SelectTrigger>
                   <SelectContent>
@@ -365,7 +318,7 @@ const Matches = () => {
               </div>
 
               <div>
-                <Label htmlFor="venue-filter">Venue</Label>
+                <Label htmlFor="venue-filter" className="text-gray-700 dark:text-gray-300">Venue</Label>
                 <Select
                   value={venueFilter || "all"}
                   onValueChange={(value) => {
@@ -373,7 +326,7 @@ const Matches = () => {
                     setCurrentPage(1);
                   }}
                 >
-                  <SelectTrigger id="venue-filter">
+                  <SelectTrigger id="venue-filter" className="border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                     <SelectValue placeholder="Select venue" />
                   </SelectTrigger>
                   <SelectContent>
@@ -388,7 +341,7 @@ const Matches = () => {
               </div>
 
               <div>
-                <Label htmlFor="duration-filter">Duration</Label>
+                <Label htmlFor="duration-filter" className="text-gray-700 dark:text-gray-300">Duration</Label>
                 <Select
                   value={durationFilter}
                   onValueChange={(value) => {
@@ -396,7 +349,7 @@ const Matches = () => {
                     setCurrentPage(1);
                   }}
                 >
-                  <SelectTrigger id="duration-filter">
+                  <SelectTrigger id="duration-filter" className="border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                     <SelectValue placeholder="Select duration" />
                   </SelectTrigger>
                   <SelectContent>
@@ -410,7 +363,7 @@ const Matches = () => {
               </div>
 
               <div>
-                <Label htmlFor="time-start">Start Time</Label>
+                <Label htmlFor="time-start" className="text-gray-700 dark:text-gray-300">Start Time</Label>
                 <Select
                   value={timeStart || "all"}
                   onValueChange={(value) => {
@@ -418,7 +371,7 @@ const Matches = () => {
                     setCurrentPage(1);
                   }}
                 >
-                  <SelectTrigger id="time-start">
+                  <SelectTrigger id="time-start" className="border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                     <SelectValue placeholder="Select start time" />
                   </SelectTrigger>
                   <SelectContent>
@@ -431,29 +384,7 @@ const Matches = () => {
               </div>
 
               <div>
-                <Label htmlFor="status-filter">Status</Label>
-                <Select
-                  value={statusFilter || "all"}
-                  onValueChange={(value) => {
-                    setStatusFilter(value === "all" ? null : value);
-                    setCurrentPage(1);
-                  }}
-                >
-                  <SelectTrigger id="status-filter">
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Statuses</SelectItem>
-                    <SelectItem value="Live Match">Live Match</SelectItem>
-                    <SelectItem value="Today's Match">Today's Match</SelectItem>
-                    <SelectItem value="Upcoming Match">Upcoming Match</SelectItem>
-                    <SelectItem value="Match Passed">Match Passed</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="state-filter">State</Label>
+                <Label htmlFor="state-filter" className="text-gray-700 dark:text-gray-300">State</Label>
                 <Select
                   value={stateFilter || "all"}
                   onValueChange={(value) => {
@@ -461,7 +392,7 @@ const Matches = () => {
                     setCurrentPage(1);
                   }}
                 >
-                  <SelectTrigger id="state-filter">
+                  <SelectTrigger id="state-filter" className="border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                     <SelectValue placeholder="Select state" />
                   </SelectTrigger>
                   <SelectContent>
@@ -495,11 +426,11 @@ const Matches = () => {
             return (
               <div 
                 key={match.id} 
-                className="border rounded-lg overflow-hidden shadow-sm bg-card"
+                className="border rounded-lg overflow-hidden shadow-sm bg-white dark:bg-gray-800"
               >
                 <div className="p-4">
                   <div className="flex justify-between items-start">
-                    <h3 className="font-bold text-lg">
+                    <h3 className="font-bold text-lg text-gray-800 dark:text-gray-200">
                       {match.title}{" "}
                       {match.is_private && (
                         <TooltipProvider>
@@ -528,7 +459,7 @@ const Matches = () => {
                     </div>
                   </div>
                   
-                  <div className="mt-2 space-y-2 text-sm">
+                  <div className="mt-2 space-y-2 text-sm text-gray-600 dark:text-gray-400">
                     <div className="flex items-center gap-2">
                       <Calendar size={16} />
                       <span>{formatDate(match.match_date)}</span>
@@ -566,7 +497,7 @@ const Matches = () => {
                   <div className="mt-4 flex justify-between items-center">
                     <div>
                       <span className="text-xs text-muted-foreground">Organized by:</span>
-                      <p className="font-medium">{match.organizer_name}</p>
+                      <p className="font-medium text-gray-800 dark:text-gray-200">{match.organizer_name}</p>
                     </div>
                     
                     <Button 
@@ -591,7 +522,7 @@ const Matches = () => {
               <ChevronLeft size={16} className="mr-2" />
               Previous
             </Button>
-            <span>
+            <span className="text-gray-700 dark:text-gray-300">
               Page {currentPage} of {totalPages}
             </span>
             <Button
@@ -605,7 +536,7 @@ const Matches = () => {
           </div>
         </div>
       ) : (
-        <div className="flex items-center justify-center h-[70vh] flex-col gap-4">
+        <div className="flex items-center justify-center h-[50vh] flex-col gap-4">
           <p className="text-muted-foreground text-center p-4">
             No matches found. Create or join a match to see it here.
           </p>
