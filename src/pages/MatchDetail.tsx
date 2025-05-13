@@ -33,7 +33,7 @@ import {
   DialogFooter,
   DialogHeader,
 } from "@/components/ui/dialog";
-import { format, isToday, isPast, differenceInHours, addDays } from "date-fns";
+import { format, isToday, isPast, differenceInHours, addDays, addHours } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -222,7 +222,10 @@ const MatchDetail = () => {
   };
 
   const formatTime = (timeString: string) => {
-    return timeString.slice(0, 5);
+    const [hours, minutes] = timeString.split(":");
+    const date = new Date();
+    date.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+    return date.toLocaleTimeString("en-NG", { hour: "2-digit", minute: "2-digit", hour12: true });
   };
 
   const getMatchStatus = () => {
@@ -230,13 +233,15 @@ const MatchDetail = () => {
     
     const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
     const now = new Date();
+    const oneHourAfter = addHours(matchDateTime, 1);
     const nextDay = addDays(matchDateTime, 1);
     
     const isFull = match.players?.length >= match.total_slots;
     const isStarted = now >= matchDateTime;
     const isPassed = now >= nextDay;
+    const isFeedbackWindow = now >= oneHourAfter && now < nextDay;
     
-    return { isStarted, isPassed, isFull };
+    return { isStarted, isPassed, isFull, isFeedbackWindow };
   };
 
   const shareMatch = async () => {
@@ -448,7 +453,7 @@ const MatchDetail = () => {
     );
   }
 
-  const { isStarted, isPassed, isFull } = getMatchStatus();
+  const { isStarted, isPassed, isFull, isFeedbackWindow } = getMatchStatus();
 
   return (
     <div className="min-h-screen pb-20">
@@ -610,16 +615,14 @@ const MatchDetail = () => {
             )}
             
             <div className="mt-6">
-              {!isPassed && !isStarted && !isFull && (
+              {isFeedbackWindow ? (
                 <Button 
                   className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
-                  onClick={() => navigate(`/join/${match.slug}`)}
+                  onClick={() => navigate(`/feedback?matchId=${match.id}`)}
                 >
-                  Join This Match
+                  Give Feedback
                 </Button>
-              )}
-              
-              {(isPassed || isStarted) && (
+              ) : (isPassed || isStarted) ? (
                 <Button 
                   className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
                   variant="outline"
@@ -627,9 +630,14 @@ const MatchDetail = () => {
                 >
                   {isPassed ? "Match Has Passed" : "Match Has Started"}
                 </Button>
-              )}
-              
-              {!isPassed && !isStarted && isFull && (
+              ) : !isFull ? (
+                <Button 
+                  className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
+                  onClick={() => navigate(`/join/${match.slug}`)}
+                >
+                  Join This Match
+                </Button>
+              ) : (
                 <Button 
                   className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
                   variant="outline"
