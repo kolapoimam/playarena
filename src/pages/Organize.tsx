@@ -73,7 +73,7 @@ const formSchema = z.object({
     
   price: z.number()
     .min(0, { message: "Price cannot be negative" })
-    .max(10000, { message: "Maximum price is ₦10,000" })
+    .max(100000, { message: "Maximum price is ₦100,000" })
     .optional()
     .nullable()
     .refine(val => val === null || val === undefined || val >= 0, {
@@ -85,7 +85,7 @@ const formSchema = z.object({
     .optional(),
     
   organizer_name: z.string()
-    .min(2, { message: "Name must be at least 2 characters" })
+    .min(3, { message: "Name must be at least 3 characters" })
     .max(50, { message: "Name cannot exceed 50 characters" }),
     
   organizer_phone: z.string()
@@ -491,7 +491,26 @@ const Organize = () => {
                   </FormItem>
                 )}
               />
+
+                            <FormField
+                control={form.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Notes (Optional)</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="E.g., Bring boots, parking available, etc."
+                        className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
+            
 
             {/* Payment and Privacy Section */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
@@ -643,24 +662,6 @@ const Organize = () => {
             {/* Organizer Details Section */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
               <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Organizer Details</h2>
-
-              <FormField
-                control={form.control}
-                name="notes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Notes (Optional)</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="E.g., Bring boots, parking available, etc."
-                        className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
 
               <FormField
                 control={form.control}
