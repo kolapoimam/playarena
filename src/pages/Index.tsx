@@ -4,10 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Store, Plus, Calendar, Users, Clock } from "lucide-react";
 import SearchBar from "@/components/SearchBar";
 import Navbar from "@/components/Navbar";
-import ThemeToggle from "@/components/ThemeToggle";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
+import ThemeToggle, { useTheme } from "@/components/ThemeToggle";
+
 
 type Match = {
   id: string;
@@ -138,15 +139,15 @@ const Index = () => {
 
   return (
 <div className="min-h-screen pb-20">
-  <header className="sticky top-0 z-50 p-4 flex items-center bg-green-50 dark:bg-green-900 shadow-md mb-4">
-    <img
-      src={theme === "dark" ? "/playarenadark.png" : "/playarenalight.png"}
-      alt="PlayArena Logo"
-      className="h-10 w-auto object-contain"
-    />
-    <div className="flex-grow" /> {/* This empty div will push the toggle to the right */}
-    <ThemeToggle />
-  </header>
+<header className="sticky top-0 z-50 p-4 flex items-center bg-green-50 dark:bg-green-900 shadow-md mb-4">
+  <img
+    src={theme === "dark" ? "/playarenadark.png" : "/playarenalight.png"}
+    alt="PlayArena Logo"
+    className="h-10 w-auto object-contain"
+  />
+  <div className="flex-grow" />
+  <ThemeToggle />
+</header>
 
       <div className="px-4 mb-6 mt-4">
         <SearchBar />
