@@ -33,12 +33,11 @@ import {
   DialogFooter,
   DialogHeader,
 } from "@/components/ui/dialog";
-import { format, isToday, isPast, differenceInHours, addDays, addHours } from "date-fns";
+import { format, isToday, isPast, differenceInHours, addHours } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import html2canvas from "html2canvas";
-import * as ics from "ics";
 
 // Match type definition
 type Match = {
@@ -350,48 +349,22 @@ const MatchDetail = () => {
     const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
     const endDateTime = new Date(matchDateTime.getTime() + 2 * 60 * 60 * 1000);
 
-    const event: ics.EventAttributes = {
-      start: [
-        matchDateTime.getFullYear(),
-        matchDateTime.getMonth() + 1,
-        matchDateTime.getDate(),
-        matchDateTime.getHours(),
-        matchDateTime.getMinutes(),
-      ],
-      end: [
-        endDateTime.getFullYear(),
-        endDateTime.getMonth() + 1,
-        endDateTime.getDate(),
-        endDateTime.getHours(),
-        endDateTime.getMinutes(),
-      ],
-      title: match.title,
-      description: `Football Match organized by ${match.organizer_name}. Match Slug: ${match.slug}. Venue: ${match.venue?.name || 'Unknown'}, ${match.venue?.city || ''}. Powered by PlayArena.${match.is_private ? ` (Access Password: ${match.access_password})` : ''}`,
-      location: match.venue ? `${match.venue.name}, ${match.venue.city}` : "Unknown Venue",
-      url: `${window.location.origin}/match/${match.slug}`,
-      status: "CONFIRMED",
-      organizer: { name: match.organizer_name, email: "noreply@playarena.com" },
+    // Format dates for Google Calendar (YYYYMMDDTHHMMSSZ)
+    const formatGoogleDate = (date: Date) => {
+      const pad = (num: number) => num.toString().padStart(2, '0');
+      return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}T${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`;
     };
 
-    const { error, value } = ics.createEvent(event);
+    const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE` +
+      `&text=${encodeURIComponent(match.title)}` +
+      `&dates=${formatGoogleDate(matchDateTime)}/${formatGoogleDate(endDateTime)}` +
+      `&location=${encodeURIComponent(match.venue ? `${match.venue.name}, ${match.venue.city}` : 'Unknown Venue')}` +
+      `&details=${encodeURIComponent(
+        `Football Match organized by ${match.organizer_name}. Match Slug: ${match.slug}. Venue: ${match.venue?.name || 'Unknown'}, ${match.venue?.city || ''}. Powered by PlayArena.${match.is_private ? ` (Access Password: ${match.access_password})` : ''}`
+      )}` +
+      `&sf=true&output=xml`;
 
-    if (error || !value) {
-      console.error("Error creating calendar event:", error);
-      toast({
-        title: "Error",
-        description: "Failed to create calendar event. Please try again.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const blob = new Blob([value], { type: "text/calendar" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `PlayArena-Match-${match.slug}.ics`;
-    link.click();
-    URL.revokeObjectURL(url);
+    window.open(googleCalendarUrl, '_blank');
   };
 
   if (loading) {
@@ -597,8 +570,7 @@ const MatchDetail = () => {
                         {player.player_name.charAt(0).toUpperCase()}
                       </span>
                       <span>
-                        {match.is_paid && player.number_of_slots > 1 ? `${player.number_of_slots} - ` : ""}
-                        {player.player_name}
+                        {player.number_of_slots > 1 ? `${player.player_name} (${player.number_of_slots})` : player.player_name}
                       </span>
                     </div>
                     <Badge
@@ -793,7 +765,7 @@ const MatchDetail = () => {
                   </div>
                   <div className="flex items-center">
                     <DollarSign className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-                    <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{match.is_paid ? `Paid (₦{match.price?.toFixed(2)})` : "Free"}</span>
+                    <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{match.is_paid ? `Paid (₦${match.price?.toFixed(2)})` : "Free"}</span>
                   </div>
                   <div className="flex items-center">
                     <Users className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
