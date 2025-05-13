@@ -80,6 +80,7 @@ const accountNameSchema = z
 
 // List of Nigerian banks
 const nigerianBanks = [
+  // Traditional Commercial Banks
   "Access Bank",
   "Citibank Nigeria",
   "Ecobank Nigeria",
@@ -95,11 +96,42 @@ const nigerianBanks = [
   "Stanbic IBTC Bank",
   "Standard Chartered Bank",
   "Sterling Bank",
+  "Titan Trust Bank",
   "Union Bank of Nigeria",
   "United Bank for Africa (UBA)",
   "Unity Bank",
   "Wema Bank",
   "Zenith Bank",
+
+  // New/Niche Commercial Banks
+  "SunTrust Bank Nigeria Limited",
+  "Parallex Bank",
+  "TAJ Bank", // Non-interest bank
+  "Lotus Bank", // Non-interest bank
+
+  // Microfinance Banks (Licensed Digital-First or Mobile-Based)
+  "Opay (Paycom MFB)",
+  "PalmPay (PalmPay Ltd. MFB)",
+  "Moniepoint MFB",
+  "Kuda Bank (Kuda MFB)",
+  "Rubies Bank (Rubies MFB)",
+  "Sparkle MFB",
+  "VFD MFB",
+  "FairMoney MFB",
+  "Carbon (One Finance MFB)",
+  "Mint MFB",
+  "Eyowo MFB",
+  "GoMoney (Go Financial Services)",
+  "ALAT by Wema", // Product of Wema Bank
+  "Branch MFB",
+  "9Pay MFB",
+  "MKOBO MFB",
+
+  // Others (Licensed or Active)
+  "PayDay (Africhange Technologies)",
+  "Chipper Cash (Chipper Technologies)",
+  "Paga",
+  "NowNow MFB",
 ];
 
 const ConfirmCheckin = () => {
@@ -125,15 +157,32 @@ const ConfirmCheckin = () => {
   const [accountNameError, setAccountNameError] = useState<string | null>(null);
   const codeInputRef = useRef<HTMLInputElement>(null);
 
+  const resetState = () => {
+    setMatch(null);
+    setCashout(null);
+    setMatchNotFound(false);
+    setMode(null);
+    setPlayerStatuses([]);
+    setCheckinCodes({});
+    setCheckinCodeErrors({});
+    setCashoutDialogOpen(false);
+    setBankAccountNumber("");
+    setBankName("");
+    setAccountName("");
+    setBankAccountError(null);
+    setAccountNameError(null);
+  };
+
   const fetchMatch = async () => {
     const validation = codeSchema.safeParse(superCode);
     if (!validation.success) {
       setSuperCodeError(validation.error.errors[0].message);
+      setMatchNotFound(false);
+      resetState();
       return;
     }
     setSuperCodeError(null);
     setMatchNotFound(false);
-
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -150,6 +199,7 @@ const ConfirmCheckin = () => {
 
       if (!data) {
         setMatchNotFound(true);
+        resetState();
         toast({
           title: "Match Not Found",
           description: `No match found with super code ${superCode}. Please check the code and try again.`,
@@ -189,6 +239,7 @@ const ConfirmCheckin = () => {
     } catch (error: any) {
       console.error("Error fetching match:", error.message, error.details || error);
       setMatchNotFound(true);
+      resetState();
       toast({
         title: "Error",
         description: error.message.includes("0 rows") 
@@ -200,6 +251,14 @@ const ConfirmCheckin = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (superCode && codeSchema.safeParse(superCode).success) {
+      fetchMatch();
+    } else {
+      resetState();
+    }
+  }, [superCode]);
 
   const isMatchStarted = () => {
     if (!match) return false;
@@ -448,24 +507,26 @@ const ConfirmCheckin = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-gradient-to-r from-playarena-500 to-playarena-700 text-white py-6 px-4">
-        <Button
-          variant="ghost"
-          onClick={() => navigate(-1)}
-          className="text-white hover:bg-white/20 mb-4"
-        >
-          <ArrowLeft size={18} className="mr-2" />
-          Back
-        </Button>
-        <h1 className="text-3xl font-bold">Manage Matches</h1>
-        <p className="text-sm mt-1 opacity-80">Manage player confirmations, check-ins, and cashouts</p>
-      </div>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-20">
+      <header className="sticky top-0 z-50 bg-green-500 text-white shadow-md">
+        <div className="p-4 flex items-center justify-between">
+          <Button
+            variant="ghost"
+            onClick={() => navigate(-1)}
+            className="text-white hover:text-gray-200"
+          >
+            <ArrowLeft size={18} className="mr-2" />
+            Back
+          </Button>
+          <h1 className="text-2xl font-bold">Manage Matches</h1>
+          <div className="w-10"></div>
+        </div>
+      </header>
 
-      <div className="max-w-4xl mx-auto p-4 -mt-8 pb-20">
-        <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Enter Match Super Code</h2>
-          <div className="flex flex-col sm:flex-row gap-3">
+      <div className="max-w-4xl mx-auto p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6 border border-gray-200 dark:border-gray-700">
+          <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Enter Match Super Code</h2>
+          <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1">
               <Input
                 placeholder="Enter 6-digit super code"
@@ -479,14 +540,15 @@ const ConfirmCheckin = () => {
                 inputMode="numeric"
                 pattern="[0-9]*"
                 maxLength={6}
-                className="w-full"
+                className="w-full text-base"
+                ref={codeInputRef}
               />
               {superCodeError && (
                 <p className="text-sm text-red-600 mt-1">{superCodeError}</p>
               )}
             </div>
             <Button
-              className="bg-playarena-500 hover:bg-playarena-600 text-white px-6"
+              className="bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 w-full sm:w-auto"
               onClick={fetchMatch}
               disabled={loading}
             >
@@ -503,20 +565,20 @@ const ConfirmCheckin = () => {
         </div>
 
         {matchNotFound && !loading && (
-          <div className="bg-white rounded-xl shadow-lg p-6 mb-6 text-center">
-            <AlertCircle size={40} className="text-red-500 mx-auto mb-3" />
-            <h2 className="text-lg font-semibold text-red-600">Match Not Found</h2>
-            <p className="text-muted-foreground mt-2">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6 text-center border border-gray-200 dark:border-gray-700">
+            <AlertCircle size={40} className="text-red-fh6 dark:text-red-500 mx-auto mb-3" />
+            <h2 className="text-lg font-semibold text-red-600 dark:text-red-500">Match Not Found</h2>
+            <p className="text-gray-600 dark:text-gray-400 mt-2">
               No match found with super code <strong>{superCode}</strong>. Please check the code and try again.
             </p>
           </div>
         )}
 
         {match && (
-          <div className="animate-fade-in">
-            <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+          <div className="animate-fade-in space-y-6">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold">Match Details</h2>
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Match Details</h2>
                 {cashout && (
                   <span
                     className={`inline-block px-3 py-1 text-sm font-medium rounded border ${getStatusStyles(cashout.status)}`}
@@ -527,55 +589,55 @@ const ConfirmCheckin = () => {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex items-center gap-3">
-                  <Trophy size={20} className="text-playarena-500" />
+                  <Trophy size={20} className="text-green-500" />
                   <div>
-                    <p className="font-medium">{match.title || "Untitled Match"}</p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="font-medium text-gray-900 dark:text-gray-100">{match.title || "Untitled Match"}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
                       Organized by {match.organizer_name || "Unknown Organizer"}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <MapPin size={20} className="text-playarena-500" />
-                  <span>
+                  <MapPin size={20} className="text-green-500" />
+                  <span className="text-gray-900 dark:text-gray-100">
                     {match.venue?.name || "Unknown Venue"}, {match.venue?.city || "Unknown City"}
                   </span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Calendar size={20} className="text-playarena-500" />
-                  <span>{match.match_date ? formatDate(match.match_date) : "Date TBD"}</span>
+                  <Calendar size={20} className="text-green-500" />
+                  <span className="text-gray-900 dark:text-gray-100">{match.match_date ? formatDate(match.match_date) : "Date TBD"}</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Clock size={20} className="text-playarena-500" />
-                  <span>{match.match_time ? formatTime(match.match_time) : "Time TBD"}</span>
+                  <Clock size={20} className="text-green-500" />
+                  <span className="text-gray-900 dark:text-gray-100">{match.match_time ? formatTime(match.match_time) : "Time TBD"}</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Users size={20} className="text-playarena-500" />
-                  <span>{(match.players || []).length}/{match.total_slots || 0} players</span>
+                  <Users size={20} className="text-green-500" />
+                  <span className="text-gray-900 dark:text-gray-100">{(match.players || []).length}/{match.total_slots || 0} players</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <DollarSign size={20} className="text-playarena-500" />
-                  <span>{match.is_paid ? "Paid" : "Free"}</span>
+                  <DollarSign size={20} className="text-green-500" />
+                  <span className="text-gray-900 dark:text-gray-100">{match.is_paid ? "Paid" : "Free"}</span>
                 </div>
               </div>
             </div>
 
             {cashout && cashout.status === "under_review" && (
-              <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
-                <h2 className="text-xl font-semibold mb-4">Cashout Under Review</h2>
-                <p className="text-muted-foreground">
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700">
+                <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Cashout Under Review</h2>
+                <p className="text-gray-600 dark:text-gray-400">
                   Your cashout request is being processed. You'll be notified once it's reviewed.
                 </p>
               </div>
             )}
 
-            <div className="flex flex-col sm:flex-row gap-4 mb-6">
+            <div className="flex flex-col sm:flex-row gap-4">
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <span>
                       <Button
-                        className="flex-1 bg-playarena-500 hover:bg-playarena-600 text-white"
+                        className="flex-1 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 w-full sm:w-auto"
                         onClick={handleConfirmMode}
                         disabled={isMatchStarted()}
                       >
@@ -597,7 +659,7 @@ const ConfirmCheckin = () => {
                   <TooltipTrigger asChild>
                     <span>
                       <Button
-                        className="flex-1 bg-playarena-500 hover:bg-playarena-600 text-white"
+                        className="flex-1 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 w-full sm:w-auto"
                         onClick={handleCheckinMode}
                         disabled={isMatchStarted()}
                       >
@@ -616,7 +678,7 @@ const ConfirmCheckin = () => {
 
               {!cashout && (
                 <Button
-                  className="flex-1 bg-playarena-500 hover:bg-playarena-600 text-white"
+                  className="flex-1 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 w-full sm:w-auto"
                   onClick={handleCashoutMode}
                 >
                   <DollarSign size={18} className="mr-2" />
@@ -626,8 +688,8 @@ const ConfirmCheckin = () => {
             </div>
 
             {mode === "confirm" && (
-              <div className="bg-white rounded-xl shadow-lg p-6">
-                <h2 className="text-xl font-semibold mb-4">Confirm Players</h2>
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700">
+                <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Confirm Players</h2>
                 {(match.players || []).length > 0 ? (
                   <div className="space-y-3 max-h-[50vh] overflow-y-auto">
                     {(match.players || []).map((player) => {
@@ -635,15 +697,15 @@ const ConfirmCheckin = () => {
                       return (
                         <div
                           key={player.id}
-                          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
+                          className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition"
                         >
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-playarena-100 flex items-center justify-center text-playarena-600 font-semibold">
+                            <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center text-green-600 dark:text-green-400 font-semibold">
                               {(player.player_name || "Unknown").charAt(0).toUpperCase()}
                             </div>
                             <div>
-                              <span className="font-medium">{player.player_name || "Unknown Player"}</span>
-                              <p className="text-sm text-muted-foreground">
+                              <span className="font-medium text-gray-900 dark:text-gray-100">{player.player_name || "Unknown Player"}</span>
+                              <p className="text-sm text-gray-600 dark:text-gray-400">
                                 Phone: {player.details?.phone || "N/A"}
                               </p>
                               <span
@@ -659,11 +721,11 @@ const ConfirmCheckin = () => {
                               size="sm"
                               onClick={() => handleStatusChange(player.id, "confirmed")}
                               disabled={currentStatus === "checked_in"}
-                              className="hover:bg-green-100"
+                              className="hover:bg-green-100 dark:hover:bg-green-900"
                             >
                               <CheckCircle
                                 size={20}
-                                className={currentStatus === "confirmed" ? "text-green-500" : "text-gray-500"}
+                                className={currentStatus === "confirmed" ? "text-green-500" : "text-gray-500 dark:text-gray-400"}
                               />
                             </Button>
                             <Button
@@ -671,11 +733,11 @@ const ConfirmCheckin = () => {
                               size="sm"
                               onClick={() => handleStatusChange(player.id, "pending")}
                               disabled={currentStatus === "checked_in"}
-                              className="hover:bg-red-100"
+                              className="hover:bg-red-100 dark:hover:bg-red-900"
                             >
                               <XCircle
                                 size={20}
-                                className={currentStatus === "pending" ? "text-red-500" : "text-gray-500"}
+                                className={currentStatus === "pending" ? "text-red-500" : "text-gray-500 dark:text-gray-400"}
                               />
                             </Button>
                           </div>
@@ -683,7 +745,7 @@ const ConfirmCheckin = () => {
                       );
                     })}
                     <Button
-                      className="w-full bg-playarena-500 hover:bg-playarena-600 text-white mt-4 sticky bottom-0"
+                      className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 mt-4 sticky bottom-0"
                       onClick={handleSave}
                       disabled={loading}
                     >
@@ -692,14 +754,14 @@ const ConfirmCheckin = () => {
                     </Button>
                   </div>
                 ) : (
-                  <p className="text-muted-foreground text-sm">No players have registered yet.</p>
+                  <p className="text-gray-600 dark:text-gray-400 text-sm">No players have registered yet.</p>
                 )}
               </div>
             )}
 
             {mode === "checkin" && (
-              <div className="bg-white rounded-xl shadow-lg p-6">
-                <h2 className="text-xl font-semibold mb-4">Check-in Players</h2>
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700">
+                <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Check-in Players</h2>
                 {(match.players || []).filter((p) => p.status === "confirmed").length > 0 ? (
                   <div className="space-y-3 max-h-[50vh] overflow-y-auto">
                     {(match.players || [])
@@ -709,15 +771,15 @@ const ConfirmCheckin = () => {
                         return (
                           <div
                             key={player.id}
-                            className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
+                            className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition"
                           >
                             <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-full bg-playarena-100 flex items-center justify-center text-playarena-600 font-semibold">
+                              <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center text-green-600 dark:text-green-400 font-semibold">
                                 {(player.player_name || "Unknown").charAt(0).toUpperCase()}
                               </div>
                               <div>
-                                <span className="font-medium">{player.player_name || "Unknown Player"}</span>
-                                <p className="text-sm text-muted-foreground">
+                                <span className="font-medium text-gray-900 dark:text-gray-100">{player.player_name || "Unknown Player"}</span>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">
                                   Phone: {player.details?.phone || "N/A"}
                                 </p>
                                 <span
@@ -739,7 +801,7 @@ const ConfirmCheckin = () => {
                                     inputMode="numeric"
                                     pattern="[0-9]*"
                                     maxLength={6}
-                                    className="h-9"
+                                    className="h-9 text-base"
                                   />
                                   {checkinCodeErrors[player.id] && (
                                     <p className="text-xs text-red-600 mt-1">
@@ -751,7 +813,7 @@ const ConfirmCheckin = () => {
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => validateCheckinCode(player.id)}
-                                  className="hover:bg-blue-100"
+                                  className="hover:bg-blue-100 dark:hover:bg-blue-900"
                                 >
                                   <CheckCircle size={20} className="text-blue-500" />
                                 </Button>
@@ -761,7 +823,7 @@ const ConfirmCheckin = () => {
                         );
                       })}
                     <Button
-                      className="w-full bg-playarena-500 hover:bg-playarena-600 text-white mt-4 sticky bottom-0"
+                      className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 mt-4 sticky bottom-0"
                       onClick={handleSave}
                       disabled={loading}
                     >
@@ -770,7 +832,7 @@ const ConfirmCheckin = () => {
                     </Button>
                   </div>
                 ) : (
-                  <p className="text-muted-foreground text-sm">No confirmed players available for check-in.</p>
+                  <p className="text-gray-600 dark:text-gray-400 text-sm">No confirmed players available for check-in.</p>
                 )}
               </div>
             )}
@@ -778,12 +840,12 @@ const ConfirmCheckin = () => {
         )}
 
         <Dialog open={cashoutDialogOpen} onOpenChange={setCashoutDialogOpen}>
-          <DialogContent className="max-w-md rounded-2xl bg-white dark:bg-gray-800 p-6 shadow-xl border border-gray-200 dark:border-gray-700">
+          <DialogContent className="max-w-md rounded-xl bg-white dark:bg-gray-800 p-6 shadow-md border border-gray-200 dark:border-gray-700">
             <DialogHeader>
-              <DialogTitle className="text-xl font-bold text-gray-900 dark:text-white text-center">
+              <DialogTitle className="text-xl font-bold text-gray-900 dark:text-gray-100 text-center">
                 Cashout Request
               </DialogTitle>
-              <DialogDescription className="text-gray-600 dark:text-gray-300 text-center mt-2">
+              <DialogDescription className="text-gray-600 dark:text-gray-400 text-center mt-2 text-sm">
                 Enter your bank details to initiate a cashout for this match.
               </DialogDescription>
             </DialogHeader>
@@ -804,7 +866,7 @@ const ConfirmCheckin = () => {
                   inputMode="numeric"
                   pattern="[0-9]*"
                   maxLength={10}
-                  className="w-full mt-1"
+                  className="w-full mt-1 text-base"
                 />
                 {bankAccountError && (
                   <p className="text-sm text-red-600 mt-1">{bankAccountError}</p>
@@ -815,12 +877,12 @@ const ConfirmCheckin = () => {
                   Bank Name
                 </label>
                 <Select onValueChange={setBankName} value={bankName}>
-                  <SelectTrigger className="w-full mt-1">
+                  <SelectTrigger className="w-full mt-1 text-base">
                     <SelectValue placeholder="Select a bank" />
                   </SelectTrigger>
                   <SelectContent>
                     {nigerianBanks.map((bank) => (
-                      <SelectItem key={bank} value={bank}>
+                      <SelectItem key={bank} value={bank} className="text-base">
                         {bank}
                       </SelectItem>
                     ))}
@@ -840,7 +902,7 @@ const ConfirmCheckin = () => {
                     setAccountName(value);
                     setAccountNameError(null);
                   }}
-                  className="w-full mt-1"
+                  className="w-full mt-1 text-base"
                 />
                 {accountNameError && (
                   <p className="text-sm text-red-600 mt-1">{accountNameError}</p>
@@ -849,7 +911,7 @@ const ConfirmCheckin = () => {
             </div>
             <DialogFooter className="flex justify-center">
               <Button
-                className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg transition-colors"
+                className="bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2"
                 onClick={handleCashoutSubmit}
                 disabled={loading}
               >
