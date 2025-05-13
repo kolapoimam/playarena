@@ -15,10 +15,20 @@ import {
   XCircle, 
   Loader2,
   AlertCircle,
-  Trophy
+  Trophy,
+  DollarSign
 } from "lucide-react";
-import { format } from "date-fns";
-import { differenceInHours } from "date-fns";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+} from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { format, differenceInMinutes } from "date-fns";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { z } from "zod";
 
 type Match = {
@@ -30,6 +40,7 @@ type Match = {
   total_slots: number;
   organizer_name: string;
   super_code: string;
+  is_paid: boolean;
   venue: {
     name?: string;
     city?: string;
@@ -43,10 +54,53 @@ type Match = {
   }[] | null;
 };
 
-// Validation schema for 6-digit numeric codes
+type Cashout = {
+  id: string;
+  match_id: string;
+  super_code: string;
+  bank_account_number: string;
+  bank_name: string;
+  account_name: string;
+  status: "under_review" | "processed" | "failed" | "successful";
+};
+
+// Validation schemas
 const codeSchema = z
   .string()
   .regex(/^\d{6}$/, { message: "Code must be exactly 6 digits" });
+
+const bankAccountSchema = z
+  .string()
+  .regex(/^\d{10}$/, { message: "Bank account number must be exactly 10 digits" });
+
+const accountNameSchema = z
+  .string()
+  .regex(/^[A-Za-z\s]+$/, { message: "Account name must contain only letters and spaces" })
+  .min(2, { message: "Account name must be at least 2 characters" });
+
+// List of Nigerian banks
+const nigerianBanks = [
+  "Access Bank",
+  "Citibank Nigeria",
+  "Ecobank Nigeria",
+  "Fidelity Bank",
+  "First Bank of Nigeria",
+  "First City Monument Bank (FCMB)",
+  "Globus Bank",
+  "Guaranty Trust Bank (GTB)",
+  "Heritage Bank",
+  "Keystone Bank",
+  "Polaris Bank",
+  "Providus Bank",
+  "Stanbic IBTC Bank",
+  "Standard Chartered Bank",
+  "Sterling Bank",
+  "Union Bank of Nigeria",
+  "United Bank for Africa (UBA)",
+  "Unity Bank",
+  "Wema Bank",
+  "Zenith Bank",
+];
 
 const ConfirmCheckin = () => {
   const navigate = useNavigate();
@@ -54,14 +108,21 @@ const ConfirmCheckin = () => {
   const [superCode, setSuperCode] = useState("");
   const [superCodeError, setSuperCodeError] = useState<string | null>(null);
   const [match, setMatch] = useState<Match | null>(null);
+  const [cashout, setCashout] = useState<Cashout | null>(null);
   const [matchNotFound, setMatchNotFound] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState<"confirm" | "checkin" | null>(null);
+  const [mode, setMode] = useState<"confirm" | "checkin" | "cashout" | null>(null);
   const [playerStatuses, setPlayerStatuses] = useState<
     { id: string; status: string; checkinCode: string }[]
   >([]);
   const [checkinCodes, setCheckinCodes] = useState<{ [key: string]: string }>({});
   const [checkinCodeErrors, setCheckinCodeErrors] = useState<{ [key: string]: string | null }>({});
+  const [cashoutDialogOpen, setCashoutDialogOpen] = useState(false);
+  const [bankAccountNumber, setBankAccountNumber] = useState("");
+  const [bankName, setBankName] = useState("");
+  const [accountName, setAccountName] = useState("");
+  const [bankAccountError, setBankAccountError] = useState<string | null>(null);
+  const [accountNameError, setAccountNameError] = useState<string | null>(null);
   const codeInputRef = useRef<HTMLInputElement>(null);
 
   const fetchMatch = async () => {
@@ -78,7 +139,7 @@ const ConfirmCheckin = () => {
       const { data, error } = await supabase
         .from("matches")
         .select(`
-          id, slug, title, match_date, match_time, total_slots, organizer_name, super_code,
+          id, slug, title, match_date, match_time, total_slots, organizer_name, super_code, is_paid,
           venue:venues(name, city),
           players(id, player_name, status, confirmation_code, details)
         `)
@@ -97,8 +158,6 @@ const ConfirmCheckin = () => {
         return;
       }
 
-      console.log("Fetched match data:", data);
-
       const matchData: Match = {
         ...data,
         venue: data.venue ? { name: data.venue.name ?? "Unknown Venue", city: data.venue.city ?? "Unknown City" } : null,
@@ -113,6 +172,20 @@ const ConfirmCheckin = () => {
           checkinCode: "",
         }))
       );
+
+      // Fetch cashout status
+      const { data: cashoutData, error: cashoutError } = await supabase
+        .from("cashouts")
+        .select("*")
+        .eq("super_code", superCode)
+        .eq("match_id", matchData.id)
+        .single();
+
+      if (cashoutError && !cashoutError.message.includes("0 rows")) {
+        console.error("Error fetching cashout:", cashoutError);
+      }
+
+      setCashout(cashoutData);
     } catch (error: any) {
       console.error("Error fetching match:", error.message, error.details || error);
       setMatchNotFound(true);
@@ -128,15 +201,47 @@ const ConfirmCheckin = () => {
     }
   };
 
+  const isMatchStarted = () => {
+    if (!match) return false;
+    const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
+    const now = new Date();
+    return now >= matchDateTime;
+  };
+
+  const isCashoutEligible = () => {
+    if (!match) return false;
+    if (!match.is_paid) return false;
+    const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
+    const now = new Date();
+    const minutesToStart = differenceInMinutes(matchDateTime, now);
+    return minutesToStart <= 30;
+  };
+
   const handleConfirmMode = () => {
+    if (isMatchStarted()) {
+      toast({
+        title: "Action Not Available",
+        description: "This match has started. Confirmation and check-in are no longer available.",
+        variant: "destructive",
+      });
+      return;
+    }
     setMode("confirm");
   };
 
   const handleCheckinMode = () => {
     if (!match) return;
+    if (isMatchStarted()) {
+      toast({
+        title: "Action Not Available",
+        description: "This match has started. Confirmation and check-in are no longer available.",
+        variant: "destructive",
+      });
+      return;
+    }
     const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
     const now = new Date();
-    if (differenceInHours(matchDateTime, now) > 2) {
+    if (differenceInMinutes(matchDateTime, now) > 120) {
       toast({
         title: "Check-in Not Available",
         description: "Check-in is only available 2 hours before the match starts.",
@@ -145,6 +250,81 @@ const ConfirmCheckin = () => {
       return;
     }
     setMode("checkin");
+  };
+
+  const handleCashoutMode = () => {
+    if (!isCashoutEligible()) {
+      toast({
+        title: "Cashout Not Available",
+        description: "This match is not eligible for cashout.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setCashoutDialogOpen(true);
+  };
+
+  const handleCashoutSubmit = async () => {
+    if (!match) return;
+
+    const bankAccountValidation = bankAccountSchema.safeParse(bankAccountNumber);
+    const accountNameValidation = accountNameSchema.safeParse(accountName);
+
+    if (!bankAccountValidation.success) {
+      setBankAccountError(bankAccountValidation.error.errors[0].message);
+      return;
+    }
+    if (!accountNameValidation.success) {
+      setAccountNameError(accountNameValidation.error.errors[0].message);
+      return;
+    }
+    if (!bankName) {
+      toast({
+        title: "Error",
+        description: "Please select a bank.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("cashouts")
+        .insert({
+          match_id: match.id,
+          super_code: match.super_code,
+          bank_account_number: bankAccountNumber,
+          bank_name: bankName,
+          account_name: accountName,
+          status: "under_review",
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setCashout(data);
+      setCashoutDialogOpen(false);
+      setBankAccountNumber("");
+      setBankName("");
+      setAccountName("");
+      setBankAccountError(null);
+      setAccountNameError(null);
+      toast({
+        title: "Success",
+        description: "Cashout request submitted successfully. It is now under review.",
+      });
+    } catch (error) {
+      console.error("Error submitting cashout:", error);
+      toast({
+        title: "Error",
+        description: "Failed to submit cashout request. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleStatusChange = (playerId: string, newStatus: string) => {
@@ -254,6 +434,14 @@ const ConfirmCheckin = () => {
         return "bg-blue-100 text-blue-700 border-blue-300";
       case "absent":
         return "bg-gray-100 text-gray-700 border-gray-300";
+      case "under_review":
+        return "bg-yellow-100 text-yellow-700 border-yellow-300";
+      case "processed":
+        return "bg-blue-100 text-blue-700 border-blue-300";
+      case "failed":
+        return "bg-red-100 text-red-700 border-red-300";
+      case "successful":
+        return "bg-green-100 text-green-700 border-green-300";
       default:
         return "bg-yellow-100 text-yellow-700 border-yellow-300";
     }
@@ -270,8 +458,8 @@ const ConfirmCheckin = () => {
           <ArrowLeft size={18} className="mr-2" />
           Back
         </Button>
-        <h1 className="text-3xl font-bold">Organizer Dashboard</h1>
-        <p className="text-sm mt-1 opacity-80">Manage player confirmations and check-ins</p>
+        <h1 className="text-3xl font-bold">Manage Matches</h1>
+        <p className="text-sm mt-1 opacity-80">Manage player confirmations, check-ins, and cashouts</p>
       </div>
 
       <div className="max-w-4xl mx-auto p-4 -mt-8 pb-20">
@@ -327,7 +515,16 @@ const ConfirmCheckin = () => {
         {match && (
           <div className="animate-fade-in">
             <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
-              <h2 className="text-xl font-semibold mb-4">Match Details</h2>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold">Match Details</h2>
+                {cashout && (
+                  <span
+                    className={`inline-block px-3 py-1 text-sm font-medium rounded border ${getStatusStyles(cashout.status)}`}
+                  >
+                    Cashout: {cashout.status.replace("_", " ").charAt(0).toUpperCase() + cashout.status.replace("_", " ").slice(1)}
+                  </span>
+                )}
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex items-center gap-3">
                   <Trophy size={20} className="text-playarena-500" />
@@ -356,24 +553,76 @@ const ConfirmCheckin = () => {
                   <Users size={20} className="text-playarena-500" />
                   <span>{(match.players || []).length}/{match.total_slots || 0} players</span>
                 </div>
+                <div className="flex items-center gap-3">
+                  <DollarSign size={20} className="text-playarena-500" />
+                  <span>{match.is_paid ? "Paid" : "Free"}</span>
+                </div>
               </div>
             </div>
 
+            {cashout && cashout.status === "under_review" && (
+              <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+                <h2 className="text-xl font-semibold mb-4">Cashout Under Review</h2>
+                <p className="text-muted-foreground">
+                  Your cashout request is being processed. You'll be notified once it's reviewed.
+                </p>
+              </div>
+            )}
+
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
-              <Button
-                className="flex-1 bg-playarena-500 hover:bg-playarena-600 text-white"
-                onClick={handleConfirmMode}
-              >
-                <CheckCircle size={18} className="mr-2" />
-                Confirm Players
-              </Button>
-              <Button
-                className="flex-1 bg-playarena-500 hover:bg-playarena-600 text-white"
-                onClick={handleCheckinMode}
-              >
-                <Users size={18} className="mr-2" />
-                Check-in Players
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span>
+                      <Button
+                        className="flex-1 bg-playarena-500 hover:bg-playarena-600 text-white"
+                        onClick={handleConfirmMode}
+                        disabled={isMatchStarted()}
+                      >
+                        <CheckCircle size={18} className="mr-2" />
+                        Confirm Players
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  {isMatchStarted() && (
+                    <TooltipContent>
+                      <p>This match has started. Confirmation and check-in are no longer available.</p>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
+
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span>
+                      <Button
+                        className="flex-1 bg-playarena-500 hover:bg-playarena-600 text-white"
+                        onClick={handleCheckinMode}
+                        disabled={isMatchStarted()}
+                      >
+                        <Users size={18} className="mr-2" />
+                        Check-in Players
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  {isMatchStarted() && (
+                    <TooltipContent>
+                      <p>This match has started. Confirmation and check-in are no longer available.</p>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
+
+              {!cashout && (
+                <Button
+                  className="flex-1 bg-playarena-500 hover:bg-playarena-600 text-white"
+                  onClick={handleCashoutMode}
+                >
+                  <DollarSign size={18} className="mr-2" />
+                  Cash Out
+                </Button>
+              )}
             </div>
 
             {mode === "confirm" && (
@@ -527,6 +776,95 @@ const ConfirmCheckin = () => {
             )}
           </div>
         )}
+
+        <Dialog open={cashoutDialogOpen} onOpenChange={setCashoutDialogOpen}>
+          <DialogContent className="max-w-md rounded-2xl bg-white dark:bg-gray-800 p-6 shadow-xl border border-gray-200 dark:border-gray-700">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold text-gray-900 dark:text-white text-center">
+                Cashout Request
+              </DialogTitle>
+              <DialogDescription className="text-gray-600 dark:text-gray-300 text-center mt-2">
+                Enter your bank details to initiate a cashout for this match.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Bank Account Number
+                </label>
+                <Input
+                  type="text"
+                  placeholder="Enter 10-digit account number"
+                  value={bankAccountNumber}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/[^0-9]/g, "").slice(0, 10);
+                    setBankAccountNumber(value);
+                    setBankAccountError(null);
+                  }}
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={10}
+                  className="w-full mt-1"
+                />
+                {bankAccountError && (
+                  <p className="text-sm text-red-600 mt-1">{bankAccountError}</p>
+                )}
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Bank Name
+                </label>
+                <Select onValueChange={setBankName} value={bankName}>
+                  <SelectTrigger className="w-full mt-1">
+                    <SelectValue placeholder="Select a bank" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {nigerianBanks.map((bank) => (
+                      <SelectItem key={bank} value={bank}>
+                        {bank}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Account Name
+                </label>
+                <Input
+                  type="text"
+                  placeholder="Enter account name"
+                  value={accountName}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/[^A-Za-z\s]/g, "");
+                    setAccountName(value);
+                    setAccountNameError(null);
+                  }}
+                  className="w-full mt-1"
+                />
+                {accountNameError && (
+                  <p className="text-sm text-red-600 mt-1">{accountNameError}</p>
+                )}
+              </div>
+            </div>
+            <DialogFooter className="flex justify-center">
+              <Button
+                className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg transition-colors"
+                onClick={handleCashoutSubmit}
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 size={16} className="mr-2 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  "Submit"
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
       <Navbar />
     </div>
