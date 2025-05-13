@@ -41,7 +41,7 @@ import {
 } from "@/components/ui/dialog";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { Switch } from "@/components/ui/s Horiz";
+import { Switch } from "@/components/ui/switch";
 import VenueForm from "@/components/VenueForm";
 import Navbar from "@/components/Navbar";
 import html2canvas from "html2canvas";
@@ -252,19 +252,25 @@ const Organize = () => {
   const selectedVenue = venues.find(venue => venue.id === selectedVenueId);
 
   return (
-    <div className="min-h-screen pb-20">
-      <div className="p-4">
-        <Button 
-          variant="ghost" 
-          className="mb-4" 
-          onClick={() => navigate(-1)}
-        >
-          <ArrowLeft size={18} className="mr-2" />
-          Back
-        </Button>
-        
-        <h1 className="text-2xl font-bold mb-6">Organize a Match</h1>
-        
+    <div className="min-h-screen pb-20 bg-gray-50 dark:bg-gray-900">
+      <header className="sticky top-0 z-50 bg-green-500 text-white shadow-md">
+        <div className="p-4 flex items-center justify-between">
+          <Button 
+            variant="ghost" 
+            className="text-white hover:text-gray-200"
+            onClick={() => navigate(-1)}
+          >
+            <ArrowLeft size={18} className="mr-2" />
+            Back
+          </Button>
+          <h1 className="text-2xl font-bold">Organise a Match</h1>
+          <div className="w-10 flex items-center">
+            <ThemeToggle />
+          </div>
+        </div>
+      </header>
+
+      <div className="p-6 max-w-2xl mx-auto">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
@@ -272,9 +278,9 @@ const Organize = () => {
               name="title"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Match Title</FormLabel>
+                  <FormLabel className="text-sm font-medium">Match Title</FormLabel>
                   <FormControl>
-                    <Input placeholder="E.g., Saturday Friendly" {...field} />
+                    <Input placeholder="E.g., Saturday Friendly" className="text-base" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -287,10 +293,10 @@ const Organize = () => {
               render={({ field }) => (
                 <FormItem>
                   <div className="flex justify-between items-center">
-                    <FormLabel>Venue</FormLabel>
+                    <FormLabel className="text-sm font-medium">Venue</FormLabel>
                     <Dialog open={venueDialogOpen} onOpenChange={setVenueDialogOpen}>
                       <DialogTrigger asChild>
-                        <Button variant="outline" size="sm" type="button">
+                        <Button variant="outline" size="sm" type="button" className="text-sm font-medium">
                           <Plus size={16} className="mr-1" /> Add New Venue
                         </Button>
                       </DialogTrigger>
@@ -304,7 +310,7 @@ const Organize = () => {
                   </div>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
-                      <SelectTrigger className="w-full">
+                      <SelectTrigger className="w-full text-base">
                         <SelectValue placeholder="Select a venue" />
                       </SelectTrigger>
                     </FormControl>
@@ -315,7 +321,7 @@ const Organize = () => {
                         </SelectItem>
                       ) : venues.length > 0 ? (
                         venues.map((venue) => (
-                          <SelectItem key={venue.id} value={venue.id}>
+                          <SelectItem key={venue.id} value={venue.id} className="text-base">
                             {venue.name}{venue.city ? `, ${venue.city}` : ''}
                           </SelectItem>
                         ))
@@ -337,14 +343,14 @@ const Organize = () => {
                 name="match_date"
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
-                    <FormLabel>Date</FormLabel>
+                    <FormLabel className="text-sm font-medium">Date</FormLabel>
                     <Popover>
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
-                            variant={"outline"}
+                            variant="outline"
                             className={cn(
-                              "pl-3 text-left font-normal",
+                              "pl-3 text-left text-base font-normal",
                               !field.value && "text-muted-foreground"
                             )}
                           >
@@ -381,12 +387,13 @@ const Organize = () => {
                 name="match_time"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Time</FormLabel>
+                    <FormLabel className="text-sm font-medium">Time</FormLabel>
                     <FormControl>
                       <div className="relative">
                         <Input
                           type="time"
                           placeholder="HH:MM"
+                          className="text-base"
                           {...field}
                         />
                         <Clock className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -403,11 +410,12 @@ const Organize = () => {
               name="total_slots"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Number of Players</FormLabel>
+                  <FormLabel className="text-sm font-medium">Number of Players</FormLabel>
                   <FormControl>
                     <Input
                       type="number"
                       min={2}
+                      className="text-base"
                       {...field}
                       onChange={(e) => {
                         const value = parseInt(e.target.value, 10);
@@ -415,7 +423,7 @@ const Organize = () => {
                       }}
                     />
                   </FormControl>
-                  <FormDescription>
+                  <FormDescription className="text-sm">
                     Total number of players needed for this match
                   </FormDescription>
                   <FormMessage />
@@ -429,10 +437,10 @@ const Organize = () => {
               render={({ field }) => (
                 <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                   <div className="space-y-0.5">
-                    <FormLabel className="text-base">
+                    <FormLabel className="text-base font-medium">
                       Paid Match
                     </FormLabel>
-                    <FormDescription>
+                    <FormDescription className="text-sm">
                       Toggle if players need to pay to join this match
                     </FormDescription>
                   </div>
@@ -452,13 +460,14 @@ const Organize = () => {
                 name="price"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Price per Player (₦)</FormLabel>
+                    <FormLabel className="text-sm font-medium">Price per Player (₦)</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
                         placeholder="0.00"
                         min={0}
                         step="0.01"
+                        className="text-base"
                         {...field}
                         onChange={(e) => {
                           const value = parseFloat(e.target.value);
@@ -480,11 +489,11 @@ const Organize = () => {
                 render={({ field }) => (
                   <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                     <div className="space-y-0.5">
-                      <FormLabel className="text-base">
+                      <FormLabel className="text-base font-medium">
                         Allow Bulk Ticket Purchase
                       </FormLabel>
-                      <FormDescription>
-                        Toggle to allow players to purchase multiple slots (up to 5)
+                      <FormDescription className="text-sm">
+                        Toggle to allow players to purchase multiple slots (up to 5 or available slots)
                       </FormDescription>
                     </div>
                     <FormControl>
@@ -504,10 +513,10 @@ const Organize = () => {
               render={({ field }) => (
                 <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                   <div className="space-y-0.5">
-                    <FormLabel className="text-base">
+                    <FormLabel className="text-base font-medium">
                       Private Match
                     </FormLabel>
-                    <FormDescription>
+                    <FormDescription className="text-sm">
                       Toggle to restrict access to invited players only
                     </FormDescription>
                   </div>
@@ -527,18 +536,19 @@ const Organize = () => {
                 name="access_password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Access Password</FormLabel>
+                    <FormLabel className="text-sm font-medium">Access Password</FormLabel>
                     <div className="flex items-center gap-2">
                       <FormControl>
                         <Input
                           value={field.value || ''}
                           readOnly
-                          className="font-mono"
+                          className="font-mono text-base"
                         />
                       </FormControl>
                       <Button
                         type="button"
                         variant="outline"
+                        className="text-sm font-medium"
                         onClick={() => {
                           navigator.clipboard.writeText(field.value || '');
                           toast({
@@ -551,7 +561,7 @@ const Organize = () => {
                         Copy
                       </Button>
                     </div>
-                    <FormDescription>
+                    <FormDescription className="text-sm">
                       Share this password with players you want to invite
                     </FormDescription>
                     <FormMessage />
@@ -565,10 +575,11 @@ const Organize = () => {
               name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Notes (Optional)</FormLabel>
+                  <FormLabel className="text-sm font-medium">Notes (Optional)</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="E.g., Bring Boots, parking available, etc."
+                      placeholder="E.g., Bring boots, parking available, etc."
+                      className="text-base"
                       {...field}
                     />
                   </FormControl>
@@ -582,11 +593,11 @@ const Organize = () => {
               name="organizer_name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Your Name</FormLabel>
+                  <FormLabel className="text-sm font-medium">Your Name</FormLabel>
                   <FormControl>
-                    <Input placeholder="Your name" {...field} />
+                    <Input placeholder="Your name" className="text-base" {...field} />
                   </FormControl>
-                  <FormDescription>
+                  <FormDescription className="text-sm">
                     This will be displayed as the organizer of the match
                   </FormDescription>
                   <FormMessage />
@@ -599,11 +610,12 @@ const Organize = () => {
               name="organizer_phone"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Your Phone Number (Optional)</FormLabel>
+                  <FormLabel className="text-sm font-medium">Your Phone Number (Optional)</FormLabel>
                   <FormControl>
                     <Input
                       type="tel"
                       placeholder="Enter 11-digit phone number"
+                      className="text-base"
                       {...field}
                       value={field.value ?? ""}
                       onChange={(e) => {
@@ -611,7 +623,7 @@ const Organize = () => {
                       }}
                     />
                   </FormControl>
-                  <FormDescription>
+                  <FormDescription className="text-sm">
                     Provide your phone number for contact purposes
                   </FormDescription>
                   <FormMessage />
@@ -625,10 +637,10 @@ const Organize = () => {
               render={({ field }) => (
                 <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                   <div className="space-y-0.5">
-                    <FormLabel className="text-base">
+                    <FormLabel className="text-base font-medium">
                       Disclose Phone Number
                     </FormLabel>
-                    <FormDescription>
+                    <FormDescription className="text-sm">
                       Toggle to share your phone number with players
                     </FormDescription>
                   </div>
@@ -642,7 +654,11 @@ const Organize = () => {
               )}
             />
 
-            <Button type="submit" className="w-full bg-green-500 hover:bg-green-600 text-white" disabled={loading}>
+            <Button 
+              type="submit" 
+              className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2" 
+              disabled={loading}
+            >
               {loading ? "Creating..." : "Create Match"}
             </Button>
           </form>
@@ -657,9 +673,9 @@ const Organize = () => {
         setSuccessDialogOpen(open);
       }}>
         <DialogContent className="sm:max-w-[425px]">
-          <DialogTitle>Match Created Successfully!</DialogTitle>
+          <DialogTitle className="text-xl font-bold">Match Created Successfully!</DialogTitle>
           <DialogDescription>
-            <p className="text-gray-600 dark:text-gray-300 mb-4">
+            <p className="text-gray-600 dark:text-gray-300 mb-4 text-sm">
               Your match has been created. Below is your unique 6-digit supercode for check-ins on match day.
               {isPrivate && " Also, note the access password to share with invited players."}
             </p>
@@ -676,7 +692,7 @@ const Organize = () => {
                 <Trophy className="h-6 w-6" />
               </div>
               <h2 className="text-xl font-bold mb-2">{matchTitle}</h2>
-              <div className="space-y-2 mb-4">
+              <div className="space-y-2 mb-4 text-sm">
                 <div className="flex items-center">
                   <MapPin className="h-4 w-4 mr-2" />
                   <span>{selectedVenue?.name || "Venue"}</span>
@@ -705,16 +721,16 @@ const Organize = () => {
               <strong>Note:</strong> Save or download this code. You'll need it to confirm and check in players on match day.
               {isPrivate && " Share the access password with invited players to allow them to join."}
             </p>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-4">
               <Button 
-                className="flex-1 bg-green-500 hover:bg-green-600 text-white"
+                className="flex-1 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2"
                 onClick={handleDownload}
                 disabled={isDownloading}
               >
                 {isDownloading ? "Downloading..." : "Download Supercode"}
               </Button>
               <Button 
-                className="flex-1 bg-green-500 hover:bg-green-600 text-white"
+                className="flex-1 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2"
                 onClick={() => {
                   if (!isDownloading) {
                     setSuccessDialogOpen(false);
