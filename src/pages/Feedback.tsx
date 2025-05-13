@@ -31,11 +31,12 @@ import Navbar from "@/components/Navbar";
 
 type Match = {
   id: string;
+  slug: string;
   super_code: string;
   organizer_name: string;
   title: string;
-  match_date: string; // Added for expiration check
-  match_time: string; // Added for expiration check
+  match_date: string;
+  match_time: string;
   players: {
     id: string;
     confirmation_code: string;
@@ -76,7 +77,7 @@ const Feedback = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
-  const matchId = searchParams.get("matchId");
+  const matchSlug = searchParams.get("matchSlug"); // Changed from matchId to matchSlug
   const [dialogOpen, setDialogOpen] = useState(true);
   const [code, setCode] = useState("");
   const [codeError, setCodeError] = useState<string | null>(null);
@@ -101,7 +102,7 @@ const Feedback = () => {
   const isFeedbackExpired = () => {
     if (!match?.match_date || !match?.match_time) return true;
     const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
-    const now = new Date("2025-05-13T19:34:00+01:00"); // 07:34 PM WAT, May 13, 2025
+    const now = new Date("2025-05-13T21:15:00+01:00"); // 09:15 PM WAT, May 13, 2025
     const hoursSinceMatch = (now.getTime() - matchDateTime.getTime()) / (1000 * 60 * 60);
     return hoursSinceMatch > 48;
   };
@@ -109,9 +110,13 @@ const Feedback = () => {
   useEffect(() => {
     setDialogOpen(true);
     setMatch(null);
+    setFeedback([]);
+    setSummary(null);
     setIsOrganizer(false);
     setHasSubmitted(false);
-  }, [matchId]);
+    setCode("");
+    setCodeError(null);
+  }, [matchSlug]);
 
   const validateCode = async () => {
     const validation = codeSchema.safeParse(code);
@@ -123,20 +128,20 @@ const Feedback = () => {
     setLoading(true);
 
     try {
-      // Fetch match details
+      // Fetch match details using slug instead of ID
       const { data: matchData, error: matchError } = await supabase
         .from("matches")
         .select(`
-          id, super_code, organizer_name, title, match_date, match_time,
+          id, slug, super_code, organizer_name, title, match_date, match_time,
           players(id, confirmation_code, player_name)
         `)
-        .eq("id", matchId)
+        .eq("slug", matchSlug)
         .single();
 
       if (matchError || !matchData) {
         toast({
           title: "Error",
-          description: "Match not found. Please check the match ID.",
+          description: "Match not found. Please check the match slug.",
           variant: "destructive",
         });
         navigate("/matches");
@@ -161,7 +166,7 @@ const Feedback = () => {
             id, player_id, venue_quality, match_organization, referee_performance, comments, created_at,
             players(player_name)
           `)
-          .eq("match_id", matchId);
+          .eq("match_id", match.id);
 
         if (feedbackError) throw feedbackError;
 
@@ -176,7 +181,7 @@ const Feedback = () => {
         const { data: summaryData, error: summaryError } = await supabase
           .from("feedback_summaries")
           .select("summary")
-          .eq("match_id", matchId)
+          .eq("match_id", match.id)
           .single();
 
         if (summaryData && !summaryError) {
@@ -191,7 +196,7 @@ const Feedback = () => {
       if (!player) {
         setCodeError("Invalid code. Please try again.");
         setLoading(false);
-        navigate("/matches");
+        navigate(`/match/${match.slug}`);
         return;
       }
 
@@ -199,7 +204,7 @@ const Feedback = () => {
       const { data: existingFeedback, error: feedbackError } = await supabase
         .from("feedback")
         .select("id")
-        .eq("match_id", matchId)
+        .eq("match_id", match.id)
         .eq("player_id", player.id)
         .single();
 
@@ -211,7 +216,7 @@ const Feedback = () => {
           title: "Feedback Already Submitted",
           description: "You have already submitted feedback for this match.",
         });
-        return;
+        return; // Stay on the page to show the "Feedback Already Submitted" message
       }
 
       setMatch(match);
@@ -223,7 +228,7 @@ const Feedback = () => {
         description: "An error occurred. Please try again.",
         variant: "destructive",
       });
-      navigate("/matches");
+      navigate(`/match/${match?.slug || ""}`);
     } finally {
       setLoading(false);
     }
@@ -259,7 +264,7 @@ const Feedback = () => {
         title: "Success",
         description: "Feedback submitted successfully.",
       });
-      navigate("/matches");
+      navigate(`/match/${match.slug}`);
     } catch (error) {
       console.error("Error submitting feedback:", error);
       toast({
@@ -278,135 +283,205 @@ const Feedback = () => {
     const doc = new jsPDF();
     const img = new Image();
     img.src = "/Playarenalight.png";
-    doc.addImage(img, "PNG", 10, 10, 30, 30);
-    doc.setFontSize(16);
-    doc.text(`Feedback Report - ${match.title}`, 50, 20);
-    const now = new Date("2025-05-13T19:34:00+01:00"); // 07:34 PM WAT, May 13, 2025
-    doc.setFontSize(10);
-    doc.text(`Generated on: ${now.toLocaleString("en-NG", { timeZone: "Africa/Lagos" })}`, 50, 30);
-    doc.setFontSize(12);
-    doc.setFillColor(0, 128, 0);
-    doc.rect(10, 40, 190, 10, "F");
-    doc.setTextColor(255, 255, 255);
-    doc.text("Feedback Details", 100, 46, { align: "center" });
-    doc.setTextColor(0, 0, 0);
-    let y = 60;
+    img.crossOrigin = "Anonymous";
 
-    feedback.forEach((f, index) => {
-      doc.setFillColor(240, 240, 240);
-      doc.rect(10, y - 5, 190, 20, "F");
-      doc.text(`Feedback #${index + 1} - ${f.player_name}`, 15, y);
-      y += 10;
-      doc.text(`Venue Quality: ${f.venue_quality}/5`, 15, y);
-      y += 10;
-      doc.text(`Match Organization: ${f.match_organization}/5`, 15, y);
-      y += 10;
-      doc.text(`Referee Performance: ${f.referee_performance}/5`, 15, y);
-      y += 10;
-      if (f.comments) {
-        doc.text(`Comments: ${f.comments}`, 15, y, { maxWidth: 160 });
-        y += Math.ceil(f.comments.length / 80) * 10 + 10;
-      }
-      y += 10;
-      if (y > 270) {
-        doc.addPage();
-        y = 20;
-        doc.addImage(img, "PNG", 10, 10, 30, 30);
-        doc.text(`Feedback Report - ${match.title} (Continued)`, 50, 20);
-        doc.text(`Generated on: ${now.toLocaleString("en-NG", { timeZone: "Africa/Lagos" })}`, 50, 30);
-        doc.setFillColor(0, 128, 0);
-        doc.rect(10, 40, 190, 10, "F");
-        doc.setTextColor(255, 255, 255);
-        doc.text("Feedback Details", 100, 46, { align: "center" });
-        doc.setTextColor(0, 0, 0);
-      }
+    const loadImage = new Promise((resolve, reject) => {
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error("Failed to load logo image"));
     });
 
-    doc.save(`feedback_${match.title.replace(/\s+/g, "_")}.pdf`);
+    loadImage
+      .then(() => {
+        // Header
+        doc.addImage(img, "PNG", 10, 10, 30, 30);
+        doc.setFontSize(18);
+        doc.setTextColor(0, 128, 0);
+        doc.text(`Feedback Report - ${match.title}`, 50, 20);
+        const now = new Date("2025-05-13T21:15:00+01:00");
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.text(`Generated on: ${now.toLocaleString("en-NG", { timeZone: "Africa/Lagos" })}`, 50, 30);
+        doc.setLineWidth(0.5);
+        doc.setDrawColor(0, 128, 0);
+        doc.line(10, 45, 200, 45);
+
+        // Feedback Details Header
+        doc.setFontSize(14);
+        doc.setFillColor(0, 128, 0);
+        doc.rect(10, 50, 190, 10, "F");
+        doc.setTextColor(255, 255, 255);
+        doc.text("Feedback Details", 105, 57, { align: "center" });
+
+        // Feedback Content
+        doc.setTextColor(0, 0, 0);
+        let y = 70;
+
+        feedback.forEach((f, index) => {
+          doc.setFontSize(12);
+          doc.setFillColor(240, 240, 240);
+          doc.rect(10, y - 5, 190, 30, "F");
+          doc.setTextColor(0, 128, 0);
+          doc.text(`Feedback #${index + 1} - ${f.player_name}`, 15, y);
+          doc.setTextColor(0, 0, 0);
+          y += 10;
+          doc.setFontSize(10);
+          doc.text(`Venue Quality: ${f.venue_quality}/5`, 15, y);
+          y += 8;
+          doc.text(`Match Organization: ${f.match_organization}/5`, 15, y);
+          y += 8;
+          doc.text(`Referee Performance: ${f.referee_performance}/5`, 15, y);
+          y += 10;
+
+          if (f.comments) {
+            doc.setFontSize(10);
+            doc.text(`Comments:`, 15, y);
+            y += 6;
+            doc.setTextColor(100);
+            doc.text(f.comments, 15, y, { maxWidth: 180 });
+            y += Math.ceil(f.comments.length / 90) * 6 + 10;
+          }
+          y += 10;
+
+          if (y > 260) {
+            doc.addPage();
+            y = 20;
+            doc.addImage(img, "PNG", 10, 10, 30, 30);
+            doc.setFontSize(18);
+            doc.setTextColor(0, 128, 0);
+            doc.text(`Feedback Report - ${match.title} (Continued)`, 50, 20);
+            doc.setFontSize(10);
+            doc.setTextColor(100);
+            doc.text(`Generated on: ${now.toLocaleString("en-NG", { timeZone: "Africa/Lagos" })}`, 50, 30);
+            doc.setLineWidth(0.5);
+            doc.setDrawColor(0, 128, 0);
+            doc.line(10, 45, 200, 45);
+            doc.setFontSize(14);
+            doc.setFillColor(0, 128, 0);
+            doc.rect(10, 50, 190, 10, "F");
+            doc.setTextColor(255, 255, 255);
+            doc.text("Feedback Details", 105, 57, { align: "center" });
+            doc.setTextColor(0, 0, 0);
+          }
+        });
+
+        // Footer
+        doc.setFontSize(8);
+        doc.setTextColor(150);
+        doc.text("Generated by PlayArena", 105, 290, { align: "center" });
+
+        doc.save(`feedback_${match.title.replace(/\s+/g, "_")}.pdf`);
+      })
+      .catch((error) => {
+        console.error("Error generating PDF:", error);
+        toast({
+          title: "Error",
+          description: "Failed to generate PDF. Please try again.",
+          variant: "destructive",
+        });
+      });
   };
 
-  const generateSummary = async () => {
-    if (!feedback.length) {
+const generateSummary = async () => {
+  if (!feedback.length) {
+    toast({
+      title: "No Feedback",
+      description: "No feedback available to generate a summary.",
+      variant: "destructive",
+    });
+    return;
+  }
+
+  setLoading(true);
+  try {
+    // Aggregate feedback data including ratings and comments
+    const comments = feedback.map((f) => f.comments || "").filter(Boolean);
+    const avgVenueQuality = feedback.reduce((sum, f) => sum + f.venue_quality, 0) / feedback.length;
+    const avgMatchOrganization = feedback.reduce((sum, f) => sum + f.match_organization, 0) / feedback.length;
+    const avgRefereePerformance = feedback.reduce((sum, f) => sum + f.referee_performance, 0) / feedback.length;
+
+    const prompt = `
+      You are an expert in sports event analysis tasked with creating a detailed and actionable summary based on player feedback from a sports match. Analyze the following feedback, which includes both numerical ratings and written comments, to generate a structured summary in JSON format with three sections: "what_went_well", "major_concerns", and "action_items". Each section should be a concise paragraph (2-3 sentences) that provides specific, actionable insights tailored to the feedback provided, avoiding generic statements about the overall experience. Use the numerical ratings to identify trends and combine them with the comments to highlight specific strengths, issues, and recommendations.
+
+      Feedback Data:
+      - Average Venue Quality Rating: ${avgVenueQuality.toFixed(1)}/5
+      - Average Match Organization Rating: ${avgMatchOrganization.toFixed(1)}/5
+      - Average Referee Performance Rating: ${avgRefereePerformance.toFixed(1)}/5
+      - Written Comments:
+      ${comments.join("\n\n")}
+
+      Guidelines:
+      - In "what_went_well", highlight specific aspects that received high ratings (above 3.5) or positive mentions in comments, focusing on concrete strengths (e.g., "The venue's cleanliness was frequently praised").
+      - In "major_concerns", identify specific issues where ratings are low (below 3.0) or negative themes emerge from comments, providing clear examples (e.g., "Referee decisions were inconsistent, as noted in multiple comments").
+      - In "action_items", suggest targeted improvements based on the concerns, ensuring they are practical and directly address the feedback (e.g., "Implement a pre-match briefing for referees to ensure consistency").
+      - Avoid generic phrases like "the match was well-organized" unless supported by specific evidence from the data.
+
+      Output Format (JSON):
+      {
+        "what_went_well": "Specific strengths based on high ratings or positive comments.",
+        "major_concerns": "Specific issues based on low ratings or negative comments.",
+        "action_items": "Targeted recommendations to address the concerns."
+      }
+    `;
+
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    if (!apiKey) {
       toast({
-        title: "No Feedback",
-        description: "No feedback available to generate a summary.",
+        title: "Error",
+        description: "API key is not configured. Please contact support.",
         variant: "destructive",
       });
+      setLoading(false);
       return;
     }
 
-    setLoading(true);
-    try {
-      const comments = feedback.map((f) => f.comments || "").filter(Boolean);
-      const prompt = `
-        Analyze the following feedback comments from a sports match and generate a structured summary in JSON format with three sections: "what_went_well", "major_concerns", and "action_items". Each section should be a concise paragraph summarizing the feedback.
-
-        Comments:
-        ${comments.join("\n\n")}
-
-        Example output:
-        {
-          "what_went_well": "The match was well-organized with clear communication.",
-          "major_concerns": "Some players reported issues with referee decisions.",
-          "action_items": "Review referee performance and provide additional training."
-        }
-      `;
-
-      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-      if (!apiKey) {
-        toast({
-          title: "Error",
-          description: "API key is not configured. Please contact support.",
-          variant: "destructive",
-        });
-        setLoading(false);
-        return;
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+        }),
       }
+    );
 
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-          }),
-        }
-      );
+    const data = await response.json();
+    const summaryText = data.candidates[0].content.parts[0].text;
 
-      const data = await response.json();
-      const summaryText = data.candidates[0].content.parts[0].text;
-      const summary: FeedbackSummary = JSON.parse(summaryText);
+    // Clean up the response by removing markdown code fences if present
+    const cleanedSummaryText = summaryText.replace(/```json\n|\n```/g, "").trim();
+    const summary: FeedbackSummary = JSON.parse(cleanedSummaryText);
 
-      // Save summary to Supabase
-      const { error } = await supabase.from("feedback_summaries").upsert({
-        match_id: match!.id,
-        summary,
-      });
+    // Save summary to Supabase
+    const { error } = await supabase.from("feedback_summaries").upsert({
+      match_id: match!.id,
+      summary,
+    });
 
-      if (error) throw error;
+    if (error) throw error;
 
-      setSummary(summary);
-      setSummaryDialogOpen(true);
-      toast({
-        title: "Success",
-        description: "Summary generated successfully.",
-      });
-    } catch (error) {
-      console.error("Error generating summary:", error);
-      toast({
-        title: "Error",
-        description: "Failed to generate summary. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+    setSummary(summary);
+    setSummaryDialogOpen(true);
+    toast({
+      title: "Success",
+      description: "Summary generated successfully.",
+    });
+  } catch (error) {
+    console.error("Error generating summary:", error);
+    toast({
+      title: "Error",
+      description: "Failed to generate summary. Please try again.",
+      variant: "destructive",
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
-  const copySummary = () => {
-    if (!summary) return;
-    const text = `
+const copySummary = () => {
+  if (!summary) return;
+  const text = `Feedback Summary for ${match?.title || "Match"}
+
 What Went Well:
 ${summary.what_went_well}
 
@@ -415,15 +490,14 @@ ${summary.major_concerns}
 
 Action Items:
 ${summary.action_items}
-    `;
-    navigator.clipboard.writeText(text);
-    toast({
-      title: "Copied",
-      description: "Summary copied to clipboard.",
-    });
-  };
-
-  if (!matchId) {
+  `;
+  navigator.clipboard.writeText(text);
+  toast({
+    title: "Copied",
+    description: "Summary copied to clipboard.",
+  });
+};
+  if (!matchSlug) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-20">
         <header className="sticky top-0 z-50 bg-green-500 text-white shadow-md">
@@ -445,7 +519,7 @@ ${summary.action_items}
             <AlertCircle size={40} className="text-red-600 dark:text-red-500 mx-auto mb-3" />
             <h2 className="text-lg font-semibold text-red-600 dark:text-red-500">Invalid Match</h2>
             <p className="text-gray-600 dark:text-gray-400 mt-2">
-              No match ID provided. Please access feedback from the match details page.
+              No match slug provided. Please access feedback from the match details page.
             </p>
           </div>
         </div>
@@ -474,7 +548,7 @@ ${summary.action_items}
       <div className="max-w-4xl mx-auto p-6">
         <Button
           variant="ghost"
-          onClick={() => navigate(-1)}
+          onClick={() => navigate("/matches")}
           className="text-green-500 mb-4 hover:text-green-600"
         >
           <ArrowLeft size={18} className="mr-2" />
@@ -614,9 +688,9 @@ ${summary.action_items}
               <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
                 Feedback for {match.title}
               </h2>
-              <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
                 <Button
-                  className="w-full sm:w-auto bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2"
+                  className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg px-4 py-2 transition-colors shadow-sm"
                   onClick={downloadPDF}
                   disabled={!feedback.length}
                 >
@@ -624,7 +698,7 @@ ${summary.action_items}
                   Download PDF
                 </Button>
                 <Button
-                  className="w-full sm:w-auto bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2"
+                  className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg px-4 py-2 transition-colors shadow-sm"
                   onClick={generateSummary}
                   disabled={loading || !feedback.length}
                 >
@@ -693,7 +767,13 @@ ${summary.action_items}
         )}
       </div>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog
+        open={dialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) navigate(`/match/${match?.slug || matchSlug || ""}`);
+        }}
+      >
         <DialogContent className="max-w-md rounded-xl bg-white dark:bg-gray-800 p-6 shadow-md border border-gray-200 dark:border-gray-700">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-gray-900 dark:text-gray-100 text-center">
