@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+import { useRouter } from 'next/router';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -17,45 +19,49 @@ import MatchRedirect from "./pages/MatchRedirect";
 import VenueRedirect from "./pages/VenueRedirect";
 import VenueDirectory from "./pages/VenueDirectory";
 import ConfirmCheckin from "./pages/ConfirmCheckin";
-import Feedback from "./pages/Feedback"; // Added import for Feedback
+import Feedback from "./pages/Feedback";
 import Guides from "./pages/Guides";
+import ScrollToTop from "./components/ScrollToTop";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          {/* Main App Routes */}
-          <Route path="/" element={<Index />} />
-          <Route path="/search" element={<Search />} />
-          <Route path="/matches" element={<Matches />} />
-          <Route path="/guides" element={<Guides />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/organize" element={<Organize />} />
-          <Route path="/venue-create" element={<VenueCreate />} />
-          <Route path="/venues" element={<VenueDirectory />} />
-          <Route path="/confirm-checkin" element={<ConfirmCheckin />} />
-          <Route path="/feedback" element={<Feedback />} /> {/* Added Feedback route */}
+const App = () => {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <ScrollToTop />
+          <Routes>
+            {/* Main App Routes */}
+            <Route path="/" element={<Index />} />
+            <Route path="/search" element={<Search />} />
+            <Route path="/matches" element={<Matches />} />
+            <Route path="/guides" element={<Guides />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/organize" element={<Organize />} />
+            <Route path="/venue-create" element={<VenueCreate />} />
+            <Route path="/venues" element={<VenueDirectory />} />
+            <Route path="/confirm-checkin" element={<ConfirmCheckin />} />
+            <Route path="/feedback" element={<Feedback />} />
 
-          {/* Slug-Based Routes for Matches and Venues */}
-          <Route path="/match/:slug" element={<MatchDetail />} />
-          <Route path="/join/:slug" element={<JoinMatch />} />
-          <Route path="/venue/:slug" element={<VenueDetail />} />
+            {/* Slug-Based Routes for Matches and Venues */}
+            <Route path="/match/:slug" element={<MatchDetail />} />
+            <Route path="/join/:slug" element={<JoinMatch />} />
+            <Route path="/venue/:slug" element={<VenueDetail />} />
 
-          {/* Redirect Routes for Backward Compatibility */}
-          <Route path="/match-id/:id" element={<MatchRedirect />} />
-          <Route path="/venue-id/:id" element={<VenueRedirect />} />
+            {/* Redirect Routes for Backward Compatibility */}
+            <Route path="/match-id/:id" element={<MatchRedirect />} />
+            <Route path="/venue-id/:id" element={<VenueRedirect />} />
 
-          {/* Catch-All Route */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+            {/* Catch-All Route */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;
