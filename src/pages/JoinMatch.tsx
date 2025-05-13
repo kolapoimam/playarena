@@ -652,7 +652,7 @@ const JoinMatch = () => {
           <DialogTitle>Registration Successful</DialogTitle>
           <DialogDescription>
             <p className="text-gray-600 dark:text-gray-300 mb-4">
-              You have successfully registered for the match for {selectedSlots} slot(s). Save or share this card with your confirmation code.
+              You have successfully registered for the match for {selectedSlots} slot(s).
             </p>
             <div className="mb-4">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Background:</label>
