@@ -683,6 +683,7 @@ const MatchDetail = () => {
               onClick={() => setDownloadDialogOpen(true)}
             >
               <Download size={18} className="mr-2" />
+              Download
             </Button>
           </div>
         </div>
