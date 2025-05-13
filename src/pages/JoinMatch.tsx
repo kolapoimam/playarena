@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Loader, Calendar, MapPin, Users, DollarSign, Trophy, Phone, MessageSquare } from "lucide-react";
+import { ArrowLeft, Loader, Calendar, MapPin, Clock, Users, DollarSign, Trophy, Phone, MessageSquare } from "lucide-react";
 import {
   Form,
   FormControl,
@@ -411,7 +411,10 @@ const JoinMatch = () => {
   };
 
   const formatTime = (timeString: string) => {
-    return timeString.slice(0, 5);
+    const [hours, minutes] = timeString.split(":");
+    const date = new Date();
+    date.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+    return date.toLocaleTimeString("en-NG", { hour: "2-digit", minute: "2-digit", hour12: true });
   };
 
   if (loading || verifyingPayment) {
@@ -461,9 +464,22 @@ const JoinMatch = () => {
       <div className="p-6">
         <div className="bg-card rounded-lg shadow-md p-6 mb-6">
           <h2 className="text-xl font-semibold mb-2">{match.title}</h2>
-          <p className="text-muted-foreground mb-2">
-            {formatDate(match.match_date)} · {formatTime(match.match_time)} · {match.venue?.name}, {match.venue?.city}
-          </p>
+          <div className="text-muted-foreground mb-2">
+            <div className="flex items-center gap-2">
+              <Calendar size={16} />
+              <span>{formatDate(match.match_date)}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Clock size={16} />
+              <span>{formatTime(match.match_time)}</span>
+            </div>
+            {match.venue && (
+              <div className="flex items-center gap-2">
+                <MapPin size={16} />
+                <span>{match.venue.name}, {match.venue.city}</span>
+              </div>
+            )}
+          </div>
           <div className="flex items-center gap-2 text-sm">
             <Users size={16} />
             <span>Spots available: {match.total_slots - totalPlayerSlots} / {match.total_slots}</span>
