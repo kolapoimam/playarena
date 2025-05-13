@@ -74,7 +74,17 @@ const SearchPage = () => {
   const searchMatchesAndVenues = async (query: string) => {
     setLoading(true);
     try {
-      // Search for matches
+      // Step 1: Get all venue IDs that match the query
+      const { data: matchingVenues, error: venueError } = await supabase
+        .from("venues")
+        .select("id")
+        .or(`name.ilike.%${query}%,city.ilike.%${query}%,state.ilike.%${query}%`);
+
+      if (venueError) throw venueError;
+
+      const venueIds = matchingVenues.map((venue) => venue.id);
+
+      // Step 2: Search matches by title or associated venue
       const { data: matchData, error: matchError } = await supabase
         .from("matches")
         .select(`
@@ -82,18 +92,20 @@ const SearchPage = () => {
           venue:venues(slug, name, city, state),
           players:players(player_name)
         `)
-        .or(`title.ilike.%${query}%,venues.name.ilike.%${query}%,venues.city.ilike.%${query}%,venues.state.ilike.%${query}%`)
+        .or(
+          `title.ilike.%${query}%,venue_id.in.(${venueIds.join(",")})`
+        )
         .order("match_date", { ascending: true });
 
       if (matchError) throw matchError;
 
-      // Search for venues
-      const { data: venueData, error: venueError } = await supabase
+      // Step 3: Search for venues directly
+      const { data: venueData, error: venueSearchError } = await supabase
         .from("venues")
         .select("id, slug, name, city, state")
         .or(`name.ilike.%${query}%,city.ilike.%${query}%,state.ilike.%${query}%`);
 
-      if (venueError) throw venueError;
+      if (venueSearchError) throw venueSearchError;
 
       setMatches(matchData as Match[]);
       setVenues(venueData as Venue[]);
@@ -240,7 +252,7 @@ const SearchPage = () => {
               variant={viewMode === "list" ? "default" : "outline"}
               size="sm"
               onClick={() => setViewMode("list")}
-              className="flex items-center gap-1"
+              className={`flex items-center gap-1 ${viewMode === "list" ? "bg-green-500 hover:bg-green-600 text-white" : ""}`}
             >
               <List size={16} />
               List
@@ -249,7 +261,7 @@ const SearchPage = () => {
               variant={viewMode === "grid" ? "default" : "outline"}
               size="sm"
               onClick={() => setViewMode("grid")}
-              className="flex items-center gap-1"
+              className={`flex items-center gap-1 ${viewMode === "grid" ? "bg-green-500 hover:bg-green-600 text-white" : ""}`}
             >
               <Grid size={16} />
               Grid
