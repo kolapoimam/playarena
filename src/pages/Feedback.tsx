@@ -589,10 +589,10 @@ ${summary.action_items.map((item, i) => `${i + 1}. ${item}`).join("\n")}
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-sm font-medium">Referee Performance</FormLabel>
-                      <Select
-                        onValueChange=(value) => field.onChange(parseInt(value))}
-                        value={field.value.toString()}
-                      >
+<Select
+  onValueChange={(value) => field.onChange(parseInt(value))}
+  value={field.value.toString()}
+>
                         <FormControl>
                           <SelectTrigger className="text-base">
                             <SelectValue placeholder="Select rating" />
