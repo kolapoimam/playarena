@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Store, Plus, Calendar, Search, Clock } from "lucide-react";
+import { Store, Plus, Calendar, Users, Clock } from "lucide-react";
 import SearchBar from "@/components/SearchBar";
 import Navbar from "@/components/Navbar";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -60,16 +60,14 @@ const Index = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Get current time in Africa/Lagos timezone
         const now = new Date().toLocaleString("en-US", { timeZone: "Africa/Lagos" });
         const currentDateTime = new Date(now);
         const currentDate = currentDateTime.toISOString().split("T")[0];
-        const currentTime = currentDateTime.toTimeString().slice(0, 5); // HH:MM format
+        const currentTime = currentDateTime.toTimeString().slice(0, 5);
 
         console.log("Current Date (Africa/Lagos):", currentDate);
         console.log("Current Time (Africa/Lagos):", currentTime);
 
-        // Fetch upcoming matches
         const { data: matchesData, error: matchesError } = await supabase
           .from("matches")
           .select(`
@@ -82,7 +80,7 @@ const Index = () => {
             price,
             venue:venues(slug, name, city, image_urls)
           `)
-          .gte("match_date", currentDate) // Matches from today onward
+          .gte("match_date", currentDate)
           .order("match_date", { ascending: true })
           .order("match_time", { ascending: true })
           .limit(5);
@@ -91,7 +89,6 @@ const Index = () => {
 
         console.log("Raw Matches Data:", matchesData);
 
-        // Filter matches to exclude those where time has passed today
         const filteredMatches = matchesData.filter((match: Match) => {
           const matchDateTime = new Date(`${match.match_date}T${match.match_time}:00`);
           const isToday = match.match_date === currentDate;
@@ -101,7 +98,6 @@ const Index = () => {
 
         console.log("Filtered Matches:", filteredMatches);
 
-        // Get popular venues with match count
         const { data: venuesData, error: venuesError } = await supabase
           .from("venues")
           .select(`
@@ -118,7 +114,6 @@ const Index = () => {
 
         if (venuesError) throw venuesError;
 
-        // Map venues to include match_count
         const venuesWithMatchCount = venuesData.map((venue: any) => ({
           ...venue,
           match_count: venue.matches[0]?.count || 0,
@@ -143,43 +138,41 @@ const Index = () => {
 
   return (
     <div className="min-h-screen pb-20">
-      {/* Header */}
-      <header className="sticky top-0 z-50 p-4 flex justify-between items-center bg-white dark:bg-gray-900 shadow-sm">
+      <header className="sticky top-0 z-50 p-4 flex justify-between items-center bg-green-50 dark:bg-green-900 shadow-md">
+        <div className="w-12" /> {/* Spacer for alignment */}
         <img
           src={theme === "dark" ? "/playarenadark.png" : "/playarenalight.png"}
           alt="PlayArena Logo"
-          className="h-12 w-auto object-contain"
+          className="h-10 w-auto object-contain"
         />
         <ThemeToggle />
       </header>
 
-      {/* Search Bar */}
       <div className="px-4 mb-6">
         <SearchBar />
       </div>
 
-      {/* Action Buttons */}
-      <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 px-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 px-4 mb-8">
         <Button
-          className="flex flex-col items-center justify-center h-24 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-transform hover:scale-105"
+          className="flex flex-col items-center justify-center h-24 bg-green-500 hover:bg-green-600 text-white rounded-xl transition-transform hover:scale-105"
           onClick={() => navigate("/organize")}
         >
           <Plus size={24} className="mb-2" />
-          <span className="text-sm font-medium">Organize</span>
+          <span className="text-base font-medium">Organize</span>
         </Button>
         <Button
-          className="flex flex-col items-center justify-center h-24 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-transform hover:scale-105"
-          onClick={() => navigate("/search")}
+          className="flex flex-col items-center justify-center h-24 bg-blue-500 hover:bg-blue-600 text-white rounded-xl transition-transform hover:scale-105"
+          onClick={() => navigate("/confirm-checkin")}
         >
-          <Calendar size={24} className="mb-2" />
-          <span className="text-sm font-medium">Join Match</span>
+          <Users size={24} className="mb-2" />
+          <span className="text-base font-medium">Manage</span>
         </Button>
         <Button
-          className="flex flex-col items-center justify-center h-24 bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-transform hover:scale-105"
+          className="flex flex-col items-center justify-center h-24 bg-purple-500 hover:bg-purple-600 text-white rounded-xl transition-transform hover:scale-105"
           onClick={() => navigate("/venue-create")}
         >
           <Store size={24} className="mb-2" />
-          <span className="text-sm font-medium">Add Venue</span>
+          <span className="text-base font-medium">Add Venue</span>
         </Button>
       </div>
 
@@ -189,13 +182,12 @@ const Index = () => {
         </div>
       ) : (
         <>
-          {/* Upcoming Matches */}
           <section className="mb-8">
             <div className="flex justify-between items-center px-4 mb-3">
               <h2 className="text-2xl font-bold">Upcoming Matches</h2>
               <Button
                 variant="outline"
-                className="text-primary hover:bg-primary hover:text-white transition-colors"
+                className="text-green-600 hover:bg-green-600 hover:text-white transition-colors"
                 onClick={() => navigate("/matches")}
               >
                 See All
@@ -207,7 +199,7 @@ const Index = () => {
                 {upcomingMatches.map((match) => (
                   <div
                     key={match.id}
-                    className="min-w-[280px] bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 border border-gray-200 dark:border-gray-700"
+                    className="min-w-[280px] bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 border border-gray-200 dark:border-gray-700"
                   >
                     <h3 className="font-bold text-lg mb-2">{match.title}</h3>
 
@@ -253,7 +245,7 @@ const Index = () => {
                 <p className="text-muted-foreground">No upcoming matches yet.</p>
                 <Button
                   variant="link"
-                  className="mt-2 text-primary"
+                  className="mt-2 text-green-600"
                   onClick={() => navigate("/organize")}
                 >
                   Create the first match!
@@ -262,13 +254,12 @@ const Index = () => {
             )}
           </section>
 
-          {/* Popular Venues */}
           <section>
             <div className="flex justify-between items-center px-4 mb-3">
               <h2 className="text-2xl font-bold">Venues</h2>
               <Button
                 variant="outline"
-                className="text-primary hover:bg-primary hover:text-white transition-colors"
+                className="text-green-600 hover:bg-green-600 hover:text-white transition-colors"
                 onClick={() => navigate("/venues")}
               >
                 See All
@@ -284,7 +275,7 @@ const Index = () => {
                   return (
                     <div
                       key={venue.id}
-                      className="min-w-[280px] bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 cursor-pointer"
+                      className="min-w-[280px] bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 cursor-pointer"
                       onClick={() => navigate(`/venue/${venue.slug}`)}
                     >
                       <img
@@ -306,7 +297,7 @@ const Index = () => {
                 <p className="text-muted-foreground">No venues added yet.</p>
                 <Button
                   variant="link"
-                  className="mt-2 text-primary"
+                  className="mt-2 text-green-600"
                   onClick={() => navigate("/venue-create")}
                 >
                   Add the first venue!
@@ -315,8 +306,7 @@ const Index = () => {
             )}
           </section>
 
-          {/* FAQ Section */}
-          <section className="px-4 py-6 bg-gray-100 dark:bg-gray-800 rounded-lg mt-8">
+          <section className="px-4 py-6 bg-gradient-to-b from-green-50 to-white dark:from-green-900 dark:to-gray-800 rounded-lg mt-8">
             <h2 className="text-2xl font-bold mb-4 text-center">Frequently Asked Questions</h2>
             <div className="flex space-x-4 mb-4 justify-center">
               <button 
@@ -389,7 +379,7 @@ const Index = () => {
               </details>
               <details className="bg-white dark:bg-gray-700 rounded-md p-4">
                 <summary className="font-semibold cursor-pointer">Can I organize a paid match?</summary>
-                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Yes, set the price when organizing via the 'Organize' page.</p>
+                <p className "mt-2 text-sm text-gray-600 dark:text-gray-300">Yes, set the price when organizing via the 'Organize' page.</p>
               </details>
               <details className="bg-white dark:bg-gray-700 rounded-md p-4">
                 <summary className="font-semibold cursor-pointer">What if a match is canceled?</summary>
@@ -408,7 +398,6 @@ const Index = () => {
         </>
       )}
 
-      {/* Bottom Navigation */}
       <Navbar />
     </div>
   );
