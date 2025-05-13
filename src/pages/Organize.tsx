@@ -46,20 +46,55 @@ import VenueForm from "@/components/VenueForm";
 import Navbar from "@/components/Navbar";
 import html2canvas from "html2canvas";
 
-// Form schema using zod
 const formSchema = z.object({
-  title: z.string().min(3, { message: "Title must be at least 3 characters" }),
-  venue_id: z.string().uuid({ message: "Please select a venue" }),
-  match_date: z.date({ required_error: "Please select a date" }),
-  match_time: z.string().regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, { 
-    message: "Please enter a valid time (HH:MM)" 
-  }),
-  total_slots: z.number().int().min(2, { message: "At least 2 players are required" }),
+  title: z.string()
+    .min(3, { message: "Title must be at least 3 characters" })
+    .max(100, { message: "Title cannot exceed 100 characters" }),
+    
+  venue_id: z.string()
+    .uuid({ message: "Please select a valid venue" }),
+    
+  match_date: z.date({ 
+    required_error: "Please select a date",
+    invalid_type_error: "Please select a valid date" 
+  }).min(new Date(), { message: "Date cannot be in the past" }),
+    
+  match_time: z.string()
+    .regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, { 
+      message: "Please enter a valid time in HH:MM format (24-hour clock)" 
+    }),
+    
+  total_slots: z.number()
+    .int({ message: "Must be a whole number" })
+    .min(2, { message: "At least 2 players are required" })
+    .max(100, { message: "Maximum 100 players allowed" }),
+    
   is_paid: z.boolean().default(false),
-  price: z.number().optional().nullable(),
-  notes: z.string().optional(),
-  organizer_name: z.string().min(2, { message: "Name must be at least 2 characters" }),
-  organizer_phone: z.string().regex(/^\d{11}$/, { message: "Phone number must be exactly 11 digits" }).optional().nullable(),
+    
+  price: z.number()
+    .min(0, { message: "Price cannot be negative" })
+    .max(10000, { message: "Maximum price is ₦10,000" })
+    .optional()
+    .nullable()
+    .refine(val => val === null || val === undefined || val >= 0, {
+      message: "Price must be positive if provided"
+    }),
+    
+  notes: z.string()
+    .max(500, { message: "Notes cannot exceed 500 characters" })
+    .optional(),
+    
+  organizer_name: z.string()
+    .min(2, { message: "Name must be at least 2 characters" })
+    .max(50, { message: "Name cannot exceed 50 characters" }),
+    
+  organizer_phone: z.string()
+    .regex(/^[0-9]+$/, { message: "Must contain only numbers" })
+    .length(11, { message: "Must be exactly 11 digits" })
+    .optional()
+    .nullable()
+    .transform(val => val === "" ? null : val),
+    
   disclose_phone: z.boolean().default(false),
   player_number_required: z.boolean().default(false),
   is_private: z.boolean().default(false),
@@ -263,10 +298,7 @@ const Organize = () => {
             <ArrowLeft size={18} className="mr-2" />
             Back
           </Button>
-          <h1 className="text-2xl font-bold">Organise a Match</h1>
-          <div className="w-10 flex items-center">
-            <ThemeToggle />
-          </div>
+          <h1 className="text-2xl font-bold">Organize a Match</h1>
         </div>
       </header>
 
@@ -605,31 +637,36 @@ const Organize = () => {
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="organizer_phone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium">Your Phone Number (Optional)</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="tel"
-                      placeholder="Enter 11-digit phone number"
-                      className="text-base"
-                      {...field}
-                      value={field.value ?? ""}
-                      onChange={(e) => {
-                        field.onChange(e.target.value || null);
-                      }}
-                    />
-                  </FormControl>
-                  <FormDescription className="text-sm">
-                    Provide your phone number for contact purposes
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+<FormField
+  control={form.control}
+  name="organizer_phone"
+  render={({ field }) => (
+    <FormItem>
+      <FormLabel className="text-sm font-medium">Your Phone Number (Optional)</FormLabel>
+      <FormControl>
+        <Input
+          type="tel"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          placeholder="Enter 11-digit phone number"
+          className="text-base"
+          {...field}
+          value={field.value ?? ""}
+          onChange={(e) => {
+            // Only allow numbers and limit to 11 digits
+            const numericValue = e.target.value.replace(/\D/g, '');
+            const truncatedValue = numericValue.slice(0, 11);
+            field.onChange(truncatedValue || null);
+          }}
+        />
+      </FormControl>
+      <FormDescription className="text-sm">
+        Provide your phone number for contact purposes (numbers only)
+      </FormDescription>
+      <FormMessage />
+    </FormItem>
+  )}
+/>
 
             <FormField
               control={form.control}
