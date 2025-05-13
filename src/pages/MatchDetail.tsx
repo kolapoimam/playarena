@@ -232,14 +232,14 @@ const MatchDetail = () => {
     if (!match) return { isStarted: false, isPassed: false, isFull: false };
     
     const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
-    const now = new Date();
-    const twentyFourHoursAfter = addHours(matchDateTime, 24);
+    const now = new Date("2025-05-13T19:46:00+01:00"); // 07:46 PM WAT, May 13, 2025
+    const fortyEightHoursAfter = addHours(matchDateTime, 48);
     
     const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
     const isFull = totalPlayerSlots >= match.total_slots;
     const isStarted = now >= matchDateTime;
-    const isPassed = now >= twentyFourHoursAfter;
-    const isFeedbackWindow = now >= matchDateTime && now < twentyFourHoursAfter;
+    const isPassed = now >= fortyEightHoursAfter;
+    const isFeedbackWindow = now >= matchDateTime && now < fortyEightHoursAfter;
     
     return { isStarted, isPassed, isFull, isFeedbackWindow };
   };
@@ -248,12 +248,13 @@ const MatchDetail = () => {
     if (!match) return;
     
     const url = `${window.location.origin}/match/${match.slug}`;
-    const shareText = `Join my Football Match: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. Powered by PlayArena. ${url}${match.is_private ? ` (Access Password: ${match.access_password})` : ''}`;
+    const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
+    const shareText = `Join my Football Match: PlayArena: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. ${totalPlayerSlots}/${match.total_slots} slots. Powered by PlayArena. ${url}${match.is_private ? ` (Access Password: ${match.access_password})` : ''}`;
     
     if (navigator.share) {
       try {
         await navigator.share({
-          title: `Join my Football Match: ${match.title}`,
+          title: `Join my Football Match: PlayArena: ${match.title}`,
           text: shareText,
           url: url,
         });
@@ -281,7 +282,8 @@ const MatchDetail = () => {
     if (!match) return;
     
     const url = `${window.location.origin}/match/${match.slug}`;
-    const shareText = `Join my Football Match: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. Powered by PlayArena. ${url}${match.is_private ? ` (Access Password: ${match.access_password})` : ''}`;
+    const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
+    const shareText = `Join my Football Match: PlayArena: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. ${totalPlayerSlots}/${match.total_slots} slots. Powered by PlayArena. ${url}${match.is_private ? ` (Access Password: ${match.access_password})` : ''}`;
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
     window.open(whatsappUrl, '_blank');
   };
@@ -290,7 +292,8 @@ const MatchDetail = () => {
     if (!match) return;
     
     const url = `${window.location.origin}/match/${match.slug}`;
-    const shareText = `Join my Football Match: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. Powered by PlayArena. ${url}${match.is_private ? ` (Access Password: ${match.access_password})` : ''}`;
+    const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
+    const shareText = `Join my Football Match: PlayArena: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. ${totalPlayerSlots}/${match.total_slots} slots. Powered by PlayArena. ${url}${match.is_private ? ` (Access Password: ${match.access_password})` : ''}`;
     const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
     window.open(twitterUrl, '_blank');
   };
@@ -299,8 +302,9 @@ const MatchDetail = () => {
     if (!match) return;
     
     const url = `${window.location.origin}/match/${match.slug}`;
-    const shareText = `Join my Football Match: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. Powered by PlayArena. ${match.is_private ? ` (Access Password: ${match.access_password})` : ''}`;
-    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(shareText)}`;
+    const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
+    const shareText = `Join my Football Match: PlayArena: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. ${totalPlayerSlots}/${match.total_slots} slots. Powered by PlayArena. ${match.is_private ? ` (Access Password: ${match.access_password})` : ''}`;
+    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}"e=${encodeURIComponent(shareText)}`;
     window.open(facebookUrl, '_blank');
   };
 
@@ -356,7 +360,7 @@ const MatchDetail = () => {
     };
 
     const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE` +
-      `&text=${encodeURIComponent(match.title)}` +
+      `&text=${encodeURIComponent(`PlayArena: ${match.title}`)}` +
       `&dates=${formatGoogleDate(matchDateTime)}/${formatGoogleDate(endDateTime)}` +
       `&location=${encodeURIComponent(match.venue ? `${match.venue.name}, ${match.venue.city}` : 'Unknown Venue')}` +
       `&details=${encodeURIComponent(
@@ -369,7 +373,8 @@ const MatchDetail = () => {
       )}` +
       `&sf=true&output=xml`;
 
-    window.open(googleCalendarUrl, '_blank');
+    window.open(googleCalendarUrl, '_blank', 'width=600,height=600');
+    setTimeout(() => navigate(`/match/${slug}`), 1000); // Redirect after a short delay
   };
 
   if (loading) {
@@ -456,7 +461,7 @@ const MatchDetail = () => {
 
       <div className="p-4">
         <h1 className="text-2xl font-bold mb-2">
-          {match.title}{" "}
+          PlayArena: {match.title}{" "}
           {match.is_private && (
             <TooltipProvider>
               <Tooltip>
@@ -758,7 +763,7 @@ const MatchDetail = () => {
                   />
                   <Trophy className={`h-6 w-6 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
                 </div>
-                <h2 className={`text-xl font-bold mb-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`}>{match.title}</h2>
+                <h2 className={`text-xl font-bold mb-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`}>PlayArena: {match.title}</h2>
                 <div className="space-y-2 mb-4">
                   <div className="flex items-center">
                     <MapPin className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
