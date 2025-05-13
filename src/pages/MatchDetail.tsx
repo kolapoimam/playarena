@@ -249,12 +249,12 @@ const MatchDetail = () => {
     
     const url = `${window.location.origin}/match/${match.slug}`;
     const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
-    const shareText = `Join my Football Match: PlayArena: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. ${totalPlayerSlots}/${match.total_slots} slots. Powered by PlayArena. ${url}${match.is_private ? ` (Access Password: ${match.access_password})` : ''}`;
+    const shareText = `Join my Football Match: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. ${totalPlayerSlots}/${match.total_slots} slots. Powered by PlayArena. ${url}${match.is_private ? ` (Access Password: ${match.access_password})` : ''}`;
     
     if (navigator.share) {
       try {
         await navigator.share({
-          title: `Join my Football Match: PlayArena: ${match.title}`,
+          title: `Join my Football Match: ${match.title}`,
           text: shareText,
           url: url,
         });
@@ -283,7 +283,7 @@ const MatchDetail = () => {
     
     const url = `${window.location.origin}/match/${match.slug}`;
     const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
-    const shareText = `Join my Football Match: PlayArena: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. ${totalPlayerSlots}/${match.total_slots} slots. Powered by PlayArena. ${url}${match.is_private ? ` (Access Password: ${match.access_password})` : ''}`;
+    const shareText = `Join my Football Match: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. ${totalPlayerSlots}/${match.total_slots} slots. Powered by PlayArena. ${url}${match.is_private ? ` (Access Password: ${match.access_password})` : ''}`;
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
     window.open(whatsappUrl, '_blank');
   };
@@ -293,7 +293,7 @@ const MatchDetail = () => {
     
     const url = `${window.location.origin}/match/${match.slug}`;
     const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
-    const shareText = `Join my Football Match: PlayArena: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. ${totalPlayerSlots}/${match.total_slots} slots. Powered by PlayArena. ${url}${match.is_private ? ` (Access Password: ${match.access_password})` : ''}`;
+    const shareText = `Join my Football Match: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. ${totalPlayerSlots}/${match.total_slots} slots. Powered by PlayArena. ${url}${match.is_private ? ` (Access Password: ${match.access_password})` : ''}`;
     const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
     window.open(twitterUrl, '_blank');
   };
@@ -303,7 +303,7 @@ const MatchDetail = () => {
     
     const url = `${window.location.origin}/match/${match.slug}`;
     const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
-    const shareText = `Join my Football Match: PlayArena: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. ${totalPlayerSlots}/${match.total_slots} slots. Powered by PlayArena. ${match.is_private ? ` (Access Password: ${match.access_password})` : ''}`;
+    const shareText = `Join my Football Match: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. ${totalPlayerSlots}/${match.total_slots} slots. Powered by PlayArena. ${match.is_private ? ` (Access Password: ${match.access_password})` : ''}`;
     const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}"e=${encodeURIComponent(shareText)}`;
     window.open(facebookUrl, '_blank');
   };
@@ -461,7 +461,7 @@ const MatchDetail = () => {
 
       <div className="p-4">
         <h1 className="text-2xl font-bold mb-2">
-          PlayArena: {match.title}{" "}
+     {match.title}{" "}
           {match.is_private && (
             <TooltipProvider>
               <Tooltip>
@@ -763,7 +763,7 @@ const MatchDetail = () => {
                   />
                   <Trophy className={`h-6 w-6 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
                 </div>
-                <h2 className={`text-xl font-bold mb-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`}>PlayArena: {match.title}</h2>
+                <h2 className={`text-xl font-bold mb-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`}>{match.title}</h2>
                 <div className="space-y-2 mb-4">
                   <div className="flex items-center">
                     <MapPin className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
