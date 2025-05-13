@@ -35,20 +35,20 @@ export default function MatchCard({
   } else if (matchDate.hasSame(now, "day")) {
     const hoursDiff = matchDate.diff(now, "hours").hours;
     if (hoursDiff >= 0 && hoursDiff <= 2) {
-      statusLabel = "Live Match";
+      statusLabel = "Live";
       statusClass = "bg-red-100 text-red-700 animate-pulse";
     } else if (hoursDiff > 2) {
       statusLabel = "Today's Match";
       statusClass = "bg-green-100 text-green-700";
     } else {
-      statusLabel = "Match Passed";
+      statusLabel = "Passed";
       statusClass = "bg-gray-200 text-gray-600";
     }
   } else if (matchDate > tomorrow) {
-    statusLabel = "Upcoming Match";
+    statusLabel = "Upcoming";
     statusClass = "bg-blue-100 text-blue-800";
   } else {
-    statusLabel = "Upcoming Match";
+    statusLabel = "Upcoming";
     statusClass = "bg-blue-100 text-blue-800";
   }
 
