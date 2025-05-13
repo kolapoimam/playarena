@@ -58,9 +58,14 @@ const VenueDetail = () => {
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [matchesLoading, setMatchesLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!slug) return;
+    if (!slug) {
+      setError("No venue slug provided.");
+      setLoading(false);
+      return;
+    }
 
     const fetchVenue = async () => {
       try {
@@ -70,17 +75,19 @@ const VenueDetail = () => {
           .eq("slug", slug)
           .single();
 
-        if (error) throw error;
+        if (error) throw new Error(error.message || "Failed to fetch venue.");
         setVenue(data as Venue);
         return data;
-      } catch (error) {
-        console.error("Error fetching venue:", error);
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred.";
+        console.error("Error fetching venue:", errorMessage);
+        setError(errorMessage);
         toast({
           title: "Error",
           description: "Failed to load venue details. Please try again.",
           variant: "destructive",
         });
-        throw error;
+        throw err;
       }
     };
 
@@ -93,10 +100,11 @@ const VenueDetail = () => {
           .order("match_date", { ascending: false })
           .limit(5);
 
-        if (error) throw error;
+        if (error) throw new Error(error.message || "Failed to fetch matches.");
         setMatches(data as Match[]);
-      } catch (error) {
-        console.error("Error fetching matches:", error);
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred.";
+        console.error("Error fetching matches:", errorMessage);
         toast({
           title: "Error",
           description: "Failed to load recent matches. Please try again.",
@@ -113,8 +121,8 @@ const VenueDetail = () => {
         if (venueData) {
           await fetchMatches(venueData.id);
         }
-      } catch (error) {
-        console.error("Error in fetchData:", error);
+      } catch (err) {
+        console.error("Error in fetchData:", err);
       } finally {
         setLoading(false);
       }
@@ -130,6 +138,13 @@ const VenueDetail = () => {
     }
   };
 
+  // Initialize editor only when venue is available
+  const editor = useEditor({
+    extensions: [StarterKit],
+    content: venue?.facilities || "<p>No facilities information available.</p>",
+    editable: false,
+  });
+
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-[50vh] bg-gray-50 dark:bg-gray-900">
@@ -138,7 +153,7 @@ const VenueDetail = () => {
     );
   }
 
-  if (!venue) {
+  if (error || !venue) {
     return (
       <div className="p-6 bg-gray-50 dark:bg-gray-900 min-h-screen">
         <Button
@@ -150,8 +165,12 @@ const VenueDetail = () => {
           Back
         </Button>
         <div className="text-center py-8">
-          <h2 className="text-xl font-semibold mb-2 text-gray-900 dark:text-gray-100">Venue Not Found</h2>
-          <p className="text-gray-500 dark:text-gray-400">The venue you're looking for doesn't exist or has been removed.</p>
+          <h2 className="text-xl font-semibold mb-2 text-gray-900 dark:text-gray-100">
+            {error ? "Error Loading Venue" : "Venue Not Found"}
+          </h2>
+          <p className="text-gray-500 dark:text-gray-400">
+            {error || "The venue you're looking for doesn't exist or has been removed."}
+          </p>
         </div>
       </div>
     );
@@ -159,13 +178,6 @@ const VenueDetail = () => {
 
   const defaultImage = "https://dailytrust.com/wp-content/uploads/2023/12/football-488714_1280.jpg";
   const venueImage = venue.image_urls && venue.image_urls.length > 0 ? venue.image_urls[0] : defaultImage;
-
-  // Initialize editor for read-only display
-  const editor = useEditor({
-    extensions: [StarterKit],
-    content: venue.facilities || "",
-    editable: false,
-  });
 
   return (
     <div className="min-h-screen pb-20 bg-gray-50 dark:bg-gray-900">
@@ -216,10 +228,10 @@ const VenueDetail = () => {
                 </div>
               )}
 
-              {venue.facilities && editor && (
+              {editor && (
                 <div>
                   <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Facilities</h3>
-                  <RichTextEditor editor={editor} readOnly className="bg-white dark:bg-gray-800" />
+                  <RichTextEditor editor={editor} className="bg-white dark:bg-gray-800" />
                 </div>
               )}
 
