@@ -473,10 +473,10 @@ const JoinMatch = () => {
           )}
           {match.disclose_phone && match.organizer_phone && (
             <div className="mt-2 flex items-center gap-2 text-sm">
-              <span>Contact Organizer:</span>
+              <span>Organizer:</span>
               <a href={`tel:${match.organizer_phone}`} className="flex items-center text-blue-600 hover:underline">
                 <Phone size={16} className="mr-1" />
-                {match.organizer_phone}
+                Call Organizer
               </a>
               <a
                 href={`https://wa.me/${match.organizer_phone}`}
