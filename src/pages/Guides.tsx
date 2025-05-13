@@ -76,7 +76,7 @@ const Guides = () => {
                   </AccordionItem>
                   <AccordionItem value="organiserCode" className="border-b border-gray-200 dark:border-gray-700">
                     <AccordionTrigger className="text-xl font-semibold hover:bg-green-50 dark:hover:bg-gray-700 py-3 px-2 data-[state=open]:border-l-4 data-[state=open]:border-green-500">
-                      Super Code & Match Management
+                      Match Management
                     </AccordionTrigger>
                     <AccordionContent className="text-gray-700 dark:text-gray-300 px-2 py-2">
                       When you create a match, you'll receive a Super Code. This code is essential as it allows you to:
