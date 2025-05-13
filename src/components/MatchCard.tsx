@@ -26,8 +26,8 @@ export default function MatchCard({
   const now = DateTime.now().setZone("Africa/Lagos");
   const tomorrow = now.plus({ days: 1 }).startOf("day");
 
-  let statusLabel = "Upcoming Match";
-  let statusClass = "bg-blue-100 text-blue-800";
+  let statusLabel = "";
+  let statusClass = "";
 
   if (matchDate < now) {
     statusLabel = "Match Passed";
@@ -45,6 +45,9 @@ export default function MatchCard({
       statusClass = "bg-gray-200 text-gray-600";
     }
   } else if (matchDate > tomorrow) {
+    statusLabel = "Upcoming Match";
+    statusClass = "bg-blue-100 text-blue-800";
+  } else {
     statusLabel = "Upcoming Match";
     statusClass = "bg-blue-100 text-blue-800";
   }
