@@ -402,9 +402,9 @@ const JoinMatch = () => {
 
   const formatDate = (dateString: string) => {
     const options: Intl.DateTimeFormatOptions = {
-      weekday: "long",
+      weekday: "short",
       day: "numeric",
-      month: "long",
+      month: "short",
       year: "numeric",
     };
     return new Date(dateString).toLocaleDateString("en-NG", options);
