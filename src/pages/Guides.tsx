@@ -88,7 +88,7 @@ const Guides = () => {
                     </AccordionTrigger>
                     <AccordionContent className="text-gray-700 dark:text-gray-300 px-2 py-2">
                       Leave the "Private Match" option unchecked to create a public match. It will be visible to all users for joining.
-                    </AccordionContent一体>
+                    </AccordionContent>
                   </AccordionItem>
                   <AccordionItem value="bulkPayment" className="border-b border-gray-200 dark:border-gray-700">
                     <AccordionTrigger className="text-xl font-semibold hover:bg-green-50 dark:hover:bg-gray-700 py-3 px-2 data-[state=open]:border-l-4 data-[state=open]:border-green-500">
