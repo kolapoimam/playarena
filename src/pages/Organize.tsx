@@ -74,7 +74,6 @@ const formSchema = z.object({
   price: z.number()
     .min(0, { message: "Price cannot be negative" })
     .max(100000, { message: "Maximum price is ₦100,000" })
-    .regex(/^[0-9]+$/, { message: "Must contain only numbers" })
     .optional()
     .nullable()
     .refine(val => val === null || val === undefined || val >= 0, {
