@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -100,6 +100,26 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
     },
   });
 
+  // Initialize editor for facilities field
+  const editor = useEditor({
+    extensions: [StarterKit],
+    content: "",
+    onUpdate: ({ editor }) => {
+      const html = editor.getHTML();
+      form.setValue("facilities", html === "<p></p>" ? "" : html);
+    },
+  });
+
+  // Sync editor content with form field on mount or reset
+  useEffect(() => {
+    if (editor) {
+      const currentFacilities = form.getValues("facilities");
+      if (currentFacilities && currentFacilities !== editor.getHTML()) {
+        editor.commands.setContent(currentFacilities);
+      }
+    }
+  }, [editor, form]);
+
   const handleFileChange = (files: FileList | null) => {
     setFileError(null);
     if (!files || files.length === 0) return;
@@ -138,7 +158,7 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
             upsert: false,
           });
 
-        if (uploadError) throw uploadError;
+        if (uploadError) throw new Error(uploadError.message || "Failed to upload image.");
 
         const { data: publicUrlData } = supabase.storage
           .from("venue-images")
@@ -146,6 +166,8 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
 
         if (publicUrlData) {
           imageUrl = publicUrlData.publicUrl;
+        } else {
+          throw new Error("Failed to retrieve image URL.");
         }
       }
 
@@ -168,7 +190,7 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
         .select("id, slug, name")
         .single();
 
-      if (error) throw error;
+      if (error) throw new Error(error.message || "Failed to create venue.");
 
       toast({
         title: "Venue created!",
@@ -180,28 +202,25 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
+      if (editor) {
+        editor.commands.setContent("");
+      }
 
       if (onSuccess && venue) {
         onSuccess(venue.id, venue.slug, venue.name);
       }
     } catch (error) {
-      console.error("Error creating venue:", error);
+      const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred.";
+      console.error("Error creating venue:", errorMessage);
       toast({
         title: "Error",
-        description: "Failed to create venue. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
   };
-
-  // Initialize editor for facilities field
-  const editor = useEditor({
-    extensions: [StarterKit],
-    content: form.watch("facilities") || "",
-    onUpdate: ({ editor }) => form.setValue("facilities", editor.getHTML()),
-  });
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
@@ -324,7 +343,7 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
                     />
                   </FormControl>
                   <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
-                    Provide a WhatsApp-enabled phone number for booking inquiries (numbers only)
+                    Provide a valid phone number of the Venue owner or Manager (numbers only)
                   </FormDescription>
                   <FormMessage className="text-red-500" />
                 </FormItem>
@@ -402,11 +421,11 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
             <FormField
               control={form.control}
               name="facilities"
-              render={({ field }) => (
+              render={() => (
                 <FormItem>
                   <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Facilities (Optional)</FormLabel>
                   <FormControl>
-                    <RichTextEditor editor={editor} />
+                    {editor ? <RichTextEditor editor={editor} /> : <p>Loading editor...</p>}
                   </FormControl>
                   <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
                     Add details about facilities (e.g., pitches, seating) using rich text
@@ -499,7 +518,7 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
             <Button
               type="submit"
               className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-3 text-lg shadow-md transition-colors"
-              disabled={loading}
+              disabled={loading || !editor}
             >
               {loading ? "Creating..." : "Create Venue"}
             </Button>
