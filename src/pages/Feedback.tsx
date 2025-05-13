@@ -56,9 +56,9 @@ type Feedback = {
 };
 
 type FeedbackSummary = {
-  what_went_well: string;
-  major_concerns: string;
-  action_items: string;
+  what_went_well: string[];
+  major_concerns: string[];
+  action_items: string[];
 };
 
 // Validation schemas
@@ -77,7 +77,7 @@ const Feedback = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
-  const matchSlug = searchParams.get("matchSlug"); // Changed from matchId to matchSlug
+  const matchSlug = searchParams.get("matchSlug");
   const [dialogOpen, setDialogOpen] = useState(true);
   const [code, setCode] = useState("");
   const [codeError, setCodeError] = useState<string | null>(null);
@@ -102,7 +102,7 @@ const Feedback = () => {
   const isFeedbackExpired = () => {
     if (!match?.match_date || !match?.match_time) return true;
     const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
-    const now = new Date("2025-05-13T21:15:00+01:00"); // 09:15 PM WAT, May 13, 2025
+    const now = new Date("2025-05-13T21:44:00+01:00"); // 09:44 PM WAT, May 13, 2025
     const hoursSinceMatch = (now.getTime() - matchDateTime.getTime()) / (1000 * 60 * 60);
     return hoursSinceMatch > 48;
   };
@@ -128,7 +128,6 @@ const Feedback = () => {
     setLoading(true);
 
     try {
-      // Fetch match details using slug instead of ID
       const { data: matchData, error: matchError } = await supabase
         .from("matches")
         .select(`
@@ -153,13 +152,11 @@ const Feedback = () => {
         players: Array.isArray(matchData.players) ? matchData.players : [],
       };
 
-      // Check if code is super code (organizer)
       if (code === match.super_code) {
         setIsOrganizer(true);
         setMatch(match);
         setDialogOpen(false);
 
-        // Fetch feedback for the match
         const { data: feedbackData, error: feedbackError } = await supabase
           .from("feedback")
           .select(`
@@ -177,7 +174,6 @@ const Feedback = () => {
           }))
         );
 
-        // Fetch existing summary
         const { data: summaryData, error: summaryError } = await supabase
           .from("feedback_summaries")
           .select("summary")
@@ -191,7 +187,6 @@ const Feedback = () => {
         return;
       }
 
-      // Check if code is a player confirmation code
       const player = match.players?.find((p) => p.confirmation_code === code);
       if (!player) {
         setCodeError("Invalid code. Please try again.");
@@ -200,7 +195,6 @@ const Feedback = () => {
         return;
       }
 
-      // Check if player has already submitted feedback
       const { data: existingFeedback, error: feedbackError } = await supabase
         .from("feedback")
         .select("id")
@@ -216,7 +210,7 @@ const Feedback = () => {
           title: "Feedback Already Submitted",
           description: "You have already submitted feedback for this match.",
         });
-        return; // Stay on the page to show the "Feedback Already Submitted" message
+        return;
       }
 
       setMatch(match);
@@ -282,221 +276,194 @@ const Feedback = () => {
 
     const doc = new jsPDF();
     const img = new Image();
-    img.src = "/Playarenalight.png";
-    img.crossOrigin = "Anonymous";
+    img.src = "https://playarenagames.vercel.app/playarenalight.png"; // Updated to a valid public URL
+    img.crossOrigin = "anonymous";
 
     const loadImage = new Promise((resolve, reject) => {
       img.onload = () => resolve(img);
-      img.onerror = () => reject(new Error("Failed to load logo image"));
+      img.onerror = () => {
+        console.warn("Logo image failed to load, proceeding without logo.");
+        resolve(null); // Fallback to proceed without logo
+      };
     });
 
-    loadImage
-      .then(() => {
-        // Header
-        doc.addImage(img, "PNG", 10, 10, 30, 30);
-        doc.setFontSize(18);
-        doc.setTextColor(0, 128, 0);
-        doc.text(`Feedback Report - ${match.title}`, 50, 20);
-        const now = new Date("2025-05-13T21:15:00+01:00");
+    loadImage.then((loadedImg) => {
+      // Header with branding
+      if (loadedImg) doc.addImage(loadedImg, "PNG", 10, 10, 40, 40);
+      doc.setFillColor(0, 128, 0); // Green background
+      doc.rect(10, 10, 190, 40, "F");
+      doc.setTextColor(255, 255, 255); // White text
+      doc.setFontSize(20);
+      doc.text("PlayArena Feedback Report", 105, 30, { align: "center" });
+      const now = new Date("2025-05-13T21:44:00+01:00");
+      doc.setFontSize(10);
+      doc.text(`Generated: ${now.toLocaleString("en-NG", { timeZone: "Africa/Lagos" })}`, 105, 40, { align: "center" });
+
+      // Content Section
+      doc.setFillColor(240, 240, 240); // Light gray background
+      doc.rect(10, 60, 190, 120, "F");
+      doc.setTextColor(0, 0, 0); // Black text
+      doc.setFontSize(14);
+      doc.text("Feedback Details", 105, 70, { align: "center" });
+      let y = 80;
+      feedback.forEach((f, index) => {
         doc.setFontSize(10);
-        doc.setTextColor(100);
-        doc.text(`Generated on: ${now.toLocaleString("en-NG", { timeZone: "Africa/Lagos" })}`, 50, 30);
-        doc.setLineWidth(0.5);
-        doc.setDrawColor(0, 128, 0);
-        doc.line(10, 45, 200, 45);
-
-        // Feedback Details Header
-        doc.setFontSize(14);
-        doc.setFillColor(0, 128, 0);
-        doc.rect(10, 50, 190, 10, "F");
-        doc.setTextColor(255, 255, 255);
-        doc.text("Feedback Details", 105, 57, { align: "center" });
-
-        // Feedback Content
-        doc.setTextColor(0, 0, 0);
-        let y = 70;
-
-        feedback.forEach((f, index) => {
-          doc.setFontSize(12);
-          doc.setFillColor(240, 240, 240);
-          doc.rect(10, y - 5, 190, 30, "F");
-          doc.setTextColor(0, 128, 0);
-          doc.text(`Feedback #${index + 1} - ${f.player_name}`, 15, y);
-          doc.setTextColor(0, 0, 0);
-          y += 10;
+        doc.text(`Player ${index + 1}: ${f.player_name}`, 20, y);
+        y += 10;
+        doc.text(`Venue: ${f.venue_quality}/5`, 20, y);
+        doc.text(`Org: ${f.match_organization}/5`, 80, y);
+        doc.text(`Ref: ${f.referee_performance}/5`, 140, y);
+        y += 10;
+        if (f.comments) {
+          doc.text("Comments:", 20, y);
+          doc.setTextColor(100);
+          doc.text(f.comments, 40, y, { maxWidth: 150 });
+          y += 10 + Math.ceil(f.comments.length / 50) * 5;
+        }
+        y += 5;
+        if (y > 160) {
+          doc.addPage();
+          doc.setFillColor(0, 128, 0);
+          doc.rect(10, 10, 190, 40, "F");
+          if (loadedImg) doc.addImage(loadedImg, "PNG", 10, 10, 40, 40);
+          doc.setTextColor(255, 255, 255);
+          doc.setFontSize(20);
+          doc.text("PlayArena Feedback Report (Cont.)", 105, 30, { align: "center" });
           doc.setFontSize(10);
-          doc.text(`Venue Quality: ${f.venue_quality}/5`, 15, y);
-          y += 8;
-          doc.text(`Match Organization: ${f.match_organization}/5`, 15, y);
-          y += 8;
-          doc.text(`Referee Performance: ${f.referee_performance}/5`, 15, y);
-          y += 10;
-
-          if (f.comments) {
-            doc.setFontSize(10);
-            doc.text(`Comments:`, 15, y);
-            y += 6;
-            doc.setTextColor(100);
-            doc.text(f.comments, 15, y, { maxWidth: 180 });
-            y += Math.ceil(f.comments.length / 90) * 6 + 10;
-          }
-          y += 10;
-
-          if (y > 260) {
-            doc.addPage();
-            y = 20;
-            doc.addImage(img, "PNG", 10, 10, 30, 30);
-            doc.setFontSize(18);
-            doc.setTextColor(0, 128, 0);
-            doc.text(`Feedback Report - ${match.title} (Continued)`, 50, 20);
-            doc.setFontSize(10);
-            doc.setTextColor(100);
-            doc.text(`Generated on: ${now.toLocaleString("en-NG", { timeZone: "Africa/Lagos" })}`, 50, 30);
-            doc.setLineWidth(0.5);
-            doc.setDrawColor(0, 128, 0);
-            doc.line(10, 45, 200, 45);
-            doc.setFontSize(14);
-            doc.setFillColor(0, 128, 0);
-            doc.rect(10, 50, 190, 10, "F");
-            doc.setTextColor(255, 255, 255);
-            doc.text("Feedback Details", 105, 57, { align: "center" });
-            doc.setTextColor(0, 0, 0);
-          }
-        });
-
-        // Footer
-        doc.setFontSize(8);
-        doc.setTextColor(150);
-        doc.text("Generated by PlayArena", 105, 290, { align: "center" });
-
-        doc.save(`feedback_${match.title.replace(/\s+/g, "_")}.pdf`);
-      })
-      .catch((error) => {
-        console.error("Error generating PDF:", error);
-        toast({
-          title: "Error",
-          description: "Failed to generate PDF. Please try again.",
-          variant: "destructive",
-        });
+          doc.text(`Generated: ${now.toLocaleString("en-NG", { timeZone: "Africa/Lagos" })}`, 105, 40, { align: "center" });
+          doc.setFillColor(240, 240, 240);
+          doc.rect(10, 60, 190, 120, "F");
+          doc.setTextColor(0, 0, 0);
+          doc.setFontSize(14);
+          doc.text("Feedback Details", 105, 70, { align: "center" });
+          y = 80;
+        }
       });
-  };
 
-const generateSummary = async () => {
-  if (!feedback.length) {
-    toast({
-      title: "No Feedback",
-      description: "No feedback available to generate a summary.",
-      variant: "destructive",
-    });
-    return;
-  }
+      // Footer
+      doc.setFillColor(0, 128, 0);
+      doc.rect(10, 280, 190, 10, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(8);
+      doc.text("© 2025 PlayArena. All rights reserved.", 105, 286, { align: "center" });
 
-  setLoading(true);
-  try {
-    // Aggregate feedback data including ratings and comments
-    const comments = feedback.map((f) => f.comments || "").filter(Boolean);
-    const avgVenueQuality = feedback.reduce((sum, f) => sum + f.venue_quality, 0) / feedback.length;
-    const avgMatchOrganization = feedback.reduce((sum, f) => sum + f.match_organization, 0) / feedback.length;
-    const avgRefereePerformance = feedback.reduce((sum, f) => sum + f.referee_performance, 0) / feedback.length;
-
-    const prompt = `
-      You are an expert in sports event analysis tasked with creating a detailed and actionable summary based on player feedback from a sports match. Analyze the following feedback, which includes both numerical ratings and written comments, to generate a structured summary in JSON format with three sections: "what_went_well", "major_concerns", and "action_items". Each section should be a concise paragraph (2-3 sentences) that provides specific, actionable insights tailored to the feedback provided, avoiding generic statements about the overall experience. Use the numerical ratings to identify trends and combine them with the comments to highlight specific strengths, issues, and recommendations.
-
-      Feedback Data:
-      - Average Venue Quality Rating: ${avgVenueQuality.toFixed(1)}/5
-      - Average Match Organization Rating: ${avgMatchOrganization.toFixed(1)}/5
-      - Average Referee Performance Rating: ${avgRefereePerformance.toFixed(1)}/5
-      - Written Comments:
-      ${comments.join("\n\n")}
-
-      Guidelines:
-      - In "what_went_well", highlight specific aspects that received high ratings (above 3.5) or positive mentions in comments, focusing on concrete strengths (e.g., "The venue's cleanliness was frequently praised").
-      - In "major_concerns", identify specific issues where ratings are low (below 3.0) or negative themes emerge from comments, providing clear examples (e.g., "Referee decisions were inconsistent, as noted in multiple comments").
-      - In "action_items", suggest targeted improvements based on the concerns, ensuring they are practical and directly address the feedback (e.g., "Implement a pre-match briefing for referees to ensure consistency").
-      - Avoid generic phrases like "the match was well-organized" unless supported by specific evidence from the data.
-
-      Output Format (JSON):
-      {
-        "what_went_well": "Specific strengths based on high ratings or positive comments.",
-        "major_concerns": "Specific issues based on low ratings or negative comments.",
-        "action_items": "Targeted recommendations to address the concerns."
-      }
-    `;
-
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    if (!apiKey) {
+      doc.save(`feedback_${match.title.replace(/\s+/g, "_")}.pdf`);
+    }).catch((error) => {
+      console.error("Error generating PDF:", error);
       toast({
         title: "Error",
-        description: "API key is not configured. Please contact support.",
+        description: "Failed to generate PDF. Proceeding without logo.",
         variant: "destructive",
       });
-      setLoading(false);
+    });
+  };
+
+  const generateSummary = async () => {
+    if (!feedback.length) {
+      toast({
+        title: "No Feedback",
+        description: "No feedback available to generate a summary.",
+        variant: "destructive",
+      });
       return;
     }
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-        }),
+    setLoading(true);
+    try {
+      const comments = feedback.map((f) => f.comments || "").filter(Boolean);
+      const avgVenueQuality = feedback.reduce((sum, f) => sum + f.venue_quality, 0) / feedback.length;
+      const avgMatchOrganization = feedback.reduce((sum, f) => sum + f.match_organization, 0) / feedback.length;
+      const avgRefereePerformance = feedback.reduce((sum, f) => sum + f.referee_performance, 0) / feedback.length;
+
+      const prompt = `
+        You are an expert in sports event analysis. Create a concise summary from player feedback with numerical ratings and comments, formatted as JSON with three sections: "what_went_well", "major_concerns", and "action_items". Each section should list 3-5 specific bullet points (max 10 words each) based on trends in ratings (>3.5 for positives, <3.0 for concerns) and comments, avoiding generic statements.
+
+        Feedback Data:
+        - Average Venue Quality: ${avgVenueQuality.toFixed(1)}/5
+        - Average Match Organization: ${avgMatchOrganization.toFixed(1)}/5
+        - Average Referee Performance: ${avgRefereePerformance.toFixed(1)}/5
+        - Comments: ${comments.join("\n")}
+
+        Output Format (JSON):
+        {
+          "what_went_well": ["Item 1", "Item 2", "Item 3"],
+          "major_concerns": ["Item 1", "Item 2", "Item 3"],
+          "action_items": ["Item 1", "Item 2", "Item 3"]
+        }
+      `;
+
+      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+      if (!apiKey) {
+        toast({
+          title: "Error",
+          description: "API key is not configured. Please contact support.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
       }
-    );
 
-    const data = await response.json();
-    const summaryText = data.candidates[0].content.parts[0].text;
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+          }),
+        }
+      );
 
-    // Clean up the response by removing markdown code fences if present
-    const cleanedSummaryText = summaryText.replace(/```json\n|\n```/g, "").trim();
-    const summary: FeedbackSummary = JSON.parse(cleanedSummaryText);
+      const data = await response.json();
+      const summaryText = data.candidates[0].content.parts[0].text;
+      const cleanedSummaryText = summaryText.replace(/```json\n|\n```/g, "").trim();
+      const summary: FeedbackSummary = JSON.parse(cleanedSummaryText);
 
-    // Save summary to Supabase
-    const { error } = await supabase.from("feedback_summaries").upsert({
-      match_id: match!.id,
-      summary,
-    });
+      const { error } = await supabase.from("feedback_summaries").upsert({
+        match_id: match!.id,
+        summary,
+      });
 
-    if (error) throw error;
+      if (error) throw error;
 
-    setSummary(summary);
-    setSummaryDialogOpen(true);
-    toast({
-      title: "Success",
-      description: "Summary generated successfully.",
-    });
-  } catch (error) {
-    console.error("Error generating summary:", error);
-    toast({
-      title: "Error",
-      description: "Failed to generate summary. Please try again.",
-      variant: "destructive",
-    });
-  } finally {
-    setLoading(false);
-  }
-};
+      setSummary(summary);
+      setSummaryDialogOpen(true);
+      toast({
+        title: "Success",
+        description: "Summary generated successfully.",
+      });
+    } catch (error) {
+      console.error("Error generating summary:", error);
+      toast({
+        title: "Error",
+        description: "Failed to generate summary. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-const copySummary = () => {
-  if (!summary) return;
-  const text = `Feedback Summary for ${match?.title || "Match"}
+  const copySummary = () => {
+    if (!summary) return;
+    const text = `Feedback Summary for ${match?.title || "Match"}
 
 What Went Well:
-${summary.what_went_well}
+${summary.what_went_well.map((item, i) => `${i + 1}. ${item}`).join("\n")}
 
 Major Concerns:
-${summary.major_concerns}
+${summary.major_concerns.map((item, i) => `${i + 1}. ${item}`).join("\n")}
 
 Action Items:
-${summary.action_items}
+${summary.action_items.map((item, i) => `${i + 1}. ${item}`).join("\n")}
   `;
-  navigator.clipboard.writeText(text);
-  toast({
-    title: "Copied",
-    description: "Summary copied to clipboard.",
-  });
-};
+    navigator.clipboard.writeText(text);
+    toast({
+      title: "Copied",
+      description: "Summary copied to clipboard.",
+    });
+  };
+
   if (!matchSlug) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-20">
@@ -623,7 +590,7 @@ ${summary.action_items}
                     <FormItem>
                       <FormLabel className="text-sm font-medium">Referee Performance</FormLabel>
                       <Select
-                        onValueChange={(value) => field.onChange(parseInt(value))}
+                        onValueChange=(value) => field.onChange(parseInt(value))}
                         value={field.value.toString()}
                       >
                         <FormControl>
@@ -821,39 +788,45 @@ ${summary.action_items}
       </Dialog>
 
       <Dialog open={summaryDialogOpen} onOpenChange={setSummaryDialogOpen}>
-        <DialogContent className="max-w-lg rounded-xl bg-white dark:bg-gray-800 p-6 shadow-md border border-gray-200 dark:border-gray-700">
+        <DialogContent className="max-w-md rounded-xl bg-white dark:bg-gray-800 p-6 shadow-md border border-gray-200 dark:border-gray-700 mx-auto">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-gray-900 dark:text-gray-100">
+            <DialogTitle className="text-xl font-bold text-gray-900 dark:text-gray-100 text-center">
               Feedback Summary
             </DialogTitle>
           </DialogHeader>
           {summary && (
-            <div className="space-y-4">
+            <div className="space-y-4 text-center">
               <div>
                 <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
                   What Went Well
                 </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  {summary.what_went_well}
-                </p>
+                <ul className="list-disc list-inside text-sm text-gray-600 dark:text-gray-400">
+                  {summary.what_went_well.map((item, i) => (
+                    <li key={i}>{item}</li>
+                  ))}
+                </ul>
               </div>
               <div>
                 <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
                   Major Concerns
                 </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  {summary.major_concerns}
-                </p>
+                <ul className="list-disc list-inside text-sm text-gray-600 dark:text-gray-400">
+                  {summary.major_concerns.map((item, i) => (
+                    <li key={i}>{item}</li>
+                  ))}
+                </ul>
               </div>
               <div>
                 <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
                   Action Items
                 </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  {summary.action_items}
-                </p>
+                <ul className="list-disc list-inside text-sm text-gray-600 dark:text-gray-400">
+                  {summary.action_items.map((item, i) => (
+                    <li key={i}>{item}</li>
+                  ))}
+                </ul>
               </div>
-              <div className="flex gap-4">
+              <div className="flex gap-4 justify-center">
                 <Button
                   className="w-full sm:w-auto bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2"
                   onClick={copySummary}
@@ -864,17 +837,65 @@ ${summary.action_items}
                 <Button
                   className="w-full sm:w-auto bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2"
                   onClick={() => {
-                    const doc = new jsPDF();
-                    doc.setFontSize(16);
-                    doc.text("Feedback Summary", 20, 20);
-                    doc.setFontSize(12);
-                    doc.text("What Went Well:", 20, 30);
-                    doc.text(summary.what_went_well, 20, 40, { maxWidth: 160 });
-                    doc.text("Major Concerns:", 20, 80);
-                    doc.text(summary.major_concerns, 20, 90, { maxWidth: 160 });
-                    doc.text("Action Items:", 20, 130);
-                    doc.text(summary.action_items, 20, 140, { maxWidth: 160 });
-                    doc.save(`summary_${match!.title.replace(/\s+/g, "_")}.pdf`);
+                    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+                    const img = new Image();
+                    img.src = "https://playarenagames.vercel.app/playarenalight.png";
+                    img.crossOrigin = "anonymous";
+
+                    const loadImage = new Promise((resolve, reject) => {
+                      img.onload = () => resolve(img);
+                      img.onerror = () => {
+                        console.warn("Logo image failed to load, proceeding without logo.");
+                        resolve(null);
+                      };
+                    });
+
+                    loadImage.then((loadedImg) => {
+                      // Header with branding
+                      if (loadedImg) doc.addImage(loadedImg, "PNG", 10, 10, 40, 40);
+                      doc.setFillColor(0, 128, 0);
+                      doc.rect(10, 10, 190, 40, "F");
+                      doc.setTextColor(255, 255, 255);
+                      doc.setFontSize(24);
+                      doc.text("PlayArena Feedback Summary", 105, 30, { align: "center" });
+                      const now = new Date("2025-05-13T21:44:00+01:00");
+                      doc.setFontSize(12);
+                      doc.text(`Date: ${now.toLocaleString("en-NG", { timeZone: "Africa/Lagos" })}`, 105, 40, { align: "center" });
+
+                      // Content
+                      doc.setFillColor(245, 245, 245);
+                      doc.rect(20, 60, 170, 200, "F");
+                      doc.setTextColor(0, 0, 0);
+                      let y = 70;
+                      const sections = ["What Went Well", "Major Concerns", "Action Items"];
+                      const contents = [summary.what_went_well, summary.major_concerns, summary.action_items];
+                      sections.forEach((section, idx) => {
+                        doc.setFontSize(16);
+                        doc.text(section, 30, y);
+                        y += 10;
+                        doc.setFontSize(12);
+                        contents[idx].forEach((item, i) => {
+                          doc.text(`• ${item}`, 40, y + i * 10);
+                        });
+                        y += contents[idx].length * 10 + 15;
+                      });
+
+                      // Footer
+                      doc.setFillColor(0, 128, 0);
+                      doc.rect(10, 270, 190, 20, "F");
+                      doc.setTextColor(255, 255, 255);
+                      doc.setFontSize(10);
+                      doc.text("© 2025 PlayArena | Enhancing Your Sports Experience", 105, 280, { align: "center" });
+
+                      doc.save(`summary_${match!.title.replace(/\s+/g, "_")}.pdf`);
+                    }).catch((error) => {
+                      console.error("Error generating PDF:", error);
+                      toast({
+                        title: "Error",
+                        description: "Failed to generate PDF. Proceeding without logo.",
+                        variant: "destructive",
+                      });
+                    });
                   }}
                 >
                   <Download size={18} className="mr-2" />
