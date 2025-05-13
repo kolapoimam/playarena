@@ -46,6 +46,11 @@ import VenueForm from "@/components/VenueForm";
 import Navbar from "@/components/Navbar";
 import html2canvas from "html2canvas";
 
+// Define enums for dropdown options
+const skillLevels = ["Beginner", "Amateur", "Intermediate", "Advanced", "Professional"] as const;
+const matchTypes = ["4-a-side", "5-a-side", "7-a-side", "11-a-side (Regular)", "Double", "Friendly"] as const;
+const genders = ["Male", "Female"] as const;
+
 const formSchema = z.object({
   title: z.string()
     .min(3, { message: "Title must be at least 3 characters" })
@@ -100,6 +105,9 @@ const formSchema = z.object({
   is_private: z.boolean().default(false),
   access_password: z.string().nullable().optional(),
   allow_bulk_tickets: z.boolean().default(false),
+  skill_level: z.enum(skillLevels).optional().nullable(),
+  match_type: z.enum(matchTypes).optional().nullable(),
+  gender: z.enum(genders).optional().nullable(),
 }).refine(data => {
   const now = new Date();
   const selectedDateTime = new Date(data.match_date);
@@ -140,6 +148,7 @@ const Organize = () => {
   const preSelectedVenueSlug = searchParams.get('venue');
   const [venueDialogOpen, setVenueDialogOpen] = useState(false);
   const [successDialogOpen, setSuccessDialogOpen] = useState(false);
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
   const [supercode, setSupercode] = useState<string | null>(null);
   const [matchSlug, setMatchSlug] = useState<string | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -160,8 +169,32 @@ const Organize = () => {
       is_private: false,
       access_password: null,
       allow_bulk_tickets: false,
+      skill_level: null,
+      match_type: null,
+      gender: null,
     },
   });
+
+  // Persist form state to localStorage
+  useEffect(() => {
+    const savedForm = localStorage.getItem("organizeFormState");
+    if (savedForm) {
+      const parsed = JSON.parse(savedForm);
+      // Parse match_date as Date object
+      if (parsed.match_date) {
+        parsed.match_date = new Date(parsed.match_date);
+      }
+      form.reset(parsed);
+    }
+  }, [form]);
+
+  // Save form state to localStorage on change
+  useEffect(() => {
+    const subscription = form.watch((value) => {
+      localStorage.setItem("organizeFormState", JSON.stringify(value));
+    });
+    return () => subscription.unsubscribe();
+  }, [form.watch]);
 
   const isPaid = form.watch("is_paid");
   const isPrivate = form.watch("is_private");
@@ -172,6 +205,11 @@ const Organize = () => {
   const organizerName = form.watch("organizer_name");
   const accessPassword = form.watch("access_password");
   const organizerPhone = form.watch("organizer_phone");
+  const totalSlots = form.watch("total_slots");
+  const notes = form.watch("notes");
+  const skillLevel = form.watch("skill_level");
+  const matchType = form.watch("match_type");
+  const gender = form.watch("gender");
 
   useEffect(() => {
     const fetchVenues = async () => {
@@ -240,6 +278,9 @@ const Organize = () => {
           is_private: data.is_private,
           access_password: data.is_private ? data.access_password : null,
           allow_bulk_tickets: data.allow_bulk_tickets,
+          skill_level: data.skill_level || null,
+          match_type: data.match_type || null,
+          gender: data.gender || null,
         })
         .select('id, slug, super_code')
         .single();
@@ -249,6 +290,9 @@ const Organize = () => {
       setSupercode(match.super_code || "N/A");
       setMatchSlug(match.slug);
       setSuccessDialogOpen(true);
+
+      // Clear localStorage after successful submission
+      localStorage.removeItem("organizeFormState");
 
       toast({
         title: "Success!",
@@ -319,7 +363,7 @@ const Organize = () => {
             Back
           </Button>
           <h1 className="text-2xl font-bold">Organize a Match</h1>
-          <div className="w-10"></div> {/* Spacer for alignment */}
+          <div className="w-10"></div>
         </div>
       </header>
 
@@ -492,7 +536,7 @@ const Organize = () => {
                 )}
               />
 
-                            <FormField
+              <FormField
                 control={form.control}
                 name="notes"
                 render={({ field }) => (
@@ -510,7 +554,98 @@ const Organize = () => {
                 )}
               />
             </div>
-            
+
+            {/* Preferences (Optional) Section */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
+              <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Preferences (Optional)</h2>
+
+              <FormField
+                control={form.control}
+                name="skill_level"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Skill Level</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || undefined}>
+                      <FormControl>
+                        <SelectTrigger className="w-full text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white">
+                          <SelectValue placeholder="All Skills" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="All Skills">All Skills</SelectItem>
+                        {skillLevels.map((level) => (
+                          <SelectItem key={level} value={level} className="text-base">
+                            {level}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                      Select the preferred skill level for this match (optional)
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="match_type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Match Type</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || undefined}>
+                      <FormControl>
+                        <SelectTrigger className="w-full text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white">
+                          <SelectValue placeholder="Select Match Type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="Select Match Type">Select Match Type</SelectItem>
+                        {matchTypes.map((type) => (
+                          <SelectItem key={type} value={type} className="text-base">
+                            {type}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                      Select the type of match (optional)
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="gender"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Gender Preference</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || undefined}>
+                      <FormControl>
+                        <SelectTrigger className="w-full text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white">
+                          <SelectValue placeholder="All Genders" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="All Genders">All Genders</SelectItem>
+                        {genders.map((gender) => (
+                          <SelectItem key={gender} value={gender} className="text-base">
+                            {gender}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                      Select the preferred gender for this match (optional)
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             {/* Payment and Privacy Section */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
@@ -740,19 +875,113 @@ const Organize = () => {
               />
             </div>
 
-            <Button 
-              type="submit" 
-              className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-3 text-lg shadow-md transition-colors" 
-              disabled={loading}
-            >
-              {loading ? "Creating..." : "Create Match"}
-            </Button>
+            <div className="flex gap-4">
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium rounded-lg px-4 py-3 text-lg shadow-md transition-colors"
+                onClick={() => setPreviewDialogOpen(true)}
+                disabled={loading}
+              >
+                Preview Match
+              </Button>
+              <Button 
+                type="submit" 
+                className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-3 text-lg shadow-md transition-colors" 
+                disabled={loading}
+              >
+                {loading ? "Creating..." : "Create Match"}
+              </Button>
+            </div>
           </form>
         </Form>
       </div>
       <Navbar />
-      
-<Dialog open={successDialogOpen} onOpenChange={(open) => {
+
+      {/* Preview Dialog */}
+      <Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
+        <DialogContent className="sm:max-w-[375px] rounded-2xl">
+          <DialogTitle className="text-xl font-bold text-gray-800 dark:text-gray-200">Match Preview</DialogTitle>
+          <DialogDescription>
+            <div className="bg-gradient-to-br from-green-500 to-green-700 rounded-xl p-6 text-white shadow-lg">
+              <div className="flex items-center justify-between mb-4">
+                <img 
+                  src="/playarenadark.png" 
+                  alt="PlayArena Logo" 
+                  className="h-8 w-auto"
+                />
+                <Trophy className="h-6 w-6" />
+              </div>
+              <h2 className="text-xl font-bold mb-2">{matchTitle || "Your Match"}</h2>
+              <div className="space-y-2 mb-4 text-sm">
+                <div className="flex items-center">
+                  <MapPin className="h-4 w-4 mr-2" />
+                  <span>{selectedVenue?.name || "Venue"}</span>
+                </div>
+                <div className="flex items-center">
+                  <CalendarIcon className="h-4 w-4 mr-2" />
+                  <span>{matchDate ? format(matchDate, "PPP") : "Date"} at {matchTime || "Time"}</span>
+                </div>
+                <div className="flex items-center">
+                  <User className="h-4 w-4 mr-2" />
+                  <span>Organized by {organizerName || "Organizer"}</span>
+                </div>
+                <div className="flex items-center">
+                  <span className="font-semibold">Players: </span>
+                  <span className="ml-2">{totalSlots || "N/A"}</span>
+                </div>
+                {isPaid && (
+                  <div className="flex items-center">
+                    <span className="font-semibold">Price: </span>
+                    <span className="ml-2">₦{form.watch("price")?.toFixed(2) || "0.00"}</span>
+                  </div>
+                )}
+                {notes && (
+                  <div className="flex items-center">
+                    <span className="font-semibold">Notes: </span>
+                    <span className="ml-2">{notes}</span>
+                  </div>
+                )}
+                {skillLevel && (
+                  <div className="flex items-center">
+                    <span className="font-semibold">Skill Level: </span>
+                    <span className="ml-2">{skillLevel}</span>
+                  </div>
+                )}
+                {matchType && (
+                  <div className="flex items-center">
+                    <span className="font-semibold">Match Type: </span>
+                    <span className="ml-2">{matchType}</span>
+                  </div>
+                )}
+                {gender && (
+                  <div className="flex items-center">
+                    <span className="font-semibold">Gender: </span>
+                    <span className="ml-2">{gender}</span>
+                  </div>
+                )}
+                {isPrivate && (
+                  <div className="flex items-center">
+                    <span className="font-semibold">Access Password: </span>
+                    <span className="ml-2 font-mono">{accessPassword || "N/A"}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="mt-4 flex justify-end">
+              <Button
+                className="bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 transition-colors"
+                onClick={() => setPreviewDialogOpen(false)}
+              >
+                Close
+              </Button>
+            </div>
+          </DialogDescription>
+        </DialogContent>
+      </Dialog>
+
+      {/* Success Dialog */}
+      <Dialog open={successDialogOpen} onOpenChange={(open) => {
         if (!open && matchSlug) {
           navigate(`/match/${matchSlug}`);
         }
