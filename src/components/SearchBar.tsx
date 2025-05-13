@@ -1,4 +1,3 @@
-
 import { useState, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search } from "lucide-react";
@@ -25,7 +24,10 @@ export default function SearchBar() {
         className="pl-12 pr-4 py-2 w-full rounded-full bg-secondary focus:outline-none focus:ring-2 focus:ring-primary transition-all text-foreground"
         placeholder="Search matches, venues..."
         value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
+        onChange={(e) => {
+          const value = e.target.value.replace(/[^A-Za-z\s]/g, ""); // Allow only alphabetical characters and spaces
+          setSearchTerm(value);
+        }}
       />
     </form>
   );
