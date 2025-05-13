@@ -125,39 +125,63 @@ const MatchDetail = () => {
   };
 
   const verifyPassword = async () => {
-    if (!slug) return;
+    if (!slug) {
+      navigate("/matches");
+      return;
+    }
 
-    const { data, error } = await supabase
-      .from("matches")
-      .select("access_password, is_private")
-      .eq("slug", slug)
-      .single();
+    if (!password) {
+      toast({
+        title: "Error",
+        description: "Please enter a password.",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    if (error) {
+    try {
+      const { data, error } = await supabase
+        .from("matches")
+        .select("access_password, is_private")
+        .eq("slug", slug)
+        .single();
+
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to verify access. Please try again.",
+          variant: "destructive",
+        });
+        navigate("/matches");
+        return;
+      }
+
+      if (!data.is_private) {
+        fetchMatch(slug);
+        setPasswordDialogOpen(false);
+        return;
+      }
+
+      if (data.access_password === password) {
+        localStorage.setItem(`match_access_${slug}`, "true");
+        setPasswordDialogOpen(false);
+        fetchMatch(slug);
+      } else {
+        toast({
+          title: "Error",
+          description: "Incorrect or expired password. Please try again.",
+          variant: "destructive",
+        });
+        navigate("/matches");
+      }
+    } catch (error) {
+      console.error("Error verifying password:", error);
       toast({
         title: "Error",
         description: "Failed to verify access. Please try again.",
         variant: "destructive",
       });
-      return;
-    }
-
-    if (!data.is_private) {
-      fetchMatch(slug);
-      setPasswordDialogOpen(false);
-      return;
-    }
-
-    if (data.access_password === password) {
-      localStorage.setItem(`match_access_${slug}`, "true");
-      setPasswordDialogOpen(false);
-      fetchMatch(slug);
-    } else {
-      toast({
-        title: "Error",
-        description: "Incorrect password. Please try again.",
-        variant: "destructive",
-      });
+      navigate("/matches");
     }
   };
 
