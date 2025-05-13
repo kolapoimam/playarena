@@ -741,7 +741,9 @@ const JoinMatch = () => {
                   </div>
                   <div className="flex items-center">
                     <DollarSign className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-                    <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{match?.is_paid ? `Paid (₦${match?.price?.toFixed(2)} x ${selectedSlots})` : "Free"}</span>
+                    <span className={backgroundOption === "white" ? "text-black" : "text-white"}>
+                      {match?.is_paid ? `Paid (₦${match?.price?.toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} x${selectedSlots})` : "Free"}
+                    </span>
                   </div>
                   <div className="flex items-center">
                     <Users className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
