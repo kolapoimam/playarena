@@ -239,7 +239,7 @@ const Feedback = () => {
         title: "Success",
         description: "Feedback submitted successfully.",
       });
-      navigate("/match-history");
+      navigate("/matches");
     } catch (error) {
       console.error("Error submitting feedback:", error);
       toast({
@@ -395,7 +395,7 @@ ${summary.action_items}
             <AlertCircle size={40} className="text-red-600 dark:text-red-500 mx-auto mb-3" />
             <h2 className="text-lg font-semibold text-red-600 dark:text-red-500">Invalid Match</h2>
             <p className="text-gray-600 dark:text-gray-400 mt-2">
-              No match ID provided. Please access feedback from the match history page.
+              No match ID provided. Please access feedback from the match details page.
             </p>
           </div>
         </div>
