@@ -150,27 +150,29 @@ const VenueDirectory = () => {
   const totalPages = Math.ceil(filteredVenues.length / venuesPerPage);
 
   return (
-    <div className="min-h-screen pb-20 bg-gray-50 dark:bg-gray-900">
-      <header className="sticky top-0 z-50 p-4 bg-white dark:bg-gray-900 shadow-sm">
+    <div className="min-h-screen pb-20">
+      <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg">
         <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <Button
-              variant="ghost"
-              className="mr-2"
-              onClick={() => navigate(-1)}
-            >
-              <ArrowLeft size={18} />
-            </Button>
-            <h1 className="text-xl font-semibold">Venue Directory</h1>
+          <Button 
+            variant="ghost" 
+            onClick={() => navigate(-1)} 
+            className="text-white hover:bg-green-600"
+          >
+            <ArrowLeft size={18} className="mr-2" />
+            Back
+          </Button>
+          <div className="text-center">
+            <h1 className="text-2xl font-bold">Venue Directory</h1>
           </div>
+          <div className="w-10"></div>
         </div>
       </header>
 
-      <div className="px-4 py-6">
+      <div className="p-4">
         <div className="mb-6">
           <Button
             variant="outline"
-            className="w-full flex justify-between items-center bg-white dark:bg-gray-800"
+            className="w-full flex justify-between items-center bg-white dark:bg-gray-800 text-green-600 border-green-500 hover:bg-green-50 dark:hover:bg-green-900"
             onClick={() => setIsFiltersOpen(!isFiltersOpen)}
           >
             <span>Filters</span>
@@ -178,7 +180,7 @@ const VenueDirectory = () => {
           </Button>
           <div
             className={cn(
-              "mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4 bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm transition-all duration-300",
+              "mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3 bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm transition-all duration-300",
               isFiltersOpen ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0 overflow-hidden"
             )}
           >
@@ -243,7 +245,7 @@ const VenueDirectory = () => {
           </div>
         ) : filteredVenues.length > 0 ? (
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 px-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 px-4">
               {currentVenues.map((venue) => {
                 const defaultImage = "https://dailytrust.com/wp-content/uploads/2023/12/football-488714_1280.jpg";
                 const venueImage = venue.image_urls && venue.image_urls.length > 0 ? venue.image_urls[0] : defaultImage;
@@ -251,17 +253,17 @@ const VenueDirectory = () => {
                 return (
                   <div
                     key={venue.id}
-                    className="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 cursor-pointer transform transition-all hover:scale-105 hover:shadow-lg"
+                    className="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 cursor-pointer transform transition-all hover:scale-105 hover:bg-green-50 dark:hover:bg-green-900"
                     onClick={() => navigate(`/venue/${venue.slug}`)}
                   >
                     <img
                       src={venueImage}
                       alt={venue.name}
-                      className="w-full h-48 object-cover rounded-t-xl"
+                      className="w-full h-36 object-cover rounded-t-xl"
                     />
-                    <div className="p-4">
-                      <h3 className="font-bold text-lg text-gray-900 dark:text-gray-100 mb-2">{venue.name}</h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{`${venue.city}, ${venue.state}`}</p>
+                    <div className="p-3">
+                      <h3 className="font-bold text-lg text-gray-900 dark:text-gray-100 mb-1">{venue.name}</h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{`${venue.city}, ${venue.state}`}</p>
                       <div className="flex items-center text-sm font-medium text-green-600 dark:text-green-400">
                         <Store className="h-4 w-4 mr-1" />
                         <span>{`${venue.match_count} Match${venue.match_count !== 1 ? "es" : ""}`}</span>
@@ -272,12 +274,12 @@ const VenueDirectory = () => {
               })}
             </div>
 
-            <div className="flex justify-between items-center px-4 mt-8">
+            <div className="flex justify-between items-center px-4 mt-6">
               <Button
                 variant="outline"
                 disabled={currentPage === 1}
                 onClick={() => setCurrentPage((prev) => prev - 1)}
-                className="bg-white dark:bg-gray-800"
+                className="bg-white dark:bg-gray-800 text-green-600 border-green-500 hover:bg-green-600 hover:text-white transition-colors"
               >
                 Previous
               </Button>
@@ -288,7 +290,7 @@ const VenueDirectory = () => {
                 variant="outline"
                 disabled={currentPage === totalPages || totalPages === 0}
                 onClick={() => setCurrentPage((prev) => prev + 1)}
-                className="bg-white dark:bg-gray-800"
+                className="bg-white dark:bg-gray-800 text-green-600 border-green-500 hover:bg-green-600 hover:text-white transition-colors"
               >
                 Next
               </Button>
