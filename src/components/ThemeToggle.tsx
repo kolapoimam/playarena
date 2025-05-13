@@ -1,12 +1,11 @@
-
+// ThemeToggle.tsx
 import { useEffect, useState } from "react";
 import { Moon, Sun } from "lucide-react";
 
-export default function ThemeToggle() {
+export const useTheme = () => {
   const [theme, setTheme] = useState<"light" | "dark">("light");
 
   useEffect(() => {
-    // Check if user has a theme preference stored
     const storedTheme = localStorage.getItem("theme");
     if (storedTheme === "dark" || (!storedTheme && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
       setTheme("dark");
@@ -27,6 +26,12 @@ export default function ThemeToggle() {
       document.documentElement.classList.remove("dark");
     }
   };
+
+  return { theme, toggleTheme };
+};
+
+export default function ThemeToggle() {
+  const { theme, toggleTheme } = useTheme();
 
   return (
     <button
