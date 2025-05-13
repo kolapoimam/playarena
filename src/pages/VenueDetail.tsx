@@ -5,6 +5,9 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { MapPin, ArrowLeft, ExternalLink, Calendar, Clock, MessageCircle, CalendarPlus } from "lucide-react";
 import Navbar from "@/components/Navbar";
+import { RichTextEditor } from "@mantine/tiptap";
+import { useEditor } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
 
 type Venue = {
   id: string;
@@ -18,6 +21,10 @@ type Venue = {
   venue_phone: string | null;
   image_urls: string[] | null;
   match_count?: number;
+  facilities: string | null;
+  opening_hours: string | null;
+  pricing: string | null;
+  booking_fee: number | null;
 };
 
 type Match = {
@@ -59,7 +66,7 @@ const VenueDetail = () => {
       try {
         const { data, error } = await supabase
           .from("venues")
-          .select("id, slug, name, address, city, state, description, map_link, venue_phone, image_urls")
+          .select("id, slug, name, address, city, state, description, map_link, venue_phone, image_urls, facilities, opening_hours, pricing, booking_fee")
           .eq("slug", slug)
           .single();
 
@@ -118,7 +125,7 @@ const VenueDetail = () => {
 
   const handleBookVenue = () => {
     if (venue?.venue_phone) {
-      const message = encodeURIComponent(`Hello, I'd like to book ${venue.name} for a match. Can you provide more details on availability and pricing?`);
+      const message = encodeURIComponent(`Hello, I'd like to book ${venue.name} for a match. Can you provide more details on availability, pricing (NGN${venue.booking_fee || 0}/hour), and facilities?`);
       window.open(`https://wa.me/+234${venue.venue_phone}?text=${message}`, "_blank");
     }
   };
@@ -152,6 +159,13 @@ const VenueDetail = () => {
 
   const defaultImage = "https://dailytrust.com/wp-content/uploads/2023/12/football-488714_1280.jpg";
   const venueImage = venue.image_urls && venue.image_urls.length > 0 ? venue.image_urls[0] : defaultImage;
+
+  // Initialize editor for read-only display
+  const editor = useEditor({
+    extensions: [StarterKit],
+    content: venue.facilities || "",
+    editable: false,
+  });
 
   return (
     <div className="min-h-screen pb-20 bg-gray-50 dark:bg-gray-900">
@@ -199,6 +213,34 @@ const VenueDetail = () => {
                 <div>
                   <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Description</h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400">{venue.description}</p>
+                </div>
+              )}
+
+              {venue.facilities && editor && (
+                <div>
+                  <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Facilities</h3>
+                  <RichTextEditor editor={editor} readOnly className="bg-white dark:bg-gray-800" />
+                </div>
+              )}
+
+              {venue.opening_hours && (
+                <div>
+                  <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Opening Hours</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{venue.opening_hours}</p>
+                </div>
+              )}
+
+              {venue.pricing && (
+                <div>
+                  <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Pricing</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{venue.pricing}</p>
+                </div>
+              )}
+
+              {venue.booking_fee !== null && (
+                <div>
+                  <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Booking Fee (per hour)</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">NGN {venue.booking_fee?.toFixed(2)}</p>
                 </div>
               )}
 
