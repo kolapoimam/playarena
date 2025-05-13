@@ -1,9 +1,9 @@
 // src/App.tsx
 import { BrowserRouter as Router } from 'react-router-dom';
 import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MantineProvider } from '@mantine/core';
 import Index from "./pages/Index";
 import Search from "./pages/Search";
 import Matches from "./pages/Matches";
@@ -27,38 +27,39 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <Router>
-        <ScrollToTop />
-        <Routes>
-          {/* Main App Routes */}
-          <Route path="/" element={<Index />} />
-          <Route path="/search" element={<Search />} />
-          <Route path="/matches" element={<Matches />} />
-          <Route path="/guides" element={<Guides />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/organize" element={<Organize />} />
-          <Route path="/venue-create" element={<VenueCreate />} />
-          <Route path="/venues" element={<VenueDirectory />} />
-          <Route path="/confirm-checkin" element={<ConfirmCheckin />} />
-          <Route path="/feedback" element={<Feedback />} />
+    <MantineProvider withGlobalStyles withNormalizeCSS>
+      <TooltipProvider>
+        <Toaster />
+        <Router>
+          <ScrollToTop />
+          <Routes>
+            {/* Main App Routes */}
+            <Route path="/" element={<Index />} />
+            <Route path="/search" element={<Search />} />
+            <Route path="/matches" element={<Matches />} />
+            <Route path="/guides" element={<Guides />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/organize" element={<Organize />} />
+            <Route path="/venue-create" element={<VenueCreate />} />
+            <Route path="/venues" element={<VenueDirectory />} />
+            <Route path="/confirm-checkin" element={<ConfirmCheckin />} />
+            <Route path="/feedback" element={<Feedback />} />
 
-          {/* Slug-Based Routes for Matches and Venues */}
-          <Route path="/match/:slug" element={<MatchDetail />} />
-          <Route path="/join/:slug" element={<JoinMatch />} />
-          <Route path="/venue/:slug" element={<VenueDetail />} />
+            {/* Slug-Based Routes for Matches and Venues */}
+            <Route path="/match/:slug" element={<MatchDetail />} />
+            <Route path="/join/:slug" element={<JoinMatch />} />
+            <Route path="/venue/:slug" element={<VenueDetail />} />
 
-          {/* Redirect Routes for Backward Compatibility */}
-          <Route path="/match-id/:id" element={<MatchRedirect />} />
-          <Route path="/venue-id/:id" element={<VenueRedirect />} />
+            {/* Redirect Routes for Backward Compatibility */}
+            <Route path="/match-id/:id" element={<MatchRedirect />} />
+            <Route path="/venue-id/:id" element={<VenueRedirect />} />
 
-          {/* Catch-All Route */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </Router>
-    </TooltipProvider>
+            {/* Catch-All Route */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Router>
+      </TooltipProvider>
+    </MantineProvider>
   </QueryClientProvider>
 );
 
