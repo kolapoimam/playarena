@@ -1,4 +1,3 @@
-// src/App.tsx
 import { BrowserRouter as Router } from 'react-router-dom';
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -22,6 +21,7 @@ import Feedback from "./pages/Feedback";
 import Guides from "./pages/Guides";
 import ScrollToTop from "./components/ScrollToTop";
 import { Routes, Route } from 'react-router-dom';
+import TeamManagement from "./pages/TeamManagement"; // Import the new page
 
 const queryClient = new QueryClient();
 
@@ -49,6 +49,7 @@ const App = () => (
             <Route path="/match/:slug" element={<MatchDetail />} />
             <Route path="/join/:slug" element={<JoinMatch />} />
             <Route path="/venue/:slug" element={<VenueDetail />} />
+            <Route path="/team-management/:slug" element={<TeamManagement />} /> {/* New route for TeamManagement */}
 
             {/* Redirect Routes for Backward Compatibility */}
             <Route path="/match-id/:id" element={<MatchRedirect />} />
