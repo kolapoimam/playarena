@@ -25,7 +25,7 @@ import {
   DialogHeader,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, CheckCircle, Copy, Download, FileText, AlertCircle } from "lucide-react";
+import { Loader2, CheckCircle, Copy, Download, FileText, AlertCircle, ArrowLeft } from "lucide-react";
 import { jsPDF } from "jspdf";
 import Navbar from "@/components/Navbar";
 
