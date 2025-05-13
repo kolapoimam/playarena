@@ -23,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { X, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 
 // Nigerian states including FCT
 const nigerianStates = [
@@ -42,7 +42,8 @@ const formSchema = z.object({
   state: z.enum(nigerianStates as [string, ...string[]], { message: "Please select a valid state" }),
   venue_phone: z.string()
     .regex(/^[0-9]+$/, { message: "Phone number must contain only numbers" })
-    .length(11, { message: "Phone number must be exactly 11 digits" }),
+    .length(11, { message: "Phone number must be exactly 11 digits" })
+    .transform(val => val.slice(0, 11)),
   description: z.string().optional(),
   map_link: z.string().url({ message: "Please enter a valid URL" }).or(z.literal("")),
 });
@@ -179,71 +180,26 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md border border-gray-200 dark:border-gray-700">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Create New Venue</h2>
-        {onCancel && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onCancel}
-            className="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
-          >
-            <X size={20} />
-          </Button>
-        )}
-      </div>
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+      <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-6">Create New Venue</h2>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <FormField
-            control={form.control}
-            name="name"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-gray-700 dark:text-gray-300">Venue Name</FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder="E.g., National Stadium"
-                    {...field}
-                    className="border-gray-300 dark:border-gray-600 focus:ring-green-500"
-                  />
-                </FormControl>
-                <FormMessage className="text-red-500" />
-              </FormItem>
-            )}
-          />
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          {/* Venue Details Section */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
+            <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Venue Details</h3>
 
-          <FormField
-            control={form.control}
-            name="address"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-gray-700 dark:text-gray-300">Address</FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder="Full street address"
-                    {...field}
-                    className="border-gray-300 dark:border-gray-600 focus:ring-green-500"
-                  />
-                </FormControl>
-                <FormMessage className="text-red-500" />
-              </FormItem>
-            )}
-          />
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField
               control={form.control}
-              name="city"
+              name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-gray-700 dark:text-gray-300">City</FormLabel>
+                  <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Venue Name</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="E.g., Lagos"
+                      placeholder="E.g., National Stadium"
                       {...field}
-                      className="border-gray-300 dark:border-gray-600 focus:ring-green-500"
+                      className="border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                     />
                   </FormControl>
                   <FormMessage className="text-red-500" />
@@ -253,135 +209,188 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
 
             <FormField
               control={form.control}
-              name="state"
+              name="address"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-gray-700 dark:text-gray-300">State</FormLabel>
+                  <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Address</FormLabel>
                   <FormControl>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
-                    >
-                      <SelectTrigger className="border-gray-300 dark:border-gray-600 focus:ring-green-500">
-                        <SelectValue placeholder="Select a state" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {nigerianStates.map((state) => (
-                          <SelectItem key={state} value={state}>
-                            {state}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Input
+                      placeholder="Full street address"
+                      {...field}
+                      className="border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                    />
                   </FormControl>
+                  <FormMessage className="text-red-500" />
+                </FormItem>
+              )}
+            />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="city"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">City</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="E.g., Lagos"
+                        {...field}
+                        className="border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                      />
+                    </FormControl>
+                    <FormMessage className="text-red-500" />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="state"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">State</FormLabel>
+                    <FormControl>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                      >
+                        <SelectTrigger className="border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white">
+                          <SelectValue placeholder="Select a state" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {nigerianStates.map((state) => (
+                            <SelectItem key={state} value={state}>
+                              {state}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                    <FormMessage className="text-red-500" />
+                  </FormItem>
+                )}
+              />
+            </div>
+          </div>
+
+          {/* Contact & Location Section */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
+            <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Contact & Location</h3>
+
+            <FormField
+              control={form.control}
+              name="venue_phone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Venue Phone Number</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="tel"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      placeholder="Enter 11-digit phone number"
+                      {...field}
+                      value={field.value}
+                      onChange={(e) => {
+                        const numericValue = e.target.value.replace(/\D/g, '');
+                        field.onChange(numericValue.slice(0, 11));
+                      }}
+                      className="border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                    />
+                  </FormControl>
+                  <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                    Provide a WhatsApp-enabled phone number for booking inquiries (numbers only)
+                  </FormDescription>
+                  <FormMessage className="text-red-500" />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="map_link"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Google Maps Link (Optional)</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Paste Google Maps URL here"
+                      {...field}
+                      className="border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                    />
+                  </FormControl>
+                  <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                    Add a Google Maps link to help players find the venue easily
+                  </FormDescription>
                   <FormMessage className="text-red-500" />
                 </FormItem>
               )}
             />
           </div>
 
-          <FormField
-            control={form.control}
-            name="venue_phone"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-gray-700 dark:text-gray-300">Venue Phone Number</FormLabel>
-                <FormControl>
-                  <Input
-                    type="tel"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    placeholder="Enter 11-digit phone number"
-                    {...field}
-                    className="border-gray-300 dark:border-gray-600 focus:ring-green-500"
-                  />
-                </FormControl>
-                <FormDescription className="text-gray-500 dark:text-gray-400">
-                  Provide a WhatsApp-enabled phone number for booking inquiries (numbers only)
-                </FormDescription>
-                <FormMessage className="text-red-500" />
-              </FormItem>
-            )}
-          />
+          {/* Additional Info Section */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
+            <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Additional Info</h3>
 
-          <FormField
-            control={form.control}
-            name="description"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-gray-700 dark:text-gray-300">Description (Optional)</FormLabel>
-                <FormControl>
-                  <Textarea
-                    placeholder="Describe the venue, facilities, etc."
-                    {...field}
-                    className="border-gray-300 dark:border-gray-600 focus:ring-green-500"
-                  />
-                </FormControl>
-                <FormMessage className="text-red-500" />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="map_link"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-gray-700 dark:text-gray-300">Google Maps Link (Optional)</FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder="Paste Google Maps URL here"
-                    {...field}
-                    className="border-gray-300 dark:border-gray-600 focus:ring-green-500"
-                  />
-                </FormControl>
-                <FormDescription className="text-gray-500 dark:text-gray-400">
-                  Add a Google Maps link to help players find the venue easily
-                </FormDescription>
-                <FormMessage className="text-red-500" />
-              </FormItem>
-            )}
-          />
-
-          <FormItem>
-            <FormLabel className="text-gray-700 dark:text-gray-300">Image (Optional)</FormLabel>
-            <div className="space-y-2">
-              {selectedFile ? (
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-700 dark:text-gray-300">
-                    {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)}MB)
-                  </span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={removeSelectedFile}
-                    className="text-red-500 hover:text-red-700"
-                  >
-                    <Trash2 size={16} />
-                  </Button>
-                </div>
-              ) : (
-                <FormControl>
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    ref={fileInputRef}
-                    onChange={(e) => handleFileChange(e.target.files)}
-                    className="border-gray-300 dark:border-gray-600 focus:ring-green-500"
-                  />
-                </FormControl>
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Description (Optional)</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Describe the venue, facilities, etc."
+                      {...field}
+                      className="border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                    />
+                  </FormControl>
+                  <FormMessage className="text-red-500" />
+                </FormItem>
               )}
-            </div>
-            <FormDescription className="text-gray-500 dark:text-gray-400">
-              Upload 1 image (max 5MB) to showcase the venue
-            </FormDescription>
-            {fileError && <p className="text-red-500 text-sm">{fileError}</p>}
-          </FormItem>
+            />
+
+            <FormItem>
+              <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Image (Optional)</FormLabel>
+              <div className="space-y-2">
+                {selectedFile ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-700 dark:text-gray-300">
+                      {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)}MB)
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={removeSelectedFile}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      <Trash2 size={16} />
+                    </Button>
+                  </div>
+                ) : (
+                  <FormControl>
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      ref={fileInputRef}
+                      onChange={(e) => handleFileChange(e.target.files)}
+                      className="border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                    />
+                  </FormControl>
+                )}
+              </div>
+              <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                Upload 1 image (max 5MB) to showcase the venue
+              </FormDescription>
+              {fileError && <p className="text-red-500 text-sm">{fileError}</p>}
+            </FormItem>
+          </div>
 
           <Button
             type="submit"
-            className="w-full bg-green-500 hover:bg-green-600 text-white"
+            className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-3 text-lg shadow-md transition-colors"
             disabled={loading}
           >
             {loading ? "Creating..." : "Create Venue"}
