@@ -17,22 +17,23 @@ const Guides = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-20">
-      <div className="p-4 max-w-5xl mx-auto">
-        <div className="bg-green-500 p-4 rounded-b-xl shadow-md flex items-center justify-between mb-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-white hover:bg-green-600 transition-colors"
-            onClick={() => navigate(-1)}
+    <div className="min-h-screen pb-20">
+      <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg">
+        <div className="flex items-center justify-between">
+          <Button 
+            variant="ghost" 
+            onClick={() => navigate(-1)} 
+            className="text-white hover:bg-green-600"
           >
-            <ArrowLeft size={24} />
+            <ArrowLeft size={18} className="mr-2" />
+            Back
           </Button>
-          <h1 className="text-2xl font-bold text-white text-center flex-1">
-            Comprehensive Guide
-          </h1>
-          <div className="w-6" /> {/* Spacer for alignment */}
+          <div className="text-center">
+            <h1 className="text-2xl font-bold">Guides</h1>
+          </div>
+          <div className="w-10"></div>
         </div>
+      </header>
 
         <Card className="bg-gradient-to-b from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 shadow-lg rounded-xl border border-gray-200 dark:border-gray-700">
           <CardHeader>
@@ -70,7 +71,7 @@ const Guides = () => {
                       Creating a Match
                     </AccordionTrigger>
                     <AccordionContent className="text-gray-700 dark:text-gray-300 px-2 py-2">
-                      To create a match, navigate to the "Create Match" section, enter the match title, date, time, venue, and pricing details. Save to publish a public match or set a password for a private match.
+                      To create a match, navigate to the "Organize Match" section, enter the match title, date, time, venue, and pricing details. Save to publish a public match or retrieve a password for a private match.
                     </AccordionContent>
                   </AccordionItem>
                   <AccordionItem value="privateMatch" className="border-b border-gray-200 dark:border-gray-700">
@@ -78,7 +79,7 @@ const Guides = () => {
                       Creating a Private Match
                     </AccordionTrigger>
                     <AccordionContent className="text-gray-700 dark:text-gray-300 px-2 py-2">
-                      For a private match, check the "Private Match" option during creation, set an access password, and share it with invited players.
+                      For a private match, check the "Private Match" option during creation, copy an access password, and share it with invited players.
                     </AccordionContent>
                   </AccordionItem>
                   <AccordionItem value="publicMatch" className="border-b border-gray-200 dark:border-gray-700">
@@ -118,7 +119,7 @@ const Guides = () => {
                       Cashout
                     </AccordionTrigger>
                     <AccordionContent className="text-gray-700 dark:text-gray-300 px-2 py-2">
-                      Request a cashout from earned match fees via the "Earnings" section. A 2% platform fee applies after your first 10 free matches.
+                      Request a cashout from earned match fees via the "Manage" section. A 2% platform fee applies after your first 5 free matches.
                     </AccordionContent>
                   </AccordionItem>
                 </Accordion>
@@ -131,7 +132,7 @@ const Guides = () => {
                       Joining a Match
                     </AccordionTrigger>
                     <AccordionContent className="text-gray-700 dark:text-gray-300 px-2 py-2">
-                      Search for a match, view details, and click "Join" if slots are available. Enter a password for private matches if required.
+                      Search for a match, view details, and click "Join" if slots are available. Enter a password for private matches if required and save your code.
                     </AccordionContent>
                   </AccordionItem>
                   <AccordionItem value="refund" className="border-b border-gray-200 dark:border-gray-700">
@@ -139,7 +140,7 @@ const Guides = () => {
                       Refund Policy
                     </AccordionTrigger>
                     <AccordionContent className="text-gray-700 dark:text-gray-300 px-2 py-2">
-                      Cancel your participation 1 hour before match start for a full refund. Cancellations within 1 hour attract a 50% refund. No refunds after the match starts.
+                      Cancel your participation 1 hour before match start for a full refund. Cancellations within 1 hour attract a 50% refund. No refunds after the match starts for checkedin players.
                     </AccordionContent>
                   </AccordionItem>
                   <AccordionItem value="noShow" className="border-b border-gray-200 dark:border-gray-700">
@@ -147,7 +148,7 @@ const Guides = () => {
                       No Show Policy
                     </AccordionTrigger>
                     <AccordionContent className="text-gray-700 dark:text-gray-300 px-2 py-2">
-                      No refunds or penalties for no-shows, but organizers may ban repeat offenders. Check in on time to avoid issues.
+                      Full refund for no shows if player is unconfirmed, but organizers may ban repeat offenders. Check in on time to avoid issues.
                     </AccordionContent>
                   </AccordionItem>
                 </Accordion>
