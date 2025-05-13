@@ -125,7 +125,7 @@ const VenueDetail = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-[50vh]">
+      <div className="flex justify-center items-center min-h-[50vh] bg-gray-50 dark:bg-gray-900">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
       </div>
     );
@@ -133,7 +133,7 @@ const VenueDetail = () => {
 
   if (!venue) {
     return (
-      <div className="p-4 bg-gray-50 dark:bg-gray-900 min-h-screen">
+      <div className="p-6 bg-gray-50 dark:bg-gray-900 min-h-screen">
         <Button
           variant="ghost"
           onClick={() => navigate(-1)}
@@ -156,7 +156,7 @@ const VenueDetail = () => {
   return (
     <div className="min-h-screen pb-20 bg-gray-50 dark:bg-gray-900">
       <header className="sticky top-0 z-50 bg-green-500 text-white shadow-md">
-        <div className="p-4 flex items-center">
+        <div className="p-4 flex items-center justify-between">
           <Button
             variant="ghost"
             onClick={() => navigate(-1)}
@@ -165,11 +165,12 @@ const VenueDetail = () => {
             <ArrowLeft size={18} className="mr-2" />
             Back
           </Button>
-          <h1 className="text-xl font-semibold ml-2">Venue Details</h1>
+          <h1 className="text-2xl font-bold">Venue Details</h1>
+          <div className="w-10"></div>
         </div>
       </header>
 
-      <div className="p-4 max-w-3xl mx-auto">
+      <div className="p-6 max-w-3xl mx-auto">
         <div className="rounded-xl overflow-hidden mb-6 h-64 shadow-md">
           <img
             src={venueImage}
@@ -190,13 +191,13 @@ const VenueDetail = () => {
 
             <div className="space-y-4">
               <div>
-                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Address:</h3>
+                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Address</h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400">{venue.address}</p>
               </div>
 
               {venue.description && (
                 <div>
-                  <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Description:</h3>
+                  <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Description</h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400">{venue.description}</p>
                 </div>
               )}
@@ -207,7 +208,7 @@ const VenueDetail = () => {
                     href={venue.map_link}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center text-green-500 hover:text-green-600"
+                    className="inline-flex items-center text-green-500 hover:text-green-600 text-sm font-medium"
                   >
                     <ExternalLink size={16} className="mr-2" />
                     View on Google Maps
@@ -227,7 +228,7 @@ const VenueDetail = () => {
             ) : matches.length > 0 ? (
               <div className="space-y-4">
                 {matches.map((match) => (
-                  <ansion-colors"
+                  <div
                     key={match.id}
                     className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer transition-colors"
                     onClick={() => navigate(`/match/${match.slug}`)}
