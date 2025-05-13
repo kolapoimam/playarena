@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Loader, Calendar, MapPin, Users, DollarSign, Trophy } from "lucide-react";
+import { ArrowLeft, Loader, Calendar, MapPin, Users, DollarSign, Trophy, Phone, MessageSquare } from "lucide-react";
 import {
   Form,
   FormControl,
@@ -34,10 +34,13 @@ type Match = {
   match_time: string;
   total_slots: number;
   organizer_name: string;
+  organizer_phone: string | null;
+  disclose_phone: boolean;
   is_paid: boolean;
   price: number | null;
   player_number_required: boolean;
   required_fields: string[] | null;
+  allow_bulk_tickets: boolean;
   venue: {
     slug: string;
     name: string;
@@ -45,6 +48,7 @@ type Match = {
   } | null;
   players: {
     player_name: string;
+    number_of_slots: number;
   }[];
 };
 
@@ -70,6 +74,7 @@ const JoinMatch = () => {
   const [confirmationCode, setConfirmationCode] = useState<string | null>(null);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
   const [backgroundOption, setBackgroundOption] = useState("field");
+  const [selectedSlots, setSelectedSlots] = useState(1);
   const cardRef = useRef<HTMLDivElement>(null);
   const defaultEmail = "kolapoimam1@gmail.com";
 
@@ -126,10 +131,10 @@ const JoinMatch = () => {
           .from("matches")
           .select(
             `
-            id, slug, title, match_date, match_time, total_slots, organizer_name, 
-            is_paid, price, player_number_required, required_fields,
+            id, slug, title, match_date, match_time, total_slots, organizer_name, organizer_phone, disclose_phone, 
+            is_paid, price, player_number_required, required_fields, allow_bulk_tickets,
             venue:venues(slug, name, city),
-            players(*)
+            players(player_name, number_of_slots)
           `
           )
           .eq("slug", slug)
@@ -228,7 +233,7 @@ const JoinMatch = () => {
       const response = await supabase.functions.invoke("initialize-paystack-transaction", {
         body: {
           email: defaultEmail,
-          amount: match.price,
+          amount: match.price * selectedSlots,
           match_id: match.id,
           slug: match.slug,
           title: match.title,
@@ -313,10 +318,11 @@ const JoinMatch = () => {
   const onSubmit = async (data: any) => {
     if (!match || !slug) return;
 
-    if (match.players.length >= match.total_slots) {
+    const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
+    if (totalPlayerSlots + selectedSlots > match.total_slots) {
       toast({
-        title: "Match is full",
-        description: "Sorry, this match has reached its player limit.",
+        title: "Not enough slots",
+        description: `Only ${match.total_slots - totalPlayerSlots} slot(s) are available.`,
         variant: "destructive",
       });
       return;
@@ -346,6 +352,7 @@ const JoinMatch = () => {
           details: Object.keys(playerDetails).length > 0 ? playerDetails : undefined,
           payment_status: match.is_paid ? (paymentStatus === "success" ? "paid" : "pending") : "free",
           status: "registered",
+          number_of_slots: selectedSlots,
         })
         .select("confirmation_code")
         .single();
@@ -356,21 +363,22 @@ const JoinMatch = () => {
 
       toast({
         title: "Success!",
-        description: "You have joined the match successfully.",
+        description: `You have joined the match successfully for ${selectedSlots} slot(s).`,
       });
 
       form.reset();
       setPaymentStatus("pending");
+      setSelectedSlots(1);
       setSuccessDialogOpen(true);
 
       const { data: updatedMatch } = await supabase
         .from("matches")
         .select(
           `
-          id, slug, title, match_date, match_time, total_slots, organizer_name, 
-          is_paid, price, player_number_required, required_fields,
+          id, slug, title, match_date, match_time, total_slots, organizer_name, organizer_phone, disclose_phone, 
+          is_paid, price, player_number_required, required_fields, allow_bulk_tickets,
           venue:venues(slug, name, city),
-          players(*)
+          players(player_name, number_of_slots)
         `
         )
         .eq("slug", slug)
@@ -429,7 +437,9 @@ const JoinMatch = () => {
     );
   }
 
-  const isFull = match.players.length >= match.total_slots;
+  const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
+  const isFull = totalPlayerSlots >= match.total_slots;
+  const maxSlots = Math.min(5, match.total_slots - totalPlayerSlots);
   const matchDate = new Date(`${match.match_date}T00:00:00`);
   const isPastMatch = isPast(matchDate) && !isToday(matchDate);
 
@@ -456,10 +466,28 @@ const JoinMatch = () => {
           </p>
           <div className="flex items-center gap-2 text-sm">
             <Users size={16} />
-            <span>Spots available: {match.total_slots - match.players.length} / {match.total_slots}</span>
+            <span>Spots available: {match.total_slots - totalPlayerSlots} / {match.total_slots}</span>
           </div>
           {match.is_paid && (
-            <div className="mt-2 font-medium text-green-600">Price: ₦{match.price?.toFixed(2)}</div>
+            <div className="mt-2 font-medium text-green-600">Price: ₦{match.price?.toFixed(2)} per slot</div>
+          )}
+          {match.disclose_phone && match.organizer_phone && (
+            <div className="mt-2 flex items-center gap-2 text-sm">
+              <span>Contact Organizer:</span>
+              <a href={`tel:${match.organizer_phone}`} className="flex items-center text-blue-600 hover:underline">
+                <Phone size={16} className="mr-1" />
+                {match.organizer_phone}
+              </a>
+              <a
+                href={`https://wa.me/${match.organizer_phone}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center text-green-600 hover:underline"
+              >
+                <MessageSquare size={16} className="mr-1" />
+                WhatsApp
+              </a>
+            </div>
           )}
         </div>
 
@@ -487,6 +515,36 @@ const JoinMatch = () => {
                 <p className="text-muted-foreground">
                   This is a paid match. Please complete the payment to join.
                 </p>
+                {match.allow_bulk_tickets && (
+                  <div className="flex items-center gap-4">
+                    <span className="text-sm font-medium">Number of Slots:</span>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedSlots((prev) => Math.max(1, prev - 1))}
+                        disabled={selectedSlots <= 1}
+                      >
+                        -
+                      </Button>
+                      <span className="text-lg font-medium">{selectedSlots}</span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedSlots((prev) => Math.min(maxSlots, prev + 1))}
+                        disabled={selectedSlots >= maxSlots}
+                      >
+                        +
+                      </Button>
+                    </div>
+                    <span className="text-sm text-muted-foreground">
+                      Max {maxSlots} slots available
+                    </span>
+                  </div>
+                )}
+                <div className="text-sm font-medium">
+                  Total: ₦{(match.price! * selectedSlots).toFixed(2)}
+                </div>
                 <Button
                   type="button"
                   className="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg transition-colors"
@@ -499,7 +557,7 @@ const JoinMatch = () => {
                       Processing...
                     </>
                   ) : (
-                    `Pay Now (₦${match.price?.toFixed(2)})`
+                    `Pay Now (₦${(match.price! * selectedSlots).toFixed(2)})`
                   )}
                 </Button>
               </div>
@@ -509,7 +567,7 @@ const JoinMatch = () => {
                   {match.is_paid && paymentStatus === "success" && (
                     <div className="bg-green-50 p-4 rounded-md border border-green-200 text-green-700">
                       <p className="font-medium">Payment Successful!</p>
-                      <p className="text-sm">Please complete your registration below.</p>
+                      <p className="text-sm">Please complete your registration below for {selectedSlots} slot(s).</p>
                       {paymentReference && (
                         <p className="text-sm mt-1">Reference: {paymentReference}</p>
                       )}
@@ -558,7 +616,7 @@ const JoinMatch = () => {
                         Joining...
                       </>
                     ) : (
-                      "Join Match"
+                      `Join Match${selectedSlots > 1 ? ` (${selectedSlots} slots)` : ""}`
                     )}
                   </Button>
                 </form>
@@ -578,7 +636,7 @@ const JoinMatch = () => {
           <DialogTitle>Registration Successful</DialogTitle>
           <DialogDescription>
             <p className="text-gray-600 dark:text-gray-300 mb-4">
-              You have successfully registered for the match. Save or share this card with your confirmation code.
+              You have successfully registered for the match for {selectedSlots} slot(s). Save or share this card with your confirmation code.
             </p>
             <div className="mb-4">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Background:</label>
@@ -667,16 +725,22 @@ const JoinMatch = () => {
                   </div>
                   <div className="flex items-center">
                     <DollarSign className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-                    <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{match?.is_paid ? `Paid (₦${match?.price?.toFixed(2)})` : "Free"}</span>
+                    <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{match?.is_paid ? `Paid (₦${match?.price?.toFixed(2)} x ${selectedSlots})` : "Free"}</span>
                   </div>
                   <div className="flex items-center">
                     <Users className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-                    <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{match?.players?.length || 0}/{match?.total_slots} slots booked</span>
+                    <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{totalPlayerSlots}/{match?.total_slots} slots booked</span>
                   </div>
                   <div className="flex items-center">
                     <span className={`font-bold ${backgroundOption === "white" ? "text-black" : "text-white"}`}>Confirmation Code:</span>
                     <span className={`ml-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`}>{confirmationCode}</span>
                   </div>
+                  {selectedSlots > 1 && (
+                    <div className="flex items-center">
+                      <span className={`font-bold ${backgroundOption === "white" ? "text-black" : "text-white"}`}>Slots Registered:</span>
+                      <span className={`ml-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`}>{selectedSlots}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
