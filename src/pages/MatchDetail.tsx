@@ -65,6 +65,7 @@ type Match = {
   players: {
     player_name: string;
     status: string;
+    number_of_slots: number;
   }[];
 };
 
@@ -98,7 +99,7 @@ const MatchDetail = () => {
         .select(`
           *,
           venue:venues(id, slug, name, city, map_link),
-          players(player_name, status)
+          players(player_name, status, number_of_slots)
         `)
         .eq("slug", matchSlug)
         .single();
@@ -192,7 +193,7 @@ const MatchDetail = () => {
         .select(`
           *,
           venue:venues(id, slug, name, city, map_link),
-          players(player_name, status)
+          players(player_name, status, number_of_slots)
         `)
         .eq("slug", matchSlug)
         .single();
@@ -213,9 +214,9 @@ const MatchDetail = () => {
 
   const formatDate = (dateString: string) => {
     const options: Intl.DateTimeFormatOptions = {
-      weekday: "long",
+      weekday: "short",
       day: "numeric",
-      month: "long",
+      month: "short",
       year: "numeric",
     };
     return new Date(dateString).toLocaleDateString("en-NG", options);
@@ -233,13 +234,13 @@ const MatchDetail = () => {
     
     const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
     const now = new Date();
-    const oneHourAfter = addHours(matchDateTime, 1);
-    const nextDay = addDays(matchDateTime, 1);
+    const twentyFourHoursAfter = addHours(matchDateTime, 24);
     
-    const isFull = match.players?.length >= match.total_slots;
+    const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
+    const isFull = totalPlayerSlots >= match.total_slots;
     const isStarted = now >= matchDateTime;
-    const isPassed = now >= nextDay;
-    const isFeedbackWindow = now >= oneHourAfter && now < nextDay;
+    const isPassed = now >= twentyFourHoursAfter;
+    const isFeedbackWindow = now >= matchDateTime && now < twentyFourHoursAfter;
     
     return { isStarted, isPassed, isFull, isFeedbackWindow };
   };
@@ -454,6 +455,7 @@ const MatchDetail = () => {
   }
 
   const { isStarted, isPassed, isFull, isFeedbackWindow } = getMatchStatus();
+  const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
 
   return (
     <div className="min-h-screen pb-20">
@@ -563,7 +565,7 @@ const MatchDetail = () => {
               <div className="flex items-center gap-2">
                 <Users size={18} />
                 <span>
-                  {match.players?.length || 0}/{match.total_slots} spots filled
+                  {totalPlayerSlots}/{match.total_slots} spots filled
                   {isFull && " (FULL)"}
                 </span>
               </div>
@@ -584,7 +586,7 @@ const MatchDetail = () => {
           </div>
           
           <div className="border rounded-lg p-4 bg-card shadow-md">
-            <h2 className="font-semibold mb-3">Players ({match.players?.length || 0}/{match.total_slots})</h2>
+            <h2 className="font-semibold mb-3">Players ({totalPlayerSlots}/{match.total_slots})</h2>
             
             {match.players && match.players.length > 0 ? (
               <div className="space-y-2">
@@ -792,7 +794,7 @@ const MatchDetail = () => {
                   </div>
                   <div className="flex items-center">
                     <Users className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-                    <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{match.players?.length || 0}/{match.total_slots} slots booked</span>
+                    <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{totalPlayerSlots}/{match.total_slots} slots booked</span>
                   </div>
                 </div>
               </div>
