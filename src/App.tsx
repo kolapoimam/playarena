@@ -16,7 +16,8 @@ import VenueCreate from "./pages/VenueCreate";
 import MatchRedirect from "./pages/MatchRedirect";
 import VenueRedirect from "./pages/VenueRedirect";
 import VenueDirectory from "./pages/VenueDirectory";
-import ConfirmCheckin from "./pages/ConfirmCheckin"; // Added import
+import ConfirmCheckin from "./pages/ConfirmCheckin";
+import Feedback from "./pages/Feedback"; // Added import for Feedback
 
 const queryClient = new QueryClient();
 
@@ -35,8 +36,9 @@ const App = () => (
           <Route path="/organize" element={<Organize />} />
           <Route path="/venue-create" element={<VenueCreate />} />
           <Route path="/venues" element={<VenueDirectory />} />
-          <Route path="/confirm-checkin" element={<ConfirmCheckin />} /> {/* Added route */}
-          
+          <Route path="/confirm-checkin" element={<ConfirmCheckin />} />
+          <Route path="/feedback" element={<Feedback />} /> {/* Added Feedback route */}
+
           {/* Slug-Based Routes for Matches and Venues */}
           <Route path="/match/:slug" element={<MatchDetail />} />
           <Route path="/join/:slug" element={<JoinMatch />} />
