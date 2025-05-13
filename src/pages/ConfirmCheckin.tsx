@@ -16,7 +16,9 @@ import {
   Loader2,
   AlertCircle,
   Trophy,
-  DollarSign
+  DollarSign,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 import {
   Dialog,
