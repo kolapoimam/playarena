@@ -31,6 +31,7 @@ type Match = {
     slug: string;
     name: string;
     city: string;
+    state: string; // Added state to venue type
   } | null;
   players: {
     player_name: string;
@@ -56,6 +57,7 @@ const Matches = () => {
   const [durationFilter, setDurationFilter] = useState<string>("all");
   const [timeStart, setTimeStart] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [stateFilter, setStateFilter] = useState<string | null>(null); // New state filter
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -66,7 +68,7 @@ const Matches = () => {
   useEffect(() => {
     fetchVenues();
     fetchMatches();
-  }, [currentPage, isPaidFilter, venueFilter, durationFilter, timeStart, statusFilter]);
+  }, [currentPage, isPaidFilter, venueFilter, durationFilter, timeStart, statusFilter, stateFilter]);
 
   const fetchVenues = async () => {
     try {
@@ -95,7 +97,7 @@ const Matches = () => {
         .select(
           `
           id, slug, title, match_date, match_time, total_slots, is_paid, price, notes, organizer_name, is_private, access_password,
-          venue:venues(slug, name, city),
+          venue:venues(slug, name, city, state), // Updated to include state
           players(*),
           created_at
         `,
@@ -185,6 +187,9 @@ const Matches = () => {
             break;
         }
       }
+      if (stateFilter && stateFilter !== "all") {
+        query = query.eq("venue.state", stateFilter);
+      }
 
       const start = (currentPage - 1) * matchesPerPage;
       const end = start + matchesPerPage - 1;
@@ -230,7 +235,7 @@ const Matches = () => {
 
   const formatTime = (timeString: string) => {
     const time = DateTime.fromISO(`2000-01-01T${timeString}Z`, { zone: "utc" }).setZone(LAGOS_TIMEZONE);
-    return time.toFormat("HH:mm");
+    return time.toFormat("hh:mm a");
   };
 
   const totalPages = Math.ceil(totalMatches / matchesPerPage);
@@ -253,6 +258,7 @@ const Matches = () => {
     setDurationFilter("all");
     setTimeStart("");
     setStatusFilter(null);
+    setStateFilter(null); // Reset state filter
     setCurrentPage(1);
   };
 
@@ -290,6 +296,15 @@ const Matches = () => {
   const hasAccess = (matchSlug: string) => {
     return !!localStorage.getItem(`match_access_${matchSlug}`);
   };
+
+  // Nigerian states including FCT
+  const nigerianStates = [
+    "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", "Borno", 
+    "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu", "FCT", "Gombe", 
+    "Imo", "Jigawa", "Kaduna", "Kano", "Katsina", "Kebbi", "Kogi", "Kwara", 
+    "Lagos", "Nasarawa", "Niger", "Ogun", "Ondo", "Osun", "Oyo", "Plateau", 
+    "Rivers", "Sokoto", "Taraba", "Yobe", "Zamfara"
+  ];
 
   return (
     <div className="min-h-screen pb-20">
@@ -433,6 +448,29 @@ const Matches = () => {
                     <SelectItem value="Today's Match">Today's Match</SelectItem>
                     <SelectItem value="Upcoming Match">Upcoming Match</SelectItem>
                     <SelectItem value="Match Passed">Match Passed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="state-filter">State</Label>
+                <Select
+                  value={stateFilter || "all"}
+                  onValueChange={(value) => {
+                    setStateFilter(value === "all" ? null : value);
+                    setCurrentPage(1);
+                  }}
+                >
+                  <SelectTrigger id="state-filter">
+                    <SelectValue placeholder="Select state" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All States</SelectItem>
+                    {nigerianStates.map((state) => (
+                      <SelectItem key={state} value={state}>
+                        {state}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
