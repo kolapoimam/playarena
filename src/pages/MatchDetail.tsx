@@ -572,7 +572,7 @@ const MatchDetail = () => {
               
               {match.is_paid && (
                 <div className="font-semibold mt-2">
-                  Price: â�¦{match.price?.toFixed(2)}
+                  Price: ₦{match.price?.toFixed(2)}
                 </div>
               )}
               
@@ -793,7 +793,7 @@ const MatchDetail = () => {
                   </div>
                   <div className="flex items-center">
                     <DollarSign className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-                    <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{match.is_paid ? `Paid (â�¦${match.price?.toFixed(2)})` : "Free"}</span>
+                    <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{match.is_paid ? `Paid (₦{match.price?.toFixed(2)})` : "Free"}</span>
                   </div>
                   <div className="flex items-center">
                     <Users className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
