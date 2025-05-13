@@ -57,7 +57,7 @@ const formSchema = z.object({
   match_date: z.date({ 
     required_error: "Please select a date",
     invalid_type_error: "Please select a valid date" 
-  }).min(new Date(), { message: "Date cannot be in the past" }),
+  }),
     
   match_time: z.string()
     .regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, { 
@@ -100,6 +100,25 @@ const formSchema = z.object({
   is_private: z.boolean().default(false),
   access_password: z.string().nullable().optional(),
   allow_bulk_tickets: z.boolean().default(false),
+}).refine(data => {
+  const now = new Date();
+  const selectedDateTime = new Date(data.match_date);
+  const [hours, minutes] = data.match_time.split(':').map(Number);
+  selectedDateTime.setHours(hours, minutes, 0, 0);
+
+  if (selectedDateTime < now) {
+    return false;
+  }
+
+  const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
+  if (selectedDateTime.toDateString() === now.toDateString() && selectedDateTime < oneHourLater) {
+    return false;
+  }
+
+  return true;
+}, {
+  message: "Match must be scheduled at least 1 hour from now",
+  path: ["match_time"],
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -152,6 +171,7 @@ const Organize = () => {
   const matchTime = form.watch("match_time");
   const organizerName = form.watch("organizer_name");
   const accessPassword = form.watch("access_password");
+  const organizerPhone = form.watch("organizer_phone");
 
   useEffect(() => {
     const fetchVenues = async () => {
@@ -287,128 +307,42 @@ const Organize = () => {
   const selectedVenue = venues.find(venue => venue.id === selectedVenueId);
 
   return (
-    <div className="min-h-screen pb-20 bg-gray-50 dark:bg-gray-900">
-      <header className="sticky top-0 z-50 bg-green-500 text-white shadow-md">
-        <div className="p-4 flex items-center justify-between">
+    <div className="min-h-screen pb-20 bg-gray-100 dark:bg-gray-900">
+      <header className="sticky top-0 z-50 bg-gradient-to-r from-green-500 to-green-700 text-white shadow-lg">
+        <div className="p-4 flex items-center justify-between max-w-7xl mx-auto">
           <Button 
             variant="ghost" 
-            className="text-white hover:text-gray-200"
+            className="text-white hover:bg-green-600 transition-colors"
             onClick={() => navigate(-1)}
           >
             <ArrowLeft size={18} className="mr-2" />
             Back
           </Button>
           <h1 className="text-2xl font-bold">Organize a Match</h1>
+          <div className="w-10"></div> {/* Spacer for alignment */}
         </div>
       </header>
 
-      <div className="p-6 max-w-2xl mx-auto">
+      <div className="p-6 max-w-3xl mx-auto">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium">Match Title</FormLabel>
-                  <FormControl>
-                    <Input placeholder="E.g., Saturday Friendly" className="text-base" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="venue_id"
-              render={({ field }) => (
-                <FormItem>
-                  <div className="flex justify-between items-center">
-                    <FormLabel className="text-sm font-medium">Venue</FormLabel>
-                    <Dialog open={venueDialogOpen} onOpenChange={setVenueDialogOpen}>
-                      <DialogTrigger asChild>
-                        <Button variant="outline" size="sm" type="button" className="text-sm font-medium">
-                          <Plus size={16} className="mr-1" /> Add New Venue
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
-                        <VenueForm 
-                          onSuccess={handleVenueCreated} 
-                          onCancel={() => setVenueDialogOpen(false)} 
-                        />
-                      </DialogContent>
-                    </Dialog>
-                  </div>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger className="w-full text-base">
-                        <SelectValue placeholder="Select a venue" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {venuesLoading ? (
-                        <SelectItem value="loading" disabled>
-                          Loading venues...
-                        </SelectItem>
-                      ) : venues.length > 0 ? (
-                        venues.map((venue) => (
-                          <SelectItem key={venue.id} value={venue.id} className="text-base">
-                            {venue.name}{venue.city ? `, ${venue.city}` : ''}
-                          </SelectItem>
-                        ))
-                      ) : (
-                        <SelectItem value="none" disabled>
-                          No venues available
-                        </SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+            {/* Match Details Section */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
+              <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Match Details</h2>
+              
               <FormField
                 control={form.control}
-                name="match_date"
+                name="title"
                 render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel className="text-sm font-medium">Date</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "pl-3 text-left text-base font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, "PPP")
-                            ) : (
-                              <span>Pick a date</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date) => {
-                            const today = new Date();
-                            today.setHours(0, 0, 0, 0);
-                            return date < today;
-                          }}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
+                  <FormItem>
+                    <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Match Title</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="E.g., Saturday Friendly" 
+                        className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white" 
+                        {...field} 
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -416,284 +350,398 @@ const Organize = () => {
 
               <FormField
                 control={form.control}
-                name="match_time"
+                name="venue_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium">Time</FormLabel>
+                    <div className="flex justify-between items-center">
+                      <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Venue</FormLabel>
+                      <Dialog open={venueDialogOpen} onOpenChange={setVenueDialogOpen}>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" size="sm" type="button" className="text-sm font-medium hover:bg-green-50 dark:hover:bg-gray-700 transition-colors">
+                            <Plus size={16} className="mr-1" /> Add New Venue
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
+                          <VenueForm 
+                            onSuccess={handleVenueCreated} 
+                            onCancel={() => setVenueDialogOpen(false)} 
+                          />
+                        </DialogContent>
+                      </Dialog>
+                    </div>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="w-full text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white">
+                          <SelectValue placeholder="Select a venue" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {venuesLoading ? (
+                          <SelectItem value="loading" disabled>
+                            Loading venues...
+                          </SelectItem>
+                        ) : venues.length > 0 ? (
+                          venues.map((venue) => (
+                            <SelectItem key={venue.id} value={venue.id} className="text-base">
+                              {venue.name}{venue.city ? `, ${venue.city}` : ''}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="none" disabled>
+                            No venues available
+                          </SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="match_date"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Date</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "pl-3 text-left text-base font-normal border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              {field.value ? (
+                                format(field.value, "PPP")
+                              ) : (
+                                <span>Pick a date</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            disabled={(date) => {
+                              const now = new Date();
+                              const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                              return date < today;
+                            }}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="match_time"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Time</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input
+                            type="time"
+                            placeholder="HH:MM"
+                            className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                            {...field}
+                          />
+                          <Clock className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="total_slots"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Number of Players</FormLabel>
                     <FormControl>
-                      <div className="relative">
-                        <Input
-                          type="time"
-                          placeholder="HH:MM"
-                          className="text-base"
-                          {...field}
-                        />
-                        <Clock className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                      </div>
+                      <Input
+                        type="number"
+                        min={2}
+                        className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                        {...field}
+                        onChange={(e) => {
+                          const value = parseInt(e.target.value, 10);
+                          field.onChange(isNaN(value) ? 2 : value);
+                        }}
+                      />
                     </FormControl>
+                    <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                      Total number of players needed for this match
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
 
-            <FormField
-              control={form.control}
-              name="total_slots"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium">Number of Players</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      min={2}
-                      className="text-base"
-                      {...field}
-                      onChange={(e) => {
-                        const value = parseInt(e.target.value, 10);
-                        field.onChange(isNaN(value) ? 2 : value);
-                      }}
-                    />
-                  </FormControl>
-                  <FormDescription className="text-sm">
-                    Total number of players needed for this match
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* Payment and Privacy Section */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
+              <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Payment & Privacy</h2>
 
-            <FormField
-              control={form.control}
-              name="is_paid"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                  <div className="space-y-0.5">
-                    <FormLabel className="text-base font-medium">
-                      Paid Match
-                    </FormLabel>
-                    <FormDescription className="text-sm">
-                      Toggle if players need to pay to join this match
-                    </FormDescription>
-                  </div>
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-
-            {isPaid && (
               <FormField
                 control={form.control}
-                name="price"
+                name="is_paid"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium">Price per Player (₦)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="0.00"
-                        min={0}
-                        step="0.01"
-                        className="text-base"
-                        {...field}
-                        onChange={(e) => {
-                          const value = parseFloat(e.target.value);
-                          field.onChange(isNaN(value) ? 0 : value);
-                        }}
-                        value={field.value ?? ""}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-
-            {isPaid && (
-              <FormField
-                control={form.control}
-                name="allow_bulk_tickets"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 dark:border-gray-600">
                     <div className="space-y-0.5">
-                      <FormLabel className="text-base font-medium">
-                        Allow Bulk Ticket Purchase
+                      <FormLabel className="text-base font-medium text-gray-700 dark:text-gray-300">
+                        Paid Match
                       </FormLabel>
-                      <FormDescription className="text-sm">
-                        Toggle to allow players to purchase multiple slots (up to 5 or available slots)
+                      <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                        Toggle if players need to pay to join this match
                       </FormDescription>
                     </div>
                     <FormControl>
                       <Switch
                         checked={field.value}
                         onCheckedChange={field.onChange}
+                        className="data-[state=checked]:bg-green-500"
                       />
                     </FormControl>
                   </FormItem>
                 )}
               />
-            )}
 
-            <FormField
-              control={form.control}
-              name="is_private"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                  <div className="space-y-0.5">
-                    <FormLabel className="text-base font-medium">
-                      Private Match
-                    </FormLabel>
-                    <FormDescription className="text-sm">
-                      Toggle to restrict access to invited players only
-                    </FormDescription>
-                  </div>
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-
-            {isPrivate && (
-              <FormField
-                control={form.control}
-                name="access_password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium">Access Password</FormLabel>
-                    <div className="flex items-center gap-2">
+              {isPaid && (
+                <FormField
+                  control={form.control}
+                  name="price"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Price per Player (₦)</FormLabel>
                       <FormControl>
                         <Input
-                          value={field.value || ''}
-                          readOnly
-                          className="font-mono text-base"
+                          type="number"
+                          placeholder="0.00"
+                          min={0}
+                          step="0.01"
+                          className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                          {...field}
+                          onChange={(e) => {
+                            const value = parseFloat(e.target.value);
+                            field.onChange(isNaN(value) ? 0 : value);
+                          }}
+                          value={field.value ?? ""}
                         />
                       </FormControl>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="text-sm font-medium"
-                        onClick={() => {
-                          navigator.clipboard.writeText(field.value || '');
-                          toast({
-                            title: "Copied!",
-                            description: "Password copied to clipboard",
-                          });
-                        }}
-                      >
-                        <Copy size={16} className="mr-2" />
-                        Copy
-                      </Button>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              {isPaid && (
+                <FormField
+                  control={form.control}
+                  name="allow_bulk_tickets"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 dark:border-gray-600">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base font-medium text-gray-700 dark:text-gray-300">
+                          Allow Bulk Ticket Purchase
+                        </FormLabel>
+                        <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                          Toggle to allow players to purchase multiple slots (up to 5 or available slots)
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          className="data-[state=checked]:bg-green-500"
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              <FormField
+                control={form.control}
+                name="is_private"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 dark:border-gray-600">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base font-medium text-gray-700 dark:text-gray-300">
+                        Private Match
+                      </FormLabel>
+                      <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                        Toggle to restrict access to invited players only
+                      </FormDescription>
                     </div>
-                    <FormDescription className="text-sm">
-                      Share this password with players you want to invite
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        className="data-[state=checked]:bg-green-500"
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              {isPrivate && (
+                <FormField
+                  control={form.control}
+                  name="access_password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Access Password</FormLabel>
+                      <div className="flex items-center gap-2">
+                        <FormControl>
+                          <Input
+                            value={field.value || ''}
+                            readOnly
+                            className="font-mono text-base border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                          />
+                        </FormControl>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="text-sm font-medium hover:bg-green-50 dark:hover:bg-gray-700 transition-colors"
+                          onClick={() => {
+                            navigator.clipboard.writeText(field.value || '');
+                            toast({
+                              title: "Copied!",
+                              description: "Password copied to clipboard",
+                            });
+                          }}
+                        >
+                          <Copy size={16} className="mr-2" />
+                          Copy
+                        </Button>
+                      </div>
+                      <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                        Share this password with players you want to invite
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+            </div>
+
+            {/* Organizer Details Section */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
+              <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Organizer Details</h2>
+
+              <FormField
+                control={form.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Notes (Optional)</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="E.g., Bring boots, parking available, etc."
+                        className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="organizer_name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Your Name</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Your name" 
+                        className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white" 
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                      This will be displayed as the organizer of the match
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-            )}
 
-            <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium">Notes (Optional)</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="E.g., Bring boots, parking available, etc."
-                      className="text-base"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="organizer_name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium">Your Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Your name" className="text-base" {...field} />
-                  </FormControl>
-                  <FormDescription className="text-sm">
-                    This will be displayed as the organizer of the match
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-<FormField
-  control={form.control}
-  name="organizer_phone"
-  render={({ field }) => (
-    <FormItem>
-      <FormLabel className="text-sm font-medium">Your Phone Number (Optional)</FormLabel>
-      <FormControl>
-        <Input
-          type="tel"
-          inputMode="numeric"
-          pattern="[0-9]*"
-          placeholder="Enter 11-digit phone number"
-          className="text-base"
-          {...field}
-          value={field.value ?? ""}
-          onChange={(e) => {
-            // Only allow numbers and limit to 11 digits
-            const numericValue = e.target.value.replace(/\D/g, '');
-            const truncatedValue = numericValue.slice(0, 11);
-            field.onChange(truncatedValue || null);
-          }}
-        />
-      </FormControl>
-      <FormDescription className="text-sm">
-        Provide your phone number for contact purposes (numbers only)
-      </FormDescription>
-      <FormMessage />
-    </FormItem>
-  )}
-/>
-
-            <FormField
-              control={form.control}
-              name="disclose_phone"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                  <div className="space-y-0.5">
-                    <FormLabel className="text-base font-medium">
-                      Disclose Phone Number
-                    </FormLabel>
-                    <FormDescription className="text-sm">
-                      Toggle to share your phone number with players
+              <FormField
+                control={form.control}
+                name="organizer_phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Your Phone Number (Optional)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="tel"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        placeholder="Enter 11-digit phone number"
+                        className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                        {...field}
+                        value={field.value ?? ""}
+                        onChange={(e) => {
+                          const numericValue = e.target.value.replace(/\D/g, '');
+                          const truncatedValue = numericValue.slice(0, 11);
+                          field.onChange(truncatedValue || null);
+                        }}
+                      />
+                    </FormControl>
+                    <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                      Provide your phone number for contact purposes (numbers only)
                     </FormDescription>
-                  </div>
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="disclose_phone"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 dark:border-gray-600">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base font-medium text-gray-700 dark:text-gray-300">
+                        Disclose Phone Number
+                      </FormLabel>
+                      <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                        Toggle to share your phone number with players
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        disabled={!organizerPhone || organizerPhone.length !== 11}
+                        className="data-[state=checked]:bg-green-500"
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <Button 
               type="submit" 
-              className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2" 
+              className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-3 text-lg shadow-md transition-colors" 
               disabled={loading}
             >
               {loading ? "Creating..." : "Create Match"}
@@ -703,14 +751,14 @@ const Organize = () => {
       </div>
       <Navbar />
       
-      <Dialog open={successDialogOpen} onOpenChange={(open) => {
+<Dialog open={successDialogOpen} onOpenChange={(open) => {
         if (!open && matchSlug) {
           navigate(`/match/${matchSlug}`);
         }
         setSuccessDialogOpen(open);
       }}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogTitle className="text-xl font-bold">Match Created Successfully!</DialogTitle>
+        <DialogContent className="sm:max-w-[375px] rounded-2xl">
+          <DialogTitle className="text-xl font-bold text-gray-800 dark:text-gray-200">Match Created Successfully!</DialogTitle>
           <DialogDescription>
             <p className="text-gray-600 dark:text-gray-300 mb-4 text-sm">
               Your match has been created. Below is your unique 6-digit supercode for check-ins on match day.
@@ -718,11 +766,11 @@ const Organize = () => {
             </p>
             <div 
               ref={cardRef}
-              className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg p-6 text-white shadow-lg"
+              className="bg-gradient-to-br from-green-500 to-green-700 rounded-xl p-6 text-white shadow-lg"
             >
               <div className="flex items-center justify-between mb-4">
                 <img 
-                  src="/playarenalight.png" 
+                  src="/playarenadark.png" 
                   alt="PlayArena Logo" 
                   className="h-8 w-auto"
                 />
@@ -749,7 +797,7 @@ const Organize = () => {
                   </div>
                 )}
               </div>
-              <div className="bg-white text-green-600 rounded-md p-4 text-center">
+              <div className="bg-white text-green-600 rounded-md p-4 text-center shadow-inner">
                 <p className="text-sm font-medium">Supercode</p>
                 <p className="text-3xl font-bold tracking-wider">{supercode || "N/A"}</p>
               </div>
@@ -758,16 +806,16 @@ const Organize = () => {
               <strong>Note:</strong> Save or download this code. You'll need it to confirm and check in players on match day.
               {isPrivate && " Share the access password with invited players to allow them to join."}
             </p>
-            <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex flex-col sm:flex-row gap-3">
               <Button 
-                className="flex-1 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2"
+                className="flex-1 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 transition-colors"
                 onClick={handleDownload}
                 disabled={isDownloading}
               >
                 {isDownloading ? "Downloading..." : "Download Supercode"}
               </Button>
               <Button 
-                className="flex-1 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2"
+                className="flex-1 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 transition-colors"
                 onClick={() => {
                   if (!isDownloading) {
                     setSuccessDialogOpen(false);
