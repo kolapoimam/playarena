@@ -786,7 +786,7 @@ const MatchDetail = () => {
             <p className="text-sm text-gray-500 dark:text-gray-400 my-4">
               <strong>Note:</strong> Save or share this card to invite players to your match.
             </p>
-            <div className="flex gap-2">
+<div className="flex gap-2">
               <Button 
                 className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
                 onClick={handleDownload}
@@ -804,6 +804,10 @@ const MatchDetail = () => {
           </DialogDescription>
         </DialogContent>
       </Dialog>
+    </div>
+    {/* Close the div from the earlier snippet (e.g., className="mt-6") */}
+    </div>
+    {/* Close the outer div wrapping the entire component */}
     </div>
   );
 };
