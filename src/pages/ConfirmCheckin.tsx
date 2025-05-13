@@ -27,7 +27,7 @@ import {
   DialogHeader,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { format, differenceInMinutes } from "date-fns";
+import { format, differenceInMinutes, isPast } from "date-fns";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { z } from "zod";
 
@@ -41,6 +41,7 @@ type Match = {
   organizer_name: string;
   super_code: string;
   is_paid: boolean;
+  price?: number; // Added to support price if available
   venue: {
     name?: string;
     city?: string;
@@ -156,6 +157,7 @@ const ConfirmCheckin = () => {
   const [bankAccountError, setBankAccountError] = useState<string | null>(null);
   const [accountNameError, setAccountNameError] = useState<string | null>(null);
   const codeInputRef = useRef<HTMLInputElement>(null);
+  const [isPlayersOpen, setIsPlayersOpen] = useState(false);
 
   const resetState = () => {
     setMatch(null);
@@ -188,7 +190,7 @@ const ConfirmCheckin = () => {
       const { data, error } = await supabase
         .from("matches")
         .select(`
-          id, slug, title, match_date, match_time, total_slots, organizer_name, super_code, is_paid,
+          id, slug, title, match_date, match_time, total_slots, organizer_name, super_code, is_paid, price,
           venue:venues(name, city),
           players(id, player_name, status, confirmation_code, details)
         `)
@@ -263,8 +265,7 @@ const ConfirmCheckin = () => {
   const isMatchStarted = () => {
     if (!match) return false;
     const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
-    const now = new Date();
-    return now >= matchDateTime;
+    return isPast(matchDateTime);
   };
 
   const isCashoutEligible = () => {
@@ -273,14 +274,14 @@ const ConfirmCheckin = () => {
     const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
     const now = new Date();
     const minutesToStart = differenceInMinutes(matchDateTime, now);
-    return minutesToStart <= 30;
+    return minutesToStart <= 30 && minutesToStart >= -30; // Allow within 30 minutes before and after start for edge cases
   };
 
   const handleConfirmMode = () => {
     if (isMatchStarted()) {
       toast({
         title: "Action Not Available",
-        description: "This match has started. Confirmation and check-in are no longer available.",
+        description: "This match has passed. No further actions are allowed.",
         variant: "destructive",
       });
       return;
@@ -293,7 +294,7 @@ const ConfirmCheckin = () => {
     if (isMatchStarted()) {
       toast({
         title: "Action Not Available",
-        description: "This match has started. Confirmation and check-in are no longer available.",
+        description: "This match has passed. No further actions are allowed.",
         variant: "destructive",
       });
       return;
@@ -315,7 +316,7 @@ const ConfirmCheckin = () => {
     if (!isCashoutEligible()) {
       toast({
         title: "Cashout Not Available",
-        description: "This match is not eligible for cashout.",
+        description: "Cashout is only available 30 minutes before the match starts for paid matches.",
         variant: "destructive",
       });
       return;
@@ -506,6 +507,12 @@ const ConfirmCheckin = () => {
     }
   };
 
+  const calculateExpectedAmount = () => {
+    if (!match || !match.is_paid || !match.price) return "N/A";
+    const checkedInPlayers = match.players?.filter(p => p.status === "checked_in").length || 0;
+    return `₦${(checkedInPlayers * (match.price || 5000)).toLocaleString()}`;
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-20">
       <header className="sticky top-0 z-50 bg-green-500 text-white shadow-md">
@@ -620,6 +627,54 @@ const ConfirmCheckin = () => {
                   <span className="text-gray-900 dark:text-gray-100">{match.is_paid ? "Paid" : "Free"}</span>
                 </div>
               </div>
+              {cashout && cashout.status === "under_review" && (
+                <div className="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700 rounded-lg">
+                  <h3 className="text-md font-medium text-yellow-800 dark:text-yellow-200">Cashout Under Review</h3>
+                  <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+                    Account Details: {cashout.account_name} ({cashout.bank_name}, {cashout.bank_account_number})
+                  </p>
+                  <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+                    Expected Amount: {calculateExpectedAmount()}
+                  </p>
+                  <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-1">
+                    Your cashout request is being processed. You'll be notified once reviewed.
+                  </p>
+                </div>
+              )}
+              <Button
+                className="mt-4 w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2"
+                onClick={() => setIsPlayersOpen(!isPlayersOpen)}
+              >
+                {isPlayersOpen ? <ChevronUp size={18} className="mr-2" /> : <ChevronDown size={18} className="mr-2" />}
+                {isPlayersOpen ? "Hide Players" : "See Players"}
+              </Button>
+              {isPlayersOpen && (
+                <div className="mt-4 space-y-3 max-h-[30vh] overflow-y-auto">
+                  {(match.players || []).map((player) => (
+                    <div
+                      key={player.id}
+                      className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center text-green-600 dark:text-green-400 font-semibold">
+                          {(player.player_name || "Unknown").charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <span className="font-medium text-gray-900 dark:text-gray-100">{player.player_name || "Unknown Player"}</span>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            Phone: {player.details?.phone || "N/A"}
+                          </p>
+                          <span
+                            className={`inline-block px-2 py-1 text-xs font-medium rounded border ${getStatusStyles(player.status)}`}
+                          >
+                            {player.status.charAt(0).toUpperCase() + player.status.slice(1)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {cashout && cashout.status === "under_review" && (
@@ -648,7 +703,7 @@ const ConfirmCheckin = () => {
                   </TooltipTrigger>
                   {isMatchStarted() && (
                     <TooltipContent>
-                      <p>This match has started. Confirmation and check-in are no longer available.</p>
+                      <p>This match has passed. No further actions are allowed.</p>
                     </TooltipContent>
                   )}
                 </Tooltip>
@@ -670,16 +725,17 @@ const ConfirmCheckin = () => {
                   </TooltipTrigger>
                   {isMatchStarted() && (
                     <TooltipContent>
-                      <p>This match has started. Confirmation and check-in are no longer available.</p>
+                      <p>This match has passed. No further actions are allowed.</p>
                     </TooltipContent>
                   )}
                 </Tooltip>
               </TooltipProvider>
 
-              {!cashout && (
+              {match?.is_paid && !cashout && (
                 <Button
                   className="flex-1 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 w-full sm:w-auto"
                   onClick={handleCashoutMode}
+                  disabled={!isCashoutEligible() || (cashout?.status === "under_review")}
                 >
                   <DollarSign size={18} className="mr-2" />
                   Cash Out
@@ -720,7 +776,7 @@ const ConfirmCheckin = () => {
                               variant="ghost"
                               size="sm"
                               onClick={() => handleStatusChange(player.id, "confirmed")}
-                              disabled={currentStatus === "checked_in"}
+                              disabled={currentStatus === "checked_in" || isMatchStarted()}
                               className="hover:bg-green-100 dark:hover:bg-green-900"
                             >
                               <CheckCircle
@@ -732,7 +788,7 @@ const ConfirmCheckin = () => {
                               variant="ghost"
                               size="sm"
                               onClick={() => handleStatusChange(player.id, "pending")}
-                              disabled={currentStatus === "checked_in"}
+                              disabled={currentStatus === "checked_in" || isMatchStarted()}
                               className="hover:bg-red-100 dark:hover:bg-red-900"
                             >
                               <XCircle
@@ -747,7 +803,7 @@ const ConfirmCheckin = () => {
                     <Button
                       className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 mt-4 sticky bottom-0"
                       onClick={handleSave}
-                      disabled={loading}
+                      disabled={loading || isMatchStarted()}
                     >
                       <CheckCircle size={18} className="mr-2" />
                       Save Changes
@@ -802,6 +858,7 @@ const ConfirmCheckin = () => {
                                     pattern="[0-9]*"
                                     maxLength={6}
                                     className="h-9 text-base"
+                                    disabled={isMatchStarted()}
                                   />
                                   {checkinCodeErrors[player.id] && (
                                     <p className="text-xs text-red-600 mt-1">
@@ -814,6 +871,7 @@ const ConfirmCheckin = () => {
                                   size="sm"
                                   onClick={() => validateCheckinCode(player.id)}
                                   className="hover:bg-blue-100 dark:hover:bg-blue-900"
+                                  disabled={isMatchStarted()}
                                 >
                                   <CheckCircle size={20} className="text-blue-500" />
                                 </Button>
@@ -825,7 +883,7 @@ const ConfirmCheckin = () => {
                     <Button
                       className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 mt-4 sticky bottom-0"
                       onClick={handleSave}
-                      disabled={loading}
+                      disabled={loading || isMatchStarted()}
                     >
                       <Users size={18} className="mr-2" />
                       Save Check-ins
@@ -867,6 +925,7 @@ const ConfirmCheckin = () => {
                   pattern="[0-9]*"
                   maxLength={10}
                   className="w-full mt-1 text-base"
+                  disabled={isMatchStarted()}
                 />
                 {bankAccountError && (
                   <p className="text-sm text-red-600 mt-1">{bankAccountError}</p>
@@ -876,7 +935,7 @@ const ConfirmCheckin = () => {
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                   Bank Name
                 </label>
-                <Select onValueChange={setBankName} value={bankName}>
+                <Select onValueChange={setBankName} value={bankName} disabled={isMatchStarted()}>
                   <SelectTrigger className="w-full mt-1 text-base">
                     <SelectValue placeholder="Select a bank" />
                   </SelectTrigger>
@@ -903,6 +962,7 @@ const ConfirmCheckin = () => {
                     setAccountNameError(null);
                   }}
                   className="w-full mt-1 text-base"
+                  disabled={isMatchStarted()}
                 />
                 {accountNameError && (
                   <p className="text-sm text-red-600 mt-1">{accountNameError}</p>
@@ -913,7 +973,7 @@ const ConfirmCheckin = () => {
               <Button
                 className="bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2"
                 onClick={handleCashoutSubmit}
-                disabled={loading}
+                disabled={loading || isMatchStarted()}
               >
                 {loading ? (
                   <>
