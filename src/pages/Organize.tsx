@@ -41,7 +41,7 @@ import {
 } from "@/components/ui/dialog";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { Switch } from "@/components/ui/switch";
+import { Switch } from "@/components/ui/s Horiz";
 import VenueForm from "@/components/VenueForm";
 import Navbar from "@/components/Navbar";
 import html2canvas from "html2canvas";
@@ -64,6 +64,7 @@ const formSchema = z.object({
   player_number_required: z.boolean().default(false),
   is_private: z.boolean().default(false),
   access_password: z.string().nullable().optional(),
+  allow_bulk_tickets: z.boolean().default(false),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -104,6 +105,7 @@ const Organize = () => {
       player_number_required: false,
       is_private: false,
       access_password: null,
+      allow_bulk_tickets: false,
     },
   });
 
@@ -182,6 +184,7 @@ const Organize = () => {
           player_number_required: data.player_number_required,
           is_private: data.is_private,
           access_password: data.is_private ? data.access_password : null,
+          allow_bulk_tickets: data.allow_bulk_tickets,
         })
         .select('id, slug, super_code')
         .single();
@@ -465,6 +468,31 @@ const Organize = () => {
                       />
                     </FormControl>
                     <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {isPaid && (
+              <FormField
+                control={form.control}
+                name="allow_bulk_tickets"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">
+                        Allow Bulk Ticket Purchase
+                      </FormLabel>
+                      <FormDescription>
+                        Toggle to allow players to purchase multiple slots (up to 5)
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
                   </FormItem>
                 )}
               />
