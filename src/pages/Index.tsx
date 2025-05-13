@@ -8,8 +8,6 @@ import ThemeToggle from "@/components/ThemeToggle";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
-import { useState } from "react"; // Add useState import
-import { Sun, Moon } from "lucide-react"; // Add icons for ThemeToggle
 
 type Match = {
   id: string;
@@ -58,23 +56,6 @@ const Index = () => {
   const [popularVenues, setPopularVenues] = useState<Venue[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFaqTab, setActiveFaqTab] = useState('general');
-  const { theme, setTheme } = useTheme(); // Keep useTheme for theme state
-  const [mounted, setMounted] = useState(false); // Add mounted state to avoid SSR mismatch
-
-  useEffect(() => {
-    setMounted(true); // Set mounted to true after client-side render
-  }, []);
-
-  const toggleTheme = () => {
-    const newTheme = theme === "light" ? "dark" : "light";
-    setTheme(newTheme);
-    localStorage.setItem("theme", newTheme);
-    if (newTheme === "dark") {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -155,25 +136,17 @@ const Index = () => {
     fetchData();
   }, [toast]);
 
-return (
-    <div className="min-h-screen pb-20">
-      <header className="sticky top-0 z-50 p-4 flex items-center bg-green-50 dark:bg-green-900 shadow-md mb-4">
-        <img
-          src={theme === "dark" ? "/playarenadark.png" : "/playarenalight.png"}
-          alt="PlayArena Logo"
-          className="h-10 w-auto object-contain"
-        />
-        <div className="flex-grow" />
-        {mounted && (
-          <button
-            onClick={toggleTheme}
-            className="p-2 rounded-full bg-secondary text-foreground hover:bg-accent transition-colors duration-200"
-            aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
-          >
-            {theme === "light" ? <Moon size={20} /> : <Sun size={20} />}
-          </button>
-        )}
-      </header>
+  return (
+<div className="min-h-screen pb-20">
+  <header className="sticky top-0 z-50 p-4 flex items-center bg-green-50 dark:bg-green-900 shadow-md mb-4">
+    <img
+      src={theme === "dark" ? "/playarenadark.png" : "/playarenalight.png"}
+      alt="PlayArena Logo"
+      className="h-10 w-auto object-contain"
+    />
+    <div className="flex-grow" /> {/* This empty div will push the toggle to the right */}
+    <ThemeToggle />
+  </header>
 
       <div className="px-4 mb-6 mt-4">
         <SearchBar />
