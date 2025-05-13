@@ -138,41 +138,40 @@ const Index = () => {
 
   return (
     <div className="min-h-screen pb-20">
-      <header className="sticky top-0 z-50 p-4 flex justify-between items-center bg-green-50 dark:bg-green-900 shadow-md">
-        <div className="w-12" /> {/* Spacer for alignment */}
+      <header className="sticky top-0 z-50 p-4 flex items-center justify-start gap-4 bg-green-50 dark:bg-green-900 shadow-md mb-4">
         <img
           src={theme === "dark" ? "/playarenadark.png" : "/playarenalight.png"}
           alt="PlayArena Logo"
           className="h-10 w-auto object-contain"
         />
-        <ThemeToggle />
+        <ThemeToggle className="ml-auto" />
       </header>
 
-      <div className="px-4 mb-6">
+      <div className="px-4 mb-6 mt-4">
         <SearchBar />
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 px-4 mb-8">
+      <div className="grid grid-cols-3 gap-2 px-4 mb-8">
         <Button
-          className="flex flex-col items-center justify-center h-24 bg-green-500 hover:bg-green-600 text-white rounded-xl transition-transform hover:scale-105"
+          className="flex flex-col items-center justify-center h-20 bg-green-500 hover:bg-green-600 text-white rounded-xl transition-transform hover:scale-105 flex-1 text-sm py-2"
           onClick={() => navigate("/organize")}
         >
-          <Plus size={24} className="mb-2" />
-          <span className="text-base font-medium">Organize</span>
+          <Plus size={20} className="mb-1" />
+          <span className="font-medium">Organize</span>
         </Button>
         <Button
-          className="flex flex-col items-center justify-center h-24 bg-blue-500 hover:bg-blue-600 text-white rounded-xl transition-transform hover:scale-105"
+          className="flex flex-col items-center justify-center h-20 bg-blue-500 hover:bg-blue-600 text-white rounded-xl transition-transform hover:scale-105 flex-1 text-sm py-2"
           onClick={() => navigate("/confirm-checkin")}
         >
-          <Users size={24} className="mb-2" />
-          <span className="text-base font-medium">Manage</span>
+          <Users size={20} className="mb-1" />
+          <span className="font-medium">Manage</span>
         </Button>
         <Button
-          className="flex flex-col items-center justify-center h-24 bg-purple-500 hover:bg-purple-600 text-white rounded-xl transition-transform hover:scale-105"
+          className="flex flex-col items-center justify-center h-20 bg-purple-500 hover:bg-purple-600 text-white rounded-xl transition-transform hover:scale-105 flex-1 text-sm py-2"
           onClick={() => navigate("/venue-create")}
         >
-          <Store size={24} className="mb-2" />
-          <span className="text-base font-medium">Add Venue</span>
+          <Store size={20} className="mb-1" />
+          <span className="font-medium">Add Venue</span>
         </Button>
       </div>
 
@@ -372,14 +371,14 @@ const Index = () => {
                 <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Contact support to request venue removal if needed.</p>
               </details>
             </div>
-            <div className={`space-y-4 ${activeFaqTab === 'matches' ? 'block' : 'hidden'}`}>
+            <div className={`space-y-4 ${activeFoqTab === 'matches' ? 'block' : 'hidden'}`}>
               <details className="bg-white dark:bg-gray-700 rounded-md p-4">
                 <summary className="font-semibold cursor-pointer">How do I join a match?</summary>
                 <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Use the 'Join Match' button on the match card to participate.</p>
               </details>
               <details className="bg-white dark:bg-gray-700 rounded-md p-4">
                 <summary className="font-semibold cursor-pointer">Can I organize a paid match?</summary>
-<p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Yes, set the price when organizing via the 'Organize' page.</p>
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Yes, set the price when organizing via the 'Organize' page.</p>
               </details>
               <details className="bg-white dark:bg-gray-700 rounded-md p-4">
                 <summary className="font-semibold cursor-pointer">What if a match is canceled?</summary>
