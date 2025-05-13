@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { MapPin, ArrowLeft, ExternalLink, Calendar, Clock, MessageCircle } from "lucide-react";
+import { MapPin, ArrowLeft, ExternalLink, Calendar, Clock, MessageCircle, CalendarPlus } from "lucide-react";
 import Navbar from "@/components/Navbar";
 
 type Venue = {
@@ -217,53 +217,56 @@ const VenueDetail = () => {
             </div>
           </div>
 
-<div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-200 dark:border-gray-700">
-  <h2 className="font-semibold text-lg mb-4 text-gray-900 dark:text-gray-100">Recent Matches</h2>
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-200 dark:border-gray-700">
+            <h2 className="font-semibold text-lg mb-4 text-gray-900 dark:text-gray-100">Recent Matches</h2>
 
-  {matchesLoading ? (
-    <div className="flex justify-center py-4">
-      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-500"></div>
-    </div>
-  ) : (
-    <div className="space-y-4">
-      {matches.map((match) => (
-        <div
-          key={match.id}
-          className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer transition-colors"
-          onClick={() => navigate(`/match/${match.slug}`)}
-        >
-          <h3 className="font-medium text-gray-900 dark:text-gray-100">{match.title}</h3>
-          <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400 mt-1">
-            <Calendar size={16} />
-            <span>{formatDate(match.match_date)}</span>
-            <Clock size={16} />
-            <span>{formatTime(match.match_time)}</span>
+            {matchesLoading ? (
+              <div className="flex justify-center py-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-500"></div>
+              </div>
+            ) : matches.length > 0 ? (
+              <div className="space-y-4">
+                {matches.map((match) => (
+                  <ansion-colors"
+                    key={match.id}
+                    className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer transition-colors"
+                    onClick={() => navigate(`/match/${match.slug}`)}
+                  >
+                    <h3 className="font-medium text-gray-900 dark:text-gray-100">{match.title}</h3>
+                    <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400 mt-1">
+                      <Calendar size={16} />
+                      <span>{formatDate(match.match_date)}</span>
+                      <Clock size={16} />
+                      <span>{formatTime(match.match_time)}</span>
+                    </div>
+                    <div className="mt-1 text-sm font-medium text-green-600 dark:text-green-400">
+                      {match.is_paid ? `₦${match.price?.toFixed(2)}` : "Free"}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-600 dark:text-gray-400">No recent matches found for this venue.</p>
+            )}
           </div>
-          <div className="mt-1 text-sm font-medium text-green-600 dark:text-green-400">
-            {match.is_paid ? `₦${match.price?.toFixed(2)}` : "Free"}
-          </div>
-        </div>
-      ))}
-    </div>
-  )}
-</div>
 
-<div className="flex gap-4">
-  <Button
-    className="flex-1 bg-green-500 hover:bg-green-600 text-white"
-    onClick={() => navigate(`/organize?venue=${venue.slug}`)}
-  >
-    Organize Match at This Venue
-  </Button>
-  <Button
-    className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-    onClick={handleBookVenue}
-    disabled={!venue.venue_phone}
-  >
-    <MessageCircle size={16} className="mr-2" />
-    Book Venue
-  </Button>
-</div>
+          <div className="mt-6 flex flex-col sm:flex-row gap-4">
+            <Button
+              className="flex-1 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 w-full sm:w-auto"
+              onClick={() => navigate(`/organize?venue=${venue.slug}`)}
+            >
+              <CalendarPlus size={16} className="mr-2" />
+              Organise Match
+            </Button>
+            <Button
+              className="flex-1 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 w-full sm:w-auto"
+              onClick={handleBookVenue}
+              disabled={!venue.venue_phone}
+            >
+              <MessageCircle size={16} className="mr-2" />
+              Book Venue
+            </Button>
+          </div>
         </div>
       </div>
 
