@@ -379,7 +379,7 @@ const Index = () => {
               </details>
               <details className="bg-white dark:bg-gray-700 rounded-md p-4">
                 <summary className="font-semibold cursor-pointer">Can I organize a paid match?</summary>
-                <p className "mt-2 text-sm text-gray-600 dark:text-gray-300">Yes, set the price when organizing via the 'Organize' page.</p>
+<p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Yes, set the price when organizing via the 'Organize' page.</p>
               </details>
               <details className="bg-white dark:bg-gray-700 rounded-md p-4">
                 <summary className="font-semibold cursor-pointer">What if a match is canceled?</summary>
