@@ -24,6 +24,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Trash2 } from "lucide-react";
+import { RichTextEditor } from "@mantine/tiptap";
+import { useEditor } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
 
 // Nigerian states including FCT
 const nigerianStates = [
@@ -46,6 +49,12 @@ const formSchema = z.object({
     .transform(val => val.slice(0, 11)),
   description: z.string().optional(),
   map_link: z.string().url({ message: "Please enter a valid URL" }).or(z.literal("")),
+  facilities: z.string().optional(),
+  opening_hours: z.string().optional(),
+  pricing: z.string().optional(),
+  booking_fee: z.number().optional().refine((val) => val === undefined || (Number.isFinite(val) && val >= 0), {
+    message: "Booking fee must be a valid number (NGN per hour)",
+  }),
 });
 
 // File schema for single image validation
@@ -84,6 +93,10 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
       venue_phone: "",
       description: "",
       map_link: "",
+      facilities: "",
+      opening_hours: "",
+      pricing: "",
+      booking_fee: undefined,
     },
   });
 
@@ -146,6 +159,10 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
           venue_phone: data.venue_phone,
           description: data.description || null,
           map_link: data.map_link || null,
+          facilities: data.facilities || null,
+          opening_hours: data.opening_hours || null,
+          pricing: data.pricing || null,
+          booking_fee: data.booking_fee || null,
           image_urls: imageUrl ? [imageUrl] : null,
         })
         .select("id, slug, name")
@@ -178,6 +195,13 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
       setLoading(false);
     }
   };
+
+  // Initialize editor for facilities field
+  const editor = useEditor({
+    extensions: [StarterKit],
+    content: form.watch("facilities") || "",
+    onUpdate: ({ editor }) => form.setValue("facilities", editor.getHTML()),
+  });
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
@@ -327,6 +351,30 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
                 </FormItem>
               )}
             />
+
+            <FormField
+              control={form.control}
+              name="booking_fee"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Booking Fee (NGN per hour, Optional)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      placeholder="Enter fee per hour"
+                      {...field}
+                      value={field.value === undefined ? "" : field.value}
+                      onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
+                      className="border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                    />
+                  </FormControl>
+                  <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                    Enter the hourly booking fee in NGN (optional)
+                  </FormDescription>
+                  <FormMessage className="text-red-500" />
+                </FormItem>
+              )}
+            />
           </div>
 
           {/* Additional Info Section */}
@@ -346,6 +394,65 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
                       className="border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                     />
                   </FormControl>
+                  <FormMessage className="text-red-500" />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="facilities"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Facilities (Optional)</FormLabel>
+                  <FormControl>
+                    <RichTextEditor editor={editor} />
+                  </FormControl>
+                  <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                    Add details about facilities (e.g., pitches, seating) using rich text
+                  </FormDescription>
+                  <FormMessage className="text-red-500" />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="opening_hours"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Opening Hours (Optional)</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="E.g., 8:00 AM - 6:00 PM"
+                      {...field}
+                      className="border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                    />
+                  </FormControl>
+                  <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                    Specify the venue's operating hours
+                  </FormDescription>
+                  <FormMessage className="text-red-500" />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="pricing"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Pricing (Optional)</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="E.g., General admission: NGN 500"
+                      {...field}
+                      className="border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                    />
+                  </FormControl>
+                  <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                    Describe pricing details (e.g., admission fees)
+                  </FormDescription>
                   <FormMessage className="text-red-500" />
                 </FormItem>
               )}
@@ -388,13 +495,25 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
             </FormItem>
           </div>
 
-          <Button
-            type="submit"
-            className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-3 text-lg shadow-md transition-colors"
-            disabled={loading}
-          >
-            {loading ? "Creating..." : "Create Venue"}
-          </Button>
+          <div className="flex gap-4">
+            <Button
+              type="submit"
+              className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-3 text-lg shadow-md transition-colors"
+              disabled={loading}
+            >
+              {loading ? "Creating..." : "Create Venue"}
+            </Button>
+            {onCancel && (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium rounded-lg px-4 py-3 text-lg shadow-md transition-colors"
+                onClick={onCancel}
+              >
+                Cancel
+              </Button>
+            )}
+          </div>
         </form>
       </Form>
     </div>
