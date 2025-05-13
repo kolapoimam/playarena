@@ -252,7 +252,7 @@ const JoinMatch = () => {
           setPaymentStatus("success");
           toast({
             title: "Payment Successful",
-            description: "Your payment was processed successfully. Please complete your registration.",
+            description: `Your payment for ${selectedSlots} slot(s) was processed successfully. Please complete your registration.`,
           });
           setJoining(false);
         },
@@ -363,7 +363,7 @@ const JoinMatch = () => {
 
       toast({
         title: "Success!",
-        description: `You have joined the match successfully for ${selectedSlots} slot(s).`,
+        description: `You have joined the match successfully for ${selectedSlots} slot${selectedSlots > 1 ? "s" : ""}.`,
       });
 
       form.reset();
@@ -583,7 +583,7 @@ const JoinMatch = () => {
                   {match.is_paid && paymentStatus === "success" && (
                     <div className="bg-green-50 p-4 rounded-md border border-green-200 text-green-700">
                       <p className="font-medium">Payment Successful!</p>
-                      <p className="text-sm">Please complete your registration below for {selectedSlots} slot(s).</p>
+                      <p className="text-sm">Please complete your registration below for {selectedSlots} slot{selectedSlots > 1 ? "s" : ""}.</p>
                       {paymentReference && (
                         <p className="text-sm mt-1">Reference: {paymentReference}</p>
                       )}
@@ -652,7 +652,7 @@ const JoinMatch = () => {
           <DialogTitle>Registration Successful</DialogTitle>
           <DialogDescription>
             <p className="text-gray-600 dark:text-gray-300 mb-4">
-              You have successfully registered for the match for {selectedSlots} slot(s).
+              You have successfully registered for the match for {selectedSlots} slot{selectedSlots > 1 ? "s" : ""}.
             </p>
             <div className="mb-4">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Background:</label>
