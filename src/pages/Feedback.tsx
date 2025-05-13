@@ -34,6 +34,8 @@ type Match = {
   super_code: string;
   organizer_name: string;
   title: string;
+  match_date: string; // Added for expiration check
+  match_time: string; // Added for expiration check
   players: {
     id: string;
     confirmation_code: string;
@@ -96,6 +98,21 @@ const Feedback = () => {
     },
   });
 
+  const isFeedbackExpired = () => {
+    if (!match?.match_date || !match?.match_time) return true;
+    const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
+    const now = new Date("2025-05-13T19:34:00+01:00"); // 07:34 PM WAT, May 13, 2025
+    const hoursSinceMatch = (now.getTime() - matchDateTime.getTime()) / (1000 * 60 * 60);
+    return hoursSinceMatch > 48;
+  };
+
+  useEffect(() => {
+    setDialogOpen(true);
+    setMatch(null);
+    setIsOrganizer(false);
+    setHasSubmitted(false);
+  }, [matchId]);
+
   const validateCode = async () => {
     const validation = codeSchema.safeParse(code);
     if (!validation.success) {
@@ -110,7 +127,7 @@ const Feedback = () => {
       const { data: matchData, error: matchError } = await supabase
         .from("matches")
         .select(`
-          id, super_code, organizer_name, title,
+          id, super_code, organizer_name, title, match_date, match_time,
           players(id, confirmation_code, player_name)
         `)
         .eq("id", matchId)
@@ -122,7 +139,7 @@ const Feedback = () => {
           description: "Match not found. Please check the match ID.",
           variant: "destructive",
         });
-        setDialogOpen(false);
+        navigate("/matches");
         return;
       }
 
@@ -174,6 +191,7 @@ const Feedback = () => {
       if (!player) {
         setCodeError("Invalid code. Please try again.");
         setLoading(false);
+        navigate("/matches");
         return;
       }
 
@@ -187,6 +205,7 @@ const Feedback = () => {
 
       if (existingFeedback && !feedbackError) {
         setHasSubmitted(true);
+        setMatch(match);
         setDialogOpen(false);
         toast({
           title: "Feedback Already Submitted",
@@ -204,13 +223,14 @@ const Feedback = () => {
         description: "An error occurred. Please try again.",
         variant: "destructive",
       });
+      navigate("/matches");
     } finally {
       setLoading(false);
     }
   };
 
   const onSubmit = async (data: FeedbackFormValues) => {
-    if (!match || !match.players) return;
+    if (!match || !match.players || isFeedbackExpired()) return;
     setLoading(true);
 
     try {
@@ -256,28 +276,49 @@ const Feedback = () => {
     if (!match || !feedback.length) return;
 
     const doc = new jsPDF();
+    const img = new Image();
+    img.src = "/Playarenalight.png";
+    doc.addImage(img, "PNG", 10, 10, 30, 30);
     doc.setFontSize(16);
-    doc.text(`Feedback for ${match.title}`, 20, 20);
+    doc.text(`Feedback Report - ${match.title}`, 50, 20);
+    const now = new Date("2025-05-13T19:34:00+01:00"); // 07:34 PM WAT, May 13, 2025
+    doc.setFontSize(10);
+    doc.text(`Generated on: ${now.toLocaleString("en-NG", { timeZone: "Africa/Lagos" })}`, 50, 30);
     doc.setFontSize(12);
-    let y = 30;
+    doc.setFillColor(0, 128, 0);
+    doc.rect(10, 40, 190, 10, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.text("Feedback Details", 100, 46, { align: "center" });
+    doc.setTextColor(0, 0, 0);
+    let y = 60;
 
     feedback.forEach((f, index) => {
-      doc.text(`Feedback ${index + 1} - ${f.player_name}`, 20, y);
+      doc.setFillColor(240, 240, 240);
+      doc.rect(10, y - 5, 190, 20, "F");
+      doc.text(`Feedback #${index + 1} - ${f.player_name}`, 15, y);
       y += 10;
-      doc.text(`Venue Quality: ${f.venue_quality}/5`, 20, y);
+      doc.text(`Venue Quality: ${f.venue_quality}/5`, 15, y);
       y += 10;
-      doc.text(`Match Organization: ${f.match_organization}/5`, 20, y);
+      doc.text(`Match Organization: ${f.match_organization}/5`, 15, y);
       y += 10;
-      doc.text(`Referee Performance: ${f.referee_performance}/5`, 20, y);
+      doc.text(`Referee Performance: ${f.referee_performance}/5`, 15, y);
       y += 10;
       if (f.comments) {
-        doc.text(`Comments: ${f.comments}`, 20, y, { maxWidth: 160 });
+        doc.text(`Comments: ${f.comments}`, 15, y, { maxWidth: 160 });
         y += Math.ceil(f.comments.length / 80) * 10 + 10;
       }
       y += 10;
       if (y > 270) {
         doc.addPage();
         y = 20;
+        doc.addImage(img, "PNG", 10, 10, 30, 30);
+        doc.text(`Feedback Report - ${match.title} (Continued)`, 50, 20);
+        doc.text(`Generated on: ${now.toLocaleString("en-NG", { timeZone: "Africa/Lagos" })}`, 50, 30);
+        doc.setFillColor(0, 128, 0);
+        doc.rect(10, 40, 190, 10, "F");
+        doc.setTextColor(255, 255, 255);
+        doc.text("Feedback Details", 100, 46, { align: "center" });
+        doc.setTextColor(0, 0, 0);
       }
     });
 
@@ -311,10 +352,19 @@ const Feedback = () => {
         }
       `;
 
+      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+      if (!apiKey) {
+        toast({
+          title: "Error",
+          description: "API key is not configured. Please contact support.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${
-          import.meta.env.VITE_GEMINI_API_KEY
-        }`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -422,6 +472,15 @@ ${summary.action_items}
       </header>
 
       <div className="max-w-4xl mx-auto p-6">
+        <Button
+          variant="ghost"
+          onClick={() => navigate(-1)}
+          className="text-green-500 mb-4 hover:text-green-600"
+        >
+          <ArrowLeft size={18} className="mr-2" />
+          Back to Matches
+        </Button>
+
         {match && !isOrganizer && !hasSubmitted && (
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700">
             <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">
@@ -530,7 +589,7 @@ ${summary.action_items}
                 <Button
                   type="submit"
                   className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2"
-                  disabled={loading}
+                  disabled={loading || isFeedbackExpired()}
                 >
                   {loading ? (
                     <>
@@ -551,13 +610,13 @@ ${summary.action_items}
 
         {match && isOrganizer && (
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700">
-            <div className="flex justify-between items-center mb-4">
+            <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
                 Feedback for {match.title}
               </h2>
-              <div className="flex gap-4">
+              <div className="flex flex-col sm:flex-row gap-4">
                 <Button
-                  className="bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2"
+                  className="w-full sm:w-auto bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2"
                   onClick={downloadPDF}
                   disabled={!feedback.length}
                 >
@@ -565,7 +624,7 @@ ${summary.action_items}
                   Download PDF
                 </Button>
                 <Button
-                  className="bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2"
+                  className="w-full sm:w-auto bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2"
                   onClick={generateSummary}
                   disabled={loading || !feedback.length}
                 >
@@ -641,7 +700,9 @@ ${summary.action_items}
               Enter Match Code
             </DialogTitle>
             <DialogDescription className="text-gray-600 dark:text-gray-400 text-center mt-2 text-sm">
-              Enter your 6-digit code (player confirmation code or organizer super code) to proceed.
+              {isOrganizer
+                ? "Enter your organizer super code to review feedback."
+                : "Enter your 6-digit player confirmation code to proceed."}
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
@@ -714,14 +775,14 @@ ${summary.action_items}
               </div>
               <div className="flex gap-4">
                 <Button
-                  className="bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2"
+                  className="w-full sm:w-auto bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2"
                   onClick={copySummary}
                 >
                   <Copy size={18} className="mr-2" />
                   Copy Summary
                 </Button>
                 <Button
-                  className="bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2"
+                  className="w-full sm:w-auto bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2"
                   onClick={() => {
                     const doc = new jsPDF();
                     doc.setFontSize(16);
