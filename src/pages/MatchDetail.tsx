@@ -601,40 +601,39 @@ const MatchDetail = () => {
               <p className="text-muted-foreground text-sm">No players have joined yet</p>
             )}
             
-            <div className="mt-6">
-              {isFeedbackWindow ? (
-                <Button 
-                  className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
-                  onClick={() => navigate(`/feedback?matchId=${match.id}`)}
-                >
-                  Give Feedback
-                </Button>
-              ) : (isPassed || isStarted) ? (
-                <Button 
-                  className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
-                  variant="outline"
-                  disabled
-                >
-                  {isPassed ? "Match Has Passed" : "Match Has Started"}
-                </Button>
-              ) : !isFull ? (
-                <Button 
-                  className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
-                  onClick={() => navigate(`/join/${match.slug}`)}
-                >
-                  Join This Match
-                </Button>
-              ) : (
-                <Button 
-                  className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
-                  variant="outline"
-                  disabled
-                >
-                  Match Is Full
-                </Button>
-              )}
-            </div>
-          </div>
+<div className="mt-6">
+  {isFeedbackWindow ? (
+    <Button 
+      className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
+      onClick={() => navigate(`/feedback?matchSlug=${match.slug}`)}
+    >
+      Give Feedback
+    </Button>
+  ) : (isPassed || isStarted) ? (
+    <Button 
+      className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
+      variant="outline"
+      disabled
+    >
+      {isPassed ? "Match Has Passed" : "Match Has Started"}
+    </Button>
+  ) : !isFull ? (
+    <Button 
+      className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
+      onClick={() => navigate(`/join/${match.slug}`)}
+    >
+      Join This Match
+    </Button>
+  ) : (
+    <Button 
+      className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
+      variant="outline"
+      disabled
+    >
+      Match Is Full
+    </Button>
+  )}
+</div>
           
           <div className="flex gap-3 mt-6">
             <DropdownMenu>
