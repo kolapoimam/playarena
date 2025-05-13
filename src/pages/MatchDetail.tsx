@@ -355,17 +355,21 @@ const MatchDetail = () => {
       return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}T${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`;
     };
 
-    const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE` +
-      `&text=${encodeURIComponent(match.title)}` +
-      `&dates=${formatGoogleDate(matchDateTime)}/${formatGoogleDate(endDateTime)}` +
-      `&location=${encodeURIComponent(match.venue ? `${match.venue.name}, ${match.venue.city}` : 'Unknown Venue')}` +
-      `&details=${encodeURIComponent(
-        `Football Match organized by ${match.organizer_name}. Match Slug: ${match.slug}. Venue: ${match.venue?.name || 'Unknown'}, ${match.venue?.city || ''}. Powered by PlayArena.${match.is_private ? ` (Access Password: ${match.access_password})` : ''}`
-      )}` +
-      `&sf=true&output=xml`;
+const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE` +
+  `&text=${encodeURIComponent(match.title)}` +
+  `&dates=${formatGoogleDate(matchDateTime)}/${formatGoogleDate(endDateTime)}` +
+  `&location=${encodeURIComponent(match.venue ? `${match.venue.name}, ${match.venue.city}` : 'Unknown Venue')}` +
+  `&details=${encodeURIComponent(
+    `Football Match organized by ${match.organizer_name}.\n\n` +
+    `Match Link: ${window.location.origin}/match/${match.slug}\n\n` +
+    `Venue: ${match.venue?.name || 'Unknown'}, ${match.venue?.city || ''}\n\n` +
+    `Additional Info: ${match.description || 'No additional information provided'}\n\n` +
+    `${match.is_private ? `Access Password: ${match.access_password}\n\n` : ''}` +
+    `Powered by PlayArena`
+  )}` +
+  `&sf=true&output=xml`;
 
-    window.open(googleCalendarUrl, '_blank');
-  };
+window.open(googleCalendarUrl, '_blank');
 
   if (loading) {
     return (
