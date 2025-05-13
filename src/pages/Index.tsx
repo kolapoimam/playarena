@@ -137,15 +137,16 @@ const Index = () => {
   }, [toast]);
 
   return (
-    <div className="min-h-screen pb-20">
-      <header className="sticky top-0 z-50 p-4 flex items-center justify-start gap-4 bg-green-50 dark:bg-green-900 shadow-md mb-4">
-        <img
-          src={theme === "dark" ? "/playarenadark.png" : "/playarenalight.png"}
-          alt="PlayArena Logo"
-          className="h-10 w-auto object-contain"
-        />
-        <ThemeToggle className="ml-auto" />
-      </header>
+<div className="min-h-screen pb-20">
+  <header className="sticky top-0 z-50 p-4 flex items-center bg-green-50 dark:bg-green-900 shadow-md mb-4">
+    <img
+      src={theme === "dark" ? "/playarenadark.png" : "/playarenalight.png"}
+      alt="PlayArena Logo"
+      className="h-10 w-auto object-contain"
+    />
+    <div className="flex-grow" /> {/* This empty div will push the toggle to the right */}
+    <ThemeToggle />
+  </header>
 
       <div className="px-4 mb-6 mt-4">
         <SearchBar />
@@ -371,7 +372,7 @@ const Index = () => {
                 <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Contact support to request venue removal if needed.</p>
               </details>
             </div>
-            <div className={`space-y-4 ${activeFoqTab === 'matches' ? 'block' : 'hidden'}`}>
+            <div className={`space-y-4 ${activeFaqTab === 'matches' ? 'block' : 'hidden'}`}>
               <details className="bg-white dark:bg-gray-700 rounded-md p-4">
                 <summary className="font-semibold cursor-pointer">How do I join a match?</summary>
                 <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Use the 'Join Match' button on the match card to participate.</p>
