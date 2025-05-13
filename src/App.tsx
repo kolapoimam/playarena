@@ -18,6 +18,7 @@ import VenueRedirect from "./pages/VenueRedirect";
 import VenueDirectory from "./pages/VenueDirectory";
 import ConfirmCheckin from "./pages/ConfirmCheckin";
 import Feedback from "./pages/Feedback"; // Added import for Feedback
+import Guides from "./pages/Guides";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +33,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/search" element={<Search />} />
           <Route path="/matches" element={<Matches />} />
+          <Route path="/guides" element={<Guides />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/organize" element={<Organize />} />
           <Route path="/venue-create" element={<VenueCreate />} />
