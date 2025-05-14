@@ -15,8 +15,6 @@ type Analytics = {
 
 type Profile = {
   id: string;
-  nickname?: string;
-  first_name?: string;
 };
 
 type UserDashboardProps = {
@@ -33,7 +31,6 @@ const UserDashboard = ({ profile }: UserDashboardProps) => {
     total_venues: 0,
   });
   const [analyticsFilter, setAnalyticsFilter] = useState<"all" | "month" | "week">("all");
-  const username = profile?.nickname || profile?.first_name || "User";
 
   useEffect(() => {
     if (profile) {
@@ -100,7 +97,7 @@ const UserDashboard = ({ profile }: UserDashboardProps) => {
     <Card className="bg-white dark:bg-gray-800 border-none shadow-xl rounded-xl">
       <CardHeader>
         <CardTitle className="text-xl font-semibold text-green-700 dark:text-green-400">
-          Welcome, {username}!
+          Your Stats
         </CardTitle>
         <Select
           value={analyticsFilter}
