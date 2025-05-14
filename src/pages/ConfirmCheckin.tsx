@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { isPast } from "date-fns"; // Import isPast for date checks
+import { isPast, differenceInMinutes } from "date-fns";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, AlertCircle, Loader2 } from "lucide-react";
@@ -69,12 +69,11 @@ const ConfirmCheckin = () => {
   >([]);
   const [checkinCodes, setCheckinCodes] = useState<{ [key: string]: string }>({});
   const [checkinCodeErrors, setCheckinCodeErrors] = useState<{ [key: string]: string | null }>({});
-  const [tempIdentifier] = useState(uuidv4()); // Unique identifier for non-logged-in users
-  const [error, setError] = useState<string | null>(null); // For error boundary
+  const [tempIdentifier] = useState(uuidv4());
+  const [error, setError] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [recentSuperCodes, setRecentSuperCodes] = useState<string[]>([]);
 
-  // Fetch userId on mount
   useEffect(() => {
     const fetchUserId = async () => {
       const { data: session } = await supabase.auth.getSession();
@@ -149,7 +148,6 @@ const ConfirmCheckin = () => {
         }))
       );
 
-      // Fetch cashout status using tempIdentifier
       try {
         const { data: cashoutData, error: cashoutError } = await supabase
           .from("cashouts")
@@ -207,21 +205,20 @@ const ConfirmCheckin = () => {
     ? isPast(new Date(`${match.match_date}T${match.match_time}`))
     : false;
 
+  const canConfirmPlayers = () => {
+    if (!match || match.cancellation_status || isMatchPast) return false;
+    const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
+    const now = new Date();
+    const minutesSinceStart = differenceInMinutes(now, matchDateTime);
+    return minutesSinceStart <= 60; // Allow confirming players up to 1 hour into the match
+  };
+
   const handleCancelMatch = async () => {
     if (!match || match.cancellation_status) return;
 
     const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
-    const now = new Date("2025-05-14T21:22:00+01:00"); // Current time: 09:22 PM WAT
-    if (isMatchPast) {
-      toast({
-        title: "Error",
-        description: "Cannot cancel a match that has already started or passed.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const minutesToStart = (matchDateTime.getTime() - now.getTime()) / (1000 * 60);
+    const now = new Date();
+    const minutesToStart = differenceInMinutes(matchDateTime, now);
     if (minutesToStart <= 60) {
       toast({
         title: "Error",
@@ -325,10 +322,9 @@ const ConfirmCheckin = () => {
   };
 
   useEffect(() => {
+    resetState(); // Reset state on super code change or page refresh
     if (superCode && codeSchema.safeParse(superCode).success) {
       fetchMatch();
-    } else {
-      resetState();
     }
   }, [superCode]);
 
@@ -411,6 +407,9 @@ const ConfirmCheckin = () => {
               fetchMatch={fetchMatch}
               loading={loading}
               setLoading={setLoading}
+              isMatchPast={isMatchPast}
+              canConfirmPlayers={canConfirmPlayers()}
+              handleCancelMatch={handleCancelMatch}
             />
           </div>
         )}
