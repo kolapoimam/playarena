@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, Users, MapPin } from "lucide-react";
 import { format } from "date-fns";
+import { utcToZonedTime } from "date-fns-tz";
 
 type Match = {
   id: string;
@@ -17,6 +18,8 @@ type Match = {
   confirmation_code?: string;
   status: string;
   venue_name?: string;
+  is_paid: boolean;
+  number_of_slots?: number;
 };
 
 type Profile = {
@@ -47,7 +50,7 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
       .from("user_organized_matches")
       .select(`
         match_id,
-        matches(id, title, slug, match_date, super_code, status, venue_id, venues(name))
+        matches(id, title, slug, match_date, super_code, status, is_paid, venue_id, venues(name))
       `)
       .eq("user_id", session.session.user.id)
       .order("created_at", { ascending: false })
@@ -63,6 +66,7 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
         ...item.matches,
         super_code: item.matches.super_code,
         venue_name: item.matches.venues?.name,
+        is_paid: item.matches.is_paid,
       }))
     );
 
@@ -71,8 +75,8 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
       .select(`
         match_id,
         player_id,
-        matches(id, title, slug, match_date, status, venue_id, venues(name)),
-        players(confirmation_code)
+        matches(id, title, slug, match_date, status, is_paid, venue_id, venues(name)),
+        players(confirmation_code, number_of_slots)
       `)
       .eq("user_id", session.session.user.id)
       .order("created_at", { ascending: false })
@@ -88,6 +92,8 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
         ...item.matches,
         confirmation_code: item.players.confirmation_code,
         venue_name: item.matches.venues?.name,
+        is_paid: item.matches.is_paid,
+        number_of_slots: item.players.number_of_slots,
       }))
     );
   };
@@ -133,9 +139,9 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
   };
 
   const formatMatchDateTime = (date: string) => {
-    const d = new Date(date);
-    const dateStr = format(d, "EEE, dd - MM - yyyy");
-    const timeStr = format(d, "h:mm a");
+    const zonedDate = utcToZonedTime(new Date(date), "Africa/Lagos");
+    const dateStr = format(zonedDate, "EEE, dd - MM - yyyy");
+    const timeStr = format(zonedDate, "h:mm a");
     return { dateStr, timeStr };
   };
 
@@ -251,6 +257,11 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
                       <p className="text-sm text-gray-600 dark:text-gray-400">
                         Confirmation Code: {match.confirmation_code || "N/A"}
                       </p>
+                      {match.is_paid && match.number_of_slots && (
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          Slots Purchased: {match.number_of_slots}
+                        </p>
+                      )}
                     </div>
                     <div className="flex gap-2">
                       {(match.status === "upcoming" || match.status === "live") ? (
