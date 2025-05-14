@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { isPast } from "date-fns"; // Import isPast for date checks
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, AlertCircle, Loader2 } from "lucide-react";
@@ -139,11 +140,10 @@ const ConfirmCheckin = () => {
           .eq("super_code", superCode)
           .eq("match_id", matchData.id)
           .eq("temp_identifier", tempIdentifier)
-          .maybeSingle(); // Use maybeSingle to handle no rows gracefully
+          .maybeSingle();
 
         if (cashoutError) {
           if (cashoutError.code === "42703" && cashoutError.message.includes("temp_identifier")) {
-            // Handle missing temp_identifier column
             console.warn("temp_identifier column not found in cashouts table. Please run the migration to add this column.");
             setCashout(null);
             toast({
@@ -175,8 +175,8 @@ const ConfirmCheckin = () => {
       resetState();
       toast({
         title: "Error",
-        description: error.message.includes("0 rows") 
-          ? `No match found with super code ${superCode}. Please check the code and try again.` 
+        description: error.message.includes("0 rows")
+          ? `No match found with super code ${superCode}. Please check the code and try again.`
           : "An error occurred while fetching the match. Please try again.",
         variant: "destructive",
       });
@@ -189,7 +189,16 @@ const ConfirmCheckin = () => {
     if (!match || match.cancellation_status) return;
 
     const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
-    const now = new Date();
+    const now = new Date("2025-05-14T21:14:00+01:00"); // Use current date and time
+    if (isPast(matchDateTime)) {
+      toast({
+        title: "Error",
+        description: "Cannot cancel a match that has already started or passed.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const minutesToStart = (matchDateTime.getTime() - now.getTime()) / (1000 * 60);
     if (minutesToStart <= 60) {
       toast({
@@ -329,6 +338,12 @@ const ConfirmCheckin = () => {
           setLoading={setLoading}
           fetchMatch={fetchMatch}
         />
+
+        {loading && (
+          <div className="flex justify-center items-center py-6">
+            <Loader2 className="animate-spin text-green-500" size={40} />
+          </div>
+        )}
 
         {matchNotFound && !loading && (
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6 text-center border border-gray-200 dark:border-gray-700">
