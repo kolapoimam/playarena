@@ -139,24 +139,35 @@ const ConfirmCheckin = () => {
           .eq("super_code", superCode)
           .eq("match_id", matchData.id)
           .eq("temp_identifier", tempIdentifier)
-          .single();
+          .maybeSingle(); // Use maybeSingle to handle no rows gracefully
 
         if (cashoutError) {
-          if (cashoutError.code === "42703") {
+          if (cashoutError.code === "42703" && cashoutError.message.includes("temp_identifier")) {
             // Handle missing temp_identifier column
-            console.warn("temp_identifier column not found in cashouts table. Cashout data unavailable.");
+            console.warn("temp_identifier column not found in cashouts table. Please run the migration to add this column.");
             setCashout(null);
-          } else if (!cashoutError.message.includes("0 rows")) {
-            throw cashoutError;
+            toast({
+              title: "Warning",
+              description: "Cashout information is unavailable due to a missing database column. Please contact support.",
+              variant: "default",
+            });
           } else {
-            setCashout(null);
+            throw cashoutError;
           }
         } else {
           setCashout(cashoutData);
+          if (!cashoutData) {
+            console.log("No cashout data found for this match and tempIdentifier.");
+          }
         }
       } catch (cashoutError: any) {
         console.error("Error fetching cashout:", cashoutError.message);
         setCashout(null);
+        toast({
+          title: "Error",
+          description: "Failed to fetch cashout information. Please try again later.",
+          variant: "destructive",
+        });
       }
     } catch (error: any) {
       console.error("Error fetching match:", error.message, error.details || error);
