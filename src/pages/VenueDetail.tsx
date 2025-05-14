@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { MapPin, ArrowLeft, ExternalLink, Calendar, Clock, MessageCircle, CalendarPlus } from "lucide-react";
+import { MapPin, ArrowLeft, ExternalLink, Calendar, Clock, MessageCircle, CalendarPlus, Star } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { RichTextEditor } from "@mantine/tiptap";
 import { useEditor } from "@tiptap/react";
@@ -25,6 +25,7 @@ type Venue = {
   opening_hours: string | null;
   pricing: string | null;
   booking_fee: number | null;
+  aggregated_rating: number | null;
 };
 
 type Match = {
@@ -71,7 +72,7 @@ const VenueDetail = () => {
       try {
         const { data, error } = await supabase
           .from("venues")
-          .select("id, slug, name, address, city, state, description, map_link, venue_phone, image_urls, facilities, opening_hours, pricing, booking_fee")
+          .select("id, slug, name, address, city, state, description, map_link, venue_phone, image_urls, facilities, opening_hours, pricing, booking_fee, aggregated_rating")
           .eq("slug", slug)
           .single();
 
@@ -206,9 +207,15 @@ const VenueDetail = () => {
         </div>
 
         <h1 className="text-3xl font-bold mb-2 text-gray-900 dark:text-gray-100">{venue.name}</h1>
-        <div className="flex items-center text-gray-600 dark:text-gray-400 mb-6">
+        <div className="flex items-center text-gray-600 dark:text-gray-400 mb-4">
           <MapPin size={18} className="mr-2" />
           <span>{venue.city}, {venue.state}</span>
+        </div>
+        <div className="flex items-center text-yellow-500 mb-6">
+          <Star size={18} className="mr-2 fill-yellow-500" />
+          <span className="text-gray-900 dark:text-gray-100">
+            {venue.aggregated_rating !== null ? `${venue.aggregated_rating.toFixed(1)} / 5.5` : "No ratings yet"}
+          </span>
         </div>
 
         <div className="space-y-6">
