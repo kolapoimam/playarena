@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Loader2, CheckCircle, Calendar, Trophy, Users, ArrowLeft, LogOut } from "lucide-react";
 import Navbar from "@/components/Navbar";
+import { format } from "date-fns";
 
 type Profile = {
   id: string;
@@ -24,8 +25,10 @@ type Profile = {
   state?: string;
   skill_level?: string;
   gender?: "male" | "female";
-  age?: number;
+  date_of_birth?: string; // Changed from age
   is_initial_setup: boolean;
+  created_at?: string;
+  updated_at?: string;
 };
 
 type Match = {
@@ -46,14 +49,39 @@ type Analytics = {
 };
 
 const profileSchema = z.object({
-  first_name: z.string().min(1, "First name is required").optional(),
-  last_name: z.string().min(1, "Last name is required").optional(),
-  nickname: z.string().min(1, "Nickname is required"),
-  phone_number: z.string().regex(/^[0-9]{10,15}$/, "Phone number must be 10-15 digits").optional(),
+  first_name: z
+    .string()
+    .min(3, "First name must be at least 3 characters")
+    .regex(/^[a-zA-Z]+$/, "First name must contain only letters")
+    .optional(),
+  last_name: z
+    .string()
+    .min(3, "Last name must be at least 3 characters")
+    .regex(/^[a-zA-Z]+$/, "Last name must contain only letters")
+    .optional(),
+  nickname: z
+    .string()
+    .min(3, "Nickname must be at least 3 characters")
+    .regex(/^[a-zA-Z0-9]+$/, "Nickname must be alphanumeric")
+    .optional(),
+  phone_number: z
+    .string()
+    .regex(/^[0-9]{1,11}$/, "Phone number must contain only numbers and 11 digits")
+    .optional(),
   state: z.string().min(1, "State is required"),
   skill_level: z.string().optional(),
   gender: z.enum(["male", "female"]).optional(),
-  age: z.number().min(13, "Must be at least 13").optional(),
+  date_of_birth: z
+    .string()
+    .refine((date) => {
+      const birthDate = new Date(date);
+      const today = new Date("2025-05-14T10:11:00+01:00"); // Current date and time
+      const age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) age--;
+      return age >= 13;
+    }, "You must be at least 13 years old")
+    .optional(),
 });
 
 const Profile = () => {
@@ -83,7 +111,7 @@ const Profile = () => {
       state: "",
       skill_level: "",
       gender: undefined,
-      age: undefined,
+      date_of_birth: "",
     },
   });
 
@@ -120,7 +148,7 @@ const Profile = () => {
       state: data.state || "",
       skill_level: data.skill_level || "",
       gender: data.gender,
-      age: data.age,
+      date_of_birth: data.date_of_birth ? format(new Date(data.date_of_birth), "yyyy-MM-dd") : "",
     });
   };
 
@@ -128,7 +156,6 @@ const Profile = () => {
     const { data: session } = await supabase.auth.getSession();
     if (!session.session) return;
 
-    // Fetch organized matches
     const { data: orgData, error: orgError } = await supabase
       .from("user_organized_matches")
       .select(`
@@ -151,7 +178,6 @@ const Profile = () => {
       }))
     );
 
-    // Fetch joined matches
     const { data: joinData, error: joinError } = await supabase
       .from("user_joined_matches")
       .select(`
@@ -225,7 +251,7 @@ const Profile = () => {
       total_venues: await supabase
         .from("venues")
         .select("id", { count: "exact" })
-        .eq("user_id", session.session.user.id) // Changed from owner_id to user_id
+        .eq("user_id", session.session.user.id)
         .then(({ count }) => count || 0),
     };
 
@@ -240,19 +266,19 @@ const Profile = () => {
           nickname: data.nickname,
           state: data.state,
           skill_level: data.skill_level,
-          age: data.age,
+          date_of_birth: data.date_of_birth,
         };
 
     const { error } = await supabase
       .from("profiles")
-      .update({ ...updates, is_initial_setup: false })
+      .update({ ...updates, is_initial_setup: false, updated_at: new Date().toISOString() })
       .eq("id", profile?.id);
 
     if (error) {
       toast({ title: "Error", description: "Failed to update profile.", variant: "destructive" });
     } else {
       toast({ title: "Success", description: "Profile updated successfully!" });
-      setProfile({ ...profile!, ...updates, is_initial_setup: false });
+      setProfile({ ...profile!, ...updates, is_initial_setup: false, updated_at: new Date().toISOString() });
     }
     setLoading(false);
   };
@@ -302,9 +328,19 @@ const Profile = () => {
     setShowLogout(false);
   };
 
+  // Calculate age from date_of_birth
+  const calculateAge = (dob?: string) => {
+    if (!dob) return null;
+    const birthDate = new Date(dob);
+    const today = new Date("2025-05-14T10:11:00+01:00");
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) age--;
+    return age;
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-20 relative">
-      {/* Gradient Header with Avatar */}
       <div className="bg-gradient-to-r from-green-600 to-green-800 text-white p-4 flex items-center justify-between shadow-lg">
         <Button
           variant="ghost"
@@ -344,11 +380,8 @@ const Profile = () => {
       </div>
 
       <div className="max-w-4xl mx-auto p-6 space-y-6 bg-[url('https://images.unsplash.com/photo-1518609878373-06d740f60d8b?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center relative">
-        {/* Overlay for readability */}
         <div className="absolute inset-0 bg-black/40 z-0"></div>
-
         <div className="relative z-10 space-y-6">
-          {/* Collapsible Account Details */}
           <Card className="bg-white/90 dark:bg-gray-800/90 border-none shadow-xl rounded-xl">
             <details className="group">
               <summary className="flex items-center justify-between p-4 text-xl font-semibold text-green-700 dark:text-green-400 cursor-pointer">
@@ -435,6 +468,7 @@ const Profile = () => {
                               {...field}
                               disabled={!profile?.is_initial_setup}
                               inputMode="numeric"
+                              maxLength={11}
                               className="text-base bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
                             />
                           </FormControl>
@@ -550,18 +584,23 @@ const Profile = () => {
                     />
                     <FormField
                       control={form.control}
-                      name="age"
+                      name="date_of_birth"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-gray-700 dark:text-gray-300">Age</FormLabel>
+                          <FormLabel className="text-gray-700 dark:text-gray-300">Date of Birth</FormLabel>
                           <FormControl>
                             <Input
-                              type="number"
+                              type="date"
                               {...field}
-                              onChange={(e) => field.onChange(parseInt(e.target.value))}
+                              disabled={!profile?.is_initial_setup}
                               className="text-base bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
                             />
                           </FormControl>
+                          {profile?.date_of_birth && !profile.is_initial_setup && (
+                            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                              Age: {calculateAge(profile.date_of_birth)} years
+                            </p>
+                          )}
                           <FormMessage />
                         </FormItem>
                       )}
