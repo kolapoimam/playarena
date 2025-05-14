@@ -355,10 +355,10 @@ const Profile = () => {
           <img
             src={
               profile?.gender === "male"
-                ? "https://via.placeholder.com/40?text=Male"
+                ? "https://img.freepik.com/premium-psd/smiling-3d-cartoon-man-avatar_975163-789.jpg?semt=ais_hybrid&w=740?text=Male"
                 : profile?.gender === "female"
-                ? "https://via.placeholder.com/40?text=Female"
-                : "https://via.placeholder.com/40?text=User"
+                ? "https://img.freepik.com/free-vector/young-girl-with-pigtails_1308-176684.jpg?text=Female"
+                : "https://img-new.cgtrader.com/items/4506145/4d6ab481d2/large/football-player-avatar-3d-icon-3d-model-4d6ab481d2.jpgtext=User"
             }
             alt="User Avatar"
             className="w-10 h-10 rounded-full cursor-pointer"
@@ -379,7 +379,7 @@ const Profile = () => {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto p-6 space-y-6 bg-[url('https://images.unsplash.com/photo-1518609878373-06d740f60d8b?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center relative">
+      <div className="max-w-4xl mx-auto p-6 space-y-6 bg-[url('https://img.freepik.com/premium-photo/grassy-football-pitch-stadium-sunny-day-with-blue-sky_824701-294.jpg?semt=ais_hybrid&w=740')] bg-cover bg-center relative">
         <div className="absolute inset-0 bg-black/40 z-0"></div>
         <div className="relative z-10 space-y-6">
           <Card className="bg-white/90 dark:bg-gray-800/90 border-none shadow-xl rounded-xl">
@@ -636,146 +636,146 @@ const Profile = () => {
             </details>
           </Card>
 
-          <Card className="bg-white/90 dark:bg-gray-800/90 border-none shadow-xl rounded-xl">
-            <CardHeader>
-              <CardTitle className="text-xl font-semibold text-green-700 dark:text-green-400 flex items-center">
-                <Users className="mr-2 h-6 w-6" />
-                My Matches
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Tabs defaultValue="organizing" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 bg-gray-100 dark:bg-gray-700 rounded-t-lg">
-                  <TabsTrigger
-                    value="organizing"
-                    className="data-[state=active]:bg-green-500 data-[state=active]:text-white"
+       <Card className="bg-white/90 dark:bg-gray-800/90 border-none shadow-xl rounded-xl">
+  <CardHeader>
+    <CardTitle className="text-xl font-semibold text-green-700 dark:text-green-400 flex items-center">
+      <Users className="mr-2 h-6 w-6" />
+      My Matches
+    </CardTitle>
+  </CardHeader>
+  <CardContent>
+    <Tabs defaultValue="organizing" className="w-full">
+      <TabsList className="grid w-full grid-cols-2 bg-gray-100 dark:bg-gray-700 rounded-t-lg">
+        <TabsTrigger
+          value="organizing"
+          className="data-[state=active]:bg-green-500 data-[state=active]:text-white"
+        >
+          Organizing
+        </TabsTrigger>
+        <TabsTrigger
+          value="playing"
+          className="data-[state=active]:bg-green-500 data-[state=active]:text-white"
+        >
+          Playing
+        </TabsTrigger>
+      </TabsList>
+      <TabsContent value="organizing">
+        {organizedMatches.length > 0 ? (
+          organizedMatches.map((match) => (
+            <div
+              key={match.id}
+              className="p-4 border-b border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-800/80 rounded-lg shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
+            >
+              <div>
+                <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">{match.title}</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  <Calendar size={14} className="inline mr-1" />
+                  {new Date(match.match_date).toLocaleDateString()}
+                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Super Code: {match.super_code || "N/A"}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                {(match.status === "upcoming" || match.status === "live") ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-green-500 text-green-500 hover:bg-green-500 hover:text-white"
+                    onClick={() => cancelMatch(match.id, false)}
                   >
-                    Organizing
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="playing"
-                    className="data-[state=active]:bg-green-500 data-[state=active]:text-white"
+                    Cancel
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    className="bg-green-500 hover:bg-green-600 text-white"
+                    onClick={() => navigate(`/feedback?matchId=${match.id}`)}
+                    disabled={
+                      (new Date().getTime() - new Date(match.match_date).getTime()) /
+                        (1000 * 60 * 60) >
+                      48 || match.status !== "completed"
+                    }
                   >
-                    Playing
-                  </TabsTrigger>
-                </TabsList>
-                <TabsContent value="organizing">
-                  {organizedMatches.length > 0 ? (
-                    organizedMatches.map((match) => (
-                      <div
-                        key={match.id}
-                        className="p-4 border-b border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-800/80 rounded-lg shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
-                      >
-                        <div>
-                          <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">{match.title}</h3>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
-                            <Calendar size={14} className="inline mr-1" />
-                            {new Date(match.match_date).toLocaleDateString()}
-                          </p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
-                            Super Code: {match.super_code}
-                          </p>
-                        </div>
-                        <div className="flex gap-2">
-                          {new Date(match.match_date) > new Date() ? (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="border-green-500 text-green-500 hover:bg-green-500 hover:text-white"
-                              onClick={() => cancelMatch(match.id, false)}
-                            >
-                              Cancel
-                            </Button>
-                          ) : (
-                            <Button
-                              size="sm"
-                              className="bg-green-500 hover:bg-green-600 text-white"
-                              onClick={() => navigate(`/feedback?matchId=${match.id}`)}
-                              disabled={
-                                (new Date().getTime() - new Date(match.match_date).getTime()) /
-                                  (1000 * 60 * 60) >
-                                48
-                              }
-                            >
-                              Give Feedback
-                            </Button>
-                          )}
-                          <Button
-                            size="sm"
-                            className="bg-green-500 hover:bg-green-600 text-white"
-                            onClick={() => navigate(`/matches/${match.id}`)}
-                          >
-                            View Details
-                          </Button>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-sm text-gray-600 dark:text-gray-400 p-4">
-                      No organized matches found.
-                    </p>
-                  )}
-                </TabsContent>
-                <TabsContent value="playing">
-                  {joinedMatches.length > 0 ? (
-                    joinedMatches.map((match) => (
-                      <div
-                        key={match.id}
-                        className="p-4 border-b border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-800/80 rounded-lg shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
-                      >
-                        <div>
-                          <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">{match.title}</h3>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
-                            <Calendar size={14} className="inline mr-1" />
-                            {new Date(match.match_date).toLocaleDateString()}
-                          </p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
-                            Confirmation Code: {match.confirmation_code}
-                          </p>
-                        </div>
-                        <div className="flex gap-2">
-                          {new Date(match.match_date) > new Date() ? (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="border-green-500 text-green-500 hover:bg-green-500 hover:text-white"
-                              onClick={() => cancelMatch(match.id, true)}
-                            >
-                              Cancel
-                            </Button>
-                          ) : (
-                            <Button
-                              size="sm"
-                              className="bg-green-500 hover:bg-green-600 text-white"
-                              onClick={() => navigate(`/feedback?matchId=${match.id}`)}
-                              disabled={
-                                (new Date().getTime() - new Date(match.match_date).getTime()) /
-                                  (1000 * 60 * 60) >
-                                48
-                              }
-                            >
-                              Give Feedback
-                            </Button>
-                          )}
-                          <Button
-                            size="sm"
-                            className="bg-green-500 hover:bg-green-600 text-white"
-                            onClick={() => navigate(`/matches/${match.id}`)}
-                          >
-                            View Details
-                          </Button>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-sm text-gray-600 dark:text-gray-400 p-4">
-                      No joined matches found.
-                    </p>
-                  )}
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
+                    Give Feedback
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  className="bg-green-500 hover:bg-green-600 text-white"
+                  onClick={() => navigate(`/matches/${match.id}`)}
+                >
+                  View Details
+                </Button>
+              </div>
+            </div>
+          ))
+        ) : (
+          <p className="text-sm text-gray-600 dark:text-gray-400 p-4">
+            No organized matches found.
+          </p>
+        )}
+      </TabsContent>
+      <TabsContent value="playing">
+        {joinedMatches.length > 0 ? (
+          joinedMatches.map((match) => (
+            <div
+              key={match.id}
+              className="p-4 border-b border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-800/80 rounded-lg shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
+            >
+              <div>
+                <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">{match.title}</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  <Calendar size={14} className="inline mr-1" />
+                  {new Date(match.match_date).toLocaleDateString()}
+                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Confirmation Code: {match.confirmation_code || "N/A"}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                {(match.status === "upcoming" || match.status === "live") ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-green-500 text-green-500 hover:bg-green-500 hover:text-white"
+                    onClick={() => cancelMatch(match.id, true)}
+                  >
+                    Cancel
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    className="bg-green-500 hover:bg-green-600 text-white"
+                    onClick={() => navigate(`/feedback?matchId=${match.id}`)}
+                    disabled={
+                      (new Date().getTime() - new Date(match.match_date).getTime()) /
+                        (1000 * 60 * 60) >
+                      48 || match.status !== "completed"
+                    }
+                  >
+                    Give Feedback
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  className="bg-green-500 hover:bg-green-600 text-white"
+                  onClick={() => navigate(`/matches/${match.id}`)}
+                >
+                  View Details
+                </Button>
+              </div>
+            </div>
+          ))
+        ) : (
+          <p className="text-sm text-gray-600 dark:text-gray-400 p-4">
+            No joined matches found.
+          </p>
+        )}
+      </TabsContent>
+    </Tabs>
+  </CardContent>
+</Card>
 
           <Card className="bg-white/90 dark:bg-gray-800/90 border-none shadow-xl rounded-xl">
             <CardHeader>
