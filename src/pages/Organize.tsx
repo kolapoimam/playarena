@@ -45,8 +45,8 @@ import { Switch } from "@/components/ui/switch";
 import VenueForm from "@/components/VenueForm";
 import Navbar from "@/components/Navbar";
 import html2canvas from "html2canvas";
-import MatchForm from "./MatchForm";
-import OrganizerDetails from "./OrganizerDetails";
+import MatchForm from "@/components/MatchForm";
+import OrganizerDetails from "@/components/OrganizerDetails";
 
 const Organize = () => {
   const navigate = useNavigate();
