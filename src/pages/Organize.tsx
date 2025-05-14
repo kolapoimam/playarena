@@ -152,6 +152,7 @@ const Organize = () => {
   const [supercode, setSupercode] = useState<string | null>(null);
   const [matchSlug, setMatchSlug] = useState<string | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
 
   const form = useForm<FormValues>({
@@ -174,6 +175,17 @@ const Organize = () => {
       gender: null,
     },
   });
+
+  // Check authentication status
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: session } = await supabase.auth.getSession();
+      if (session.session) {
+        setUserId(session.session.user.id);
+      }
+    };
+    checkAuth();
+  }, []);
 
   // Persist form state to localStorage
   useEffect(() => {
@@ -260,6 +272,8 @@ const Organize = () => {
     setLoading(true);
 
     try {
+      const superCode = Math.floor(100000 + Math.random() * 900000).toString();
+
       const { data: match, error } = await supabase
         .from("matches")
         .insert({
@@ -281,11 +295,24 @@ const Organize = () => {
           skill_level: data.skill_level || null,
           match_type: data.match_type || null,
           gender: data.gender || null,
+          super_code: superCode,
         })
         .select('id, slug, super_code')
         .single();
 
       if (error) throw error;
+
+      // Link match to user account if logged in
+      if (userId) {
+        const { error: linkError } = await supabase
+          .from("user_organized_matches")
+          .insert({
+            user_id: userId,
+            match_id: match.id,
+          });
+
+        if (linkError) throw linkError;
+      }
 
       setSupercode(match.super_code || "N/A");
       setMatchSlug(match.slug);
