@@ -79,7 +79,7 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4 bg-[url('https://images.unsplash.com/photo-1518609878373-06d740f60d8b?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center relative">
+    <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4 bg-[url('https://img.freepik.com/premium-photo/grassy-football-pitch-stadium-sunny-day-with-blue-sky_824701-294.jpg?semt=ais_hybrid&w=740')] bg-cover bg-center relative">
       {/* Overlay for text readability */}
       <div className="absolute inset-0 bg-black/60 z-0"></div>
 
