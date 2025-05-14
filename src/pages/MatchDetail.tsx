@@ -39,7 +39,6 @@ import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import html2canvas from "html2canvas";
 
-// Match type definition
 type Match = {
   id: string;
   slug: string;
@@ -54,6 +53,9 @@ type Match = {
   player_number_required: boolean;
   is_private: boolean;
   access_password: string | null;
+  sell_tickets: boolean;
+  ticket_price: number | null;
+  max_tickets: number | null;
   venue: {
     id: string;
     slug: string;
@@ -64,11 +66,10 @@ type Match = {
   players: {
     player_name: string;
     status: string;
-    number_of_slots: number;
+    number_of_tickets: number;
   }[];
 };
 
-// Helper function to capitalize status
 const formatStatus = (status: string) => {
   return status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, " ");
 };
@@ -232,7 +233,7 @@ const MatchDetail = () => {
     if (!match) return { isStarted: false, isPassed: false, isFull: false };
     
     const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
-    const now = new Date("2025-05-13T19:46:00+01:00"); // 07:46 PM WAT, May 13, 2025
+    const now = new Date("2025-05-15T00:01:00+01:00"); // 12:01 AM WAT, May 15, 2025
     const fortyEightHoursAfter = addHours(matchDateTime, 48);
     
     const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
@@ -353,7 +354,6 @@ const MatchDetail = () => {
     const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
     const endDateTime = new Date(matchDateTime.getTime() + 2 * 60 * 60 * 1000);
 
-    // Format dates for Google Calendar (YYYYMMDDTHHMMSSZ)
     const formatGoogleDate = (date: Date) => {
       const pad = (num: number) => num.toString().padStart(2, '0');
       return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}T${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`;
@@ -374,7 +374,7 @@ const MatchDetail = () => {
       `&sf=true&output=xml`;
 
     window.open(googleCalendarUrl, '_blank', 'width=600,height=600');
-    setTimeout(() => navigate(`/match/${slug}`), 1000); // Redirect after a short delay
+    setTimeout(() => navigate(`/match/${slug}`), 1000);
   };
 
   if (loading) {
@@ -461,7 +461,7 @@ const MatchDetail = () => {
 
       <div className="p-4">
         <h1 className="text-2xl font-bold mb-2">
-     {match.title}{" "}
+          {match.title}{" "}
           {match.is_private && (
             <TooltipProvider>
               <Tooltip>
@@ -603,12 +603,12 @@ const MatchDetail = () => {
             
             <div className="mt-6">
               {isFeedbackWindow ? (
-<Button 
-      className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
-      onClick={() => navigate(`/feedback?matchSlug=${match.slug}`)}
-    >
-      Give Feedback
-    </Button>
+                <Button 
+                  className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
+                  onClick={() => navigate(`/feedback?matchSlug=${match.slug}`)}
+                >
+                  Give Feedback
+                </Button>
               ) : (isPassed || isStarted) ? (
                 <Button 
                   className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
@@ -634,6 +634,16 @@ const MatchDetail = () => {
                 </Button>
               )}
             </div>
+            {match.sell_tickets && !isPassed && !isStarted && (
+              <div className="mt-4">
+                <Button
+                  className="w-full bg-yellow-500 hover:bg-yellow-600 text-white"
+                  onClick={() => navigate(`/ticketing/${match.slug}`)}
+                >
+                  Buy Tickets
+                </Button>
+              </div>
+            )}
           </div>
           
           <div className="flex gap-3 mt-6">
