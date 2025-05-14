@@ -9,7 +9,7 @@ import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
 import MatchCodeInput from "@/components/MatchCodeInput";
 import MatchDetails from "@/components/MatchDetails";
-import PlayerManagement from "@components/PlayerManagement";
+import PlayerManagement from "@/components/PlayerManagement";
 
 type Match = {
   id: string;
