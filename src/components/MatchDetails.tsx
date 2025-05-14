@@ -1,4 +1,4 @@
-import { format, differenceInMinutes, isPast } from "date-fns";
+import { format, differenceInMinutes } from "date-fns";
 import { Trophy, MapPin, Calendar, Clock, Users, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -48,15 +48,10 @@ type MatchDetailsProps = {
   handleStartMatch: () => void;
   handleEndMatch: () => void;
   loading: boolean;
+  isMatchPast: boolean; // Use the prop from ConfirmCheckin
 };
 
-const MatchDetails = ({ match, cashout, handleCancelMatch, handleStartMatch, handleEndMatch, loading }: MatchDetailsProps) => {
-  const isMatchStarted = () => {
-    if (!match) return false;
-    const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
-    return isPast(matchDateTime);
-  };
-
+const MatchDetails = ({ match, cashout, handleCancelMatch, handleStartMatch, handleEndMatch, loading, isMatchPast }: MatchDetailsProps) => {
   const canCancelMatch = () => {
     if (!match) return false;
     const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
@@ -67,8 +62,7 @@ const MatchDetails = ({ match, cashout, handleCancelMatch, handleStartMatch, han
 
   const canStartMatch = () => {
     if (!match || match.cancellation_status || match.match_start_time) return false;
-    const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
-    return isPast(matchDateTime);
+    return isMatchPast; // Use isMatchPast instead of isPast
   };
 
   const canEndMatch = () => {
