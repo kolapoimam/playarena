@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Loader2, CheckCircle, Calendar, DollarSign, MapPin, Users, ArrowLeft } from "lucide-react";
+import { Loader2, CheckCircle, Calendar, Trophy, Users, ArrowLeft, LogOut } from "lucide-react";
 import Navbar from "@/components/Navbar";
 
 type Profile = {
@@ -71,6 +71,7 @@ const Profile = () => {
   });
   const [analyticsFilter, setAnalyticsFilter] = useState<"all" | "month" | "week">("all");
   const [loading, setLoading] = useState(false);
+  const [showLogout, setShowLogout] = useState(false);
 
   const form = useForm<z.infer<typeof profileSchema>>({
     resolver: zodResolver(profileSchema),
@@ -224,7 +225,7 @@ const Profile = () => {
       total_venues: await supabase
         .from("venues")
         .select("id", { count: "exact" })
-        .eq("owner_id", session.session.user.id)
+        .eq("user_id", session.session.user.id) // Changed from owner_id to user_id
         .then(({ count }) => count || 0),
     };
 
@@ -250,7 +251,7 @@ const Profile = () => {
     if (error) {
       toast({ title: "Error", description: "Failed to update profile.", variant: "destructive" });
     } else {
-      toast({ title: "Success", description: "Profile updated successfully." });
+      toast({ title: "Success", description: "Profile updated successfully!" });
       setProfile({ ...profile!, ...updates, is_initial_setup: false });
     }
     setLoading(false);
@@ -258,19 +259,18 @@ const Profile = () => {
 
   const cancelMatch = async (matchId: string, isJoined: boolean) => {
     const now = new Date();
-    const match = await supabase
+    const { data: match } = await supabase
       .from("matches")
       .select("match_date")
       .eq("id", matchId)
       .single();
 
-    if (new Date(match.data!.match_date) < now) {
+    if (new Date(match!.match_date) < now) {
       toast({ title: "Error", description: "Cannot cancel past matches.", variant: "destructive" });
       return;
     }
 
     if (isJoined) {
-      // Remove player from match
       const { error: playerError } = await supabase
         .from("user_joined_matches")
         .delete()
@@ -282,7 +282,6 @@ const Profile = () => {
         return;
       }
     } else {
-      // Cancel organized match
       const { error: matchError } = await supabase
         .from("matches")
         .update({ status: "cancelled" })
@@ -294,410 +293,519 @@ const Profile = () => {
       }
     }
 
-    toast({ title: "Success", description: "Match cancelled successfully." });
+    toast({ title: "Success", description: "Match cancelled successfully!" });
     fetchMatches();
   };
 
+  const handleLogout = () => {
+    supabase.auth.signOut().then(() => navigate("/"));
+    setShowLogout(false);
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-20">
-      <header className="sticky top-0 z-50 bg-green-500 text-white shadow-md">
-        <div className="p-4 flex items-center justify-between">
-          <Button
-            variant="ghost"
-            onClick={() => navigate(-1)}
-            className="text-white hover:text-gray-200 text-sm flex items-center"
-          >
-            <ArrowLeft size={16} className="mr-2" />
-            Back
-          </Button>
-          <h1 className="text-2xl font-bold">My Profile</h1>
-          <Button
-            variant="ghost"
-            onClick={() => supabase.auth.signOut().then(() => navigate("/"))}
-            className="text-white hover:text-gray-200 text-sm"
-          >
-            Sign Out
-          </Button>
-        </div>
-      </header>
-
-      <div className="max-w-4xl mx-auto p-6 space-y-6">
-        <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
-          <CardHeader>
-            <CardTitle className="text-xl font-semibold">Account Details</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="first_name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>First Name</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            disabled={!profile?.is_initial_setup}
-                            className="text-base"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="last_name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Last Name</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            disabled={!profile?.is_initial_setup}
-                            className="text-base"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <FormField
-                  control={form.control}
-                  name="nickname"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nickname</FormLabel>
-                      <FormControl>
-                        <Input {...field} className="text-base" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="phone_number"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Phone Number</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          disabled={!profile?.is_initial_setup}
-                          inputMode="numeric"
-                          className="text-base"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="state"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>State</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger className="text-base">
-                            <SelectValue placeholder="Select state" />
-                          </SelectTrigger>
-                        </FormControl>
-<SelectContent>
-  {[
-    "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", "Borno", 
-    "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu", "Gombe", "Imo", "Jigawa", 
-    "Kaduna", "Kano", "Katsina", "Kebbi", "Kogi", "Kwara", "Lagos", "Nasarawa", "Niger", 
-    "Ogun", "Ondo", "Osun", "Oyo", "Plateau", "Rivers", "Sokoto", "Taraba", "Yobe", 
-    "Zamfara", "FCT"
-  ].map((state) => (
-    <SelectItem key={state} value={state} className="text-base">
-      {state}
-    </SelectItem>
-  ))}
-</SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="skill_level"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Skill Level</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger className="text-base">
-                            <SelectValue placeholder="Select skill level" />
-                          </SelectTrigger>
-                        </FormControl>
-<SelectContent>
-  {["Beginner", "Amateur", "Intermediate", "Advanced", "Professional"].map((level) => (
-    <SelectItem key={level} value={level} className="text-base">
-      {level}
-    </SelectItem>
-  ))}
-</SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="gender"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Gender</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                        disabled={!profile?.is_initial_setup}
-                      >
-                        <FormControl>
-                          <SelectTrigger className="text-base">
-                            <SelectValue placeholder="Select gender" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="male" className="text-base">Male</SelectItem>
-                          <SelectItem value="female" className="text-base">Female</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="age"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Age</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          {...field}
-                          onChange={(e) => field.onChange(parseInt(e.target.value))}
-                          className="text-base"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div>
-                  <FormLabel>Email Address</FormLabel>
-                  <Input value={profile?.email} disabled className="text-base" />
-                </div>
-                <Button
-                   type="submit"
-                  className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 text-sm"
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 size={16} className="mr-2 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle size={16} className="mr-2" />
-                      Save Profile
-                    </>
-                  )}
-                </Button>
-              </form>
-            </Form>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
-          <CardHeader>
-            <CardTitle className="text-xl font-semibold">My Matches</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="organizing" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="organizing">Organizing</TabsTrigger>
-                <TabsTrigger value="playing">Playing</TabsTrigger>
-              </TabsList>
-              <TabsContent value="organizing">
-                {organizedMatches.length > 0 ? (
-                  organizedMatches.map((match) => (
-                    <div
-                      key={match.id}
-                      className="p-4 border-b border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
-                    >
-                      <div>
-                        <h3 className="text-base font-semibold">{match.title}</h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          <Calendar size={14} className="inline mr-1" />
-                          {new Date(match.match_date).toLocaleDateString()}
-                        </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          Super Code: {match.super_code}
-                        </p>
-                      </div>
-                      <div className="flex gap-2">
-                        {new Date(match.match_date) > new Date() ? (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => cancelMatch(match.id, false)}
-                          >
-                            Cancel
-                          </Button>
-                        ) : (
-                          <Button
-                            size="sm"
-                            onClick={() => navigate(`/feedback?matchId=${match.id}`)}
-                            disabled={
-                              (new Date().getTime() - new Date(match.match_date).getTime()) /
-                                (1000 * 60 * 60) >
-                              48
-                            }
-                          >
-                            Give Feedback
-                          </Button>
-                        )}
-                        <Button
-                          size="sm"
-                          onClick={() => navigate(`/matches/${match.id}`)}
-                        >
-                          View Details
-                        </Button>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    No organized matches found.
-                  </p>
-                )}
-              </TabsContent>
-              <TabsContent value="playing">
-                {joinedMatches.length > 0 ? (
-                  joinedMatches.map((match) => (
-                    <div
-                      key={match.id}
-                      className="p-4 border-b border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
-                    >
-                      <div>
-                        <h3 className="text-base font-semibold">{match.title}</h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          <Calendar size={14} className="inline mr-1" />
-                          {new Date(match.match_date).toLocaleDateString()}
-                        </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          Confirmation Code: {match.confirmation_code}
-                        </p>
-                      </div>
-                      <div className="flex gap-2">
-                        {new Date(match.match_date) > new Date() ? (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => cancelMatch(match.id, true)}
-                          >
-                            Cancel
-                          </Button>
-                        ) : (
-                          <Button
-                            size="sm"
-                            onClick={() => navigate(`/feedback?matchId=${match.id}`)}
-                            disabled={
-                              (new Date().getTime() - new Date(match.match_date).getTime()) /
-                                (1000 * 60 * 60) >
-                              48
-                            }
-                          >
-                            Give Feedback
-                          </Button>
-                        )}
-                        <Button
-                          size="sm"
-                          onClick={() => navigate(`/matches/${match.id}`)}
-                        >
-                          View Details
-                        </Button>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    No joined matches found.
-                  </p>
-                )}
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
-          <CardHeader>
-            <CardTitle className="text-xl font-semibold">Analytics</CardTitle>
-            <Select
-              value={analyticsFilter}
-              onValueChange={(value) => setAnalyticsFilter(value as "all" | "month" | "week")}
-            >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Select filter" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Time</SelectItem>
-                <SelectItem value="month">This Month</SelectItem>
-                <SelectItem value="week">This Week</SelectItem>
-              </SelectContent>
-            </Select>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg flex items-center gap-3">
-                <Users className="h-8 w-8 text-green-500" />
-                <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Matches Organized</p>
-                  <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{analytics.total_organized}</p>
-                </div>
-              </div>
-              <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg flex items-center gap-3">
-                <Users className="h-8 w-8 text-green-500" />
-                <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Matches Joined</p>
-                  <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{analytics.total_joined}</p>
-                </div>
-              </div>
-              <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg flex items-center gap-3">
-                <DollarSign className="h-8 w-8 text-green-500" />
-                <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Spent</p>
-                  <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">₦{analytics.total_spent.toFixed(2)}</p>
-                </div>
-              </div>
-              <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg flex items-center gap-3">
-                <DollarSign className="h-8 w-8 text-green-500" />
-                <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Cashout</p>
-                  <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">₦{analytics.total_cashout.toFixed(2)}</p>
-                </div>
-              </div>
-              <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg flex items-center gap-3">
-                <MapPin className="h-8 w-8 text-green-500" />
-                <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Venues Listed</p>
-                  <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{analytics.total_venues}</p>
-                </div>
-              </div>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-20 relative">
+      {/* Gradient Header with Avatar */}
+      <div className="bg-gradient-to-r from-green-600 to-green-800 text-white p-4 flex items-center justify-between shadow-lg">
+        <Button
+          variant="ghost"
+          onClick={() => navigate(-1)}
+          className="text-white hover:text-gray-200 text-sm flex items-center"
+        >
+          <ArrowLeft size={16} className="mr-2" />
+          Back
+        </Button>
+        <h1 className="text-2xl font-bold text-center flex-1">My Profile</h1>
+        <div className="relative">
+          <img
+            src={
+              profile?.gender === "male"
+                ? "https://via.placeholder.com/40?text=Male"
+                : profile?.gender === "female"
+                ? "https://via.placeholder.com/40?text=Female"
+                : "https://via.placeholder.com/40?text=User"
+            }
+            alt="User Avatar"
+            className="w-10 h-10 rounded-full cursor-pointer"
+            onClick={() => setShowLogout(!showLogout)}
+          />
+          {showLogout && (
+            <div className="absolute right-0 mt-2 w-32 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-10">
+              <Button
+                variant="ghost"
+                className="w-full text-red-500 hover:text-red-700 flex items-center justify-start px-4 py-2 text-sm"
+                onClick={handleLogout}
+              >
+                <LogOut size={16} className="mr-2" />
+                Log Out
+              </Button>
             </div>
-          </CardContent>
-        </Card>
+          )}
+        </div>
+      </div>
+
+      <div className="max-w-4xl mx-auto p-6 space-y-6 bg-[url('https://images.unsplash.com/photo-1518609878373-06d740f60d8b?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center relative">
+        {/* Overlay for readability */}
+        <div className="absolute inset-0 bg-black/40 z-0"></div>
+
+        <div className="relative z-10 space-y-6">
+          {/* Collapsible Account Details */}
+          <Card className="bg-white/90 dark:bg-gray-800/90 border-none shadow-xl rounded-xl">
+            <details className="group">
+              <summary className="flex items-center justify-between p-4 text-xl font-semibold text-green-700 dark:text-green-400 cursor-pointer">
+                Account Details
+                <span className="transition-transform group-open:rotate-180">
+                  <svg
+                    className="w-6 h-6"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </span>
+              </summary>
+              <CardContent className="p-4 pt-0">
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="first_name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-gray-700 dark:text-gray-300">First Name</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                disabled={!profile?.is_initial_setup}
+                                className="text-base bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="last_name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-gray-700 dark:text-gray-300">Last Name</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                disabled={!profile?.is_initial_setup}
+                                className="text-base bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <FormField
+                      control={form.control}
+                      name="nickname"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700 dark:text-gray-300">Nickname</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              className="text-base bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="phone_number"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700 dark:text-gray-300">Phone Number</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              disabled={!profile?.is_initial_setup}
+                              inputMode="numeric"
+                              className="text-base bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="state"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700 dark:text-gray-300">State</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                            className="text-base"
+                          >
+                            <FormControl>
+                              <SelectTrigger className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100">
+                                <SelectValue placeholder="Select state" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {[
+                                "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", "Borno",
+                                "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu", "Gombe", "Imo", "Jigawa",
+                                "Kaduna", "Kano", "Katsina", "Kebbi", "Kogi", "Kwara", "Lagos", "Nasarawa", "Niger",
+                                "Ogun", "Ondo", "Osun", "Oyo", "Plateau", "Rivers", "Sokoto", "Taraba", "Yobe",
+                                "Zamfara", "FCT"
+                              ].map((state) => (
+                                <SelectItem
+                                  key={state}
+                                  value={state}
+                                  className="text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                >
+                                  {state}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="skill_level"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700 dark:text-gray-300">Skill Level</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                            className="text-base"
+                          >
+                            <FormControl>
+                              <SelectTrigger className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100">
+                                <SelectValue placeholder="Select skill level" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {["Beginner", "Amateur", "Intermediate", "Advanced", "Professional"].map((level) => (
+                                <SelectItem
+                                  key={level}
+                                  value={level}
+                                  className="text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                >
+                                  {level}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="gender"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700 dark:text-gray-300">Gender</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                            disabled={!profile?.is_initial_setup}
+                            className="text-base"
+                          >
+                            <FormControl>
+                              <SelectTrigger className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100">
+                                <SelectValue placeholder="Select gender" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem
+                                value="male"
+                                className="text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                              >
+                                Male
+                              </SelectItem>
+                              <SelectItem
+                                value="female"
+                                className="text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                              >
+                                Female
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="age"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700 dark:text-gray-300">Age</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              {...field}
+                              onChange={(e) => field.onChange(parseInt(e.target.value))}
+                              className="text-base bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <div>
+                      <FormLabel className="text-gray-700 dark:text-gray-300">Email Address</FormLabel>
+                      <Input
+                        value={profile?.email}
+                        disabled
+                        className="text-base bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
+                      />
+                    </div>
+                    <Button
+                      type="submit"
+                      className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 text-sm flex items-center justify-center"
+                      disabled={loading}
+                    >
+                      {loading ? (
+                        <>
+                          <Loader2 size={16} className="mr-2 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle size={16} className="mr-2" />
+                          Save Profile
+                        </>
+                      )}
+                    </Button>
+                  </form>
+                </Form>
+              </CardContent>
+            </details>
+          </Card>
+
+          <Card className="bg-white/90 dark:bg-gray-800/90 border-none shadow-xl rounded-xl">
+            <CardHeader>
+              <CardTitle className="text-xl font-semibold text-green-700 dark:text-green-400 flex items-center">
+                <Users className="mr-2 h-6 w-6" />
+                My Matches
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Tabs defaultValue="organizing" className="w-full">
+                <TabsList className="grid w-full grid-cols-2 bg-gray-100 dark:bg-gray-700 rounded-t-lg">
+                  <TabsTrigger
+                    value="organizing"
+                    className="data-[state=active]:bg-green-500 data-[state=active]:text-white"
+                  >
+                    Organizing
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="playing"
+                    className="data-[state=active]:bg-green-500 data-[state=active]:text-white"
+                  >
+                    Playing
+                  </TabsTrigger>
+                </TabsList>
+                <TabsContent value="organizing">
+                  {organizedMatches.length > 0 ? (
+                    organizedMatches.map((match) => (
+                      <div
+                        key={match.id}
+                        className="p-4 border-b border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-800/80 rounded-lg shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
+                      >
+                        <div>
+                          <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">{match.title}</h3>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            <Calendar size={14} className="inline mr-1" />
+                            {new Date(match.match_date).toLocaleDateString()}
+                          </p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            Super Code: {match.super_code}
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          {new Date(match.match_date) > new Date() ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="border-green-500 text-green-500 hover:bg-green-500 hover:text-white"
+                              onClick={() => cancelMatch(match.id, false)}
+                            >
+                              Cancel
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              className="bg-green-500 hover:bg-green-600 text-white"
+                              onClick={() => navigate(`/feedback?matchId=${match.id}`)}
+                              disabled={
+                                (new Date().getTime() - new Date(match.match_date).getTime()) /
+                                  (1000 * 60 * 60) >
+                                48
+                              }
+                            >
+                              Give Feedback
+                            </Button>
+                          )}
+                          <Button
+                            size="sm"
+                            className="bg-green-500 hover:bg-green-600 text-white"
+                            onClick={() => navigate(`/matches/${match.id}`)}
+                          >
+                            View Details
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-gray-600 dark:text-gray-400 p-4">
+                      No organized matches found.
+                    </p>
+                  )}
+                </TabsContent>
+                <TabsContent value="playing">
+                  {joinedMatches.length > 0 ? (
+                    joinedMatches.map((match) => (
+                      <div
+                        key={match.id}
+                        className="p-4 border-b border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-800/80 rounded-lg shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
+                      >
+                        <div>
+                          <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">{match.title}</h3>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            <Calendar size={14} className="inline mr-1" />
+                            {new Date(match.match_date).toLocaleDateString()}
+                          </p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            Confirmation Code: {match.confirmation_code}
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          {new Date(match.match_date) > new Date() ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="border-green-500 text-green-500 hover:bg-green-500 hover:text-white"
+                              onClick={() => cancelMatch(match.id, true)}
+                            >
+                              Cancel
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              className="bg-green-500 hover:bg-green-600 text-white"
+                              onClick={() => navigate(`/feedback?matchId=${match.id}`)}
+                              disabled={
+                                (new Date().getTime() - new Date(match.match_date).getTime()) /
+                                  (1000 * 60 * 60) >
+                                48
+                              }
+                            >
+                              Give Feedback
+                            </Button>
+                          )}
+                          <Button
+                            size="sm"
+                            className="bg-green-500 hover:bg-green-600 text-white"
+                            onClick={() => navigate(`/matches/${match.id}`)}
+                          >
+                            View Details
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-gray-600 dark:text-gray-400 p-4">
+                      No joined matches found.
+                    </p>
+                  )}
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white/90 dark:bg-gray-800/90 border-none shadow-xl rounded-xl">
+            <CardHeader>
+              <CardTitle className="text-xl font-semibold text-green-700 dark:text-green-400 flex items-center">
+                <Trophy className="mr-2 h-6 w-6" />
+                Analytics
+              </CardTitle>
+              <Select
+                value={analyticsFilter}
+                onValueChange={(value) => setAnalyticsFilter(value as "all" | "month" | "week")}
+                className="w-[180px]"
+              >
+                <SelectTrigger className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100">
+                  <SelectValue placeholder="Select filter" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" className="text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                    All Time
+                  </SelectItem>
+                  <SelectItem value="month" className="text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                    This Month
+                  </SelectItem>
+                  <SelectItem value="week" className="text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                    This Week
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="p-4 bg-green-50 dark:bg-green-900/50 rounded-lg flex items-center gap-3 shadow-md">
+                  <Users className="h-8 w-8 text-green-600" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Matches Organized</p>
+                    <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{analytics.total_organized}</p>
+                  </div>
+                </div>
+                <div className="p-4 bg-green-50 dark:bg-green-900/50 rounded-lg flex items-center gap-3 shadow-md">
+                  <Users className="h-8 w-8 text-green-600" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Matches Joined</p>
+                    <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{analytics.total_joined}</p>
+                  </div>
+                </div>
+                <div className="p-4 bg-green-50 dark:bg-green-900/50 rounded-lg flex items-center gap-3 shadow-md">
+                  <Trophy className="h-8 w-8 text-green-600" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Spent</p>
+                    <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">₦{analytics.total_spent.toFixed(2)}</p>
+                  </div>
+                </div>
+                <div className="p-4 bg-green-50 dark:bg-green-900/50 rounded-lg flex items-center gap-3 shadow-md">
+                  <Trophy className="h-8 w-8 text-green-600" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Cashout</p>
+                    <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">₦{analytics.total_cashout.toFixed(2)}</p>
+                  </div>
+                </div>
+                <div className="p-4 bg-green-50 dark:bg-green-900/50 rounded-lg flex items-center gap-3 shadow-md">
+                  <MapPin className="h-8 w-8 text-green-600" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Venues Listed</p>
+                    <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{analytics.total_venues}</p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
       <Navbar />
     </div>
