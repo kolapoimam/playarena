@@ -5,7 +5,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useNavigate } from "react-router-dom";
 import {
   FormField,
   FormItem,
@@ -17,7 +16,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Copy } from "lucide-react";
 
-const OrganizerDetails = () => {
+const OrganizerDetails = ({ userId }: { userId: string | null }) => {
   const form = useFormContext();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -47,19 +46,9 @@ const OrganizerDetails = () => {
 
   const onSubmit = async (data: any) => {
     try {
-      const { data: session } = await supabase.auth.getSession();
-      if (!session.session) {
-        toast({
-          title: "Error",
-          description: "You must be logged in to organize a match.",
-          variant: "destructive",
-        });
-        return;
-      }
-
       const matchData = {
         ...data,
-        user_id: session.session.user.id,
+        user_id: userId || null, // Set user_id to null for unauthenticated users
         slug: `${data.title.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`,
         sell_tickets: sellTickets,
         ticket_price: sellTickets ? ticketPrice : null,
