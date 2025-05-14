@@ -1,75 +1,54 @@
-import { useState, useEffect, useRef } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import ThemeToggle from "@/components/ThemeToggle";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Calendar as CalendarIcon, Clock, MapPin, ArrowLeft, Plus, User, Trophy, Copy } from "lucide-react";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogDescription,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { format } from "date-fns";
-import { cn } from "@/lib/utils";
-import { Switch } from "@/components/ui/switch";
-import VenueForm from "@/components/VenueForm";
-import Navbar from "@/components/Navbar";
-import html2canvas from "html2canvas";
+import { ArrowLeft } from "lucide-react";
 import MatchForm from "@/components/MatchForm";
 import OrganizerDetails from "@/components/OrganizerDetails";
+import Navbar from "@/components/Navbar";
 
 const Organize = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [venuesLoading, setVenuesLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const checkAuth = async () => {
-      const { data: session } = await supabase.auth.getSession();
-      if (session.session) {
-        setUserId(session.session.user.id);
+      try {
+        setIsLoading(true);
+        const { data: session, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error("Auth error:", error);
+          // Don't set error state; allow unauthenticated access
+        }
+        if (session.session) {
+          setUserId(session.session.user.id);
+        }
+      } catch (err) {
+        console.error("Unexpected auth error:", err);
+      } finally {
+        setIsLoading(false);
       }
     };
     checkAuth();
   }, []);
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
+        <p className="text-lg text-gray-700 dark:text-gray-300">Loading...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen pb-24 bg-gray-100 dark:bg-gray-900">
       <header className="sticky top-0 z-50 bg-gradient-to-r from-green-500 to-green-700 text-white shadow-lg">
         <div className="p-4 flex items-center justify-between max-w-7xl mx-auto">
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             className="text-white hover:bg-green-600 transition-colors"
             onClick={() => navigate(-1)}
           >
@@ -80,10 +59,23 @@ const Organize = () => {
           <div className="w-10"></div>
         </div>
       </header>
-
       <div className="p-6 max-w-3xl mx-auto">
+        {!userId && (
+          <div className="mb-6 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 p-4 rounded-lg">
+            <p className="text-sm">
+              You're not logged in. You can still organize a match, but logging in will associate it with your profile.
+              <Button
+                variant="link"
+                className="ml-2 text-yellow-700 dark:text-yellow-300"
+                onClick={() => navigate("/login")}
+              >
+                Log in now
+              </Button>
+            </p>
+          </div>
+        )}
         <MatchForm />
-        <OrganizerDetails />
+        <OrganizerDetails userId={userId} />
       </div>
       <Navbar />
     </div>
