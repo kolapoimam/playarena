@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, LogOut } from "lucide-react";
+import { ArrowLeft, LogOut, Settings } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import UserDashboard from "@/components/UserDashboard";
 import UserMatches from "@/components/UserMatches";
@@ -17,7 +17,7 @@ const Profile = () => {
   const [profile, setProfile] = useState(null);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [showSettings, setShowSettings] = useState(false);
-  const [showLogout, setShowLogout] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
 
   useEffect(() => {
     fetchProfile();
@@ -46,23 +46,19 @@ const Profile = () => {
 
   const handleLogout = () => {
     supabase.auth.signOut().then(() => navigate("/"));
-    setShowLogout(false);
-  };
-
-  const handleAvatarClick = () => {
-    setShowLogout(!showLogout);
+    setShowDropdown(false);
   };
 
   const handleSettingsClick = () => {
     setShowSettings(true);
-    setShowLogout(false);
+    setShowDropdown(false);
   };
 
   const username = profile?.nickname || profile?.first_name || "User";
 
   return (
-    <div className="bg-white dark:bg-gray-900">
-      <div className="bg-gradient-to-r from-green-600 to-green-800 text-white p-4 flex items-center justify-between shadow-lg sticky top-0 z-10">
+    <div className="bg-white dark:bg-gray-900 min-h-screen">
+      <div className="bg-gradient-to-r from-green-600 to-green-800 text-white p-4 flex items-center justify-between shadow-lg sticky top-0 z-20">
         <Button
           variant="ghost"
           onClick={() => navigate(-1)}
@@ -82,21 +78,26 @@ const Profile = () => {
                 : "https://img-new.cgtrader.com/items/4506145/4d6ab481d2/large/football-player-avatar-3d-icon-3d-model-4d6ab481d2.jpg"
             }
             alt="User Avatar"
-            className="w-10 h-10 rounded-full cursor-pointer"
-            onClick={handleAvatarClick}
+            className="w-10 h-10 rounded-full cursor-pointer border-2 border-white shadow-md"
+            onClick={() => setShowDropdown(!showDropdown)}
           />
-          {showLogout && (
-            <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-10">
+          {showDropdown && (
+            <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl z-10 overflow-hidden">
+              <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{username}</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">{profile?.email}</p>
+              </div>
               <Button
                 variant="ghost"
-                className="w-full text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-start px-4 py-2 text-sm"
+                className="w-full text-gray-700 dark:text-gray-300 hover:bg-green-100 dark:hover:bg-green-900 flex items-center justify-start px-4 py-3 text-sm rounded-none"
                 onClick={handleSettingsClick}
               >
+                <Settings size={16} className="mr-2" />
                 Profile & Settings
               </Button>
               <Button
                 variant="ghost"
-                className="w-full text-red-500 hover:text-red-700 flex items-center justify-start px-4 py-2 text-sm"
+                className="w-full text-red-500 hover:text-red-700 hover:bg-red-100 dark:hover:bg-red-900 flex items-center justify-start px-4 py-3 text-sm rounded-none"
                 onClick={handleLogout}
               >
                 <LogOut size={16} className="mr-2" />
@@ -107,8 +108,8 @@ const Profile = () => {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto p-6 space-y-6 pb-20">
-        <div className="space-y-2">
+      <div className="max-w-4xl mx-auto">
+        <div className="bg-white dark:bg-gray-900 p-6 sticky top-[64px] z-10 shadow-sm">
           <h2 className="text-xl font-semibold text-green-700 dark:text-green-400">
             Welcome, {username}!
           </h2>
@@ -117,47 +118,47 @@ const Profile = () => {
           </p>
         </div>
 
-        {showSettings ? (
-          <ProfileSettings profile={profile} setProfile={setProfile} setShowSettings={setShowSettings} />
-        ) : (
-          <>
+        <div className="px-6 pb-20 space-y-6 min-h-[calc(100vh-200px)]">
+          {showSettings ? (
+            <ProfileSettings profile={profile} setProfile={setProfile} setShowSettings={setShowSettings} />
+          ) : (
             <Tabs
               value={activeTab}
               onValueChange={setActiveTab}
               className="w-full"
             >
-              <TabsList className="grid w-full grid-cols-3 bg-gray-100 dark:bg-gray-700 rounded-t-lg sticky top-[64px] z-10">
+              <TabsList className="grid w-full grid-cols-3 bg-gray-100 dark:bg-gray-700 rounded-t-lg sticky top-[140px] z-10 mb-6">
                 <TabsTrigger
                   value="dashboard"
-                  className="data-[state=active]:bg-green-500 data-[state=active]:text-white"
+                  className="data-[state=active]:bg-green-500 data-[state=active]:text-white py-3 text-sm font-medium"
                 >
                   Dashboard
                 </TabsTrigger>
                 <TabsTrigger
                   value="matches"
-                  className="data-[state=active]:bg-green-500 data-[state=active]:text-white"
+                  className="data-[state=active]:bg-green-500 data-[state=active]:text-white py-3 text-sm font-medium"
                 >
                   My Matches
                 </TabsTrigger>
                 <TabsTrigger
                   value="performance"
-                  className="data-[state=active]:bg-green-500 data-[state=active]:text-white"
+                  className="data-[state=active]:bg-green-500 data-[state=active]:text-white py-3 text-sm font-medium"
                 >
                   Performance
                 </TabsTrigger>
               </TabsList>
-              <TabsContent value="dashboard">
+              <TabsContent value="dashboard" className="mt-0">
                 <UserDashboard profile={profile} />
               </TabsContent>
-              <TabsContent value="matches">
+              <TabsContent value="matches" className="mt-0">
                 <UserMatches profile={profile} />
               </TabsContent>
-              <TabsContent value="performance">
+              <TabsContent value="performance" className="mt-0">
                 <Performance profile={profile} />
               </TabsContent>
             </Tabs>
-          </>
-        )}
+          )}
+        </div>
       </div>
       <Navbar />
     </div>
