@@ -1,4 +1,4 @@
-import { format, differenceInMinutes } from "date-fns";
+import { format, differenceInMinutes, differenceInHours } from "date-fns";
 import { Trophy, MapPin, Calendar, Clock, Users, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -48,7 +48,7 @@ type MatchDetailsProps = {
   handleStartMatch: () => void;
   handleEndMatch: () => void;
   loading: boolean;
-  isMatchPast: boolean; // Use the prop from ConfirmCheckin
+  isMatchPast: boolean;
 };
 
 const MatchDetails = ({ match, cashout, handleCancelMatch, handleStartMatch, handleEndMatch, loading, isMatchPast }: MatchDetailsProps) => {
@@ -62,7 +62,7 @@ const MatchDetails = ({ match, cashout, handleCancelMatch, handleStartMatch, han
 
   const canStartMatch = () => {
     if (!match || match.cancellation_status || match.match_start_time) return false;
-    return isMatchPast; // Use isMatchPast instead of isPast
+    return isMatchPast;
   };
 
   const canEndMatch = () => {
@@ -110,6 +110,15 @@ const MatchDetails = ({ match, cashout, handleCancelMatch, handleStartMatch, han
     return `₦${(checkedInPlayers * (match.price || 5000)).toLocaleString()}`;
   };
 
+  const calculateMatchDuration = () => {
+    if (!match || !match.match_start_time || !match.match_end_time) return null;
+    const start = new Date(match.match_start_time);
+    const end = new Date(match.match_end_time);
+    const hours = differenceInHours(end, start);
+    const minutes = differenceInMinutes(end, start) % 60;
+    return `${hours} hour${hours !== 1 ? "s" : ""} ${minutes} minute${minutes !== 1 ? "s" : ""}`;
+  };
+
   if (!match) return null;
 
   return (
@@ -117,18 +126,10 @@ const MatchDetails = ({ match, cashout, handleCancelMatch, handleStartMatch, han
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Match Details</h2>
         <div className="flex items-center gap-2">
-          {match.cancellation_status ? (
+          {match.cancellation_status && (
             <span className="inline-block px-3 py-1 text-sm font-medium rounded border bg-red-100 text-red-700 border-red-300">
               Cancelled
             </span>
-          ) : (
-            <Button
-              onClick={handleCancelMatch}
-              className={`bg-red-500 hover:bg-red-600 text-white ${!canCancelMatch() ? "opacity-50 cursor-not-allowed" : ""}`}
-              disabled={!canCancelMatch() || loading}
-            >
-              Cancel Match
-            </Button>
           )}
           {cashout && (
             <span
@@ -171,7 +172,22 @@ const MatchDetails = ({ match, cashout, handleCancelMatch, handleStartMatch, han
           <DollarSign size={20} className="text-green-500" />
           <span className="text-gray-900 dark:text-gray-100">{match.is_paid ? "Paid" : "Free"}</span>
         </div>
+        {match.match_start_time && match.match_end_time && (
+          <div className="flex items-center gap-3 col-span-1 sm:col-span-2">
+            <Clock size={20} className="text-green-500" />
+            <span className="text-gray-900 dark:text-gray-100">
+              Match Duration: {calculateMatchDuration()}
+            </span>
+          </div>
+        )}
       </div>
+      {match.cancellation_status && match.is_paid && (
+        <div className="mt-4 p-4 rounded-lg bg-red-100 dark:bg-red-900">
+          <p className="text-red-700 dark:text-red-300">
+            This match has been cancelled. Players will be contacted for a refund.
+          </p>
+        </div>
+      )}
       {cashout && (
         <div className="mt-4 p-4 rounded-lg bg-yellow-100 dark:bg-yellow-900">
           <p className="text-yellow-700 dark:text-yellow-300">
@@ -182,14 +198,14 @@ const MatchDetails = ({ match, cashout, handleCancelMatch, handleStartMatch, han
       <div className="flex flex-wrap gap-4 mt-4">
         <Button
           onClick={handleStartMatch}
-          className="bg-blue-500 hover:bg-blue-600 text-white"
+          className="bg-green-600 hover:bg-green-700 text-white"
           disabled={!canStartMatch() || loading}
         >
           Start Match
         </Button>
         <Button
           onClick={handleEndMatch}
-          className="bg-blue-500 hover:bg-blue-600 text-white"
+          className="bg-green-600 hover:bg-green-700 text-white"
           disabled={!canEndMatch() || loading}
         >
           End Match
