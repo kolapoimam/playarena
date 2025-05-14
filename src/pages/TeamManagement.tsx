@@ -18,6 +18,7 @@ import html2canvas from "html2canvas";
 import { DndProvider, useDrag, useDrop } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { TouchBackend } from "react-dnd-touch-backend";
+import { isPast, differenceInMinutes } from "date-fns";
 
 // Types
 type Player = {
@@ -65,6 +66,8 @@ type Match = {
   events: MatchEvent[];
   analytics: MatchAnalytics;
   is_public: boolean;
+  match_date: string;
+  match_time: string;
 };
 
 // Player Card Component
@@ -136,6 +139,124 @@ const TeamColumn = ({ team, players, setTeams, label }: { team: string; players:
   );
 };
 
+// Team Selection Dialog Component
+const TeamSelectionDialog = ({ players, teams, setTeams, isOpen, onClose, matchDate, matchTime }: { players: Player[]; teams: { teamA: Team; teamB: Team }; setTeams: any; isOpen: boolean; onClose: () => void; matchDate: string; matchTime: string }) => {
+  const { toast } = useToast();
+  const [playersPerTeam, setPlayersPerTeam] = useState(5);
+  const now = new Date();
+  const matchDateTime = new Date(`${matchDate}T${matchTime}`);
+  const isMatchPast = isPast(matchDateTime);
+
+  const balanceTeams = () => {
+    if (isMatchPast) {
+      toast({
+        title: "Action Not Available",
+        description: "Cannot manage teams for a past match.",
+        variant: "destructive",
+      });
+      return;
+    }
+    const sorted = [...players].sort((a, b) => b.skill - a.skill);
+    const totalPlayers = Math.min(playersPerTeam * 2, sorted.length);
+    const newTeams = { teamA: [], teamB: [] };
+    for (let i = 0; i < totalPlayers; i++) {
+      if (i < playersPerTeam) newTeams.teamA.push(sorted[i]);
+      else newTeams.teamB.push(sorted[i]);
+    }
+    setTeams(newTeams);
+    onClose();
+    toast({
+      title: "Teams Generated",
+      description: "Teams have been automatically assigned.",
+    });
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent>
+        <DialogTitle>Generate Teams</DialogTitle>
+        <DialogDescription>
+          <p className="mb-4">Set the number of players per team and generate balanced teams.</p>
+          <Input
+            type="number"
+            value={playersPerTeam}
+            onChange={(e) => setPlayersPerTeam(Math.max(1, Math.min(10, parseInt(e.target.value) || 5)))}
+            min="1"
+            max="10"
+            className="mb-4"
+          />
+          <Button onClick={balanceTeams} className="w-full bg-green-500 hover:bg-green-600 text-white" disabled={isMatchPast}>
+            Generate Teams
+          </Button>
+        </DialogDescription>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+// Rules Template Dialog Component
+const RulesTemplateDialog = ({ isOpen, onClose, matchId }: { isOpen: boolean; onClose: () => void; matchId: string }) => {
+  const { toast } = useToast();
+  const [selectedRule, setSelectedRule] = useState("");
+  const ruleTemplates = {
+    "Standard 11v11": "11 players per side, 90-minute match, standard fouls and offsides apply.",
+    "5v5 Casual": "5 players per side, 30-minute match, no offsides.",
+    "7v7 Youth": "7 players per side, 60-minute match, modified fouls.",
+  };
+
+  const applyRule = async () => {
+    if (!selectedRule) {
+      toast({
+        title: "Error",
+        description: "Please select a rule template.",
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      await supabase
+        .from("matches")
+        .update({ rules: ruleTemplates[selectedRule as keyof typeof ruleTemplates] })
+        .eq("id", matchId);
+      toast({
+        title: "Success",
+        description: "Rule template applied.",
+      });
+      onClose();
+    } catch (error) {
+      console.error("Error applying rule:", error);
+      toast({
+        title: "Error",
+        description: "Failed to apply rule template.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent>
+        <DialogTitle>Apply Match Rules</DialogTitle>
+        <DialogDescription>
+          <select
+            value={selectedRule}
+            onChange={(e) => setSelectedRule(e.target.value)}
+            className="w-full p-2 mb-4 border rounded"
+          >
+            <option value="">Select a rule template</option>
+            {Object.keys(ruleTemplates).map((rule) => (
+              <option key={rule} value={rule}>{rule}</option>
+            ))}
+          </select>
+          <Button onClick={applyRule} className="w-full bg-green-500 hover:bg-green-600 text-white">
+            Apply Rule
+          </Button>
+        </DialogDescription>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 // Main Component
 const TeamManagement = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -159,6 +280,8 @@ const TeamManagement = () => {
   const [history, setHistory] = useState<{ teamA: Team; teamB: Team }[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [isExporting, setIsExporting] = useState(false);
+  const [teamSelectionOpen, setTeamSelectionOpen] = useState(false);
+  const [rulesTemplateOpen, setRulesTemplateOpen] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
 
   // Fetch match and players
@@ -169,7 +292,7 @@ const TeamManagement = () => {
       try {
         const { data, error } = await supabase
           .from("matches")
-          .select("id, slug, super_code, title, teamA, teamB, scoreA, scoreB, events, analytics, is_public")
+          .select("id, slug, super_code, title, teamA, teamB, scoreA, scoreB, events, analytics, is_public, match_date, match_time")
           .eq("slug", slug)
           .single();
 
@@ -189,7 +312,7 @@ const TeamManagement = () => {
         });
         setIsPublic(data.is_public || false);
 
-        // Fetch players (simulated as registered players for the match)
+        // Fetch players
         const { data: playersData, error: playersError } = await supabase
           .from("players")
           .select("id, name, avatar, skill, position")
@@ -329,7 +452,7 @@ const TeamManagement = () => {
       match_id: match?.id || "",
       type,
       team,
-      minute: Math.floor(Date.now() / 60000) % 90, // Simulated match minute
+      minute: Math.floor(Date.now() / 60000) % 90,
       description,
     };
 
@@ -406,6 +529,8 @@ const TeamManagement = () => {
     });
   };
 
+  const isMatchPast = match ? isPast(new Date(`${match.match_date}T${match.match_time}`)) : false;
+
   if (!match) {
     return (
       <div className="flex justify-center items-center min-h-screen bg-gray-100 dark:bg-gray-900">
@@ -476,15 +601,17 @@ const TeamManagement = () => {
                     </span>
                   </div>
                   {mode === "automatic" ? (
-                    <Button onClick={balanceTeams} className="bg-green-500 hover:bg-green-600 text-white">
-                      Suggest Best Fit
-                    </Button>
+                    <DialogTrigger asChild>
+                      <Button onClick={() => setTeamSelectionOpen(true)} className="bg-green-500 hover:bg-green-600 text-white" disabled={isMatchPast}>
+                        Suggest Best Fit
+                      </Button>
+                    </DialogTrigger>
                   ) : (
                     <div className="flex space-x-2">
-                      <Button onClick={handleUndo} disabled={historyIndex <= 0} variant="outline">
+                      <Button onClick={handleUndo} disabled={historyIndex <= 0 || isMatchPast} variant="outline">
                         Undo
                       </Button>
-                      <Button onClick={handleRedo} disabled={historyIndex >= history.length - 1} variant="outline">
+                      <Button onClick={handleRedo} disabled={historyIndex >= history.length - 1 || isMatchPast} variant="outline">
                         Redo
                       </Button>
                     </div>
@@ -494,9 +621,14 @@ const TeamManagement = () => {
                   <TeamColumn team="teamA" players={teams.teamA} setTeams={setTeams} label="Team A" />
                   <TeamColumn team="teamB" players={teams.teamB} setTeams={setTeams} label="Team B" />
                 </div>
-                <Button onClick={saveTeams} className="w-full bg-green-500 hover:bg-green-600 text-white">
+                <Button onClick={saveTeams} className="w-full bg-green-500 hover:bg-green-600 text-white" disabled={isMatchPast}>
                   Save Teams
                 </Button>
+                <DialogTrigger asChild>
+                  <Button onClick={() => setRulesTemplateOpen(true)} className="mt-2 w-full bg-green-500 hover:bg-green-600 text-white" disabled={isMatchPast}>
+                    Apply Match Rules
+                  </Button>
+                </DialogTrigger>
               </div>
 
               {/* Match Analytics Section */}
@@ -511,6 +643,7 @@ const TeamManagement = () => {
                       value={scoreA}
                       onChange={(e) => handleScoreChange("teamA", e.target.value)}
                       className="text-center text-2xl font-bold"
+                      disabled={isMatchPast}
                     />
                   </div>
                   <span className="text-xl font-bold text-gray-700 dark:text-gray-300">-</span>
@@ -521,6 +654,7 @@ const TeamManagement = () => {
                       value={scoreB}
                       onChange={(e) => handleScoreChange("teamB", e.target.value)}
                       className="text-center text-2xl font-bold"
+                      disabled={isMatchPast}
                     />
                   </div>
                 </div>
@@ -530,6 +664,7 @@ const TeamManagement = () => {
                     onClick={() => addEvent("goal", "teamA", "Goal by Team A")}
                     variant="outline"
                     className="flex-1"
+                    disabled={isMatchPast}
                   >
                     Goal (A)
                   </Button>
@@ -537,6 +672,7 @@ const TeamManagement = () => {
                     onClick={() => addEvent("goal", "teamB", "Goal by Team B")}
                     variant="outline"
                     className="flex-1"
+                    disabled={isMatchPast}
                   >
                     Goal (B)
                   </Button>
@@ -544,6 +680,7 @@ const TeamManagement = () => {
                     onClick={() => addEvent("card", "teamA", "Card for Team A")}
                     variant="outline"
                     className="flex-1"
+                    disabled={isMatchPast}
                   >
                     Card (A)
                   </Button>
@@ -551,6 +688,7 @@ const TeamManagement = () => {
                     onClick={() => addEvent("card", "teamB", "Card for Team B")}
                     variant="outline"
                     className="flex-1"
+                    disabled={isMatchPast}
                   >
                     Card (B)
                   </Button>
@@ -578,6 +716,7 @@ const TeamManagement = () => {
                           updateAnalytics("teamA", "possession", parseInt(e.target.value))
                         }
                         className="w-20"
+                        disabled={isMatchPast}
                       />
                       <span className="text-gray-700 dark:text-gray-300">%</span>
                       <Input
@@ -587,6 +726,7 @@ const TeamManagement = () => {
                           updateAnalytics("teamB", "possession", parseInt(e.target.value))
                         }
                         className="w-20"
+                        disabled={isMatchPast}
                       />
                       <span className="text-gray-700 dark:text-gray-300">%</span>
                     </div>
@@ -599,6 +739,7 @@ const TeamManagement = () => {
                         value={analytics.teamA.shots}
                         onChange={(e) => updateAnalytics("teamA", "shots", parseInt(e.target.value))}
                         className="w-full"
+                        disabled={isMatchPast}
                       />
                     </div>
                     <div>
@@ -608,6 +749,7 @@ const TeamManagement = () => {
                         value={analytics.teamB.shots}
                         onChange={(e) => updateAnalytics("teamB", "shots", parseInt(e.target.value))}
                         className="w-full"
+                        disabled={isMatchPast}
                       />
                     </div>
                     <div>
@@ -617,6 +759,7 @@ const TeamManagement = () => {
                         value={analytics.teamA.fouls}
                         onChange={(e) => updateAnalytics("teamA", "fouls", parseInt(e.target.value))}
                         className="w-full"
+                        disabled={isMatchPast}
                       />
                     </div>
                     <div>
@@ -626,6 +769,7 @@ const TeamManagement = () => {
                         value={analytics.teamB.fouls}
                         onChange={(e) => updateAnalytics("teamB", "fouls", parseInt(e.target.value))}
                         className="w-full"
+                        disabled={isMatchPast}
                       />
                     </div>
                   </div>
@@ -642,6 +786,7 @@ const TeamManagement = () => {
                     checked={isPublic}
                     onCheckedChange={togglePrivacy}
                     className="data-[state=checked]:bg-green-500"
+                    disabled={isMatchPast}
                   />
                 </div>
                 {/* Report Export */}
@@ -678,7 +823,7 @@ const TeamManagement = () => {
                     <Button
                       onClick={handleExport}
                       className="flex-1 bg-green-500 hover:bg-green-600 text-white"
-                      disabled={isExporting}
+                      disabled={isExporting || isMatchPast}
                     >
                       <Download size={16} className="mr-2" />
                       {isExporting ? "Exporting..." : "Export Report"}
@@ -686,6 +831,7 @@ const TeamManagement = () => {
                     <Button
                       onClick={handleShare}
                       className="flex-1 bg-green-500 hover:bg-green-600 text-white"
+                      disabled={isMatchPast}
                     >
                       <Share2 size={16} className="mr-2" />
                       Share
@@ -695,6 +841,20 @@ const TeamManagement = () => {
               </div>
             </>
           )}
+          <TeamSelectionDialog
+            players={players}
+            teams={teams}
+            setTeams={setTeams}
+            isOpen={teamSelectionOpen}
+            onClose={() => setTeamSelectionOpen(false)}
+            matchDate={match?.match_date || ""}
+            matchTime={match?.match_time || ""}
+          />
+          <RulesTemplateDialog
+            isOpen={rulesTemplateOpen}
+            onClose={() => setRulesTemplateOpen(false)}
+            matchId={match?.id || ""}
+          />
         </div>
         <Navbar />
       </div>
