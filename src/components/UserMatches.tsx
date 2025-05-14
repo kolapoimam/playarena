@@ -5,7 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, Users } from "lucide-react";
+import { Calendar, Users, MapPin } from "lucide-react";
 import { format } from "date-fns";
 
 type Match = {
@@ -16,6 +16,7 @@ type Match = {
   super_code?: string;
   confirmation_code?: string;
   status: string;
+  venue_name?: string;
 };
 
 type Profile = {
@@ -46,7 +47,7 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
       .from("user_organized_matches")
       .select(`
         match_id,
-        matches(id, title, slug, match_date, super_code, status)
+        matches(id, title, slug, match_date, super_code, status, venue_id, venues(name))
       `)
       .eq("user_id", session.session.user.id)
       .order("created_at", { ascending: false })
@@ -61,6 +62,7 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
       orgData.map((item) => ({
         ...item.matches,
         super_code: item.matches.super_code,
+        venue_name: item.matches.venues?.name,
       }))
     );
 
@@ -69,7 +71,7 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
       .select(`
         match_id,
         player_id,
-        matches(id, title, slug, match_date, status),
+        matches(id, title, slug, match_date, status, venue_id, venues(name)),
         players(confirmation_code)
       `)
       .eq("user_id", session.session.user.id)
@@ -85,6 +87,7 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
       joinData.map((item) => ({
         ...item.matches,
         confirmation_code: item.players.confirmation_code,
+        venue_name: item.matches.venues?.name,
       }))
     );
   };
@@ -177,6 +180,10 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
                       </p>
                       <p className="text-sm text-gray-600 dark:text-gray-400">Time: {timeStr}</p>
                       <p className="text-sm text-gray-600 dark:text-gray-400">
+                        <MapPin size={14} className="inline mr-1" />
+                        {match.venue_name || "Venue TBD"}
+                      </p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
                         Super Code: {match.super_code || "N/A"}
                       </p>
                     </div>
@@ -207,7 +214,7 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
                       <Button
                         size="sm"
                         className="bg-green-500 hover:bg-green-600 text-white"
-                        onClick={() => navigate(`/matches/${match.slug}`)}
+                        onClick={() => navigate(`/match/${match.slug}`)}
                       >
                         View Details
                       </Button>
@@ -237,6 +244,10 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
                         {dateStr}
                       </p>
                       <p className="text-sm text-gray-600 dark:text-gray-400">Time: {timeStr}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        <MapPin size={14} className="inline mr-1" />
+                        {match.venue_name || "Venue TBD"}
+                      </p>
                       <p className="text-sm text-gray-600 dark:text-gray-400">
                         Confirmation Code: {match.confirmation_code || "N/A"}
                       </p>
@@ -268,7 +279,7 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
                       <Button
                         size="sm"
                         className="bg-green-500 hover:bg-green-600 text-white"
-                        onClick={() => navigate(`/matches/${match.slug}`)}
+                        onClick={() => navigate(`/match/${match.slug}`)}
                       >
                         View Details
                       </Button>
