@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/dialog";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import VenueForm from "@/components/VenueForm";
 
 const skillLevels = ["Beginner", "Amateur", "Intermediate", "Advanced", "Professional"] as const;
@@ -125,6 +126,7 @@ const MatchForm = () => {
   const { toast } = useToast();
   const [venues, setVenues] = useState<Venue[]>([]);
   const [venuesLoading, setVenuesLoading] = useState(true);
+  const [venuesError, setVenuesError] = useState<string | null>(null);
   const [searchParams] = useSearchParams();
   const preSelectedVenueSlug = searchParams.get('venue');
   const [venueDialogOpen, setVenueDialogOpen] = useState(false);
@@ -153,17 +155,26 @@ const MatchForm = () => {
   useEffect(() => {
     const savedForm = localStorage.getItem("organizeFormState");
     if (savedForm) {
-      const parsed = JSON.parse(savedForm);
-      if (parsed.match_date) {
-        parsed.match_date = new Date(parsed.match_date);
+      try {
+        const parsed = JSON.parse(savedForm);
+        if (parsed.match_date) {
+          parsed.match_date = new Date(parsed.match_date);
+        }
+        form.reset(parsed);
+      } catch (error) {
+        console.error("Error parsing saved form state:", error);
+        localStorage.removeItem("organizeFormState");
       }
-      form.reset(parsed);
     }
   }, [form]);
 
   useEffect(() => {
     const subscription = form.watch((value) => {
-      localStorage.setItem("organizeFormState", JSON.stringify(value));
+      try {
+        localStorage.setItem("organizeFormState", JSON.stringify(value));
+      } catch (error) {
+        console.error("Error saving form state:", error);
+      }
     });
     return () => subscription.unsubscribe();
   }, [form.watch]);
@@ -174,6 +185,8 @@ const MatchForm = () => {
   useEffect(() => {
     const fetchVenues = async () => {
       try {
+        setVenuesLoading(true);
+        setVenuesError(null);
         const { data, error } = await supabase
           .from("venues")
           .select("id, slug, name, city")
@@ -186,10 +199,18 @@ const MatchForm = () => {
           const venue = data?.find(v => v.slug === preSelectedVenueSlug);
           if (venue) {
             form.setValue("venue_id", venue.id);
+          } else {
+            setVenuesError("Selected venue not found.");
+            toast({
+              title: "Warning",
+              description: "The pre-selected venue was not found.",
+              variant: "destructive",
+            });
           }
         }
       } catch (error) {
         console.error("Error fetching venues:", error);
+        setVenuesError("Failed to load venues. Please try again.");
         toast({
           title: "Error",
           description: "Failed to load venues. Please try again.",
@@ -215,6 +236,21 @@ const MatchForm = () => {
       form.setValue('access_password', null);
     }
   }, [isPrivate, form]);
+
+  if (venuesError) {
+    return (
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+        <p className="text-red-600 dark:text-red-400">{venuesError}</p>
+        <Button
+          variant="outline"
+          className="mt-4"
+          onClick={() => window.location.reload()}
+        >
+          Retry
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <Form {...form}>
@@ -255,7 +291,15 @@ const MatchForm = () => {
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
                       <VenueForm 
-                        onSuccess={handleVenueCreated} 
+                        onSuccess={(venueId, venueSlug, venueName) => {
+                          setVenues(prev => [{ id: venueId, slug: venueSlug, name: venueName, city: "" }, ...prev]);
+                          form.setValue("venue_id", venueId);
+                          setVenueDialogOpen(false);
+                          toast({
+                            title: "Venue created",
+                            description: `${venueName} has been added to venues.`,
+                          });
+                        }} 
                         onCancel={() => setVenueDialogOpen(false)} 
                       />
                     </DialogContent>
@@ -507,16 +551,6 @@ const MatchForm = () => {
       </form>
     </Form>
   );
-
-  const handleVenueCreated = (venueId: string, venueSlug: string, venueName: string) => {
-    setVenues(prev => [{ id: venueId, slug: venueSlug, name: venueName, city: "" }, ...prev]);
-    form.setValue("venue_id", venueId);
-    setVenueDialogOpen(false);
-    toast({
-      title: "Venue created",
-      description: `${venueName} has been added to venues.`,
-    });
-  };
 };
 
 export default MatchForm;
