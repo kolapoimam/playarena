@@ -2,12 +2,12 @@ import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
-import { Calendar, MapPin, Users, Search as SearchIcon } from "lucide-react";
+import SearchBar from "@/components/SearchBar";
+import { Calendar, MapPin, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { format, isToday, isPast, differenceInHours } from "date-fns";
+import { format, isToday, isPast, differenceInHours, addHours } from "date-fns";
 
 type Match = {
   id: string;
@@ -18,6 +18,8 @@ type Match = {
   is_paid: boolean;
   price: number | null;
   total_slots: number;
+  status: string;
+  cancellation_status: boolean;
   venue: {
     slug: string;
     name: string;
@@ -26,6 +28,8 @@ type Match = {
   } | null;
   players: {
     player_name: string;
+    number_of_slots: number;
+    cancellation_status: boolean;
   }[];
 };
 
@@ -40,9 +44,8 @@ type Venue = {
 const ITEMS_PER_PAGE = 4;
 
 const SearchPage = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState(searchParams.get("q") || "");
   const [matches, setMatches] = useState<Match[]>([]);
   const [venues, setVenues] = useState<Venue[]>([]);
   const [loading, setLoading] = useState(false);
@@ -53,27 +56,15 @@ const SearchPage = () => {
   useEffect(() => {
     const query = searchParams.get("q");
     if (query) {
-      setSearchTerm(query);
       searchMatchesAndVenues(query);
       setHasSearched(true);
-      setCurrentPage(1); // Reset to first page on new search
+      setCurrentPage(1);
     }
   }, [searchParams]);
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchTerm.trim()) {
-      setSearchParams({ q: searchTerm });
-      searchMatchesAndVenues(searchTerm);
-      setHasSearched(true);
-      setCurrentPage(1); // Reset to first page on new search
-    }
-  };
 
   const searchMatchesAndVenues = async (query: string) => {
     setLoading(true);
     try {
-      // Step 1: Get all venue IDs that match the query
       const { data: matchingVenues, error: venueError } = await supabase
         .from("venues")
         .select("id")
@@ -83,22 +74,18 @@ const SearchPage = () => {
 
       const venueIds = matchingVenues.map((venue) => venue.id);
 
-      // Step 2: Search matches by title or associated venue
       const { data: matchData, error: matchError } = await supabase
         .from("matches")
         .select(`
-          id, slug, title, match_date, match_time, is_paid, price, total_slots,
+          id, slug, title, match_date, match_time, is_paid, price, total_slots, status, cancellation_status,
           venue:venues(slug, name, city, state),
-          players:players(player_name)
+          players(player_name, number_of_slots, cancellation_status)
         `)
-        .or(
-          `title.ilike.%${query}%,venue_id.in.(${venueIds.join(",")})`
-        )
+        .or(`title.ilike.%${query}%,venue_id.in.(${venueIds.join(",")})`)
         .order("match_date", { ascending: true });
 
       if (matchError) throw matchError;
 
-      // Step 3: Search for venues directly
       const { data: venueData, error: venueSearchError } = await supabase
         .from("venues")
         .select("id, slug, name, city, state")
@@ -134,34 +121,54 @@ const SearchPage = () => {
     return `${displayHour}:${minutes} ${period}`;
   };
 
-  const getMatchStatus = (matchDate: string, matchTime: string) => {
-    const matchDateTime = new Date(`${matchDate}T${matchTime}:00Z`);
+  const getMatchStatus = (match: Match) => {
+    const matchDateTime = new Date(`${match.match_date}T${match.match_time}:00Z`);
     const now = new Date();
+    const fortyEightHoursAfter = addHours(matchDateTime, 48);
 
-    let statusLabel = "Upcoming";
-    let statusClass = "bg-blue-100 text-blue-800";
+    let statusLabel = "";
+    let statusClass = "";
+    let isFeedbackWindow = false;
 
-    if (isPast(matchDateTime) && !isToday(matchDateTime)) {
-      statusLabel = "Passed";
-      statusClass = "bg-gray-200 text-gray-600";
-    } else if (isToday(matchDateTime)) {
-      const hoursDiff = differenceInHours(matchDateTime, now);
-      if (hoursDiff >= 0 && hoursDiff <= 2) {
-        statusLabel = "Live";
-        statusClass = "bg-red-100 text-red-700 animate-pulse";
-      } else if (hoursDiff > 2) {
-        statusLabel = "Today";
-        statusClass = "bg-green-100 text-green-700";
-      } else {
-        statusLabel = "Passed";
-        statusClass = "bg-gray-200 text-gray-600";
+    if (match.cancellation_status) {
+      statusLabel = "Cancelled";
+      statusClass = "bg-red-100 text-red-800";
+    } else {
+      switch (match.status) {
+        case "cancelled":
+          statusLabel = "Cancelled";
+          statusClass = "bg-red-100 text-red-800";
+          break;
+        case "completed":
+          statusLabel = "Completed";
+          statusClass = "bg-gray-100 text-gray-800";
+          isFeedbackWindow = now >= matchDateTime && now < fortyEightHoursAfter;
+          break;
+        case "live":
+          statusLabel = "Live";
+          statusClass = "bg-green-100 text-green-800 animate-pulse";
+          break;
+        case "upcoming":
+          statusLabel = isToday(matchDateTime) ? "Today" : "Upcoming";
+          statusClass = isToday(matchDateTime)
+            ? "bg-green-100 text-green-700"
+            : "bg-blue-100 text-blue-800";
+          break;
+        default:
+          statusLabel = "Upcoming";
+          statusClass = "bg-blue-100 text-blue-800";
       }
     }
 
-    return { statusLabel, statusClass };
+    const totalPlayerSlots = match.players.reduce(
+      (sum, player) => sum + (player.cancellation_status ? 0 : player.number_of_slots || 1),
+      0
+    );
+    const isFull = totalPlayerSlots >= match.total_slots;
+
+    return { statusLabel, statusClass, isFull, isFeedbackWindow };
   };
 
-  // Pagination logic
   const totalMatches = matches.length;
   const totalVenues = venues.length;
   const totalPages = Math.ceil(
@@ -182,32 +189,13 @@ const SearchPage = () => {
   };
 
   return (
-    <div className="min-h-screen pb-20 bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen pb-24 bg-gray-50 dark:bg-gray-900">
       <div className="p-4 max-w-5xl mx-auto">
         <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">Find Match or Venue</h1>
 
-        <form onSubmit={handleSearch} className="mb-6 relative">
-          <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-            <SearchIcon className="h-5 w-5 text-muted-foreground" />
-          </div>
-          <Input
-            type="search"
-            placeholder="Search matches by title, venue, city, or state..."
-            value={searchTerm}
-            onChange={(e) => {
-              const value = e.target.value.replace(/[^A-Za-z\s]/g, ""); // Allow only alphabetical characters and spaces
-              setSearchTerm(value);
-            }}
-            className="pl-12 pr-24 py-2 w-full rounded-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-green-500"
-          />
-          <Button
-            type="submit"
-            size="sm"
-            className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-green-500 hover:bg-green-600 text-white"
-          >
-            Search
-          </Button>
-        </form>
+        <div className="mb-6">
+          <SearchBar />
+        </div>
 
         {hasSearched && (
           <div className="mb-6 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
@@ -227,7 +215,7 @@ const SearchPage = () => {
             value={activeTab}
             onValueChange={(value) => {
               setActiveTab(value as "matches" | "venues");
-              setCurrentPage(1); // Reset to first page when switching tabs
+              setCurrentPage(1);
             }}
             className="w-full"
           >
@@ -258,9 +246,10 @@ const SearchPage = () => {
               {paginatedMatches.length > 0 ? (
                 <div className="space-y-4">
                   {paginatedMatches.map((match) => {
-                    const { statusLabel, statusClass } = getMatchStatus(
-                      match.match_date,
-                      match.match_time
+                    const { statusLabel, statusClass, isFull, isFeedbackWindow } = getMatchStatus(match);
+                    const totalPlayerSlots = match.players.reduce(
+                      (sum, player) => sum + (player.cancellation_status ? 0 : player.number_of_slots || 1),
+                      0
                     );
 
                     return (
@@ -301,7 +290,7 @@ const SearchPage = () => {
                             <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                               <Users size={16} />
                               <span>
-                                {match.players?.length || 0}/{match.total_slots}{" "}
+                                {totalPlayerSlots}/{match.total_slots}{" "}
                                 players
                               </span>
                             </div>
@@ -312,6 +301,41 @@ const SearchPage = () => {
                                 : "Free"}
                             </span>
                           </div>
+                        </div>
+
+                        <div className="mt-4 flex gap-2">
+                          {isFeedbackWindow ? (
+                            <Button
+                              className="flex-1 bg-green-500 hover:bg-green-600 text-white rounded-lg"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/feedback?matchId=${match.id}`);
+                              }}
+                            >
+                              Give Feedback
+                            </Button>
+                          ) : (match.cancellation_status || match.status === "cancelled" || match.status === "completed" || isFull) ? (
+                            <Button
+                              className="flex-1 bg-gray-500 text-white rounded-lg"
+                              disabled
+                            >
+                              {match.cancellation_status || match.status === "cancelled"
+                                ? "Cancelled"
+                                : match.status === "completed"
+                                ? "Completed"
+                                : "Full"}
+                            </Button>
+                          ) : (
+                            <Button
+                              className="flex-1 bg-green-500 hover:bg-green-600 text-white rounded-lg"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/join/${match.slug}`);
+                              }}
+                            >
+                              Join Match
+                            </Button>
+                          )}
                         </div>
                       </div>
                     );
