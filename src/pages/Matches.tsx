@@ -12,7 +12,6 @@ import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DateTime } from "luxon";
 
-// Match type definition based on the existing Supabase schema
 type Match = {
   id: string;
   slug: string;
@@ -26,6 +25,10 @@ type Match = {
   organizer_name: string;
   is_private: boolean;
   access_password: string | null;
+  status: string;
+  cancellation_status: boolean;
+  skill_level?: string;
+  match_type?: string;
   venue: {
     slug: string;
     name: string;
@@ -34,11 +37,12 @@ type Match = {
   } | null;
   players: {
     player_name: string;
+    number_of_slots: number;
+    cancellation_status: boolean;
   }[];
   created_at: string;
 };
 
-// Venue type for filter dropdown
 type Venue = {
   id: string;
   slug: string;
@@ -95,15 +99,14 @@ const Matches = () => {
         .from("matches")
         .select(
           `
-          id, slug, title, match_date, match_time, total_slots, is_paid, price, notes, organizer_name, is_private, access_password,
+          id, slug, title, match_date, match_time, total_slots, is_paid, price, notes, organizer_name, is_private, access_password, status, cancellation_status, skill_level, match_type,
           venue:venues(slug, name, city, state),
-          players(*),
+          players(player_name, number_of_slots, cancellation_status),
           created_at
         `,
           { count: "exact" }
         );
 
-      // Apply filters
       if (isPaidFilter !== null) {
         query = query.eq("is_paid", isPaidFilter);
       }
@@ -155,14 +158,12 @@ const Matches = () => {
         query = query.eq("venue.state", stateFilter);
       }
 
-      // Sorting logic
       if (currentPage === 1) {
         query = query.order("created_at", { ascending: false });
       } else {
         query = query.order("match_date", { ascending: true }).order("match_time", { ascending: true });
       }
 
-      // Pagination
       const start = (currentPage - 1) * matchesPerPage;
       const end = start + matchesPerPage - 1;
       query = query.range(start, end);
@@ -198,29 +199,52 @@ const Matches = () => {
     return time.toFormat("hh:mm a");
   };
 
-  const getMatchStatus = (matchDate: string, matchTime: string) => {
-    const matchDateTime = DateTime.fromISO(`${matchDate}T${matchTime}`, { zone: "utc" }).setZone(LAGOS_TIMEZONE);
+  const getMatchStatus = (match: Match) => {
+    const matchDateTime = DateTime.fromISO(`${match.match_date}T${match.match_time}`, { zone: "utc" }).setZone(LAGOS_TIMEZONE);
     const now = DateTime.now().setZone(LAGOS_TIMEZONE);
-    const twoHoursLater = now.plus({ hours: 2 });
+    const fortyEightHoursAfter = matchDateTime.plus({ hours: 48 });
 
-    let statusLabel = "Upcoming Match";
-    let statusClass = "bg-blue-100 text-blue-800";
+    let statusLabel = "";
+    let statusClass = "";
+    let isFeedbackWindow = false;
 
-    if (matchDateTime < now) {
-      statusLabel = "Match Passed";
-      statusClass = "bg-gray-200 text-gray-600";
-    } else if (matchDateTime.hasSame(now, "day")) {
-      const hoursDiff = matchDateTime.diff(now, "hours").hours;
-      if (hoursDiff >= 0 && hoursDiff <= 2) {
-        statusLabel = "Live Match";
-        statusClass = "bg-red-100 text-red-700 animate-pulse";
-      } else if (hoursDiff > 2) {
-        statusLabel = "Today's Match";
-        statusClass = "bg-green-100 text-green-700";
+    if (match.cancellation_status) {
+      statusLabel = "Cancelled";
+      statusClass = "bg-red-100 text-red-800";
+    } else {
+      switch (match.status) {
+        case "cancelled":
+          statusLabel = "Cancelled";
+          statusClass = "bg-red-100 text-red-800";
+          break;
+        case "completed":
+          statusLabel = "Completed";
+          statusClass = "bg-gray-100 text-gray-800";
+          isFeedbackWindow = now >= matchDateTime && now < fortyEightHoursAfter;
+          break;
+        case "live":
+          statusLabel = "Live";
+          statusClass = "bg-green-100 text-green-800 animate-pulse";
+          break;
+        case "upcoming":
+          statusLabel = matchDateTime.hasSame(now, "day") ? "Today" : "Upcoming";
+          statusClass = matchDateTime.hasSame(now, "day")
+            ? "bg-green-100 text-green-700"
+            : "bg-blue-100 text-blue-800";
+          break;
+        default:
+          statusLabel = "Upcoming";
+          statusClass = "bg-blue-100 text-blue-800";
       }
     }
 
-    return { statusLabel, statusClass };
+    const totalPlayerSlots = match.players.reduce(
+      (sum, player) => sum + (player.cancellation_status ? 0 : player.number_of_slots || 1),
+      0
+    );
+    const isFull = totalPlayerSlots >= match.total_slots;
+
+    return { statusLabel, statusClass, isFull, isFeedbackWindow };
   };
 
   const hasAccess = (matchSlug: string) => {
@@ -260,7 +284,7 @@ const Matches = () => {
   ];
 
   return (
-    <div className="min-h-screen pb-20 bg-gray-100 dark:bg-gray-900">
+    <div className="min-h-screen pb-24 bg-gray-100 dark:bg-gray-900">
       <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg">
         <div className="flex items-center justify-between max-w-7xl mx-auto">
           <Button 
@@ -420,9 +444,13 @@ const Matches = () => {
       ) : matches.length > 0 ? (
         <div className="px-4 space-y-4">
           {matches.map((match) => {
-            const { statusLabel, statusClass } = getMatchStatus(match.match_date, match.match_time);
+            const { statusLabel, statusClass, isFull, isFeedbackWindow } = getMatchStatus(match);
             const isAccessible = !match.is_private || hasAccess(match.slug);
-            
+            const totalPlayerSlots = match.players.reduce(
+              (sum, player) => sum + (player.cancellation_status ? 0 : player.number_of_slots || 1),
+              0
+            );
+
             return (
               <div 
                 key={match.id} 
@@ -489,9 +517,21 @@ const Matches = () => {
                     <div className="flex items-center gap-2">
                       <Users size={16} />
                       <span>
-                        {match.players?.length || 0}/{match.total_slots} spots filled
+                        {totalPlayerSlots}/{match.total_slots} spots filled
                       </span>
                     </div>
+
+                    {match.skill_level && (
+                      <div className="flex items-center gap-2">
+                        <span>Skill Level: {match.skill_level}</span>
+                      </div>
+                    )}
+
+                    {match.match_type && (
+                      <div className="flex items-center gap-2">
+                        <span>Match Type: {match.match_type}</span>
+                      </div>
+                    )}
                   </div>
                   
                   <div className="mt-4 flex justify-between items-center">
@@ -500,13 +540,44 @@ const Matches = () => {
                       <p className="font-medium text-gray-800 dark:text-gray-200">{match.organizer_name}</p>
                     </div>
                     
-                    <Button 
-                      variant="outline"
-                      size="sm"
-                      onClick={() => navigate(`/match/${match.slug}`)}
-                    >
-                      View Details
-                    </Button>
+                    <div className="flex gap-2">
+                      {isFeedbackWindow ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => navigate(`/feedback?matchId=${match.id}`)}
+                        >
+                          Give Feedback
+                        </Button>
+                      ) : (match.cancellation_status || match.status === "cancelled" || match.status === "completed" || isFull) ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled
+                        >
+                          {match.cancellation_status || match.status === "cancelled"
+                            ? "Cancelled"
+                            : match.status === "completed"
+                            ? "Completed"
+                            : "Full"}
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => navigate(`/join/${match.slug}`)}
+                        >
+                          Join Match
+                        </Button>
+                      )}
+                      <Button 
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigate(`/match/${match.slug}`)}
+                      >
+                        View Details
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -522,7 +593,8 @@ const Matches = () => {
               <ChevronLeft size={16} className="mr-2" />
               Previous
             </Button>
-            <span className="text-gray-700 dark:text-gray-300">
+            <span className="text-gray-7
+00 dark:text-gray-300">
               Page {currentPage} of {totalPages}
             </span>
             <Button
