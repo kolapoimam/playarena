@@ -58,9 +58,11 @@ const Profile = () => {
     setShowLogout(false);
   };
 
+  const username = profile?.nickname || profile?.first_name || "User";
+
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900 pb-20 relative">
-      <div className="bg-gradient-to-r from-green-600 to-green-800 text-white p-4 flex items-center justify-between shadow-lg">
+    <div className="bg-white dark:bg-gray-900">
+      <div className="bg-gradient-to-r from-green-600 to-green-800 text-white p-4 flex items-center justify-between shadow-lg sticky top-0 z-10">
         <Button
           variant="ghost"
           onClick={() => navigate(-1)}
@@ -105,18 +107,26 @@ const Profile = () => {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto p-6 space-y-6">
+      <div className="max-w-4xl mx-auto p-6 space-y-6 pb-20">
+        <div className="space-y-2">
+          <h2 className="text-xl font-semibold text-green-700 dark:text-green-400">
+            Welcome, {username}!
+          </h2>
+          <p className="text-gray-700 dark:text-gray-300">
+            Explore your dashboard, manage matches, or check your performance stats.
+          </p>
+        </div>
+
         {showSettings ? (
           <ProfileSettings profile={profile} setProfile={setProfile} setShowSettings={setShowSettings} />
         ) : (
           <>
-            <UserDashboard profile={profile} />
             <Tabs
               value={activeTab}
               onValueChange={setActiveTab}
               className="w-full"
             >
-              <TabsList className="grid w-full grid-cols-3 bg-gray-100 dark:bg-gray-700 rounded-t-lg">
+              <TabsList className="grid w-full grid-cols-3 bg-gray-100 dark:bg-gray-700 rounded-t-lg sticky top-[64px] z-10">
                 <TabsTrigger
                   value="dashboard"
                   className="data-[state=active]:bg-green-500 data-[state=active]:text-white"
@@ -137,11 +147,7 @@ const Profile = () => {
                 </TabsTrigger>
               </TabsList>
               <TabsContent value="dashboard">
-                <div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md">
-                  <p className="text-lg text-gray-700 dark:text-gray-300">
-                    View your matches or performance stats using the tabs above.
-                  </p>
-                </div>
+                <UserDashboard profile={profile} />
               </TabsContent>
               <TabsContent value="matches">
                 <UserMatches profile={profile} />
