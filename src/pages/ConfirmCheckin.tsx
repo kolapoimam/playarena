@@ -7,9 +7,9 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, AlertCircle, Loader2 } from "lucide-react";
 import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
-import MatchCodeInput from "./MatchCodeInput";
-import MatchDetails from "./MatchDetails";
-import PlayerManagement from "./PlayerManagement";
+import MatchCodeInput from "@/components/MatchCodeInput";
+import MatchDetails from "@/components/MatchDetails";
+import PlayerManagement from "@components/PlayerManagement";
 
 type Match = {
   id: string;
