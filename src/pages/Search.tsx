@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
-import { Calendar, MapPin, Users, Search as SearchIcon, Grid, List } from "lucide-react";
+import { Calendar, MapPin, Users, Search as SearchIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -49,7 +49,6 @@ const SearchPage = () => {
   const [hasSearched, setHasSearched] = useState(false);
   const [activeTab, setActiveTab] = useState<"matches" | "venues">("matches");
   const [currentPage, setCurrentPage] = useState(1);
-  const [viewMode, setViewMode] = useState<"grid" | "list">("list");
 
   useEffect(() => {
     const query = searchParams.get("q");
@@ -247,26 +246,6 @@ const SearchPage = () => {
               </TabsTrigger>
             </TabsList>
           </Tabs>
-          <div className="flex gap-2 ml-4">
-            <Button
-              variant={viewMode === "list" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setViewMode("list")}
-              className={`flex items-center gap-1 ${viewMode === "list" ? "bg-green-500 hover:bg-green-600 text-white" : ""}`}
-            >
-              <List size={16} />
-              List
-            </Button>
-            <Button
-              variant={viewMode === "grid" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setViewMode("grid")}
-              className={`flex items-center gap-1 ${viewMode === "grid" ? "bg-green-500 hover:bg-green-600 text-white" : ""}`}
-            >
-              <Grid size={16} />
-              Grid
-            </Button>
-          </div>
         </div>
 
         {loading ? (
@@ -277,13 +256,7 @@ const SearchPage = () => {
           <Tabs value={activeTab} className="w-full">
             <TabsContent value="matches">
               {paginatedMatches.length > 0 ? (
-                <div
-                  className={
-                    viewMode === "grid"
-                      ? "grid grid-cols-1 sm:grid-cols-2 gap-4"
-                      : "space-y-4"
-                  }
-                >
+                <div className="space-y-4">
                   {paginatedMatches.map((match) => {
                     const { statusLabel, statusClass } = getMatchStatus(
                       match.match_date,
@@ -293,9 +266,7 @@ const SearchPage = () => {
                     return (
                       <div
                         key={match.id}
-                        className={`border rounded-lg p-4 bg-white dark:bg-gray-800 hover:border-green-500 transition-colors cursor-pointer shadow-sm ${
-                          viewMode === "grid" ? "flex flex-col" : ""
-                        }`}
+                        className="border rounded-lg p-4 bg-white dark:bg-gray-800 hover:border-green-500 transition-colors cursor-pointer shadow-sm"
                         onClick={() => navigate(`/match/${match.slug}`)}
                       >
                         <div className="flex justify-between items-start">
@@ -358,19 +329,11 @@ const SearchPage = () => {
 
             <TabsContent value="venues">
               {paginatedVenues.length > 0 ? (
-                <div
-                  className={
-                    viewMode === "grid"
-                      ? "grid grid-cols-1 sm:grid-cols-2 gap-4"
-                      : "space-y-4"
-                  }
-                >
+                <div className="space-y-4">
                   {paginatedVenues.map((venue) => (
                     <div
                       key={venue.id}
-                      className={`border rounded-lg p-4 bg-white dark:bg-gray-800 hover:border-green-500 transition-colors cursor-pointer shadow-sm ${
-                        viewMode === "grid" ? "flex flex-col" : ""
-                      }`}
+                      className="border rounded-lg p-4 bg-white dark:bg-gray-800 hover:border-green-500 transition-colors cursor-pointer shadow-sm"
                       onClick={() => navigate(`/venue/${venue.slug}`)}
                     >
                       <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100">
