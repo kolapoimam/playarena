@@ -151,6 +151,9 @@ const Performance = ({ profile }: PerformanceProps) => {
     }
   };
 
+  const earnedBadgesCount = badges.filter((badge) => badge.earned_at).length;
+  const totalBadgesCount = badges.length;
+
   return (
     <Card className="bg-white dark:bg-gray-800 border-none shadow-xl rounded-xl">
       <CardHeader>
@@ -160,36 +163,44 @@ const Performance = ({ profile }: PerformanceProps) => {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Your Badges</h3>
-          {badges.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-              {badges.map((badge) => {
-                const isEarned = !!badge.earned_at;
-                return (
-                  <div
-                    key={badge.id}
-                    className={`p-4 bg-yellow-50 dark:bg-yellow-900/50 rounded-lg flex flex-col items-center gap-3 shadow-md ${
-                      isEarned ? "cursor-pointer" : "opacity-50 cursor-not-allowed"
-                    }`}
-                    onClick={isEarned ? () => setSelectedBadge(badge) : undefined}
-                  >
-                    {getBadgeIcon(badge.icon, isEarned)}
-                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300 text-center">{badge.name}</p>
-                    <p className="text-xs text-gray-600 dark:text-gray-400">
-                      {isEarned
-                        ? `Earned: ${new Date(badge.earned_at!).toLocaleDateString()}`
-                        : "Not yet earned"}
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
+        <div className="space-y-6">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Summary</h3>
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              No badges earned yet. Keep playing to unlock achievements!
+              You've earned {earnedBadgesCount} out of {totalBadgesCount} badges. Keep joining matches, organizing events, and listing venues to unlock more achievements!
             </p>
-          )}
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Your Badges</h3>
+            {badges.length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                {badges.map((badge) => {
+                  const isEarned = !!badge.earned_at;
+                  return (
+                    <div
+                      key={badge.id}
+                      className={`p-4 bg-yellow-50 dark:bg-yellow-900/50 rounded-lg flex flex-col items-center gap-3 shadow-md ${
+                        isEarned ? "cursor-pointer" : "opacity-50 cursor-not-allowed"
+                      }`}
+                      onClick={isEarned ? () => setSelectedBadge(badge) : undefined}
+                    >
+                      {getBadgeIcon(badge.icon, isEarned)}
+                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300 text-center">{badge.name}</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400">
+                        {isEarned
+                          ? `Earned: ${new Date(badge.earned_at!).toLocaleDateString()}`
+                          : "Not yet earned"}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                No badges earned yet. Keep playing to unlock achievements!
+              </p>
+            )}
+          </div>
         </div>
       </CardContent>
 
