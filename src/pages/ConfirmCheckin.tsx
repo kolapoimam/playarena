@@ -132,19 +132,32 @@ const ConfirmCheckin = () => {
       );
 
       // Fetch cashout status using tempIdentifier
-      const { data: cashoutData, error: cashoutError } = await supabase
-        .from("cashouts")
-        .select("*")
-        .eq("super_code", superCode)
-        .eq("match_id", matchData.id)
-        .eq("temp_identifier", tempIdentifier)
-        .single();
+      try {
+        const { data: cashoutData, error: cashoutError } = await supabase
+          .from("cashouts")
+          .select("*")
+          .eq("super_code", superCode)
+          .eq("match_id", matchData.id)
+          .eq("temp_identifier", tempIdentifier)
+          .single();
 
-      if (cashoutError && !cashoutError.message.includes("0 rows")) {
-        console.error("Error fetching cashout:", cashoutError);
+        if (cashoutError) {
+          if (cashoutError.code === "42703") {
+            // Handle missing temp_identifier column
+            console.warn("temp_identifier column not found in cashouts table. Cashout data unavailable.");
+            setCashout(null);
+          } else if (!cashoutError.message.includes("0 rows")) {
+            throw cashoutError;
+          } else {
+            setCashout(null);
+          }
+        } else {
+          setCashout(cashoutData);
+        }
+      } catch (cashoutError: any) {
+        console.error("Error fetching cashout:", cashoutError.message);
+        setCashout(null);
       }
-
-      setCashout(cashoutData);
     } catch (error: any) {
       console.error("Error fetching match:", error.message, error.details || error);
       setMatchNotFound(true);
@@ -166,7 +179,7 @@ const ConfirmCheckin = () => {
 
     const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
     const now = new Date();
-    const minutesToStart = differenceInMinutes(matchDateTime, now);
+    const minutesToStart = (matchDateTime.getTime() - now.getTime()) / (1000 * 60);
     if (minutesToStart <= 60) {
       toast({
         title: "Error",
@@ -261,7 +274,7 @@ const ConfirmCheckin = () => {
       console.error("Error ending match:", error);
       toast({
         title: "Error",
-        description: "Failed to end match. Please try again.",
+        description: "Empty match cannot be ended. Please try again.",
         variant: "destructive",
       });
     } finally {
