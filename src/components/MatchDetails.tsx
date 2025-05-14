@@ -1,5 +1,6 @@
 import { format, differenceInMinutes, isPast } from "date-fns";
 import { Trophy, MapPin, Calendar, Clock, Users, DollarSign } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 type Match = {
   id: string;
@@ -37,7 +38,7 @@ type Cashout = {
   bank_name: string;
   account_name: string;
   status: "under_review" | "processed" | "failed" | "successful";
-  user_id: string;
+  temp_identifier?: string;
 };
 
 type MatchDetailsProps = {
@@ -127,13 +128,13 @@ const MatchDetails = ({ match, cashout, handleCancelMatch, handleStartMatch, han
               Cancelled
             </span>
           ) : (
-            <button
+            <Button
               onClick={handleCancelMatch}
-              className={`px-3 py-1 text-sm font-medium rounded border bg-red-500 text-white border-red-600 ${canCancelMatch() ? "hover:bg-red-600" : "opacity-50 cursor-not-allowed"}`}
+              className={`bg-red-500 hover:bg-red-600 text-white ${!canCancelMatch() ? "opacity-50 cursor-not-allowed" : ""}`}
               disabled={!canCancelMatch() || loading}
             >
               Cancel Match
-            </button>
+            </Button>
           )}
           {cashout && (
             <span
