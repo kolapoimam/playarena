@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Loader2, CheckCircle, Calendar, Trophy, Users, ArrowLeft, LogOut } from "lucide-react";
+import { Loader2, CheckCircle, Calendar, Trophy, Users, ArrowLeft, LogOut, MapPin } from "lucide-react"; // Added MapPin import
 import Navbar from "@/components/Navbar";
 import { format } from "date-fns";
 
