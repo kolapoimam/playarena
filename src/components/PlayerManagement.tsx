@@ -123,7 +123,9 @@ type PlayerManagementProps = {
   fetchMatch: () => void;
   loading: boolean;
   setLoading: (value: boolean) => void;
-  isMatchPast: boolean; // Use the prop from ConfirmCheckin
+  isMatchPast: boolean;
+  canConfirmPlayers: boolean;
+  handleCancelMatch: () => void;
 };
 
 const PlayerManagement = ({
@@ -139,6 +141,8 @@ const PlayerManagement = ({
   loading,
   setLoading,
   isMatchPast,
+  canConfirmPlayers,
+  handleCancelMatch,
 }: PlayerManagementProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -151,6 +155,10 @@ const PlayerManagement = ({
   const [accountNameError, setAccountNameError] = useState<string | null>(null);
   const [isPlayersOpen, setIsPlayersOpen] = useState(false);
 
+  const hasCheckedInPlayers = () => {
+    return match?.players?.some(p => p.status === "checked_in") || false;
+  };
+
   const isCashoutEligible = () => {
     if (!match || match.cancellation_status) return false;
     if (!match.is_paid) return false;
@@ -162,12 +170,20 @@ const PlayerManagement = ({
     return minutesToStart <= 30 && minutesToStart >= -30;
   };
 
+  const canCancelMatch = () => {
+    if (!match) return false;
+    const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
+    const now = new Date();
+    const minutesToStart = differenceInMinutes(matchDateTime, now);
+    return minutesToStart > 60 && !match.cancellation_status;
+  };
+
   const handleConfirmMode = () => {
     if (!match || match.cancellation_status) return;
-    if (isMatchPast) {
+    if (!canConfirmPlayers) {
       toast({
         title: "Action Not Available",
-        description: "This match has passed. No further actions are allowed.",
+        description: "Confirming players is only available until 1 hour into the match.",
         variant: "destructive",
       });
       return;
@@ -386,7 +402,7 @@ const PlayerManagement = ({
         <Button
           onClick={handleConfirmMode}
           className="bg-green-500 hover:bg-green-600 text-white"
-          disabled={isMatchPast || match.cancellation_status}
+          disabled={!canConfirmPlayers || match.cancellation_status}
         >
           Confirm Players
         </Button>
@@ -397,14 +413,27 @@ const PlayerManagement = ({
         >
           Check-in Players
         </Button>
+        <Button
+          onClick={handleCancelMatch}
+          className={`bg-red-500 hover:bg-red-600 text-white ${!canCancelMatch() ? "opacity-50 cursor-not-allowed" : ""}`}
+          disabled={!canCancelMatch() || loading}
+        >
+          Cancel Match
+        </Button>
         {match.is_paid && (
-          <Button
-            onClick={handleCashoutMode}
-            className="bg-yellow-500 hover:bg-yellow-600 text-white"
-            disabled={!isCashoutEligible()}
-          >
-            Request Cashout
-          </Button>
+          hasCheckedInPlayers() ? (
+            <Button
+              onClick={handleCashoutMode}
+              className="bg-yellow-500 hover:bg-yellow-600 text-white"
+              disabled={!isCashoutEligible() || match.cancellation_status}
+            >
+              Request Cashout
+            </Button>
+          ) : (
+            <div className="flex items-center text-red-600 dark:text-red-400">
+              Not eligible for cashout. All players will be refunded.
+            </div>
+          )
         )}
       </div>
 
