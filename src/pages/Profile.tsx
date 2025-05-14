@@ -124,8 +124,8 @@ const Profile = () => {
             onValueChange={setActiveTab}
             className="w-full"
           >
-            <TabsList className="grid w-full grid-cols-3 bg-gray-100 dark:bg-gray-700 rounded-t-lg border-b border-gray-300 dark:border-gray-600">
-              <TabsTrigger
+<div className="flex justify-center">
+  <TabsList className="grid grid-cols-3 w-full max-w-md bg-gray-100 dark:bg-gray-700 rounded-lg border border-gray-300 dark:border-gray-600 min-h-[48px] px-2 py-1">              <TabsTrigger
                 value="dashboard"
                 className="data-[state=active]:bg-green-500 data-[state=active]:text-white py-3 text-sm font-medium"
               >
