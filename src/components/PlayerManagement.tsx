@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import { z } from "zod";
+import { v4 as uuidv4 } from "uuid";
 
 type Match = {
   id: string;
@@ -45,8 +46,12 @@ type Cashout = {
   bank_name: string;
   account_name: string;
   status: "under_review" | "processed" | "failed" | "successful";
-  user_id: string;
+  temp_identifier?: string;
 };
+
+const codeSchema = z
+  .string()
+  .regex(/^\d{6}$/, { message: "Code must be exactly 6 digits" });
 
 const bankAccountSchema = z
   .string()
@@ -107,7 +112,7 @@ const nigerianBanks = [
 
 type PlayerManagementProps = {
   match: Match | null;
-  userId: string | null;
+  tempIdentifier: string;
   playerStatuses: { id: string; status: string; checkinCode: string }[];
   setPlayerStatuses: (statuses: { id: string; status: string; checkinCode: string }[]) => void;
   checkinCodes: { [key: string]: string };
@@ -121,7 +126,7 @@ type PlayerManagementProps = {
 
 const PlayerManagement = ({
   match,
-  userId,
+  tempIdentifier,
   playerStatuses,
   setPlayerStatuses,
   checkinCodes,
@@ -150,7 +155,7 @@ const PlayerManagement = ({
   };
 
   const isCashoutEligible = () => {
-    if (!match || !userId || match.cancellation_status) return false;
+    if (!match || match.cancellation_status) return false;
     if (!match.is_paid) return false;
     const checkedInPlayers = match.players?.filter(p => p.status === "checked_in").length || 0;
     if (checkedInPlayers === 0) return false;
@@ -197,15 +202,6 @@ const PlayerManagement = ({
   };
 
   const handleCashoutMode = () => {
-    if (!userId) {
-      toast({
-        title: "Authentication Required",
-        description: "Please log in to request a cashout.",
-        variant: "destructive",
-      });
-      navigate("/login");
-      return;
-    }
     if (!isCashoutEligible()) {
       toast({
         title: "Cashout Not Available",
@@ -218,7 +214,7 @@ const PlayerManagement = ({
   };
 
   const handleCashoutSubmit = async () => {
-    if (!match || !userId) return;
+    if (!match) return;
 
     const bankAccountValidation = bankAccountSchema.safeParse(bankAccountNumber);
     const accountNameValidation = accountNameSchema.safeParse(accountName);
@@ -251,7 +247,7 @@ const PlayerManagement = ({
           bank_name: bankName,
           account_name: accountName,
           status: "under_review",
-          user_id: userId,
+          temp_identifier: tempIdentifier,
         })
         .select()
         .single();
@@ -447,7 +443,7 @@ const PlayerManagement = ({
                   {mode === "confirm" && (
                     <Select
                       value={playerStatuses.find((p) => p.id === player.id)?.status || player.status}
-                      onValueChange={(value) => handleStatusChange(player.id_var, value)}
+                      onValueChange={(value) => handleStatusChange(player.id, value)}
                     >
                       <SelectTrigger className="w-[150px]">
                         <SelectValue placeholder="Select status" />
@@ -506,12 +502,12 @@ const PlayerManagement = ({
         </Button>
       )}
 
-      <Dialog open={cashoutDialogOpen} onOpenChange={setCashoutDialogOpenaths}>
+      <Dialog open={cashoutDialogOpen} onOpenChange={setCashoutDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Request Cashout</DialogTitle>
             <DialogDescription>
-              Enter your bank details to request a cashout for this match.
+              Enter your bank details to request a cashout for this match. You may need to log in later to verify your request.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -571,7 +567,7 @@ const PlayerManagement = ({
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setCashoutDialogOpen(false)}
+              onClick={setCashoutDialogOpen}
             >
               Cancel
             </Button>
@@ -579,7 +575,7 @@ const PlayerManagement = ({
               onClick={handleCashoutSubmit}
               className="bg-green-500 hover:bg-green-600 text-white"
               disabled={loading}
-           >
+            >
               {loading ? (
                 <>
                   <Loader2 size={16} className="mr-2 animate-spin" />
