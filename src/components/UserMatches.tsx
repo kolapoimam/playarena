@@ -133,6 +133,12 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
           playerStatus = playerData?.status || "cancelled";
           playerCancellationStatus = playerData?.cancellation_status || true;
         }
+        const { data: players, error: playerError } = await supabase
+          .from("players")
+          .select("number_of_slots")
+          .eq("match_id", item.matches.id)
+          .eq("cancellation_status", false);
+        const bookedSlots = playerError ? 0 : players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
         return {
           ...item.matches,
           confirmation_code: item.players?.confirmation_code,
@@ -141,7 +147,7 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
           number_of_slots: item.players?.number_of_slots,
           player_status: playerStatus,
           player_cancellation_status: playerCancellationStatus,
-          booked_slots: 0,
+          booked_slots: bookedSlots,
           total_slots: item.matches.total_slots,
         };
       })
@@ -335,7 +341,7 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
                         </p>
                       </div>
                     </div>
-                    <div className="mt-4 flex gap-2">
+                    <div className="mt-4 flex flex-col gap-2">
                       {(match.status === "upcoming" || match.status === "live") && !match.cancellation_status ? (
                         <Button
                           variant="outline"
@@ -414,7 +420,7 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
                         )}
                       </div>
                     </div>
-                    <div className="mt-4 flex gap-2">
+                    <div className="mt-4 flex flex-col gap-2">
                       {(match.status === "upcoming" || match.status === "live") &&
                       !match.cancellation_status &&
                       !match.player_cancellation_status ? (
@@ -472,16 +478,16 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
               Are you sure you want to cancel {cancelIsJoined ? "your participation in" : "this match"}? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="flex justify-end gap-3 mt-4">
+          <DialogFooter className="flex flex-col space-y-2 mt-4">
             <Button
               variant="outline"
-              className="px-4 py-2 border-gray-300 text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 rounded-lg"
+              className="w-full px-4 py-2 border-gray-300 text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 rounded-lg"
               onClick={() => setShowCancelDialog(false)}
             >
               No, Go Back
             </Button>
             <Button
-              className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg"
+              className="w-full px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg"
               onClick={handleCancelConfirm}
             >
               Yes, Cancel
