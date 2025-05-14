@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -9,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Loader2, CheckCircle, ChevronDown } from "lucide-react";
+import { Loader2, CheckCircle, ChevronDown, ArrowLeft } from "lucide-react";
 import { format } from "date-fns";
 
 type Profile = {
@@ -55,7 +56,7 @@ const profileSchema = z.object({
     .string()
     .refine((date) => {
       const birthDate = new Date(date);
-      const today = new Date("2025-05-14T12:17:00+01:00");
+      const today = new Date("2025-05-14T12:33:00+01:00");
       let age = today.getFullYear() - birthDate.getFullYear();
       const monthDiff = today.getMonth() - birthDate.getMonth();
       if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) age--;
@@ -71,6 +72,7 @@ type ProfileSettingsProps = {
 };
 
 const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettingsProps) => {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
 
@@ -117,7 +119,7 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
   const calculateAge = (dob?: string) => {
     if (!dob) return null;
     const birthDate = new Date(dob);
-    const today = new Date("2025-05-14T12:17:00+01:00");
+    const today = new Date("2025-05-14T12:33:00+01:00");
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) age--;
@@ -126,6 +128,16 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <Button
+          variant="ghost"
+          onClick={() => navigate(-1)}
+          className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 text-sm flex items-center"
+        >
+          <ArrowLeft size={16} className="mr-2" />
+          Back
+        </Button>
+      </div>
       <Card className="bg-white dark:bg-gray-800 border-none shadow-xl rounded-xl">
         <details className="group">
           <summary className="flex items-center justify-between p-4 text-xl font-semibold text-green-700 dark:text-green-400 cursor-pointer">
@@ -342,7 +354,7 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
                           </SelectItem>
                           <SelectItem
                             value="female"
-                            className="text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                            className="text-base bg-white dark:bg-gray-700  dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                           >
                             Female
                           </SelectItem>
