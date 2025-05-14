@@ -6,6 +6,7 @@ import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, AlertCircle, Loader2 } from "lucide-react";
 import { z } from "zod";
+import { v4 as uuidv4 } from "uuid";
 import MatchCodeInput from "./MatchCodeInput";
 import MatchDetails from "./MatchDetails";
 import PlayerManagement from "./PlayerManagement";
@@ -46,7 +47,7 @@ type Cashout = {
   bank_name: string;
   account_name: string;
   status: "under_review" | "processed" | "failed" | "successful";
-  user_id: string;
+  temp_identifier?: string;
 };
 
 const codeSchema = z
@@ -67,8 +68,7 @@ const ConfirmCheckin = () => {
   >([]);
   const [checkinCodes, setCheckinCodes] = useState<{ [key: string]: string }>({});
   const [checkinCodeErrors, setCheckinCodeErrors] = useState<{ [key: string]: string | null }>({});
-  const [userId, setUserId] = useState<string | null>(null);
-  const [recentSuperCodes, setRecentSuperCodes] = useState<string[]>([]);
+  const [tempIdentifier] = useState(uuidv4()); // Unique identifier for non-logged-in users
 
   const resetState = () => {
     setMatch(null);
@@ -131,21 +131,20 @@ const ConfirmCheckin = () => {
         }))
       );
 
-      if (userId) {
-        const { data: cashoutData, error: cashoutError } = await supabase
-          .from("cashouts")
-          .select("*")
-          .eq("super_code", superCode)
-          .eq("match_id", matchData.id)
-          .eq("user_id", userId)
-          .single();
+      // Fetch cashout status using tempIdentifier
+      const { data: cashoutData, error: cashoutError } = await supabase
+        .from("cashouts")
+        .select("*")
+        .eq("super_code", superCode)
+        .eq("match_id", matchData.id)
+        .eq("temp_identifier", tempIdentifier)
+        .single();
 
-        if (cashoutError && !cashoutError.message.includes("0 rows")) {
-          console.error("Error fetching cashout:", cashoutError);
-        }
-
-        setCashout(cashoutData);
+      if (cashoutError && !cashoutError.message.includes("0 rows")) {
+        console.error("Error fetching cashout:", cashoutError);
       }
+
+      setCashout(cashoutData);
     } catch (error: any) {
       console.error("Error fetching match:", error.message, error.details || error);
       setMatchNotFound(true);
@@ -163,8 +162,7 @@ const ConfirmCheckin = () => {
   };
 
   const handleCancelMatch = async () => {
-    if (!match || !userId) return;
-    if (match.cancellation_status) return;
+    if (!match || match.cancellation_status) return;
 
     const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
     const now = new Date();
@@ -212,7 +210,7 @@ const ConfirmCheckin = () => {
   };
 
   const handleStartMatch = async () => {
-    if (!match || !userId || match.match_start_time) return;
+    if (!match || match.match_start_time || match.cancellation_status) return;
 
     setLoading(true);
     try {
@@ -242,7 +240,7 @@ const ConfirmCheckin = () => {
   };
 
   const handleEndMatch = async () => {
-    if (!match || !userId || !match.match_start_time || match.match_end_time) return;
+    if (!match || !match.match_start_time || match.match_end_time || match.cancellation_status) return;
 
     setLoading(true);
     try {
@@ -270,16 +268,6 @@ const ConfirmCheckin = () => {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    const checkAuth = async () => {
-      const { data: session } = await supabase.auth.getSession();
-      if (session.session) {
-        setUserId(session.session.user.id);
-      }
-    };
-    checkAuth();
-  }, []);
 
   useEffect(() => {
     if (superCode && codeSchema.safeParse(superCode).success) {
@@ -316,9 +304,6 @@ const ConfirmCheckin = () => {
           loading={loading}
           setLoading={setLoading}
           fetchMatch={fetchMatch}
-          userId={userId}
-          recentSuperCodes={recentSuperCodes}
-          setRecentSuperCodes={setRecentSuperCodes}
         />
 
         {matchNotFound && !loading && (
@@ -343,7 +328,7 @@ const ConfirmCheckin = () => {
             />
             <PlayerManagement
               match={match}
-              userId={userId}
+              tempIdentifier={tempIdentifier}
               playerStatuses={playerStatuses}
               setPlayerStatuses={setPlayerStatuses}
               checkinCodes={checkinCodes}
