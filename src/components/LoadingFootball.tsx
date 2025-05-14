@@ -1,6 +1,6 @@
 import React from 'react';
 import Lottie from 'lottie-react';
-import animationData from '../public/Animation - 1747210785646.json';
+import animationData from '/src/assets/Animation - 1747210785646.json';
 
 interface LoadingFootballProps {
   isLoading?: boolean;
