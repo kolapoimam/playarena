@@ -70,6 +70,22 @@ const ConfirmCheckin = () => {
   const [checkinCodes, setCheckinCodes] = useState<{ [key: string]: string }>({});
   const [checkinCodeErrors, setCheckinCodeErrors] = useState<{ [key: string]: string | null }>({});
   const [tempIdentifier] = useState(uuidv4()); // Unique identifier for non-logged-in users
+  const [error, setError] = useState<string | null>(null); // For error boundary
+  const [userId, setUserId] = useState<string | null>(null);
+  const [recentSuperCodes, setRecentSuperCodes] = useState<string[]>([]);
+
+  // Fetch userId on mount
+  useEffect(() => {
+    const fetchUserId = async () => {
+      const { data: session } = await supabase.auth.getSession();
+      if (session.session) {
+        setUserId(session.session.user.id);
+      } else {
+        setUserId(null);
+      }
+    };
+    fetchUserId();
+  }, []);
 
   const resetState = () => {
     setMatch(null);
@@ -78,6 +94,7 @@ const ConfirmCheckin = () => {
     setPlayerStatuses([]);
     setCheckinCodes({});
     setCheckinCodeErrors({});
+    setError(null);
   };
 
   const fetchMatch = async () => {
@@ -173,6 +190,7 @@ const ConfirmCheckin = () => {
       console.error("Error fetching match:", error.message, error.details || error);
       setMatchNotFound(true);
       resetState();
+      setError("An error occurred while fetching the match. Please try again.");
       toast({
         title: "Error",
         description: error.message.includes("0 rows")
@@ -185,12 +203,16 @@ const ConfirmCheckin = () => {
     }
   };
 
+  const isMatchPast = match
+    ? isPast(new Date(`${match.match_date}T${match.match_time}`))
+    : false;
+
   const handleCancelMatch = async () => {
     if (!match || match.cancellation_status) return;
 
     const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
-    const now = new Date("2025-05-14T21:14:00+01:00"); // Use current date and time
-    if (isPast(matchDateTime)) {
+    const now = new Date("2025-05-14T21:22:00+01:00"); // Current time: 09:22 PM WAT
+    if (isMatchPast) {
       toast({
         title: "Error",
         description: "Cannot cancel a match that has already started or passed.",
@@ -337,6 +359,9 @@ const ConfirmCheckin = () => {
           loading={loading}
           setLoading={setLoading}
           fetchMatch={fetchMatch}
+          userId={userId}
+          recentSuperCodes={recentSuperCodes}
+          setRecentSuperCodes={setRecentSuperCodes}
         />
 
         {loading && (
@@ -345,7 +370,15 @@ const ConfirmCheckin = () => {
           </div>
         )}
 
-        {matchNotFound && !loading && (
+        {error && !loading && (
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6 text-center border border-gray-200 dark:border-gray-700">
+            <AlertCircle size={40} className="text-red-600 dark:text-red-500 mx-auto mb-3" />
+            <h2 className="text-lg font-semibold text-red-600 dark:text-red-500">Error</h2>
+            <p className="text-gray-600 dark:text-gray-400 mt-2">{error}</p>
+          </div>
+        )}
+
+        {matchNotFound && !loading && !error && (
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6 text-center border border-gray-200 dark:border-gray-700">
             <AlertCircle size={40} className="text-red-600 dark:text-red-500 mx-auto mb-3" />
             <h2 className="text-lg font-semibold text-red-600 dark:text-red-500">Match Not Found</h2>
@@ -355,7 +388,7 @@ const ConfirmCheckin = () => {
           </div>
         )}
 
-        {match && (
+        {match && !error && (
           <div className="animate-fade-in space-y-6">
             <MatchDetails
               match={match}
@@ -364,6 +397,7 @@ const ConfirmCheckin = () => {
               handleStartMatch={handleStartMatch}
               handleEndMatch={handleEndMatch}
               loading={loading}
+              isMatchPast={isMatchPast}
             />
             <PlayerManagement
               match={match}
