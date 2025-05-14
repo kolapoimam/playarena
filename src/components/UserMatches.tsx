@@ -224,9 +224,25 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
 
   const formatMatchDateTime = (date: string) => {
     const zonedDate = utcToZonedTime(new Date(date), "Africa/Lagos");
-    const dateStr = format(zonedDate, "EEE, dd - MM - yyyy");
+    const dateStr = format(zonedDate, "EEE, dd MMM yyyy");
     const timeStr = format(zonedDate, "h:mm a");
     return { dateStr, timeStr };
+  };
+
+  const getStatusLabel = (status: string, isCancelled: boolean) => {
+    if (isCancelled) return { text: "Cancelled", className: "bg-red-100 text-red-800" };
+    switch (status) {
+      case "upcoming":
+        return { text: "Upcoming", className: "bg-blue-100 text-blue-800" };
+      case "live":
+        return { text: "Live", className: "bg-green-100 text-green-800" };
+      case "completed":
+        return { text: "Completed", className: "bg-gray-100 text-gray-800" };
+      case "cancelled":
+        return { text: "Cancelled", className: "bg-red-100 text-red-800" };
+      default:
+        return { text: "Registered", className: "bg-yellow-100 text-yellow-800" };
+    }
   };
 
   return (
@@ -257,40 +273,41 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
             {organizedMatches.length > 0 ? (
               organizedMatches.map((match) => {
                 const { dateStr, timeStr } = formatMatchDateTime(match.match_date);
+                const statusLabel = getStatusLabel(match.status, match.cancellation_status);
                 return (
                   <div
                     key={match.id}
-                    className="p-4 border-b border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-800/80 rounded-lg shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
+                    className="p-4 mb-4 bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700"
                   >
-                    <div>
-                      <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">{match.title}</h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        <Calendar size={14} className="inline mr-1" />
-                        {dateStr}
-                      </p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Time: {timeStr}</p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        <MapPin size={14} className="inline mr-1" />
-                        {match.venue_name || "Venue TBD"}
-                      </p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Super Code: {match.super_code || "N/A"}
-                      </p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Slots: {match.booked_slots}/{match.total_slots} booked
-                      </p>
-                      {match.cancellation_status && (
-                        <p className="text-sm text-red-500 dark:text-red-400">
-                          Status: Cancelled
+                    <div className="flex justify-between items-start">
+                      <div className="space-y-2">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{match.title}</h3>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-xs font-medium px-2 py-1 rounded-full ${statusLabel.className}`}>
+                            {statusLabel.text}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
+                          <Calendar size={16} className="mr-2" />
+                          {dateStr} at {timeStr}
                         </p>
-                      )}
+                        <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
+                          <MapPin size={16} className="mr-2" />
+                          {match.venue_name || "Venue TBD"}
+                        </p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          Super Code: {match.super_code || "N/A"}
+                        </p>
+                        <p className="text-base font-medium text-gray-900 dark:text-gray-100">
+                          Slots: <span className="text-green-600 dark:text-green-400">{match.booked_slots}</span>/{match.total_slots}
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="mt-4 flex gap-2">
                       {(match.status === "upcoming" || match.status === "live") && !match.cancellation_status ? (
                         <Button
                           variant="outline"
-                          size="sm"
-                          className="border-green-500 text-green-500 hover:bg-green-500 hover:text-white"
+                          className="flex-1 border-green-500 text-green-500 hover:bg-green-500 hover:text-white rounded-lg"
                           onClick={() => {
                             setCancelMatchId(match.id);
                             setCancelIsJoined(false);
@@ -302,8 +319,7 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
                         </Button>
                       ) : (
                         <Button
-                          size="sm"
-                          className="bg-green-500 hover:bg-green-600 text-white"
+                          className="flex-1 bg-green-500 hover:bg-green-600 text-white rounded-lg"
                           onClick={() => navigate(`/feedback?matchId=${match.id}`)}
                           disabled={
                             (new Date().getTime() - new Date(match.match_date).getTime()) /
@@ -315,8 +331,7 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
                         </Button>
                       )}
                       <Button
-                        size="sm"
-                        className="bg-green-500 hover:bg-green-600 text-white"
+                        className="flex-1 bg-green-500 hover:bg-green-600 text-white rounded-lg"
                         onClick={() => navigate(`/match/${match.slug}`)}
                       >
                         View Details
@@ -335,48 +350,45 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
             {joinedMatches.length > 0 ? (
               joinedMatches.map((match) => {
                 const { dateStr, timeStr } = formatMatchDateTime(match.match_date);
+                const statusLabel = getStatusLabel(match.player_status || "registered", match.player_cancellation_status || match.cancellation_status);
                 return (
                   <div
                     key={match.id}
-                    className="p-4 border-b border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-800/80 rounded-lg shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
+                    className="p-4 mb-4 bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700"
                   >
-                    <div>
-                      <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">{match.title}</h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        <Calendar size={14} className="inline mr-1" />
-                        {dateStr}
-                      </p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Time: {timeStr}</p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        <MapPin size={14} className="inline mr-1" />
-                        {match.venue_name || "Venue TBD"}
-                      </p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Confirmation Code: {match.confirmation_code || "N/A"}
-                      </p>
-                      {match.is_paid && match.number_of_slots && (
+                    <div className="flex justify-between items-start">
+                      <div className="space-y-2">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{match.title}</h3>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-xs font-medium px-2 py-1 rounded-full ${statusLabel.className}`}>
+                            {statusLabel.text}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
+                          <Calendar size={16} className="mr-2" />
+                          {dateStr} at {timeStr}
+                        </p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
+                          <MapPin size={16} className="mr-2" />
+                          {match.venue_name || "Venue TBD"}
+                        </p>
                         <p className="text-sm text-gray-600 dark:text-gray-400">
-                          Slots Purchased: {match.number_of_slots}
+                          Confirmation Code: {match.confirmation_code || "N/A"}
                         </p>
-                      )}
-                      {match.player_cancellation_status || match.cancellation_status ? (
-                        <p className="text-sm text-red-500 dark:text-red-400">
-                          Status: Cancelled
-                        </p>
-                      ) : (
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          Status: {match.player_status || "Registered"}
-                        </p>
-                      )}
+                        {match.is_paid && match.number_of_slots && (
+                          <p className="text-base font-medium text-gray-900 dark:text-gray-100">
+                            Slots Purchased: <span className="text-green-600 dark:text-green-400">{match.number_of_slots}</span>
+                          </p>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="mt-4 flex gap-2">
                       {(match.status === "upcoming" || match.status === "live") &&
                       !match.cancellation_status &&
                       !match.player_cancellation_status ? (
                         <Button
                           variant="outline"
-                          size="sm"
-                          className="border-green-500 text-green-500 hover:bg-green-500 hover:text-white"
+                          className="flex-1 border-green-500 text-green-500 hover:bg-green-500 hover:text-white rounded-lg"
                           onClick={() => {
                             setCancelMatchId(match.id);
                             setCancelIsJoined(true);
@@ -388,8 +400,7 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
                         </Button>
                       ) : (
                         <Button
-                          size="sm"
-                          className="bg-green-500 hover:bg-green-600 text-white"
+                          className="flex-1 bg-green-500 hover:bg-green-600 text-white rounded-lg"
                           onClick={() => navigate(`/feedback?matchId=${match.id}`)}
                           disabled={
                             (new Date().getTime() - new Date(match.match_date).getTime()) /
@@ -401,8 +412,7 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
                         </Button>
                       )}
                       <Button
-                        size="sm"
-                        className="bg-green-500 hover:bg-green-600 text-white"
+                        className="flex-1 bg-green-500 hover:bg-green-600 text-white rounded-lg"
                         onClick={() => navigate(`/match/${match.slug}`)}
                       >
                         View Details
@@ -421,7 +431,7 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
       </CardContent>
 
       <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md rounded-2xl">
           <DialogHeader>
             <DialogTitle>Confirm Cancellation</DialogTitle>
             <DialogDescription>
