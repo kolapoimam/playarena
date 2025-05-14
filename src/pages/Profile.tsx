@@ -57,7 +57,7 @@ const Profile = () => {
   const username = profile?.nickname || profile?.first_name || "User";
 
   return (
-    <div className="bg-white dark:bg-gray-900 min-h-screen flex flex-col">
+    <div className="bg-white dark:bg-gray-900 min-h-screen">
       <div className="bg-gradient-to-r from-green-600 to-green-800 text-white p-4 flex items-center justify-between shadow-lg sticky top-0 z-20">
         <Button
           variant="ghost"
@@ -108,67 +108,59 @@ const Profile = () => {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto w-full flex-grow">
-        <div className="sticky top-[64px] z-10 bg-white dark:bg-gray-900">
-          <div className="p-6">
-            <h2 className="text-xl font-semibold text-green-700 dark:text-green-400">
-              Welcome, {username}!
-            </h2>
-            <p className="text-gray-700 dark:text-gray-300">
-              Explore your dashboard, manage matches, or check your performance stats.
-            </p>
-          </div>
-
-          <Tabs
-            value={activeTab}
-            onValueChange={setActiveTab}
-            className="w-full"
-          >
-<div className="flex justify-center">
-  <TabsList className="grid grid-cols-3 w-full max-w-md bg-gray-100 dark:bg-gray-700 rounded-lg border border-gray-300 dark:border-gray-600 min-h-[48px] px-2 py-1">              <TabsTrigger
-                value="dashboard"
-                className="data-[state=active]:bg-green-500 data-[state=active]:text-white py-3 text-sm font-medium"
-              >
-                Dashboard
-              </TabsTrigger>
-              <TabsTrigger
-                value="matches"
-                className="data-[state=active]:bg-green-500 data-[state=active]:text-white py-3 text-sm font-medium"
-              >
-                My Matches
-              </TabsTrigger>
-              <TabsTrigger
-                value="performance"
-                className="data-[state=active]:bg-green-500 data-[state=active]:text-white py-3 text-sm font-medium"
-              >
-                Performance
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+      <div className="max-w-4xl mx-auto">
+        <div className="bg-white dark:bg-gray-900 p-6 sticky top-[64px] z-10 shadow-sm">
+          <h2 className="text-xl font-semibold text-green-700 dark:text-green-400">
+            Welcome, {username}!
+          </h2>
+          <p className="text-gray-700 dark:text-gray-300">
+            Explore your dashboard, manage matches, or check your performance stats.
+          </p>
         </div>
-                  </div>
 
-        <div className="px-6 pb-20 overflow-y-auto">
+        <div className="px-6 pb-20 space-y-6 min-h-[calc(100vh-200px)]">
           {showSettings ? (
             <ProfileSettings profile={profile} setProfile={setProfile} setShowSettings={setShowSettings} />
           ) : (
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsContent value="dashboard" className="mt-6">
+            <Tabs
+              value={activeTab}
+              onValueChange={setActiveTab}
+              className="w-full"
+            >
+              <TabsList className="grid w-full grid-cols-3 bg-gray-100 dark:bg-gray-700 rounded-t-lg sticky top-[140px] z-10 mb-6">
+                <TabsTrigger
+                  value="dashboard"
+                  className="data-[state=active]:bg-green-500 data-[state=active]:text-white py-3 text-sm font-medium"
+                >
+                  Dashboard
+                </TabsTrigger>
+                <TabsTrigger
+                  value="matches"
+                  className="data-[state=active]:bg-green-500 data-[state=active]:text-white py-3 text-sm font-medium"
+                >
+                  My Matches
+                </TabsTrigger>
+                <TabsTrigger
+                  value="performance"
+                  className="data-[state=active]:bg-green-500 data-[state=active]:text-white py-3 text-sm font-medium"
+                >
+                  Performance
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="dashboard" className="mt-0">
                 <UserDashboard profile={profile} />
               </TabsContent>
-              <TabsContent value="matches" className="mt-6">
+              <TabsContent value="matches" className="mt-0">
                 <UserMatches profile={profile} />
               </TabsContent>
-              <TabsContent value="performance" className="mt-6">
+              <TabsContent value="performance" className="mt-0">
                 <Performance profile={profile} />
               </TabsContent>
             </Tabs>
           )}
         </div>
       </div>
-      <div className="sticky bottom-0 z-20">
-        <Navbar />
-      </div>
+      <Navbar />
     </div>
   );
 };
