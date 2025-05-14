@@ -19,9 +19,10 @@ import VenueDirectory from "./pages/VenueDirectory";
 import ConfirmCheckin from "./pages/ConfirmCheckin";
 import Feedback from "./pages/Feedback";
 import Guides from "./pages/Guides";
+import Auth from "./pages/Auth"; // Import the Auth page
 import ScrollToTop from "./components/ScrollToTop";
 import { Routes, Route } from 'react-router-dom';
-import TeamManagement from "./pages/TeamManagement"; // Import the new page
+import TeamManagement from "./pages/TeamManagement";
 
 const queryClient = new QueryClient();
 
@@ -39,6 +40,7 @@ const App = () => (
             <Route path="/matches" element={<Matches />} />
             <Route path="/guides" element={<Guides />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/auth" element={<Auth />} /> {/* New route for Auth */}
             <Route path="/organize" element={<Organize />} />
             <Route path="/venue-create" element={<VenueCreate />} />
             <Route path="/venues" element={<VenueDirectory />} />
@@ -49,7 +51,7 @@ const App = () => (
             <Route path="/match/:slug" element={<MatchDetail />} />
             <Route path="/join/:slug" element={<JoinMatch />} />
             <Route path="/venue/:slug" element={<VenueDetail />} />
-            <Route path="/team-management/:slug" element={<TeamManagement />} /> {/* New route for TeamManagement */}
+            <Route path="/team-management/:slug" element={<TeamManagement />} />
 
             {/* Redirect Routes for Backward Compatibility */}
             <Route path="/match-id/:id" element={<MatchRedirect />} />
