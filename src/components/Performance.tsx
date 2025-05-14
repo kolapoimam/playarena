@@ -98,23 +98,23 @@ const Performance = ({ profile }: PerformanceProps) => {
   const getShareText = (badge: Badge) => {
     switch (badge.name) {
       case "First Kickoff":
-        return "I just joined my first match and earned the First Kickoff badge! Ready to score some goals! 🏅⚽";
+        return "⚽ Scored my first match with the First Kickoff badge! Join the action! 🏅 #PlayArena Powered by PlayArena";
       case "Match Maestro":
-        return "I organized my first match and earned the Match Maestro badge! Leading the game! 🏅👥";
+        return "🎯 Organized my first match and earned the Match Maestro badge! Who's next? 🏅 #PlayArena Powered by PlayArena";
       case "Venue Visionary":
-        return "I listed my first venue and earned the Venue Visionary badge! Building the community! 🏅📍";
+        return "📍 Set the stage with my first venue! Earned the Venue Visionary badge! 🏅 #PlayArena Powered by PlayArena";
       case "Deca-Paid Star":
-        return "I joined 10 paid matches and earned the Deca-Paid Star badge! A true competitor! 🏅⭐";
+        return "🌟 Conquered 10 paid matches for the Deca-Paid Star badge! Game on! 🏅 #PlayArena Powered by PlayArena";
       case "Deca-Free Star":
-        return "I joined 10 free matches and earned the Deca-Free Star badge! Passion for the game! 🏅⭐";
+        return "⚽ Played 10 free matches and shone with the Deca-Free Star badge! 🏅 #PlayArena Powered by PlayArena";
       case "Penta-Venue Legend":
-        return "I listed 5 venues and earned the Penta-Venue Legend badge! Shaping the pitch! 🏅🗺️";
+        return "🗺️ Listed 5 venues for the Penta-Venue Legend badge! Building the game! 🏅 #PlayArena Powered by PlayArena";
       case "Deca-Match Maestro":
-        return "I organized 10 matches and earned the Deca-Match Maestro badge! Master of the game! 🏅🏆";
+        return "🏆 Mastered 10 matches with the Deca-Match Maestro badge! Leading the field! 🏅 #PlayArena Powered by PlayArena";
       case "Elite Investor":
-        return "I spent over ₦20,000 on matches and earned the Elite Investor badge! Big player! 🏅💰";
+        return "💰 Invested big in matches for the Elite Investor badge! Top player! 🏅 #PlayArena Powered by PlayArena";
       default:
-        return `I earned the ${badge.name} badge! ${badge.description}`;
+        return `🏅 Unlocked the ${badge.name} badge! ${badge.description} #PlayArena Powered by PlayArena`;
     }
   };
 
@@ -205,7 +205,7 @@ const Performance = ({ profile }: PerformanceProps) => {
       </CardContent>
 
       <Dialog open={!!selectedBadge} onOpenChange={() => setSelectedBadge(null)}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md rounded-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {selectedBadge && getBadgeIcon(selectedBadge.icon, true)}
@@ -215,8 +215,13 @@ const Performance = ({ profile }: PerformanceProps) => {
           </DialogHeader>
           <div
             ref={badgeRef}
-            className="p-6 bg-gradient-to-br from-yellow-100 to-yellow-200 dark:from-yellow-900 dark:to-yellow-800 rounded-lg flex flex-col items-center gap-3 border-4 border-yellow-500"
+            className="p-6 bg-gradient-to-br from-yellow-100 to-yellow-200 dark:from-yellow-900 dark:to-yellow-800 rounded-lg flex flex-col items-center gap-3 border-4 border-yellow-500 relative"
           >
+            <img
+              src="/playarenalight.png"
+              alt="PlayArena Logo"
+              className="absolute top-2 right-2 w-16 h-16 opacity-50"
+            />
             {selectedBadge && getBadgeIcon(selectedBadge.icon, true)}
             <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{selectedBadge?.name}</p>
             <p className="text-sm text-gray-700 dark:text-gray-300 text-center">{selectedBadge?.description}</p>
