@@ -535,7 +535,7 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
           <CardContent className="p-4 pt-0">
             <div className="relative bg-gradient-to-br from-green-600 to-green-800 text-white rounded-xl p-6 shadow-2xl max-w-md mx-auto">
               <img
-                src="/playarenalight.png"
+                src="/playarenadark.png"
                 alt="PlayArena Logo"
                 className="absolute top-4 right-4 w-16 h-16 opacity-80"
               />
