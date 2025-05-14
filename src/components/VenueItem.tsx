@@ -1,17 +1,20 @@
+import { Star, MessageCircle } from "lucide-react";
+
 interface VenueItemProps {
   name: string;
   location: string;
   image_urls: string[] | null;
   venue_phone: string | null;
+  aggregated_rating: number | null;
 }
 
-export default function VenueItem({ name, location, image_urls, venue_phone }: VenueItemProps) {
+export default function VenueItem({ name, location, image_urls, venue_phone, aggregated_rating }: VenueItemProps) {
   const defaultImage = "https://dailytrust.com/wp-content/uploads/2023/12/football-488714_1280.jpg";
   const image = image_urls && image_urls.length > 0 ? image_urls[0] : defaultImage;
 
   const handleBookVenue = () => {
     if (venue_phone) {
-      const message = encodeURIComponent(`Hello, I'd like to book ${venue.name} for a match. Can you provide more details on availability and pricing?`);
+      const message = encodeURIComponent(`Hello, I'd like to book ${name} for a match. Can you provide more details on availability and pricing?`);
       window.open(`https://wa.me/+234${venue_phone}?text=${message}`, "_blank");
     }
   };
@@ -28,6 +31,14 @@ export default function VenueItem({ name, location, image_urls, venue_phone }: V
       <div className="flex-1">
         <h3 className="font-bold text-gray-900 dark:text-gray-100">{name}</h3>
         <p className="text-sm text-gray-600 dark:text-gray-400">{location}</p>
+        {aggregated_rating !== null ? (
+          <div className="flex items-center text-sm text-yellow-500 mt-1">
+            <Star size={14} className="mr-1 fill-yellow-500" />
+            <span>{aggregated_rating.toFixed(1)} / 5.5</span>
+          </div>
+        ) : (
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">No ratings yet</p>
+        )}
         {venue_phone && (
           <button
             onClick={handleBookVenue}
