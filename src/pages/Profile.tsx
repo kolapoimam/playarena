@@ -146,6 +146,7 @@ const Profile = () => {
             </TabsList>
           </Tabs>
         </div>
+                  </div>
 
         <div className="px-6 pb-20 overflow-y-auto">
           {showSettings ? (
