@@ -1,6 +1,5 @@
 import React from 'react';
-import Lottie from 'lottie-react';
-import animationData from '/src/assets/Animation - 1747210785646.json';
+import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 
 interface LoadingFootballProps {
   isLoading?: boolean;
@@ -13,12 +12,12 @@ interface LoadingFootballProps {
 
 const LoadingFootball: React.FC<LoadingFootballProps> = ({ 
   isLoading = true,
-  size = { base: 150, md: 200, lg: 250 }
+  size = { base: 250, md: 300, lg: 350 } // Increased sizes for a bigger animation
 }) => {
   if (!isLoading) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-white">
       <div className={`
         w-[${size.base}px]
         md:w-[${size.md}px]
@@ -27,14 +26,11 @@ const LoadingFootball: React.FC<LoadingFootballProps> = ({
         md:h-[${size.md}px]
         lg:h-[${size.lg}px]
       `}>
-        <Lottie 
-          animationData={animationData}
-          loop={true}
-          autoplay={true}
+        <DotLottieReact
+          src="https://lottie.host/22d944dc-f5f2-4ca1-8d2c-8c679d53ce41/GmJWuhR4FA.lottie"
+          loop
+          autoplay
           style={{ width: '100%', height: '100%' }}
-          rendererSettings={{
-            preserveAspectRatio: 'xMidYMid meet'
-          }}
         />
       </div>
     </div>
