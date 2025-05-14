@@ -43,7 +43,7 @@ type Match = {
   organizer_name: string;
   super_code: string;
   is_paid: boolean;
-  price?: number; // Added to support price if available
+  price?: number;
   venue: {
     name?: string;
     city?: string;
@@ -65,6 +65,7 @@ type Cashout = {
   bank_name: string;
   account_name: string;
   status: "under_review" | "processed" | "failed" | "successful";
+  user_id: string;
 };
 
 // Validation schemas
@@ -83,7 +84,6 @@ const accountNameSchema = z
 
 // List of Nigerian banks
 const nigerianBanks = [
-  // Traditional Commercial Banks
   "Access Bank",
   "Citibank Nigeria",
   "Ecobank Nigeria",
@@ -105,14 +105,10 @@ const nigerianBanks = [
   "Unity Bank",
   "Wema Bank",
   "Zenith Bank",
-
-  // New/Niche Commercial Banks
   "SunTrust Bank Nigeria Limited",
   "Parallex Bank",
-  "TAJ Bank", // Non-interest bank
-  "Lotus Bank", // Non-interest bank
-
-  // Microfinance Banks (Licensed Digital-First or Mobile-Based)
+  "TAJ Bank",
+  "Lotus Bank",
   "Opay (Paycom MFB)",
   "PalmPay (PalmPay Ltd. MFB)",
   "Moniepoint MFB",
@@ -125,12 +121,10 @@ const nigerianBanks = [
   "Mint MFB",
   "Eyowo MFB",
   "GoMoney (Go Financial Services)",
-  "ALAT by Wema", // Product of Wema Bank
+  "ALAT by Wema",
   "Branch MFB",
   "9Pay MFB",
   "MKOBO MFB",
-
-  // Others (Licensed or Active)
   "PayDay (Africhange Technologies)",
   "Chipper Cash (Chipper Technologies)",
   "Paga",
@@ -158,8 +152,39 @@ const ConfirmCheckin = () => {
   const [accountName, setAccountName] = useState("");
   const [bankAccountError, setBankAccountError] = useState<string | null>(null);
   const [accountNameError, setAccountNameError] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [recentSuperCodes, setRecentSuperCodes] = useState<string[]>([]);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const codeInputRef = useRef<HTMLInputElement>(null);
   const [isPlayersOpen, setIsPlayersOpen] = useState(false);
+
+  // Check authentication status and fetch recent super codes for logged-in users
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: session } = await supabase.auth.getSession();
+      if (session.session) {
+        setUserId(session.session.user.id);
+        // Fetch recent super codes for logged-in user
+        const { data, error } = await supabase
+          .from("matches")
+          .select("super_code")
+          .eq("organizer_id", session.session.user.id)
+          .order("created_at", { ascending: false })
+          .limit(3);
+        if (error) {
+          console.error("Error fetching recent super codes:", error);
+          toast({
+            title: "Error",
+            description: "Failed to load recent super codes.",
+            variant: "destructive",
+          });
+        } else {
+          setRecentSuperCodes(data.map((match) => match.super_code));
+        }
+      }
+    };
+    checkAuth();
+  }, [toast]);
 
   const resetState = () => {
     setMatch(null);
@@ -189,6 +214,7 @@ const ConfirmCheckin = () => {
     setMatchNotFound(false);
     setLoading(true);
     try {
+      // Fetch match without restricting to organizer_id for non-logged-in users
       const { data, error } = await supabase
         .from("matches")
         .select(`
@@ -227,19 +253,22 @@ const ConfirmCheckin = () => {
         }))
       );
 
-      // Fetch cashout status
-      const { data: cashoutData, error: cashoutError } = await supabase
-        .from("cashouts")
-        .select("*")
-        .eq("super_code", superCode)
-        .eq("match_id", matchData.id)
-        .single();
+      // Fetch cashout status if user is logged in
+      if (userId) {
+        const { data: cashoutData, error: cashoutError } = await supabase
+          .from("cashouts")
+          .select("*")
+          .eq("super_code", superCode)
+          .eq("match_id", matchData.id)
+          .eq("user_id", userId)
+          .single();
 
-      if (cashoutError && !cashoutError.message.includes("0 rows")) {
-        console.error("Error fetching cashout:", cashoutError);
+        if (cashoutError && !cashoutError.message.includes("0 rows")) {
+          console.error("Error fetching cashout:", cashoutError);
+        }
+
+        setCashout(cashoutData);
       }
-
-      setCashout(cashoutData);
     } catch (error: any) {
       console.error("Error fetching match:", error.message, error.details || error);
       setMatchNotFound(true);
@@ -271,12 +300,12 @@ const ConfirmCheckin = () => {
   };
 
   const isCashoutEligible = () => {
-    if (!match) return false;
+    if (!match || !userId) return false;
     if (!match.is_paid) return false;
     const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
     const now = new Date();
     const minutesToStart = differenceInMinutes(matchDateTime, now);
-    return minutesToStart <= 30 && minutesToStart >= -30; // Allow within 30 minutes before and after start for edge cases
+    return minutesToStart <= 30 && minutesToStart >= -30;
   };
 
   const handleConfirmMode = () => {
@@ -315,6 +344,15 @@ const ConfirmCheckin = () => {
   };
 
   const handleCashoutMode = () => {
+    if (!userId) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to request a cashout.",
+        variant: "destructive",
+      });
+      navigate("/login");
+      return;
+    }
     if (!isCashoutEligible()) {
       toast({
         title: "Cashout Not Available",
@@ -327,7 +365,7 @@ const ConfirmCheckin = () => {
   };
 
   const handleCashoutSubmit = async () => {
-    if (!match) return;
+    if (!match || !userId) return;
 
     const bankAccountValidation = bankAccountSchema.safeParse(bankAccountNumber);
     const accountNameValidation = accountNameSchema.safeParse(accountName);
@@ -360,6 +398,7 @@ const ConfirmCheckin = () => {
           bank_name: bankName,
           account_name: accountName,
           status: "under_review",
+          user_id: userId,
         })
         .select()
         .single();
@@ -536,22 +575,61 @@ const ConfirmCheckin = () => {
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6 border border-gray-200 dark:border-gray-700">
           <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Enter Match Super Code</h2>
           <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <Input
-                placeholder="Enter 6-digit super code"
-                value={superCode}
-                onChange={(e) => {
-                  const value = e.target.value.replace(/[^0-9]/g, "").slice(0, 6);
-                  setSuperCode(value);
-                  setSuperCodeError(null);
-                  setMatchNotFound(false);
-                }}
-                inputMode="numeric"
-                pattern="[0-9]*"
-                maxLength={6}
-                className="w-full text-base"
-                ref={codeInputRef}
-              />
+            <div className="flex-1 relative">
+              {userId && recentSuperCodes.length > 0 ? (
+                <div className="relative">
+                  <Select
+                    onValueChange={(value) => {
+                      setSuperCode(value);
+                      setSuperCodeError(null);
+                      setMatchNotFound(false);
+                    }}
+                    value={superCode}
+                  >
+                    <SelectTrigger className="w-full text-base">
+                      <SelectValue placeholder="Select or enter super code" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {recentSuperCodes.map((code) => (
+                        <SelectItem key={code} value={code}>
+                          {code}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    placeholder="Enter 6-digit super code"
+                    value={superCode}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/[^0-9]/g, "").slice(0, 6);
+                      setSuperCode(value);
+                      setSuperCodeError(null);
+                      setMatchNotFound(false);
+                    }}
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={6}
+                    className="w-full text-base mt-2"
+                    ref={codeInputRef}
+                  />
+                </div>
+              ) : (
+                <Input
+                  placeholder="Enter 6-digit super code"
+                  value={superCode}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/[^0-9]/g, "").slice(0, 6);
+                    setSuperCode(value);
+                    setSuperCodeError(null);
+                    setMatchNotFound(false);
+                  }}
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={6}
+                  className="w-full text-base"
+                  ref={codeInputRef}
+                />
+              )}
               {superCodeError && (
                 <p className="text-sm text-red-600 mt-1">{superCodeError}</p>
               )}
@@ -575,7 +653,7 @@ const ConfirmCheckin = () => {
 
         {matchNotFound && !loading && (
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6 text-center border border-gray-200 dark:border-gray-700">
-            <AlertCircle size={40} className="text-red-fh6 dark:text-red-500 mx-auto mb-3" />
+            <AlertCircle size={40} className="text-red-600 dark:text-red-500 mx-auto mb-3" />
             <h2 className="text-lg font-semibold text-red-600 dark:text-red-500">Match Not Found</h2>
             <p className="text-gray-600 dark:text-gray-400 mt-2">
               No match found with super code <strong>{superCode}</strong>. Please check the code and try again.
@@ -630,320 +708,175 @@ const ConfirmCheckin = () => {
                 </div>
               </div>
               {cashout && cashout.status === "under_review" && (
-                <div className="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700 rounded-lg">
-                  <h3 className="text-md font-medium text-yellow-800 dark:text-yellow-200">Cashout Under Review</h3>
-                  <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
-                    Account Details: {cashout.account_name} ({cashout.bank_name}, {cashout.bank_account_number})
+                <div className="mt-4 p-4 bg-yellow-100 dark:bg-yellow-900 rounded-lg">
+                  <p className="text-yellow-700 dark:text-yellow-300">
+                    Your cashout request is under review. Expected amount: {calculateExpectedAmount()}
                   </p>
-                  <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
-                    Expected Amount: {calculateExpectedAmount()}
-                  </p>
-                  <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-1">
-                    Your cashout request is being processed. You'll be notified once reviewed.
-                  </p>
-                </div>
-              )}
-              <Button
-                className="mt-4 w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2"
-                onClick={() => setIsPlayersOpen(!isPlayersOpen)}
-              >
-                {isPlayersOpen ? <ChevronUp size={18} className="mr-2" /> : <ChevronDown size={18} className="mr-2" />}
-                {isPlayersOpen ? "Hide Players" : "See Players"}
-              </Button>
-              {isPlayersOpen && (
-                <div className="mt-4 space-y-3 max-h-[30vh] overflow-y-auto">
-                  {(match.players || []).map((player) => (
-                    <div
-                      key={player.id}
-                      className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center text-green-600 dark:text-green-400 font-semibold">
-                          {(player.player_name || "Unknown").charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                          <span className="font-medium text-gray-900 dark:text-gray-100">{player.player_name || "Unknown Player"}</span>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
-                            Phone: {player.details?.phone || "N/A"}
-                          </p>
-                          <span
-                            className={`inline-block px-2 py-1 text-xs font-medium rounded border ${getStatusStyles(player.status)}`}
-                          >
-                            {player.status.charAt(0).toUpperCase() + player.status.slice(1)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
                 </div>
               )}
             </div>
 
-            {cashout && cashout.status === "under_review" && (
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700">
-                <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Cashout Under Review</h2>
-                <p className="text-gray-600 dark:text-gray-400">
-                  Your cashout request is being processed. You'll be notified once it's reviewed.
-                </p>
-              </div>
-            )}
-
-            <div className="flex flex-col sm:flex-row gap-4">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span>
-                      <Button
-                        className="flex-1 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 w-full sm:w-auto"
-                        onClick={handleConfirmMode}
-                        disabled={isMatchStarted()}
-                      >
-                        <CheckCircle size={18} className="mr-2" />
-                        Confirm Players
-                      </Button>
-                    </span>
-                  </TooltipTrigger>
-                  {isMatchStarted() && (
-                    <TooltipContent>
-                      <p>This match has passed. No further actions are allowed.</p>
-                    </TooltipContent>
-                  )}
-                </Tooltip>
-              </TooltipProvider>
-
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span>
-                      <Button
-                        className="flex-1 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 w-full sm:w-auto"
-                        onClick={handleCheckinMode}
-                        disabled={isMatchStarted()}
-                      >
-                        <Users size={18} className="mr-2" />
-                        Check-in Players
-                      </Button>
-                    </span>
-                  </TooltipTrigger>
-                  {isMatchStarted() && (
-                    <TooltipContent>
-                      <p>This match has passed. No further actions are allowed.</p>
-                    </TooltipContent>
-                  )}
-                </Tooltip>
-              </TooltipProvider>
-
-              {match?.is_paid && !cashout && (
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700">
+              <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Manage Players</h2>
+              <div className="flex flex-wrap gap-4 mb-4">
                 <Button
-                  className="flex-1 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 w-full sm:w-auto"
-                  onClick={handleCashoutMode}
-                  disabled={!isCashoutEligible() || (cashout?.status === "under_review")}
+                  onClick={handleConfirmMode}
+                  className="bg-green-500 hover:bg-green-600 text-white"
+                  disabled={isMatchStarted()}
                 >
-                  <DollarSign size={18} className="mr-2" />
-                  Cash Out
+                  Confirm Players
+                </Button>
+                <Button
+                  onClick={handleCheckinMode}
+                  className="bg-blue-500 hover:bg-blue-600 text-white"
+                  disabled={isMatchStarted()}
+                >
+                  Check-in Players
+                </Button>
+                {match.is_paid && (
+                  <Button
+                    onClick={handleCashoutMode}
+                    className="bg-yellow-500 hover:bg-yellow-600 text-white"
+                    disabled={!isCashoutEligible()}
+                  >
+                    Request Cashout
+                  </Button>
+                )}
+              </div>
+
+              <div className="max-h-[400px] overflow-y-auto">
+                <button
+                  onClick={() => setIsPlayersOpen(!isPlayersOpen)}
+                  className="flex items-center gap-2 w-full text-left text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4"
+                >
+                  Players
+                  {isPlayersOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                </button>
+                {isPlayersOpen && (
+                  <div className="space-y-4">
+                    {(match.players || []).length === 0 ? (
+                      <p className="text-gray-600 dark:text-gray-400">No players registered for this match.</p>
+                    ) : (
+                      match.players?.map((player) => (
+                        <div
+                          key={player.id}
+                          className="flex flex-col sm:flex-row gap-4 items-start sm:items-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg"
+                        >
+                          <div className="flex-1">
+                            <p className="font-medium text-gray-900 dark:text-gray-100">{player.player_name}</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                              Phone: {player.details?.phone || "Not provided"}
+                            </p>
+                            <span
+                              className={`inline-block mt-1 px-2 py-1 text-xs font-medium rounded border ${getStatusStyles(player.status)}`}
+                            >
+                              {player.status.replace("_", " ").charAt(0).toUpperCase() + player.status.replace("_", " ").slice(1)}
+                            </span>
+                          </div>
+                          {mode === "confirm" && (
+                            <Select
+                              value={playerStatuses.find((p) => p.id === player.id)?.status || player.status}
+                              onValueChange={(value) => handleStatusChange(player.id, value)}
+                            >
+                              <SelectTrigger className="w-[150px]">
+                                <SelectValue placeholder="Select status" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="pending">Pending</SelectItem>
+                                <SelectItem value="confirmed">Confirmed</SelectItem>
+                                <SelectItem value="absent">Absent</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          )}
+                          {mode === "checkin" && (
+                            <div className="flex gap-2 w-full sm:w-auto">
+                              <Input
+                                placeholder="Enter check-in code"
+                                value={checkinCodes[player.id] || ""}
+                                onChange={(e) => handleCheckinCodeChange(player.id, e.target.value)}
+                                inputMode="numeric"
+                                pattern="[0-9]*"
+                                maxLength={6}
+                                className="w-full sm:w-[150px]"
+                              />
+                              <Button
+                                onClick={() => validateCheckinCode(player.id)}
+                                className="bg-blue-500 hover:bg-blue-600 text-white"
+                                disabled={!!checkinCodeErrors[player.id] || !checkinCodes[player.id]}
+                              >
+                                Verify
+                              </Button>
+                            </div>
+                          )}
+                          {checkinCodeErrors[player.id] && (
+                            <p className="text-sm text-red-600 mt-1">{checkinCodeErrors[player.id]}</p>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {(mode === "confirm" || mode === "checkin") && (
+                <Button
+                  onClick={handleSave}
+                  className="mt-4 bg-green-500 hover:bg-green-600 text-white"
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 size={16} className="mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    "Save Changes"
+                  )}
                 </Button>
               )}
             </div>
-
-            {mode === "confirm" && (
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700">
-                <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Confirm Players</h2>
-                {(match.players || []).length > 0 ? (
-                  <div className="space-y-3 max-h-[50vh] overflow-y-auto">
-                    {(match.players || []).map((player) => {
-                      const currentStatus = playerStatuses.find((p) => p.id === player.id)?.status || player.status;
-                      return (
-                        <div
-                          key={player.id}
-                          className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center text-green-600 dark:text-green-400 font-semibold">
-                              {(player.player_name || "Unknown").charAt(0).toUpperCase()}
-                            </div>
-                            <div>
-                              <span className="font-medium text-gray-900 dark:text-gray-100">{player.player_name || "Unknown Player"}</span>
-                              <p className="text-sm text-gray-600 dark:text-gray-400">
-                                Phone: {player.details?.phone || "N/A"}
-                              </p>
-                              <span
-                                className={`inline-block px-2 py-1 text-xs font-medium rounded border ${getStatusStyles(currentStatus)}`}
-                              >
-                                {currentStatus.charAt(0).toUpperCase() + currentStatus.slice(1)}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleStatusChange(player.id, "confirmed")}
-                              disabled={currentStatus === "checked_in" || isMatchStarted()}
-                              className="hover:bg-green-100 dark:hover:bg-green-900"
-                            >
-                              <CheckCircle
-                                size={20}
-                                className={currentStatus === "confirmed" ? "text-green-500" : "text-gray-500 dark:text-gray-400"}
-                              />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleStatusChange(player.id, "pending")}
-                              disabled={currentStatus === "checked_in" || isMatchStarted()}
-                              className="hover:bg-red-100 dark:hover:bg-red-900"
-                            >
-                              <XCircle
-                                size={20}
-                                className={currentStatus === "pending" ? "text-red-500" : "text-gray-500 dark:text-gray-400"}
-                              />
-                            </Button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                    <Button
-                      className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 mt-4 sticky bottom-0"
-                      onClick={handleSave}
-                      disabled={loading || isMatchStarted()}
-                    >
-                      <CheckCircle size={18} className="mr-2" />
-                      Save Changes
-                    </Button>
-                  </div>
-                ) : (
-                  <p className="text-gray-600 dark:text-gray-400 text-sm">No players have registered yet.</p>
-                )}
-              </div>
-            )}
-
-            {mode === "checkin" && (
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700">
-                <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Check-in Players</h2>
-                {(match.players || []).filter((p) => p.status === "confirmed").length > 0 ? (
-                  <div className="space-y-3 max-h-[50vh] overflow-y-auto">
-                    {(match.players || [])
-                      .filter((p) => p.status === "confirmed")
-                      .map((player) => {
-                        const currentStatus = playerStatuses.find((p) => p.id === player.id)?.status || player.status;
-                        return (
-                          <div
-                            key={player.id}
-                            className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition"
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center text-green-600 dark:text-green-400 font-semibold">
-                                {(player.player_name || "Unknown").charAt(0).toUpperCase()}
-                              </div>
-                              <div>
-                                <span className="font-medium text-gray-900 dark:text-gray-100">{player.player_name || "Unknown Player"}</span>
-                                <p className="text-sm text-gray-600 dark:text-gray-400">
-                                  Phone: {player.details?.phone || "N/A"}
-                                </p>
-                                <span
-                                  className={`inline-block px-2 py-1 text-xs font-medium rounded border ${getStatusStyles(currentStatus)}`}
-                                >
-                                  {currentStatus.charAt(0).toUpperCase() + currentStatus.slice(1)}
-                                </span>
-                              </div>
-                            </div>
-                            {currentStatus !== "checked_in" && (
-                              <div className="flex items-center gap-2">
-                                <div className="w-28">
-                                  <Input
-                                    placeholder="6-digit code"
-                                    value={checkinCodes[player.id] || ""}
-                                    onChange={(e) =>
-                                      handleCheckinCodeChange(player.id, e.target.value)
-                                    }
-                                    inputMode="numeric"
-                                    pattern="[0-9]*"
-                                    maxLength={6}
-                                    className="h-9 text-base"
-                                    disabled={isMatchStarted()}
-                                  />
-                                  {checkinCodeErrors[player.id] && (
-                                    <p className="text-xs text-red-600 mt-1">
-                                      {checkinCodeErrors[player.id]}
-                                    </p>
-                                  )}
-                                </div>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => validateCheckinCode(player.id)}
-                                  className="hover:bg-blue-100 dark:hover:bg-blue-900"
-                                  disabled={isMatchStarted()}
-                                >
-                                  <CheckCircle size={20} className="text-blue-500" />
-                                </Button>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    <Button
-                      className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 mt-4 sticky bottom-0"
-                      onClick={handleSave}
-                      disabled={loading || isMatchStarted()}
-                    >
-                      <Users size={18} className="mr-2" />
-                      Save Check-ins
-                    </Button>
-                  </div>
-                ) : (
-                  <p className="text-gray-600 dark:text-gray-400 text-sm">No confirmed players available for check-in.</p>
-                )}
-              </div>
-            )}
           </div>
         )}
 
         <Dialog open={cashoutDialogOpen} onOpenChange={setCashoutDialogOpen}>
-          <DialogContent className="max-w-md rounded-xl bg-white dark:bg-gray-800 p-6 shadow-md border border-gray-200 dark:border-gray-700">
+          <DialogContent>
             <DialogHeader>
-              <DialogTitle className="text-xl font-bold text-gray-900 dark:text-gray-100 text-center">
-                Cashout Request
-              </DialogTitle>
-              <DialogDescription className="text-gray-600 dark:text-gray-400 text-center mt-2 text-sm">
-                Enter your bank details to initiate a cashout for this match.
+              <DialogTitle>Request Cashout</DialogTitle>
+              <DialogDescription>
+                Enter your bank details to request a cashout for this match. The expected amount is {calculateExpectedAmount()}.
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4">
+            <div className="space-y-4">
               <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Bank Account Number
                 </label>
                 <Input
-                  type="text"
-                  placeholder="Enter 10-digit account number"
                   value={bankAccountNumber}
                   onChange={(e) => {
-                    const value = e.target.value.replace(/[^0-9]/g, "").slice(0, 10);
-                    setBankAccountNumber(value);
+                    setBankAccountNumber(e.target.value.replace(/[^0-9]/g, "").slice(0, 10));
                     setBankAccountError(null);
                   }}
                   inputMode="numeric"
                   pattern="[0-9]*"
                   maxLength={10}
-                  className="w-full mt-1 text-base"
-                  disabled={isMatchStarted()}
+                  className="mt-1"
                 />
                 {bankAccountError && (
                   <p className="text-sm text-red-600 mt-1">{bankAccountError}</p>
                 )}
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Bank Name
                 </label>
-                <Select onValueChange={setBankName} value={bankName} disabled={isMatchStarted()}>
-                  <SelectTrigger className="w-full mt-1 text-base">
-                    <SelectValue placeholder="Select a bank" />
+                <Select onValueChange={setBankName} value={bankName}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Select bank" />
                   </SelectTrigger>
                   <SelectContent>
                     {nigerianBanks.map((bank) => (
-                      <SelectItem key={bank} value={bank} className="text-base">
+                      <SelectItem key={bank} value={bank}>
                         {bank}
                       </SelectItem>
                     ))}
@@ -951,31 +884,33 @@ const ConfirmCheckin = () => {
                 </Select>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Account Name
                 </label>
                 <Input
-                  type="text"
-                  placeholder="Enter account name"
                   value={accountName}
                   onChange={(e) => {
-                    const value = e.target.value.replace(/[^A-Za-z\s]/g, "");
-                    setAccountName(value);
+                    setAccountName(e.target.value);
                     setAccountNameError(null);
                   }}
-                  className="w-full mt-1 text-base"
-                  disabled={isMatchStarted()}
+                  className="mt-1"
                 />
                 {accountNameError && (
                   <p className="text-sm text-red-600 mt-1">{accountNameError}</p>
                 )}
               </div>
             </div>
-            <DialogFooter className="flex justify-center">
+            <DialogFooter>
               <Button
-                className="bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2"
+                variant="outline"
+                onClick={() => setCashoutDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
                 onClick={handleCashoutSubmit}
-                disabled={loading || isMatchStarted()}
+                className="bg-green-500 hover:bg-green-600 text-white"
+                disabled={loading}
               >
                 {loading ? (
                   <>
@@ -983,7 +918,7 @@ const ConfirmCheckin = () => {
                     Submitting...
                   </>
                 ) : (
-                  "Submit"
+                  "Submit Cashout"
                 )}
               </Button>
             </DialogFooter>
