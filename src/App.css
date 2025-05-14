@@ -1,23 +1,50 @@
+/* Root container styling */
 #root {
   max-width: 1280px;
   margin: 0 auto;
   padding: 2rem;
   text-align: center;
+  box-sizing: border-box;
+  min-height: 100vh;
+  padding-bottom: 5rem;
+  position: relative; /* For absolute positioning of loading overlay */
 }
 
+/* Loading overlay - matches your football animation */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  backdrop-filter: blur(2px);
+}
+
+/* Logo styling */
 .logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+  height: 6rem;
+  padding: 1.5rem;
+  will-change: filter, transform;
+  transition: filter 300ms, transform 300ms ease;
+  border-radius: 0.5rem;
+  object-fit: contain; /* Better image handling */
 }
 
+.logo:hover {
+  filter: drop-shadow(0 0 1.5rem #646cffaa); /* More transparent glow */
+  transform: scale(1.05);
+}
+
+.logo.react:hover {
+  filter: drop-shadow(0 0 1.5rem #61dafbaa);
+}
+
+/* Logo spin animation */
 @keyframes logo-spin {
   from {
     transform: rotate(0deg);
@@ -27,16 +54,118 @@
   }
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
+/* Card styling */
+.card {
+  padding: 2rem;
+  background-color: #ffffff;
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: all 300ms ease;
+  margin: 1rem 0; /* Added spacing */
+}
+
+.card:hover {
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px); /* Added lift effect */
+}
+
+/* Text styling */
+.read-the-docs {
+  color: #666;
+  font-weight: 500;
+  margin: 1rem 0;
+}
+
+/* Content transition when loading completes */
+.content-transition {
+  opacity: 0;
+  transition: opacity 500ms ease;
+}
+
+.content-visible {
+  opacity: 1;
+}
+
+/* Enhanced responsive adjustments */
+@media (max-width: 1024px) {
+  #root {
+    padding: 1.5rem;
+    padding-bottom: 4.5rem;
   }
 }
 
-.card {
-  padding: 2em;
+@media (max-width: 768px) {
+  #root {
+    padding: 1rem;
+    padding-bottom: 4rem;
+  }
+
+  .logo {
+    height: 4.5rem;
+    padding: 1rem;
+  }
+
+  .card {
+    padding: 1.5rem;
+    margin: 0.75rem 0;
+  }
 }
 
-.read-the-docs {
-  color: #888;
+@media (max-width: 480px) {
+  #root {
+    padding: 0.75rem;
+    padding-bottom: 3.75rem;
+  }
+
+  .logo {
+    height: 3.5rem;
+    padding: 0.75rem;
+  }
+
+  .card {
+    padding: 1.25rem;
+    margin: 0.5rem 0;
+    border-radius: 0.5rem;
+  }
+
+  .read-the-docs {
+    font-size: 0.9rem;
+  }
+}
+
+/* Special case for very small devices */
+@media (max-width: 360px) {
+  #root {
+    padding: 0.5rem;
+    padding-bottom: 3.5rem;
+  }
+
+  .logo {
+    height: 3rem;
+  }
+
+  .card {
+    padding: 1rem;
+  }
+}
+
+/* Accessibility improvements */
+@media (prefers-reduced-motion) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .card {
+    background-color: #1e1e1e;
+    color: #ffffff;
+  }
+  
+  .read-the-docs {
+    color: #aaa;
+  }
 }
