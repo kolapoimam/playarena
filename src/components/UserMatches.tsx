@@ -30,6 +30,8 @@ type Match = {
 
 type Profile = {
   id: string;
+  nickname?: string;
+  first_name?: string;
 };
 
 type UserMatchesProps = {
@@ -74,17 +76,24 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
     // Fetch booked slots for each organized match
     const organizedMatchesWithSlots = await Promise.all(
       orgData.map(async (item) => {
-        const { count } = await supabase
+        const { data: players, error: playerError } = await supabase
           .from("players")
-          .select("id", { count: "exact" })
+          .select("number_of_slots")
           .eq("match_id", item.matches.id)
           .eq("cancellation_status", false);
+        
+        if (playerError) {
+          toast({ title: "Error", description: "Failed to load player slots.", variant: "destructive" });
+          return { ...item.matches, booked_slots: 0 };
+        }
+
+        const bookedSlots = players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
         return {
           ...item.matches,
           super_code: item.matches.super_code,
           venue_name: item.matches.venues?.name,
           is_paid: item.matches.is_paid,
-          booked_slots: count || 0,
+          booked_slots: bookedSlots,
           total_slots: item.matches.total_slots,
         };
       })
@@ -115,7 +124,6 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
         let playerStatus = item.players?.status || "registered";
         let playerCancellationStatus = item.players?.cancellation_status || false;
         if (!item.players) {
-          // Check if the player entry exists in players table (for cancelled matches)
           const { data: playerData } = await supabase
             .from("players")
             .select("status, cancellation_status")
@@ -133,7 +141,7 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
           number_of_slots: item.players?.number_of_slots,
           player_status: playerStatus,
           player_cancellation_status: playerCancellationStatus,
-          booked_slots: 0, // Not displayed in Playing tab
+          booked_slots: 0,
           total_slots: item.matches.total_slots,
         };
       })
@@ -145,7 +153,7 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
   const canCancelMatch = (matchDate: string) => {
     const now = new Date();
     const matchTime = new Date(matchDate);
-    const oneHourBefore = new Date(matchTime.getTime() - 60 * 60 * 1000); // 1 hour before match
+    const oneHourBefore = new Date(matchTime.getTime() - 60 * 60 * 1000);
     return now < oneHourBefore;
   };
 
@@ -155,18 +163,18 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
     const now = new Date();
     const { data: match } = await supabase
       .from("matches")
-      .select("match_date")
+      .select("match_date, cancellation_status")
       .eq("id", cancelMatchId)
       .single();
 
-    if (!match || new Date(match.match_date) <= new Date(now.getTime() + 60 * 60 * 1000)) {
-      toast({ title: "Error", description: "Cannot cancel match within 1 hour or in the past.", variant: "destructive" });
+    if (!match || match.cancellation_status || new Date(match.match_date) <= new Date(now.getTime() + 60 * 60 * 1000)) {
+      toast({ title: "Error", description: "Cannot cancel match within 1 hour, in the past, or already cancelled.", variant: "destructive" });
       setShowCancelDialog(false);
       return;
     }
 
     if (cancelIsJoined) {
-      // Cancel participation (Playing tab)
+      // Cancel participation
       const { error: joinedError } = await supabase
         .from("user_joined_matches")
         .delete()
@@ -179,7 +187,6 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
         return;
       }
 
-      // Update player status and cancellation_status
       const { error: playerError } = await supabase
         .from("players")
         .update({ status: "cancelled", cancellation_status: true, updated_at: new Date().toISOString() })
@@ -192,10 +199,10 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
         return;
       }
     } else {
-      // Cancel entire match (Organizing tab)
+      // Cancel entire match
       const { error: matchError } = await supabase
         .from("matches")
-        .update({ status: "cancelled", cancellation_status: true })
+        .update({ status: "cancelled", cancellation_status: true, updated_at: new Date().toISOString() })
         .eq("id", cancelMatchId);
 
       if (matchError) {
@@ -204,7 +211,6 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
         return;
       }
 
-      // Update all players' status and cancellation_status
       const { error: playersError } = await supabase
         .from("players")
         .update({ status: "cancelled", cancellation_status: true, updated_at: new Date().toISOString() })
@@ -431,14 +437,14 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
       </CardContent>
 
       <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
-        <DialogContent className="sm:max-w-md rounded-2xl">
+        <DialogContent className="max-w-md rounded-2xl">
           <DialogHeader>
             <DialogTitle>Confirm Cancellation</DialogTitle>
             <DialogDescription>
               Are you sure you want to cancel {cancelIsJoined ? "your participation in" : "this match"}? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
+          <DialogFooter className="flex justify-end gap-2">
             <Button
               variant="outline"
               onClick={() => setShowCancelDialog(false)}
