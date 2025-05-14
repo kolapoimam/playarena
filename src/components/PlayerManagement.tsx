@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
+import { differenceInMinutes } from "date-fns";
 
 type Match = {
   id: string;
@@ -122,6 +123,7 @@ type PlayerManagementProps = {
   fetchMatch: () => void;
   loading: boolean;
   setLoading: (value: boolean) => void;
+  isMatchPast: boolean; // Use the prop from ConfirmCheckin
 };
 
 const PlayerManagement = ({
@@ -136,6 +138,7 @@ const PlayerManagement = ({
   fetchMatch,
   loading,
   setLoading,
+  isMatchPast,
 }: PlayerManagementProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -147,12 +150,6 @@ const PlayerManagement = ({
   const [bankAccountError, setBankAccountError] = useState<string | null>(null);
   const [accountNameError, setAccountNameError] = useState<string | null>(null);
   const [isPlayersOpen, setIsPlayersOpen] = useState(false);
-
-  const isMatchStarted = () => {
-    if (!match) return false;
-    const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
-    return isPast(matchDateTime);
-  };
 
   const isCashoutEligible = () => {
     if (!match || match.cancellation_status) return false;
@@ -167,7 +164,7 @@ const PlayerManagement = ({
 
   const handleConfirmMode = () => {
     if (!match || match.cancellation_status) return;
-    if (isMatchStarted()) {
+    if (isMatchPast) {
       toast({
         title: "Action Not Available",
         description: "This match has passed. No further actions are allowed.",
@@ -180,7 +177,7 @@ const PlayerManagement = ({
 
   const handleCheckinMode = () => {
     if (!match || match.cancellation_status) return;
-    if (isMatchStarted()) {
+    if (isMatchPast) {
       toast({
         title: "Action Not Available",
         description: "This match has passed. No further actions are allowed.",
@@ -389,14 +386,14 @@ const PlayerManagement = ({
         <Button
           onClick={handleConfirmMode}
           className="bg-green-500 hover:bg-green-600 text-white"
-          disabled={isMatchStarted() || match.cancellation_status}
+          disabled={isMatchPast || match.cancellation_status}
         >
           Confirm Players
         </Button>
         <Button
           onClick={handleCheckinMode}
           className="bg-blue-500 hover:bg-blue-600 text-white"
-          disabled={isMatchStarted() || match.cancellation_status}
+          disabled={isMatchPast || match.cancellation_status}
         >
           Check-in Players
         </Button>
@@ -567,7 +564,7 @@ const PlayerManagement = ({
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={setCashoutDialogOpen}
+              onClick={() => setCashoutDialogOpen(false)}
             >
               Cancel
             </Button>
