@@ -151,88 +151,114 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
   };
 
   const canCancelMatch = (matchDate: string) => {
+    if (!matchDate) return false;
     const now = new Date();
     const matchTime = new Date(matchDate);
+    if (isNaN(matchTime.getTime())) return false;
     const oneHourBefore = new Date(matchTime.getTime() - 60 * 60 * 1000);
     return now < oneHourBefore;
   };
 
   const handleCancelConfirm = async () => {
-    if (!cancelMatchId) return;
+    if (!cancelMatchId || !profile) return;
 
     const now = new Date();
-    const { data: match } = await supabase
+    const { data: match, error: matchError } = await supabase
       .from("matches")
       .select("match_date, cancellation_status")
       .eq("id", cancelMatchId)
       .single();
 
-    if (!match || match.cancellation_status || new Date(match.match_date) <= new Date(now.getTime() + 60 * 60 * 1000)) {
+    if (matchError || !match || match.cancellation_status || new Date(match.match_date) <= new Date(now.getTime() + 60 * 60 * 1000)) {
       toast({ title: "Error", description: "Cannot cancel match within 1 hour, in the past, or already cancelled.", variant: "destructive" });
       setShowCancelDialog(false);
       return;
     }
 
-    if (cancelIsJoined) {
-      // Cancel participation
-      const { error: joinedError } = await supabase
-        .from("user_joined_matches")
-        .delete()
-        .eq("user_id", profile!.id)
-        .eq("match_id", cancelMatchId);
+    try {
+      if (cancelIsJoined) {
+        // Cancel participation
+        const { error: joinedError } = await supabase
+          .from("user_joined_matches")
+          .delete()
+          .eq("user_id", profile.id)
+          .eq("match_id", cancelMatchId);
 
-      if (joinedError) {
-        toast({ title: "Error", description: "Failed to cancel participation.", variant: "destructive" });
-        setShowCancelDialog(false);
-        return;
+        if (joinedError) throw joinedError;
+
+        const { error: playerError } = await supabase
+          .from("players")
+          .update({ status: "cancelled", cancellation_status: true, updated_at: new Date().toISOString() })
+          .eq("match_id", cancelMatchId)
+          .eq("player_name", profile.nickname || profile.first_name || "User");
+
+        if (playerError) throw playerError;
+
+        // Update booked_slots for the match
+        const { data: players, error: playerFetchError } = await supabase
+          .from("players")
+          .select("number_of_slots")
+          .eq("match_id", cancelMatchId)
+          .eq("cancellation_status", false);
+
+        if (playerFetchError) throw playerFetchError;
+
+        const bookedSlots = players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
+        setJoinedMatches((prev) =>
+          prev.map((m) =>
+            m.id === cancelMatchId
+              ? { ...m, player_status: "cancelled", player_cancellation_status: true, booked_slots }
+              : m
+          )
+        );
+      } else {
+        // Cancel entire match
+        const { error: matchUpdateError } = await supabase
+          .from("matches")
+          .update({ status: "cancelled", cancellation_status: true, updated_at: new Date().toISOString() })
+          .eq("id", cancelMatchId);
+
+        if (matchUpdateError) throw matchUpdateError;
+
+        const { error: playersError } = await supabase
+          .from("players")
+          .update({ status: "cancelled", cancellation_status: true, updated_at: new Date().toISOString() })
+          .eq("match_id", cancelMatchId);
+
+        if (playersError) throw playersError;
+
+        // Update booked_slots to 0 since the match is cancelled
+        setOrganizedMatches((prev) =>
+          prev.map((m) =>
+            m.id === cancelMatchId ? { ...m, status: "cancelled", cancellation_status: true, booked_slots: 0 } : m
+          )
+        );
       }
 
-      const { error: playerError } = await supabase
-        .from("players")
-        .update({ status: "cancelled", cancellation_status: true, updated_at: new Date().toISOString() })
-        .eq("match_id", cancelMatchId)
-        .eq("player_name", profile!.nickname || profile!.first_name || "User");
-
-      if (playerError) {
-        toast({ title: "Error", description: "Failed to update player status.", variant: "destructive" });
-        setShowCancelDialog(false);
-        return;
-      }
-    } else {
-      // Cancel entire match
-      const { error: matchError } = await supabase
-        .from("matches")
-        .update({ status: "cancelled", cancellation_status: true, updated_at: new Date().toISOString() })
-        .eq("id", cancelMatchId);
-
-      if (matchError) {
-        toast({ title: "Error", description: "Failed to cancel match.", variant: "destructive" });
-        setShowCancelDialog(false);
-        return;
-      }
-
-      const { error: playersError } = await supabase
-        .from("players")
-        .update({ status: "cancelled", cancellation_status: true, updated_at: new Date().toISOString() })
-        .eq("match_id", cancelMatchId);
-
-      if (playersError) {
-        toast({ title: "Error", description: "Failed to update players' status.", variant: "destructive" });
-        setShowCancelDialog(false);
-        return;
-      }
+      toast({ title: "Success", description: cancelIsJoined ? "Participation cancelled successfully!" : "Match cancelled successfully!" });
+      await fetchMatches(); // Refresh matches to ensure consistency
+    } catch (error) {
+      console.error("Cancellation error:", error);
+      toast({ title: "Error", description: "Failed to cancel. Please try again.", variant: "destructive" });
+    } finally {
+      setShowCancelDialog(false);
+      setCancelMatchId(null);
+      setCancelIsJoined(false);
     }
-
-    toast({ title: "Success", description: "Match cancelled successfully!" });
-    setShowCancelDialog(false);
-    fetchMatches();
   };
 
   const formatMatchDateTime = (date: string) => {
-    const zonedDate = utcToZonedTime(new Date(date), "Africa/Lagos");
-    const dateStr = format(zonedDate, "EEE, dd MMM yyyy");
-    const timeStr = format(zonedDate, "h:mm a");
-    return { dateStr, timeStr };
+    if (!date || isNaN(new Date(date).getTime())) {
+      return { dateStr: "Invalid Date", timeStr: "Invalid Time" };
+    }
+    try {
+      const zonedDate = utcToZonedTime(new Date(date), "Africa/Lagos");
+      const dateStr = format(zonedDate, "EEE, dd MMM yyyy");
+      const timeStr = format(zonedDate, "h:mm a");
+      return { dateStr, timeStr };
+    } catch {
+      return { dateStr: "Invalid Date", timeStr: "Invalid Time" };
+    }
   };
 
   const getStatusLabel = (status: string, isCancelled: boolean) => {
@@ -313,7 +339,7 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
                       {(match.status === "upcoming" || match.status === "live") && !match.cancellation_status ? (
                         <Button
                           variant="outline"
-                          className="flex-1 border-green-500 text-green-500 hover:bg-green-500 hover:text-white rounded-lg"
+                          className="px-4 py-2 border-green-500 text-green-500 hover:bg-green-500 hover:text-white rounded-lg"
                           onClick={() => {
                             setCancelMatchId(match.id);
                             setCancelIsJoined(false);
@@ -325,7 +351,7 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
                         </Button>
                       ) : (
                         <Button
-                          className="flex-1 bg-green-500 hover:bg-green-600 text-white rounded-lg"
+                          className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg"
                           onClick={() => navigate(`/feedback?matchId=${match.id}`)}
                           disabled={
                             (new Date().getTime() - new Date(match.match_date).getTime()) /
@@ -337,7 +363,7 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
                         </Button>
                       )}
                       <Button
-                        className="flex-1 bg-green-500 hover:bg-green-600 text-white rounded-lg"
+                        className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg"
                         onClick={() => navigate(`/match/${match.slug}`)}
                       >
                         View Details
@@ -394,7 +420,7 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
                       !match.player_cancellation_status ? (
                         <Button
                           variant="outline"
-                          className="flex-1 border-green-500 text-green-500 hover:bg-green-500 hover:text-white rounded-lg"
+                          className="px-4 py-2 border-green-500 text-green-500 hover:bg-green-500 hover:text-white rounded-lg"
                           onClick={() => {
                             setCancelMatchId(match.id);
                             setCancelIsJoined(true);
@@ -406,7 +432,7 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
                         </Button>
                       ) : (
                         <Button
-                          className="flex-1 bg-green-500 hover:bg-green-600 text-white rounded-lg"
+                          className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg"
                           onClick={() => navigate(`/feedback?matchId=${match.id}`)}
                           disabled={
                             (new Date().getTime() - new Date(match.match_date).getTime()) /
@@ -418,7 +444,7 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
                         </Button>
                       )}
                       <Button
-                        className="flex-1 bg-green-500 hover:bg-green-600 text-white rounded-lg"
+                        className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg"
                         onClick={() => navigate(`/match/${match.slug}`)}
                       >
                         View Details
@@ -437,23 +463,25 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
       </CardContent>
 
       <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
-        <DialogContent className="max-w-md rounded-2xl">
+        <DialogContent className="max-w-md rounded-2xl bg-white dark:bg-gray-800 border-none shadow-lg">
           <DialogHeader>
-            <DialogTitle>Confirm Cancellation</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              Confirm Cancellation
+            </DialogTitle>
+            <DialogDescription className="text-sm text-gray-600 dark:text-gray-400">
               Are you sure you want to cancel {cancelIsJoined ? "your participation in" : "this match"}? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="flex justify-end gap-2">
+          <DialogFooter className="flex justify-end gap-3 mt-4">
             <Button
               variant="outline"
+              className="px-4 py-2 border-gray-300 text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 rounded-lg"
               onClick={() => setShowCancelDialog(false)}
-              className="border-gray-300 text-gray-700 hover:bg-gray-100"
             >
               No, Go Back
             </Button>
             <Button
-              className="bg-red-500 hover:bg-red-600 text-white"
+              className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg"
               onClick={handleCancelConfirm}
             >
               Yes, Cancel
