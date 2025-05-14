@@ -408,13 +408,19 @@ const Profile = () => {
                             <SelectValue placeholder="Select state" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent>
-                          {["Lagos", "Abuja", "Kano", "Oyo", "Rivers"].map((state) => (
-                            <SelectItem key={state} value={state} className="text-base">
-                              {state}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
+<SelectContent>
+  {[
+    "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", "Borno", 
+    "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu", "Gombe", "Imo", "Jigawa", 
+    "Kaduna", "Kano", "Katsina", "Kebbi", "Kogi", "Kwara", "Lagos", "Nasarawa", "Niger", 
+    "Ogun", "Ondo", "Osun", "Oyo", "Plateau", "Rivers", "Sokoto", "Taraba", "Yobe", 
+    "Zamfara", "FCT"
+  ].map((state) => (
+    <SelectItem key={state} value={state} className="text-base">
+      {state}
+    </SelectItem>
+  ))}
+</SelectContent>
                       </Select>
                       <FormMessage />
                     </FormItem>
@@ -432,13 +438,13 @@ const Profile = () => {
                             <SelectValue placeholder="Select skill level" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent>
-                          {["Beginner", "Intermediate", "Advanced"].map((level) => (
-                            <SelectItem key={level} value={level} className="text-base">
-                              {level}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
+<SelectContent>
+  {["Beginner", "Amateur", "Intermediate", "Advanced", "Professional"].map((level) => (
+    <SelectItem key={level} value={level} className="text-base">
+      {level}
+    </SelectItem>
+  ))}
+</SelectContent>
                       </Select>
                       <FormMessage />
                     </FormItem>
