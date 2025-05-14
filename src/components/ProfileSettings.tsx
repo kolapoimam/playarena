@@ -282,7 +282,7 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
                 )}
               />
               <div>
-                <Form⇥Label className="text-gray-700 dark:text-gray-300">Email Address</FormLabel>
+<FormLabel className="text-gray-700 dark:text-gray-300">Email Address</FormLabel>
                 <div className="flex items-center gap-2">
                   <Input
                     value={profile?.email}
