@@ -1,9 +1,30 @@
-import { Home, Search, Map, BookOpen } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Home, Search, Map, BookOpen, User } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Navbar() {
   const location = useLocation();
-  
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  // Check authentication status
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: session } = await supabase.auth.getSession();
+      setIsLoggedIn(!!session.session);
+    };
+    checkAuth();
+
+    // Listen for auth state changes
+    const { data: authListener } = supabase.auth.onAuthStateChange((_, session) => {
+      setIsLoggedIn(!!session);
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
+
   const isActive = (path: string) => {
     return location.pathname === path;
   };
@@ -37,6 +58,13 @@ export default function Navbar() {
       >
         <BookOpen size={28} />
         <span className="text-xs mt-1">Guides</span>
+      </Link>
+      <Link 
+        to={isLoggedIn ? "/profile" : "/auth"} 
+        className={`flex flex-col items-center p-2 ${isActive(isLoggedIn ? '/profile' : '/auth') ? 'text-playarena-600' : 'text-muted-foreground'} hover:scale-110 transition-transform`}
+      >
+        <User size={28} />
+        <span className="text-xs mt-1">Profile</span>
       </Link>
     </nav>
   );
