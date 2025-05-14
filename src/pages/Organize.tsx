@@ -108,6 +108,15 @@ const formSchema = z.object({
   skill_level: z.enum(skillLevels).optional().nullable(),
   match_type: z.enum(matchTypes).optional().nullable(),
   gender: z.enum(genders).optional().nullable(),
+  sell_tickets: z.boolean().default(false),
+  ticket_price: z.number()
+    .min(200, { message: "Ticket price must be at least ₦200" })
+    .max(100000, { message: "Maximum ticket price is ₦100,000" })
+    .optional()
+    .nullable()
+    .refine(val => val === null || val === undefined || val >= 200, {
+      message: "Ticket price must be at least ₦200 if provided"
+    }),
 }).refine(data => {
   const now = new Date();
   const selectedDateTime = new Date(data.match_date);
@@ -173,6 +182,8 @@ const Organize = () => {
       skill_level: null,
       match_type: null,
       gender: null,
+      sell_tickets: false,
+      ticket_price: null,
     },
   });
 
@@ -222,6 +233,8 @@ const Organize = () => {
   const skillLevel = form.watch("skill_level");
   const matchType = form.watch("match_type");
   const gender = form.watch("gender");
+  const sellTickets = form.watch("sell_tickets");
+  const ticketPrice = form.watch("ticket_price");
 
   useEffect(() => {
     const fetchVenues = async () => {
@@ -296,6 +309,8 @@ const Organize = () => {
           match_type: data.match_type || null,
           gender: data.gender || null,
           super_code: superCode,
+          sell_tickets: data.sell_tickets,
+          ticket_price: data.sell_tickets ? data.ticket_price : null,
         })
         .select('id, slug, super_code')
         .single();
@@ -902,6 +917,66 @@ const Organize = () => {
               />
             </div>
 
+            {/* Ticket Sales Section */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
+              <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Ticket Sales</h2>
+
+              <FormField
+                control={form.control}
+                name="sell_tickets"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 dark:border-gray-600">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base font-medium text-gray-700 dark:text-gray-300">
+                        Sell Tickets to Fans
+                      </FormLabel>
+                      <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                        Toggle to allow fans to purchase tickets to watch the match
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        className="data-[state=checked]:bg-green-500"
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              {sellTickets && (
+                <FormField
+                  control={form.control}
+                  name="ticket_price"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Ticket Price (₦)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          placeholder="200.00"
+                          min={200}
+                          step="0.01"
+                          className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                          {...field}
+                          onChange={(e) => {
+                            const value = parseFloat(e.target.value);
+                            field.onChange(isNaN(value) || value < 200 ? 200 : value);
+                          }}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                        Set the price for each ticket (minimum ₦200)
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+            </div>
+
             <div className="flex gap-4">
               <Button
                 type="button"
@@ -961,6 +1036,12 @@ const Organize = () => {
                   <div className="flex items-center">
                     <span className="font-semibold">Price: </span>
                     <span className="ml-2">₦{form.watch("price")?.toFixed(2) || "0.00"}</span>
+                  </div>
+                )}
+                {sellTickets && (
+                  <div className="flex items-center">
+                    <span className="font-semibold">Ticket Price: </span>
+                    <span className="ml-2">₦{ticketPrice?.toFixed(2) || "N/A"}</span>
                   </div>
                 )}
                 {notes && (
