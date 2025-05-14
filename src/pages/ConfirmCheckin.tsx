@@ -329,7 +329,7 @@ const ConfirmCheckin = () => {
   }, [superCode]);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-20">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-24">
       <header className="sticky top-0 z-50 bg-green-500 text-white shadow-md">
         <div className="p-4 flex items-center justify-between">
           <Button
