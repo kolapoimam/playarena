@@ -75,8 +75,20 @@ const JoinMatch = () => {
   const [isImageLoaded, setIsImageLoaded] = useState(false);
   const [backgroundOption, setBackgroundOption] = useState("field");
   const [selectedSlots, setSelectedSlots] = useState(1);
+  const [userId, setUserId] = useState<string | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const defaultEmail = "kolapoimam1@gmail.com";
+
+  // Check authentication status
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: session } = await supabase.auth.getSession();
+      if (session.session) {
+        setUserId(session.session.user.id);
+      }
+    };
+    checkAuth();
+  }, []);
 
   useEffect(() => {
     const script = document.createElement("script");
@@ -121,6 +133,7 @@ const JoinMatch = () => {
     defaultValues: {},
   });
 
+  // Fetch match and auto-populate form for logged-in users
   useEffect(() => {
     if (!slug) return;
 
@@ -151,8 +164,21 @@ const JoinMatch = () => {
         requiredFields.forEach((field) => {
           defaultValues[field] = "";
         });
-        form.reset(defaultValues);
 
+        // Auto-populate form for logged-in users
+        if (userId) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("nickname, phone_number")
+            .eq("id", userId)
+            .single();
+          if (profile) {
+            defaultValues["name"] = profile.nickname || "";
+            defaultValues["phone"] = profile.phone_number || "";
+          }
+        }
+
+        form.reset(defaultValues);
         setMatch(data as Match);
       } catch (error) {
         console.error("Error fetching match:", error);
@@ -167,7 +193,7 @@ const JoinMatch = () => {
     };
 
     fetchMatch();
-  }, [slug, toast, form]);
+  }, [slug, toast, form, userId]);
 
   useEffect(() => {
     if (!paymentReference || !match) return;
@@ -344,7 +370,9 @@ const JoinMatch = () => {
         playerDetails.payment_status = "paid";
       }
 
-      const { data: playerData, error } = await supabase
+      const confirmationCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+      const { data: playerData, error: playerError } = await supabase
         .from("players")
         .insert({
           match_id: match.id,
@@ -353,11 +381,38 @@ const JoinMatch = () => {
           payment_status: match.is_paid ? (paymentStatus === "success" ? "paid" : "pending") : "free",
           status: "registered",
           number_of_slots: selectedSlots,
+          confirmation_code: confirmationCode,
         })
-        .select("confirmation_code")
+        .select("id, confirmation_code")
         .single();
 
-      if (error) throw error;
+      if (playerError) throw playerError;
+
+      // Link player to user account if logged in
+      if (userId) {
+        const { error: joinError } = await supabase
+          .from("user_joined_matches")
+          .insert({
+            user_id: userId,
+            match_id: match.id,
+            player_id: playerData.id,
+          });
+
+        if (joinError) throw joinError;
+
+        if (match.is_paid && paymentStatus === "success") {
+          const { error: transactionError } = await supabase
+            .from("user_transactions")
+            .insert({
+              user_id: userId,
+              match_id: match.id,
+              amount: match.price! * selectedSlots,
+              transaction_type: "payment",
+            });
+
+          if (transactionError) throw transactionError;
+        }
+      }
 
       setConfirmationCode(playerData.confirmation_code);
 
@@ -710,84 +765,84 @@ const JoinMatch = () => {
                   backgroundColor: "rgba(0, 0, 0, 0.5)",
                 }),
               }}
-            >
-              <div className="relative z-10">
-                <div className="flex items-center justify-between mb-4">
-                  <img 
-                    src={backgroundOption === "white" ? "/playarenalight.png" : "/playarenadark.png"}
-                    alt="PlayArena Logo" 
-                    className="h-8 w-auto"
-                    onLoad={handleImageLoad}
-                    onError={() => {
-                      toast({
-                        title: "Error",
-                        description: "Failed to load logo image.",
-                        variant: "destructive",
-                      });
-                      setIsImageLoaded(true);
-                    }}
-                  />
-                  <Trophy className={`h-6 w-6 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-                </div>
-                <h2 className={`text-xl font-bold mb-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`}>{match?.title}</h2>
-                <div className="space-y-2 mb-4">
-                  <div className="flex items-center">
-                    <MapPin className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-                    <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{match?.venue?.name || "Venue"}, {match?.venue?.city || ""}</span>
+              >
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between mb-4">
+                    <img 
+                      src={backgroundOption === "white" ? "/playarenalight.png" : "/playarenadark.png"}
+                      alt="PlayArena Logo" 
+                      className="h-8 w-auto"
+                      onLoad={handleImageLoad}
+                      onError={() => {
+                        toast({
+                          title: "Error",
+                          description: "Failed to load logo image.",
+                          variant: "destructive",
+                        });
+                        setIsImageLoaded(true);
+                      }}
+                    />
+                    <Trophy className={`h-6 w-6 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
                   </div>
-                  <div className="flex items-center">
-                    <Calendar className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-                    <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{match && formatDate(match.match_date)} at {match && formatTime(match.match_time)}</span>
-                  </div>
-<div className="flex items-center">
-  <DollarSign className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-  <span className={backgroundOption === "white" ? "text-black" : "text-white"}>
-    {match?.is_paid ? `Paid (₦${match?.price?.toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} x${selectedSlots})` : "Free"}
-  </span>
-</div>
-<div className="flex items-center">
-  <Users className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-  <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{totalPlayerSlots}/{match?.total_slots} slots booked</span>
-</div>
-                  <div className="flex items-center">
-                    <span className={`font-bold ${backgroundOption === "white" ? "text-black" : "text-white"}`}>Confirmation Code:</span>
-                    <span className={`ml-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`}>{confirmationCode}</span>
-                  </div>
-                  {selectedSlots > 1 && (
+                  <h2 className={`text-xl font-bold mb-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`}>{match?.title}</h2>
+                  <div className="space-y-2 mb-4">
                     <div className="flex items-center">
-                      <span className={`font-bold ${backgroundOption === "white" ? "text-black" : "text-white"}`}>Slots Registered:</span>
-                      <span className={`ml-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`}>{selectedSlots}</span>
+                      <MapPin className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
+                      <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{match?.venue?.name || "Venue"}, {match?.venue?.city || ""}</span>
                     </div>
-                  )}
+                    <div className="flex items-center">
+                      <Calendar className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
+                      <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{match && formatDate(match.match_date)} at {match && formatTime(match.match_time)}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <DollarSign className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
+                      <span className={backgroundOption === "white" ? "text-black" : "text-white"}>
+                        {match?.is_paid ? `Paid (₦${match?.price?.toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} x${selectedSlots})` : "Free"}
+                      </span>
+                    </div>
+                    <div className="flex items-center">
+                      <Users className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
+                      <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{totalPlayerSlots}/{match?.total_slots} slots booked</span>
+                    </div>
+                    <div className="flex items-center">
+                      <span className={`font-bold ${backgroundOption === "white" ? "text-black" : "text-white"}`}>Confirmation Code:</span>
+                      <span className={`ml-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`}>{confirmationCode}</span>
+                    </div>
+                    {selectedSlots > 1 && (
+                      <div className="flex items-center">
+                        <span className={`font-bold ${backgroundOption === "white" ? "text-black" : "text-white"}`}>Slots Registered:</span>
+                        <span className={`ml-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`}>{selectedSlots}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400 my-4">
-              <strong>Note:</strong> Save this card to present your confirmation code at check-in.
-            </p>
-            <div className="flex gap-2">
-              <Button 
-                className="w-full bg-green-500 hover:bg-green-600 text-white"
-                onClick={handleDownload}
-                disabled={!isImageLoaded}
-              >
-                Download
-              </Button>
-              <Button 
-                className="w-full bg-green-500 hover:bg-green-600 text-white"
-                onClick={() => {
-                  setSuccessDialogOpen(false);
-                  navigate(`/match/${match.slug}`);
-                }}
-              >
-                Close
-              </Button>
-            </div>
-          </DialogDescription>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
+              <p className="text-sm text-gray-500 dark:text-gray-400 my-4">
+                <strong>Note:</strong> Save this card to present your confirmation code at check-in.
+              </p>
+              <div className="flex gap-2">
+                <Button 
+                  className="w-full bg-green-500 hover:bg-green-600 text-white"
+                  onClick={handleDownload}
+                  disabled={!isImageLoaded}
+                >
+                  Download
+                </Button>
+                <Button 
+                  className="w-full bg-green-500 hover:bg-green-600 text-white"
+                  onClick={() => {
+                    setSuccessDialogOpen(false);
+                    navigate(`/match/${match.slug}`);
+                  }}
+                >
+                  Close
+                </Button>
+              </div>
+            </DialogDescription>
+          </DialogContent>
+        </Dialog>
+      </div>
+    );
 };
 
 export default JoinMatch;
