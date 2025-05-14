@@ -87,7 +87,7 @@ const Auth = () => {
         {/* Logo */}
         <div className="flex justify-center mb-6">
           <img
-            src="/playarenadark.png"
+            src="/playarenalight.png"
             alt="PlayArena Logo"
             className="h-12 w-auto"
           />
@@ -122,21 +122,21 @@ const Auth = () => {
         {/* Form */}
         <div className="space-y-6">
           <h2 className="text-2xl font-bold text-center text-gray-800 dark:text-gray-200">
-            {isSignUp ? "Join the PlayArena Squad! ⚽" : "Welcome Back, Champ!"}
+            {isSignUp ? "Join PlayArena! ⚽" : "Welcome Back, Champ!"}
           </h2>
           <div className="space-y-4">
             {isSignUp && (
               <div className="grid grid-cols-2 gap-4">
                 <Input
                   type="text"
-                  placeholder="Your First Name (e.g., Messi)"
+                  placeholder="Your First Name"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
                   className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                 />
                 <Input
                   type="text"
-                  placeholder="Your Last Name (e.g., Ronaldo)"
+                  placeholder="Your Last Name"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
                   className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
@@ -145,7 +145,7 @@ const Auth = () => {
             )}
             <Input
               type="email"
-              placeholder="Your Email (e.g., star@playarena.com)"
+              placeholder="Your Email Address"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
