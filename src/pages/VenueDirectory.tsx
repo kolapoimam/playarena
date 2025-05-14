@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, ChevronDown, ChevronUp, Store } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronUp, Store, Star } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,7 @@ type Venue = {
   image_urls: string[] | null;
   match_count: number;
   match_dates?: string[];
+  aggregated_rating: number | null;
 };
 
 // List of Nigerian states
@@ -66,6 +67,7 @@ const VenueDirectory = () => {
             city,
             state,
             image_urls,
+            aggregated_rating,
             matches:matches!venue_id (match_date)
           `)
           .order("created_at", { ascending: false });
@@ -137,7 +139,7 @@ const VenueDirectory = () => {
     if (sortOrder === "Most Popular") {
       filtered.sort((a, b) => b.match_count - a.match_count);
     } else if (sortOrder === "Least Popular") {
-      filtered.sort((a, b) => a.match_count - b.match_count);
+      filtered.sort((a, b) => a.match_count - a.match_count);
     }
 
     setFilteredVenues(filtered);
@@ -264,6 +266,10 @@ const VenueDirectory = () => {
                     <div className="p-3">
                       <h3 className="font-bold text-lg text-gray-900 dark:text-gray-100 mb-1">{venue.name}</h3>
                       <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{`${venue.city}, ${venue.state}`}</p>
+                      <div className="flex items-center text-sm text-yellow-500 mb-1">
+                        <Star size={14} className="mr-1 fill-yellow-500" />
+                        <span>{venue.aggregated_rating !== null ? `${venue.aggregated_rating.toFixed(1)} / 5.5` : "No ratings"}</span>
+                      </div>
                       <div className="flex items-center text-sm font-medium text-green-600 dark:text-green-400">
                         <Store className="h-4 w-4 mr-1" />
                         <span>{`${venue.match_count} Match${venue.match_count !== 1 ? "es" : ""}`}</span>
