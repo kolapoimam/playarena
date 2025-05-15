@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2 } from "lucide-react";
 import Navbar from "@/components/Navbar";
+import { useTheme } from "next-themes";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -16,6 +17,7 @@ const Auth = () => {
   const [lastName, setLastName] = useState("");
   const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
+  const { theme } = useTheme();
 
   const handleEmailAuth = async () => {
     setLoading(true);
@@ -86,11 +88,11 @@ const Auth = () => {
       <div className="relative max-w-md w-full bg-white/95 dark:bg-gray-800/95 rounded-xl shadow-xl p-8 border border-gray-200 dark:border-gray-700 z-10">
         {/* Logo */}
         <div className="flex justify-center mb-6">
-          <img
-            src="/playarenalight.png"
-            alt="PlayArena Logo"
-            className="h-12 w-auto"
-          />
+<img
+  src={theme === "dark" ? "/playarenadark.png" : "/playarenalight.png"}
+  alt="PlayArena Logo"
+  className="h-12 w-auto"
+/>
         </div>
 
         {/* Tabs */}
