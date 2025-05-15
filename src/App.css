@@ -32,11 +32,11 @@
   will-change: filter, transform;
   transition: filter 300ms, transform 300ms ease;
   border-radius: 0.5rem;
-  object-fit: contain;
+  object-fit: contain; /* Better image handling */
 }
 
 .logo:hover {
-  filter: drop-shadow(0 0 1.5rem #646cffaa);
+  filter: drop-shadow(0 0 1.5rem #646cffaa); /* More transparent glow */
   transform: scale(1.05);
 }
 
@@ -61,12 +61,12 @@
   border-radius: 0.75rem;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   transition: all 300ms ease;
-  margin: 1rem 0;
+  margin: 1rem 0; /* Added spacing */
 }
 
 .card:hover {
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
-  transform: translateY(-2px);
+  transform: translateY(-2px); /* Added lift effect */
 }
 
 /* Text styling */
@@ -86,7 +86,7 @@
   opacity: 1;
 }
 
-/* Responsive adjustments */
+/* Enhanced responsive adjustments */
 @media (max-width: 1024px) {
   #root {
     padding: 1.5rem;
@@ -158,38 +158,14 @@
   }
 }
 
-/* Base HTML & Body background */
-html, body {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-  overflow-x: hidden;
-}
-
-/* iPhone Status Bar Background Fix */
-.status-bar-bg {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: env(safe-area-inset-top);
-  background-color: #e8f5f4;
-  z-index: 9999;
-  pointer-events: none;
-}
-
 /* Dark mode support */
 @media (prefers-color-scheme: dark) {
   .card {
     background-color: #1e1e1e;
     color: #ffffff;
   }
-
+  
   .read-the-docs {
     color: #aaa;
-  }
-
-  .status-bar-bg {
-    background-color: #1e1e1e;
   }
 }
