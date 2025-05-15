@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 
 import SplashScreen from "@/components/SplashScreen";
 import ScrollToTop from "./components/ScrollToTop";
+import InstallPrompt from "./components/InstallPrompt"; // ⬅️ NEW
 
 import Index from "./pages/Index";
 import Search from "./pages/Search";
@@ -86,6 +87,22 @@ const App = () => {
     return () => clearTimeout(timer);
   }, []);
 
+  useEffect(() => {
+    const handleAppInstalled = () => {
+      console.log("PWA was installed");
+      gtag.event("app_installed", {
+        event_category: "PWA",
+        event_label: "User installed the PWA",
+      });
+    };
+
+    window.addEventListener("appinstalled", handleAppInstalled);
+
+    return () => {
+      window.removeEventListener("appinstalled", handleAppInstalled);
+    };
+  }, []);
+
   if (showSplash) {
     return <SplashScreen />;
   }
@@ -98,6 +115,7 @@ const App = () => {
           <Router>
             <ScrollToTop />
             <AppRoutes />
+            <InstallPrompt /> {/* ⬅️ NEW */}
           </Router>
         </TooltipProvider>
       </MantineProvider>
