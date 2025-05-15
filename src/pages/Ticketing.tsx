@@ -36,17 +36,14 @@ const Ticketing = () => {
   const [ticketDialogOpen, setTicketDialogOpen] = useState(false);
   const [qrCodeUrl, setQrCodeUrl] = useState("");
   const [checkinCode, setCheckinCode] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
     if (!slug) {
       if (isMounted) {
-        toast({
-          title: "Error",
-          description: "Invalid match URL.",
-          variant: "destructive",
-        });
-        navigate("/matches");
+        setError("Invalid match URL.");
+        setLoading(false);
       }
       return;
     }
@@ -54,10 +51,11 @@ const Ticketing = () => {
     return () => {
       isMounted = false;
     };
-  }, [slug, navigate]);
+  }, [slug]);
 
   const fetchMatchDetails = async () => {
     try {
+      setLoading(true);
       const { data, error } = await supabase
         .from("matches")
         .select(`
@@ -68,8 +66,8 @@ const Ticketing = () => {
         .single();
 
       if (error) {
-        console.error("Supabase error:", error.message, error.code);
-        throw new Error("Match not found");
+        console.error("Supabase error:", error.message, error.code, error.details, error.hint);
+        throw new Error(`Failed to fetch match: ${error.message}`);
       }
 
       if (!data) {
@@ -77,25 +75,16 @@ const Ticketing = () => {
       }
 
       if (!data.sell_tickets) {
-        toast({
-          title: "Tickets Unavailable",
-          description: "Tickets are not available for this match.",
-          variant: "destructive",
-        });
-        navigate("/matches");
+        setError("Tickets are not available for this match.");
         return;
       }
 
       setMatch(data as Match);
-      setLoading(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching match:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load match details. Please try again.",
-        variant: "destructive",
-      });
-      navigate("/matches");
+      setError(error.message || "Failed to load match details. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -158,7 +147,7 @@ const Ticketing = () => {
     );
   }
 
-  if (!match) {
+  if (error || !match) {
     return (
       <div className="p-4">
         <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4">
@@ -166,7 +155,7 @@ const Ticketing = () => {
         </Button>
         <div className="text-center py-8">
           <h2 className="text-xl font-semibold mb-2">Match Not Found</h2>
-          <p className="text-muted-foreground">The match you're looking for doesn't exist or has no tickets available.</p>
+          <p className="text-muted-foreground">{error || "The match you're looking for doesn't exist or has no tickets available."}</p>
           <Button onClick={() => navigate("/matches")} className="mt-4">
             View Available Matches
           </Button>
