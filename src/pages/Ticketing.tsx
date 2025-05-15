@@ -382,7 +382,7 @@ const Ticketing = () => {
 
       // Check if tickets can still be purchased
       const matchDateTime = new Date(`${matchData.match_date}T${matchData.match_time}`);
-      const now = new Date("2025-05-15T17:59:00+01:00"); // 05:59 PM WAT, May 15, 2025
+      const now = new Date("2025-05-15T18:15:00+01:00"); // 06:15 PM WAT, May 15, 2025
       const thirtyMinutesAfter = new Date(matchDateTime.getTime() + 30 * 60 * 1000);
 
       if (now > thirtyMinutesAfter) {
@@ -497,8 +497,8 @@ const Ticketing = () => {
               description: "Your tickets have been purchased.",
             });
 
-            // Redirect to receipt page
-            navigate(`/ticket-receipt/${ticketCode}`);
+            // Redirect to receipt page (relative path)
+            navigate(`ticket-receipt/${ticketCode}`);
           } catch (error) {
             console.error("Error completing purchase:", error);
             toast({
@@ -593,7 +593,8 @@ const Ticketing = () => {
           description: "Your tickets have been purchased.",
         });
 
-        navigate(`/ticket-receipt/${ticketCode}`);
+        // Redirect to receipt page (relative path)
+        navigate(`ticket-receipt/${ticketCode}`);
       } catch (error) {
         console.error("Error purchasing tickets:", error);
         toast({
