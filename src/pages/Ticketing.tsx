@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Calendar, MapPin } from "lucide-react";
-import { Dialog, DialogContent, DialogTrigger, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import QRCode from "qrcode";
 import { format } from "date-fns";
 import Navbar from "@/components/Navbar";
@@ -315,7 +315,7 @@ const TicketPrinter = ({ match, fanName, ticketCount, qrCodeUrl, checkinCode }: 
           )}
           {printProgress >= totalSteps && (
             <div className="p-4 bg-white shadow-md rounded-b-lg">
-              <h3 className="font  className="font-semibold">Ticket</h3>
+              <h3 className="font-semibold">Ticket</h3>
               <p>Fan: {fanName}</p>
               <p>Tickets: {ticketCount}</p>
               <p>Match: {match.title}</p>
