@@ -15,6 +15,7 @@ type Match = {
   title: string;
   slug: string;
   match_date: string;
+  match_time: string;
   super_code?: string;
   confirmation_code?: string;
   status: string;
@@ -62,7 +63,7 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
       .from("user_organized_matches")
       .select(`
         match_id,
-        matches(id, title, slug, match_date, super_code, status, cancellation_status, is_paid, venue_id, total_slots, venues(name))
+        matches(id, title, slug, match_date, match_time, super_code, status, cancellation_status, is_paid, venue_id, total_slots, venues(name))
       `)
       .eq("user_id", session.session.user.id)
       .order("created_at", { ascending: false })
@@ -107,7 +108,7 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
       .select(`
         match_id,
         player_id,
-        matches(id, title, slug, match_date, status, cancellation_status, is_paid, venue_id, total_slots, venues(name)),
+        matches(id, title, slug, match_date, match_time, status, cancellation_status, is_paid, venue_id, total_slots, venues(name)),
         players(confirmation_code, number_of_slots, status, cancellation_status)
       `)
       .eq("user_id", session.session.user.id)
@@ -156,12 +157,12 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
     setJoinedMatches(joinedMatchesData);
   };
 
-  const canCancelMatch = (matchDate: string) => {
-    if (!matchDate) return false;
+  const canCancelMatch = (matchDate: string, matchTime: string) => {
+    if (!matchDate || !matchTime) return false;
     const now = new Date();
-    const matchTime = new Date(matchDate);
-    if (isNaN(matchTime.getTime())) return false;
-    const oneHourBefore = new Date(matchTime.getTime() - 60 * 60 * 1000);
+    const matchDateTime = new Date(`${matchDate}T${matchTime}Z`);
+    if (isNaN(matchDateTime.getTime())) return false;
+    const oneHourBefore = new Date(matchDateTime.getTime() - 60 * 60 * 1000);
     return now < oneHourBefore;
   };
 
@@ -171,11 +172,11 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
     const now = new Date();
     const { data: match, error: matchError } = await supabase
       .from("matches")
-      .select("match_date, cancellation_status")
+      .select("match_date, match_time, cancellation_status")
       .eq("id", cancelMatchId)
       .single();
 
-    if (matchError || !match || match.cancellation_status || new Date(match.match_date) <= new Date(now.getTime() + 60 * 60 * 1000)) {
+    if (matchError || !match || match.cancellation_status || new Date(`${match.match_date}T${match.match_time}Z`) <= new Date(now.getTime() + 60 * 60 * 1000)) {
       toast({ title: "Error", description: "Cannot cancel match within 1 hour, in the past, or already cancelled.", variant: "destructive" });
       setShowCancelDialog(false);
       return;
@@ -253,12 +254,12 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
     }
   };
 
-  const formatMatchDateTime = (date: string) => {
-    if (!date || isNaN(new Date(date).getTime())) {
+  const formatMatchDateTime = (date: string, time: string) => {
+    if (!date || !time || isNaN(new Date(`${date}T${time}Z`).getTime())) {
       return { dateStr: "Invalid Date", timeStr: "Invalid Time" };
     }
     try {
-      const zonedDate = utcToZonedTime(new Date(date), "Africa/Lagos");
+      const zonedDate = utcToZonedTime(new Date(`${date}T${time}Z`), "Africa/Lagos");
       const dateStr = format(zonedDate, "EEE, dd MMM yyyy");
       const timeStr = format(zonedDate, "h:mm a");
       return { dateStr, timeStr };
@@ -310,7 +311,7 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
           <TabsContent value="organizing">
             {organizedMatches.length > 0 ? (
               organizedMatches.map((match) => {
-                const { dateStr, timeStr } = formatMatchDateTime(match.match_date);
+                const { dateStr, timeStr } = formatMatchDateTime(match.match_date, match.match_time);
                 const statusLabel = getStatusLabel(match.status, match.cancellation_status);
                 return (
                   <div
@@ -341,7 +342,7 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
                         </p>
                       </div>
                     </div>
-                    <div className="mt-4 flex flex-col gap-2">
+                    <div className="mt-4 flex gap-2">
                       {(match.status === "upcoming" || match.status === "live") && !match.cancellation_status ? (
                         <Button
                           variant="outline"
@@ -351,21 +352,21 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
                             setCancelIsJoined(false);
                             setShowCancelDialog(true);
                           }}
-                          disabled={!canCancelMatch(match.match_date)}
+                          disabled={!canCancelMatch(match.match_date, match.match_time)}
                         >
                           Cancel
                         </Button>
                       ) : (
                         <Button
                           className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg"
-                          onClick={() => navigate(`/feedback?matchId=${match.id}`)}
+                          onClick={() => navigate(`/feedback?matchSlug=${match.slug}`)}
                           disabled={
-                            (new Date().getTime() - new Date(match.match_date).getTime()) /
+                            (new Date().getTime() - new Date(`${match.match_date}T${match.match_time}Z`).getTime()) /
                               (1000 * 60 * 60) >
                             48 || match.status !== "completed"
                           }
                         >
-                          Give Feedback
+                          Review Feedback
                         </Button>
                       )}
                       <Button
@@ -387,7 +388,7 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
           <TabsContent value="playing">
             {joinedMatches.length > 0 ? (
               joinedMatches.map((match) => {
-                const { dateStr, timeStr } = formatMatchDateTime(match.match_date);
+                const { dateStr, timeStr } = formatMatchDateTime(match.match_date, match.match_time);
                 const statusLabel = getStatusLabel(match.player_status || "registered", match.player_cancellation_status || match.cancellation_status);
                 return (
                   <div
@@ -420,7 +421,7 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
                         )}
                       </div>
                     </div>
-                    <div className="mt-4 flex flex-col gap-2">
+                    <div className="mt-4 flex gap-2">
                       {(match.status === "upcoming" || match.status === "live") &&
                       !match.cancellation_status &&
                       !match.player_cancellation_status ? (
@@ -432,16 +433,16 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
                             setCancelIsJoined(true);
                             setShowCancelDialog(true);
                           }}
-                          disabled={!canCancelMatch(match.match_date)}
+                          disabled={!canCancelMatch(match.match_date, match.match_time)}
                         >
                           Cancel
                         </Button>
                       ) : (
                         <Button
                           className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg"
-                          onClick={() => navigate(`/feedback?matchId=${match.id}`)}
+                          onClick={() => navigate(`/feedback?matchSlug=${match.slug}`)}
                           disabled={
-                            (new Date().getTime() - new Date(match.match_date).getTime()) /
+                            (new Date().getTime() - new Date(`${match.match_date}T${match.match_time}Z`).getTime()) /
                               (1000 * 60 * 60) >
                             48 || match.status !== "completed"
                           }
@@ -478,16 +479,16 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
               Are you sure you want to cancel {cancelIsJoined ? "your participation in" : "this match"}? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="flex flex-col space-y-2 mt-4">
+          <DialogFooter className="flex justify-between mt-4">
             <Button
               variant="outline"
-              className="w-full px-4 py-2 border-gray-300 text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 rounded-lg"
+              className="w-1/2 px-4 py-2 border-gray-300 text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 rounded-lg"
               onClick={() => setShowCancelDialog(false)}
             >
               No, Go Back
             </Button>
             <Button
-              className="w-full px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg"
+              className="w-1/2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg"
               onClick={handleCancelConfirm}
             >
               Yes, Cancel
