@@ -58,7 +58,7 @@ const formSchema = z.object({
     .number()
     .int({ message: "Must be a whole number" })
     .min(1, { message: "At least 1 ticket is required" })
-    .max(5, { message: "Maximum 5 tickets per purchase" }),
+    .max(10, { message: "Maximum 10 tickets per purchase" }),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -171,77 +171,81 @@ const Ticketing = () => {
     }
   };
 
-  const onSubmit = async (data: FormValues) => {
-    if (!match || !slug) return;
+const onSubmit = async (data: FormValues) => {
+  if (!match || !slug) return;
 
-    setSubmitting(true);
+  setSubmitting(true);
 
-    // Re-validate available tickets
-    const { data: currentTickets, error: ticketsError } = await supabase
-      .from("tickets")
-      .select("number_of_tickets")
-      .eq("match_id", match.id);
+  // Re-validate available tickets
+  const { data: currentTickets, error: ticketsError } = await supabase
+    .from("tickets")
+    .select("number_of_tickets")
+    .eq("match_id", match.id);
 
-    if (ticketsError) {
-      toast({
-        title: "Error",
-        description: "Failed to validate ticket availability.",
-        variant: "destructive",
-      });
-      setSubmitting(false);
-      return;
-    }
+  if (ticketsError) {
+    toast({
+      title: "Error",
+      description: "Failed to validate ticket availability.",
+      variant: "destructive",
+    });
+    setSubmitting(false);
+    return;
+  }
 
-    const totalTicketsSold = currentTickets.reduce(
-      (sum, ticket) => sum + (ticket.number_of_tickets || 0),
-      0
-    );
-    const available = match.max_tickets
-      ? Math.max(0, match.max_tickets - totalTicketsSold)
-      : null;
+  const totalTicketsSold = currentTickets.reduce(
+    (sum, ticket) => sum + (ticket.number_of_tickets || 0),
+    0
+  );
+  const available = match.max_tickets
+    ? Math.max(0, match.max_tickets - totalTicketsSold)
+    : null;
 
-    if (available !== null && data.number_of_tickets > available) {
-      toast({
-        title: "Error",
-        description: `Only ${available} ticket${available === 1 ? '' : 's'} remaining.`,
-        variant: "destructive",
-      });
-      setSubmitting(false);
-      return;
-    }
+  if (available !== null && data.number_of_tickets > available) {
+    toast({
+      title: "Error",
+      description: `Only ${available} ticket${available === 1 ? '' : 's'} remaining.`,
+      variant: "destructive",
+    });
+    setSubmitting(false);
+    return;
+  }
 
-    try {
-      // Generate unique 6-digit ticket code
-      const ticketCode = Math.floor(100000 + Math.random() * 900000).toString();
+  try {
+    // Generate unique 6-digit ticket code
+    const ticketCode = Math.floor(100000 + Math.random() * 900000).toString();
 
-      // Insert ticket purchase
-      const { error } = await supabase.from("tickets").insert({
-        match_id: match.id,
-        buyer_name: data.buyer_name,
-        buyer_phone: data.buyer_phone,
-        number_of_tickets: data.number_of_tickets,
-        ticket_code: ticketCode,
-        purchase_date: new Date().toISOString(),
-      });
+    // Calculate total price
+    const totalPrice = data.number_of_tickets * (match.ticket_price || 0);
 
-      if (error) throw error;
+    // Insert ticket purchase with adjusted column names
+    const { error } = await supabase.from("tickets").insert({
+      match_id: match.id,
+      name: data.buyer_name, // Possible column name
+      phone: data.buyer_phone, // Possible column name
+      number_of_tickets: data.number_of_tickets,
+      code: ticketCode, // Possible column name
+      total_price: totalPrice, // Required
+      // Omit purchase_date if it uses created_at default
+    });
 
-      setTicketCode(ticketCode);
-      setSuccessDialogOpen(true);
+    if (error) throw error;
 
-      toast({
-        title: "Success!",
-        description: "Your tickets have been purchased.",
-      });
-    } catch (error) {
-      console.error("Error purchasing tickets:", error);
-      toast({
-        title: "Error",
-        description: "Failed to purchase tickets. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setSubmitting(false);
+    setTicketCode(ticketCode);
+    setSuccessDialogOpen(true);
+
+    toast({
+      title: "Success!",
+      description: "Your tickets have been purchased.",
+    });
+  } catch (error) {
+    console.error("Error purchasing tickets:", error);
+    toast({
+      title: "Error",
+      description: "Failed to purchase tickets. Please try again.",
+      variant: "destructive",
+    });
+  } finally {
+    setSubmitting(false);
     }
   };
 
