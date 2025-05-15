@@ -17,8 +17,8 @@ export default defineConfig(({ mode }) => ({
       registerType: 'autoUpdate',
       manifest: {
         name: 'Play Arena',
-        short_name: 'Play Arena App',
-        description: 'Organize and Join Sports Enthusiasts around you',
+        short_name: 'Play Arena',
+        description: 'Discover and organise football matches in Nigeria',
         theme_color: '#1fc55c',
         background_color: '#ffffff',
         display: 'standalone',
@@ -37,20 +37,22 @@ export default defineConfig(({ mode }) => ({
           {
             src: '/icons/apple-icon-180.png',
             sizes: '180x180',
-            type: 'image/png'
+            type: 'image/png',
+            purpose: 'any maskable' // ✅ ensures better support on Android
           }
         ]
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
-        // Fix: Increase the cache file size limit to 5MB
-        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest}'],
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024 // 5MB
       },
       includeAssets: [
         'icons/icon-192x192.png',
         'icons/icon-512x512.png',
         'icons/apple-icon-180.png',
-        'robots.txt'
+        'robots.txt',
+        'favicon.ico',
+        'apple-touch-icon.png'
       ],
       devOptions: {
         enabled: true
