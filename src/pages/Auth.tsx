@@ -158,36 +158,36 @@ const Auth = () => {
             </button>
           </div>
 
-          <div className="space-y-4">
-            {isSignUp && (
-              <>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    First Name
-                  </label>
-                  <Input
-                    type="text"
-                    placeholder="Your First Name"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    required
-                    className="w-full"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Last Name
-                  </label>
-                  <Input
-                    type="text"
-                    placeholder="Your Last Name"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    required
-                    className="w-full"
-                  />
-                </div>
-              </>
+<div className="space-y-4">
+  {isSignUp && (
+    <div className="grid grid-cols-2 gap-4">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          First Name
+        </label>
+        <Input
+          type="text"
+          placeholder="Your First Name"
+          value={firstName}
+          onChange={(e) => setFirstName(e.target.value)}
+          required
+          className="w-full"
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          Last Name
+        </label>
+        <Input
+          type="text"
+          placeholder="Your Last Name"
+          value={lastName}
+          onChange={(e) => setLastName(e.target.value)}
+          required
+          className="w-full"
+        />
+      </div>
+    </div>
             )}
 
             <div>
