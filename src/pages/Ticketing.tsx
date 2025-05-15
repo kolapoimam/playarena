@@ -26,6 +26,7 @@ import { Calendar, MapPin, ArrowLeft, Ticket, Download, Copy } from "lucide-reac
 import { format, addMinutes } from "date-fns";
 import Navbar from "@/components/Navbar";
 import html2canvas from "html2canvas";
+import jsPDF from "jspdf"; // Added
 
 type Match = {
   id: string;
@@ -74,6 +75,7 @@ const Ticketing = () => {
   const [ticketCode, setTicketCode] = useState<string | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
   const [availableTickets, setAvailableTickets] = useState<number | null>(null);
+  const [downloadFormat, setDownloadFormat] = useState<'png' | 'pdf'>('png'); // Added
   const cardRef = useRef<HTMLDivElement>(null);
 
   const form = useForm<FormValues>({
@@ -171,81 +173,81 @@ const Ticketing = () => {
     }
   };
 
-const onSubmit = async (data: FormValues) => {
-  if (!match || !slug) return;
+  const onSubmit = async (data: FormValues) => {
+    if (!match || !slug) return;
 
-  setSubmitting(true);
+    setSubmitting(true);
 
-  // Re-validate available tickets
-  const { data: currentTickets, error: ticketsError } = await supabase
-    .from("tickets")
-    .select("number_of_tickets")
-    .eq("match_id", match.id);
+    // Re-validate available tickets
+    const { data: currentTickets, error: ticketsError } = await supabase
+      .from("tickets")
+      .select("number_of_tickets")
+      .eq("match_id", match.id);
 
-  if (ticketsError) {
-    toast({
-      title: "Error",
-      description: "Failed to validate ticket availability.",
-      variant: "destructive",
-    });
-    setSubmitting(false);
-    return;
-  }
+    if (ticketsError) {
+      toast({
+        title: "Error",
+        description: "Failed to validate ticket availability.",
+        variant: "destructive",
+      });
+      setSubmitting(false);
+      return;
+    }
 
-  const totalTicketsSold = currentTickets.reduce(
-    (sum, ticket) => sum + (ticket.number_of_tickets || 0),
-    0
-  );
-  const available = match.max_tickets
-    ? Math.max(0, match.max_tickets - totalTicketsSold)
-    : null;
+    const totalTicketsSold = currentTickets.reduce(
+      (sum, ticket) => sum + (ticket.number_of_tickets || 0),
+      0
+    );
+    const available = match.max_tickets
+      ? Math.max(0, match.max_tickets - totalTicketsSold)
+      : null;
 
-  if (available !== null && data.number_of_tickets > available) {
-    toast({
-      title: "Error",
-      description: `Only ${available} ticket${available === 1 ? '' : 's'} remaining.`,
-      variant: "destructive",
-    });
-    setSubmitting(false);
-    return;
-  }
+    if (available !== null && data.number_of_tickets > available) {
+      toast({
+        title: "Error",
+        description: `Only ${available} ticket${available === 1 ? '' : 's'} remaining.`,
+        variant: "destructive",
+      });
+      setSubmitting(false);
+      return;
+    }
 
-  try {
-    // Generate unique 6-digit ticket code
-    const ticketCode = Math.floor(100000 + Math.random() * 900000).toString();
+    try {
+      // Generate unique 6-digit ticket code
+      const ticketCode = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // Calculate total price
-    const totalPrice = data.number_of_tickets * (match.ticket_price || 0);
+      // Calculate total price
+      const totalPrice = data.number_of_tickets * (match.ticket_price || 0);
 
-    // Insert ticket purchase
-    const { error } = await supabase.from("tickets").insert({
-      match_id: match.id,
-      buyer_name: data.buyer_name,
-      buyer_phone: data.buyer_phone,
-      number_of_tickets: data.number_of_tickets,
-      ticket_code: ticketCode,
-      total_price: totalPrice, // Added to satisfy NOT NULL constraint
-      purchase_date: new Date().toISOString(),
-    });
+      // Insert ticket purchase
+      const { error } = await supabase.from("tickets").insert({
+        match_id: match.id,
+        buyer_name: data.buyer_name,
+        buyer_phone: data.buyer_phone,
+        number_of_tickets: data.number_of_tickets,
+        ticket_code: ticketCode,
+        total_price: totalPrice, // Added to satisfy NOT NULL constraint
+        purchase_date: new Date().toISOString(),
+      });
 
-    if (error) throw error;
+      if (error) throw error;
 
-    setTicketCode(ticketCode);
-    setSuccessDialogOpen(true);
+      setTicketCode(ticketCode);
+      setSuccessDialogOpen(true);
 
-    toast({
-      title: "Success!",
-      description: "Your tickets have been purchased.",
-    });
-  } catch (error) {
-    console.error("Error purchasing tickets:", error);
-    toast({
-      title: "Error",
-      description: "Failed to purchase tickets. Please try again.",
-      variant: "destructive",
-    });
-  } finally {
-    setSubmitting(false);
+      toast({
+        title: "Success!",
+        description: "Your tickets have been purchased.",
+      });
+    } catch (error) {
+      console.error("Error purchasing tickets:", error);
+      toast({
+        title: "Error",
+        description: "Failed to purchase tickets. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -261,15 +263,27 @@ const onSubmit = async (data: FormValues) => {
     setIsDownloading(true);
     try {
       const canvas = await html2canvas(cardRef.current, { scale: 2 });
-      const link = document.createElement("a");
-      link.download = `PlayArena-Ticket-${match?.title.replace(/\s+/g, '-')}.png`;
-      link.href = canvas.toDataURL("image/png");
-      link.click();
+      const imgData = canvas.toDataURL('image/png');
+
+      if (downloadFormat === 'png') {
+        const link = document.createElement('a');
+        link.download = `PlayArena-Ticket-${match?.title.replace(/\s+/g, '-')}.png`;
+        link.href = imgData;
+        link.click();
+      } else {
+        const pdf = new jsPDF({
+          orientation: 'portrait',
+          unit: 'px',
+          format: [canvas.width, canvas.height],
+        });
+        pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+        pdf.save(`PlayArena-Ticket-${match?.title.replace(/\s+/g, '-')}.pdf`);
+      }
     } catch (error) {
-      console.error("Error generating ticket image:", error);
+      console.error("Error generating ticket:", error);
       toast({
         title: "Error",
-        description: "Failed to download ticket card.",
+        description: `Failed to download ticket as ${downloadFormat.toUpperCase()}.`,
         variant: "destructive",
       });
     } finally {
@@ -443,100 +457,100 @@ const onSubmit = async (data: FormValues) => {
       </div>
       <Navbar />
 
-{/* Success Dialog */}
-<Dialog open={successDialogOpen} onOpenChange={(open) => {
-  if (!open) {
-    navigate(`/match/${match.slug}`);
-  }
-  setSuccessDialogOpen(open);
-}}>
-  <DialogContent className="sm:max-w-[375px] rounded-2xl">
-    <DialogTitle className="text-xl font-bold text-gray-800 dark:text-gray-200">Tickets Purchased!</DialogTitle>
-    <DialogDescription>
-      <p className="text-gray-600 dark:text-gray-300 mb-4 text-sm">
-        Your tickets have been successfully purchased. Below is your unique 6-digit ticket code for entry.
-      </p>
-      <div className="relative">
-        {/* Printer Graphic */}
-        <div className="relative mx-auto w-48 h-12 bg-gray-300 dark:bg-gray-600 rounded-t-md overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-b from-gray-400 to-gray-200 dark:from-gray-700 dark:to-gray-500" />
-          <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-32 h-2 bg-gray-800 dark:bg-gray-900" />
-        </div>
-        {/* Ticket Card with Animation */}
-        <div
-          ref={cardRef}
-          className="bg-gradient-to-br from-green-500 to-green-700 rounded-xl p-6 text-white shadow-lg transform transition-transform duration-1000 ease-out animate-slide-up"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <img src="/playarenadark.png" alt="PlayArena Logo" className="h-8 w-auto" />
-            <Ticket className="h-6 w-6" />
-          </div>
-          <h2 className="text-xl font-bold mb-2">{match.title}</h2>
-          <div className="space-y-2 mb-4 text-sm">
-            <div className="flex items-center">
-              <MapPin className="h-4 w-4 mr-2" />
-              <span>{match.venue?.name || "Venue"}, {match.venue?.city || ""}</span>
+      {/* Success Dialog */}
+      <Dialog open={successDialogOpen} onOpenChange={(open) => {
+        if (!open) {
+          navigate(`/match/${match.slug}`);
+        }
+        setSuccessDialogOpen(open);
+      }}>
+        <DialogContent className="sm:max-w-[375px] rounded-2xl">
+          <DialogTitle className="text-xl font-bold text-gray-800 dark:text-gray-200">Tickets Purchased!</DialogTitle>
+          <DialogDescription>
+            <p className="text-gray-600 dark:text-gray-300 mb-4 text-sm">
+              Your tickets have been successfully purchased. Below is your unique 6-digit ticket code for entry.
+            </p>
+            <div className="relative">
+              {/* Printer Graphic */}
+              <div className="relative mx-auto w-48 h-12 bg-gray-300 dark:bg-gray-600 rounded-t-md overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-b from-gray-400 to-gray-200 dark:from-gray-700 dark:to-gray-500" />
+                <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-32 h-2 bg-gray-800 dark:bg-gray-900" />
+              </div>
+              {/* Ticket Card with Animation */}
+              <div
+                ref={cardRef}
+                className="bg-gradient-to-br from-green-500 to-green-700 rounded-xl p-6 text-white shadow-lg transform transition-transform duration-1000 ease-out animate-slide-up"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <img src="/playarenadark.png" alt="PlayArena Logo" className="h-8 w-auto" />
+                  <Ticket className="h-6 w-6" />
+                </div>
+                <h2 className="text-xl font-bold mb-2">{match.title}</h2>
+                <div className="space-y-2 mb-4 text-sm">
+                  <div className="flex items-center">
+                    <MapPin className="h-4 w-4 mr-2" />
+                    <span>{match.venue?.name || "Venue"}, {match.venue?.city || ""}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <Calendar className="h-4 w-4 mr-2" />
+                    <span>
+                      {format(new Date(match.match_date), "PPP")} at{" "}
+                      {format(new Date(`1970-01-01T${match.match_time}`), "p")}
+                    </span>
+                  </div>
+                  <div className="flex items-center">
+                    <span className="font-semibold">Tickets: </span>
+                    <span className="ml-2">{form.getValues("number_of_tickets")}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <span className="font-semibold">Total: </span>
+                    <span className="ml-2">
+                      ₦{(form.getValues("number_of_tickets") * (match.ticket_price || 0)).toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+                <div className="bg-white text-green-600 rounded-md p-4 text-center shadow-inner">
+                  <p className="text-sm font-medium">Ticket Code</p>
+                  <p className="text-3xl font-bold tracking-wider">{ticketCode || "N/A"}</p>
+                </div>
+              </div>
             </div>
-            <div className="flex items-center">
-              <Calendar className="h-4 w-4 mr-2" />
-              <span>
-                {format(new Date(match.match_date), "PPP")} at{" "}
-                {format(new Date(`1970-01-01T${match.match_time}`), "p")}
-              </span>
+            <p className="text-sm text-gray-500 dark:text-gray-400 my-4">
+              <strong>Note:</strong> Save or download this ticket code. You'll need it for entry on match day.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 opacity-0 transition-opacity duration-500 delay-1000 animate-fade-in">
+              <div className="flex-1 relative">
+                <select
+                  value={downloadFormat}
+                  onChange={(e) => setDownloadFormat(e.target.value as 'png' | 'pdf')}
+                  className="absolute top-0 left-0 w-20 p-2 text-sm bg-gray-100 dark:bg-gray-700 border rounded-lg"
+                  aria-label="Select download format"
+                >
+                  <option value="png">PNG</option>
+                  <option value="pdf">PDF</option>
+                </select>
+                <Button
+                  className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 pl-24 transition-colors"
+                  onClick={handleDownload}
+                  disabled={isDownloading}
+                  aria-label={`Download ticket as ${downloadFormat.toUpperCase()}`}
+                >
+                  {isDownloading ? "Downloading..." : `Download ${downloadFormat.toUpperCase()}`}
+                </Button>
+              </div>
+              <Button
+                className="flex-1 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 transition-colors"
+                onClick={copyTicketCode}
+                disabled={isDownloading}
+                aria-label="Copy ticket code"
+              >
+                <Copy size={16} className="mr-2" />
+                Copy Code
+              </Button>
             </div>
-            <div className="flex items-center">
-              <span className="font-semibold">Tickets: </span>
-              <span className="ml-2">{form.getValues("number_of_tickets")}</span>
-            </div>
-            <div className="flex items-center">
-              <span className="font-semibold">Total: </span>
-              <span className="ml-2">
-                ₦{(form.getValues("number_of_tickets") * (match.ticket_price || 0)).toFixed(2)}
-              </span>
-            </div>
-          </div>
-          <div className="bg-white text-green-600 rounded-md p-4 text-center shadow-inner">
-            <p className="text-sm font-medium">Ticket Code</p>
-            <p className="text-3xl font-bold tracking-wider">{ticketCode || "N/A"}</p>
-          </div>
-        </div>
-      </div>
-      <p className="text-sm text-gray-500 dark:text-gray-400 my-4">
-        <strong>Note:</strong> Save or download this ticket code. You'll need it for entry on match day.
-      </p>
-      <div className="flex flex-col sm:flex-row gap-3 opacity-0 transition-opacity duration-500 delay-1000 animate-fade-in">
-        <div className="flex-1 relative">
-          <select
-            value={downloadFormat}
-            onChange={(e) => setDownloadFormat(e.target.value as 'png' | 'pdf')}
-            className="absolute top-0 left-0 w-20 p-2 text-sm bg-gray-100 dark:bg-gray-700 border rounded-lg"
-            aria-label="Select download format"
-          >
-            <option value="png">PNG</option>
-            <option value="pdf">PDF</option>
-          </select>
-          <Button
-            className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 pl-24 transition-colors"
-            onClick={handleDownload}
-            disabled={isDownloading}
-            aria-label={`Download ticket as ${downloadFormat.toUpperCase()}`}
-          >
-            {isDownloading ? "Downloading..." : `Download ${downloadFormat.toUpperCase()}`}
-          </Button>
-        </div>
-        <Button
-          className="flex-1 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 transition-colors"
-          onClick={copyTicketCode}
-          disabled={isDownloading}
-          aria-label="Copy ticket code"
-        >
-          <Copy size={16} className="mr-2" />
-          Copy Code
-        </Button>
-      </div>
-    </DialogDescription>
-  </DialogContent>
-</Dialog>
+          </DialogDescription>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
