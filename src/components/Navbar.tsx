@@ -40,7 +40,7 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-gray-900 dark:bg-gray-800 border-t border-gray-700 flex justify-around py-3 px-4 z-10 rounded-t-2xl shadow-lg">
+    <nav className="fixed bottom-4 left-0 right-0 bg-gray-900 dark:bg-gray-800 border-t border-gray-700 flex justify-around py-3 px-4 z-10 rounded-2xl shadow-lg mx-4">
       <Link
         to="/"
         onClick={() => handleTabClick("/")}
