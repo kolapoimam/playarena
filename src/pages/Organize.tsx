@@ -110,7 +110,7 @@ const formSchema = z.object({
   max_tickets: z.number()
     .int({ message: "Must be a whole number" })
     .min(1, { message: "At least 1 ticket is required" })
-    .max(1000, { message: "Maximum 1000 tickets allowed" })
+    .max(5000, { message: "Maximum 5000 tickets allowed" })
     .optional()
     .nullable(),
 }).refine(data => {
