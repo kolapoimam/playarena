@@ -1,11 +1,11 @@
-import { BrowserRouter as Router } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MantineProvider } from '@mantine/core';
 import { useState, useEffect } from 'react';
 
-import SplashScreen from "@/components/SplashScreen"; // New splash screen
+import SplashScreen from "@/components/SplashScreen";
 import ScrollToTop from "./components/ScrollToTop";
 
 import Index from "./pages/Index";
@@ -28,9 +28,44 @@ import Auth from "./pages/Auth";
 import TeamManagement from "./pages/TeamManagement";
 import Ticketing from "./pages/Ticketing";
 
-import { Routes, Route } from 'react-router-dom';
+import * as gtag from "./lib/gtag";
 
 const queryClient = new QueryClient();
+
+const AppRoutes = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    gtag.pageview(location.pathname + location.search);
+  }, [location]);
+
+  return (
+    <Routes>
+      <Route path="/" element={<Index />} />
+      <Route path="/search" element={<Search />} />
+      <Route path="/matches" element={<Matches />} />
+      <Route path="/guides" element={<Guides />} />
+      <Route path="/profile" element={<Profile />} />
+      <Route path="/auth" element={<Auth />} />
+      <Route path="/organize" element={<Organize />} />
+      <Route path="/venue-create" element={<VenueCreate />} />
+      <Route path="/venues" element={<VenueDirectory />} />
+      <Route path="/confirm-checkin" element={<ConfirmCheckin />} />
+      <Route path="/feedback" element={<Feedback />} />
+      <Route path="/ticketing" element={<Ticketing />} />
+
+      <Route path="/match/:slug" element={<MatchDetail />} />
+      <Route path="/join/:slug" element={<JoinMatch />} />
+      <Route path="/venue/:slug" element={<VenueDetail />} />
+      <Route path="/team-management/:slug" element={<TeamManagement />} />
+
+      <Route path="/match-id/:id" element={<MatchRedirect />} />
+      <Route path="/venue-id/:id" element={<VenueRedirect />} />
+
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+};
 
 const App = () => {
   const [showSplash, setShowSplash] = useState(true);
@@ -46,7 +81,7 @@ const App = () => {
     const timer = setTimeout(() => {
       setShowSplash(false);
       sessionStorage.setItem('seenSplash', 'true');
-    }, 2500); // Adjust splash duration here
+    }, 2500);
 
     return () => clearTimeout(timer);
   }, []);
@@ -62,30 +97,7 @@ const App = () => {
           <Toaster />
           <Router>
             <ScrollToTop />
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/search" element={<Search />} />
-              <Route path="/matches" element={<Matches />} />
-              <Route path="/guides" element={<Guides />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/organize" element={<Organize />} />
-              <Route path="/venue-create" element={<VenueCreate />} />
-              <Route path="/venues" element={<VenueDirectory />} />
-              <Route path="/confirm-checkin" element={<ConfirmCheckin />} />
-              <Route path="/feedback" element={<Feedback />} />
-              <Route path="/ticketing" element={<Ticketing />} />
-
-              <Route path="/match/:slug" element={<MatchDetail />} />
-              <Route path="/join/:slug" element={<JoinMatch />} />
-              <Route path="/venue/:slug" element={<VenueDetail />} />
-              <Route path="/team-management/:slug" element={<TeamManagement />} />
-
-              <Route path="/match-id/:id" element={<MatchRedirect />} />
-              <Route path="/venue-id/:id" element={<VenueRedirect />} />
-
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <AppRoutes />
           </Router>
         </TooltipProvider>
       </MantineProvider>
