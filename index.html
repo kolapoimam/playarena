@@ -3,23 +3,20 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="theme-color" content="#e8f5f4" />
-<meta name="apple-mobile-web-app-status-bar-style" content="default" />
-<meta name="apple-mobile-web-app-capable" content="yes" />
+
+    <!-- Brand Theme -->
+    <meta name="theme-color" content="#e8f5f4" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="PlayArena" />
 
     <title>PlayArena - Discover & Organize Football Matches</title>
     <meta name="description" content="Discover or organize football matches around you in Nigeria. Host or join free or paid football matches, create venues and register without accounts." />
     <meta name="author" content="PlayArena" />
 
-    <!-- PWA -->
-    <link rel="manifest" href="/manifest.webmanifest" />
-    <meta name="theme-color" content="#317EFB" />
-
-    <!-- iOS PWA Support -->
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="apple-mobile-web-app-title" content="PlayArena" />
+    <!-- Icons -->
     <link rel="apple-touch-icon" href="/icons/apple-icon-180.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
 
     <!-- Social meta -->
     <meta property="og:title" content="PlayArena - Discover & Organize Football Matches" />
@@ -32,9 +29,13 @@
     <meta name="twitter:image" content="/football-field.jpg" />
   </head>
 
-  <body>
+  <body style="margin: 0; background-color: #ffffff;">
+    <!-- Status bar background fix for iOS PWA -->
+    <div class="status-bar-bg"></div>
+
     <div id="root"></div>
-    <!-- IMPORTANT: DO NOT REMOVE THIS SCRIPT TAG OR THIS VERY COMMENT! -->
+
+    <!-- Scripts -->
     <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
