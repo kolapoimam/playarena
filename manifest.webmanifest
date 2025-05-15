@@ -1,6 +1,6 @@
 {
-  "name": "PlayArena",
-  "short_name": "PlayArena",
+  "name": "Play Arena",
+  "short_name": "Play Arena",
   "description": "Discover and organise football matches in Nigeria.",
   "start_url": "/",
   "display": "standalone",
