@@ -4,6 +4,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MantineProvider } from '@mantine/core';
 import { useState, useEffect } from 'react';
+
+import SplashScreen from "@/components/SplashScreen"; // New splash screen
+import ScrollToTop from "./components/ScrollToTop";
+
 import Index from "./pages/Index";
 import Search from "./pages/Search";
 import Matches from "./pages/Matches";
@@ -21,63 +25,68 @@ import ConfirmCheckin from "./pages/ConfirmCheckin";
 import Feedback from "./pages/Feedback";
 import Guides from "./pages/Guides";
 import Auth from "./pages/Auth";
-import ScrollToTop from "./components/ScrollToTop";
-import { Routes, Route } from 'react-router-dom';
 import TeamManagement from "./pages/TeamManagement";
-import LoadingFootball from "./components/LoadingFootball";
-import Ticketing from "./pages/Ticketing"; // Assuming a new Ticketing page component
+import Ticketing from "./pages/Ticketing";
+
+import { Routes, Route } from 'react-router-dom';
 
 const queryClient = new QueryClient();
 
 const App = () => {
-  const [isLoading, setIsLoading] = useState(true);
+  const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
-    // Simulate loading (replace with your actual loading logic)
-    const timer = setTimeout(() => setIsLoading(false), 2000);
-    
+    const seen = sessionStorage.getItem('seenSplash');
+
+    if (seen) {
+      setShowSplash(false);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setShowSplash(false);
+      sessionStorage.setItem('seenSplash', 'true');
+    }, 2500); // Adjust splash duration here
+
     return () => clearTimeout(timer);
   }, []);
+
+  if (showSplash) {
+    return <SplashScreen />;
+  }
 
   return (
     <QueryClientProvider client={queryClient}>
       <MantineProvider withGlobalStyles withNormalizeCSS>
         <TooltipProvider>
           <Toaster />
-          <LoadingFootball isLoading={isLoading} />
-          <div className={isLoading ? 'opacity-0' : 'opacity-100 transition-opacity duration-300'}>
-            <Router>
-              <ScrollToTop />
-              <Routes>
-                {/* Main App Routes */}
-                <Route path="/" element={<Index />} />
-                <Route path="/search" element={<Search />} />
-                <Route path="/matches" element={<Matches />} />
-                <Route path="/guides" element={<Guides />} />
-                <Route path="/profile" element={<Profile />} />
-                <Route path="/auth" element={<Auth />} />
-                <Route path="/organize" element={<Organize />} />
-                <Route path="/venue-create" element={<VenueCreate />} />
-                <Route path="/venues" element={<VenueDirectory />} />
-                <Route path="/confirm-checkin" element={<ConfirmCheckin />} />
-                <Route path="/feedback" element={<Feedback />} />
-                <Route path="/ticketing" element={<Ticketing />} /> {/* New ticketing route */}
+          <Router>
+            <ScrollToTop />
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/search" element={<Search />} />
+              <Route path="/matches" element={<Matches />} />
+              <Route path="/guides" element={<Guides />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/organize" element={<Organize />} />
+              <Route path="/venue-create" element={<VenueCreate />} />
+              <Route path="/venues" element={<VenueDirectory />} />
+              <Route path="/confirm-checkin" element={<ConfirmCheckin />} />
+              <Route path="/feedback" element={<Feedback />} />
+              <Route path="/ticketing" element={<Ticketing />} />
 
-                {/* Slug-Based Routes for Matches and Venues */}
-                <Route path="/match/:slug" element={<MatchDetail />} />
-                <Route path="/join/:slug" element={<JoinMatch />} />
-                <Route path="/venue/:slug" element={<VenueDetail />} />
-                <Route path="/team-management/:slug" element={<TeamManagement />} />
+              <Route path="/match/:slug" element={<MatchDetail />} />
+              <Route path="/join/:slug" element={<JoinMatch />} />
+              <Route path="/venue/:slug" element={<VenueDetail />} />
+              <Route path="/team-management/:slug" element={<TeamManagement />} />
 
-                {/* Redirect Routes for Backward Compatibility */}
-                <Route path="/match-id/:id" element={<MatchRedirect />} />
-                <Route path="/venue-id/:id" element={<VenueRedirect />} />
+              <Route path="/match-id/:id" element={<MatchRedirect />} />
+              <Route path="/venue-id/:id" element={<VenueRedirect />} />
 
-                {/* Catch-All Route */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </Router>
-          </div>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Router>
         </TooltipProvider>
       </MantineProvider>
     </QueryClientProvider>
