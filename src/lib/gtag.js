@@ -1,12 +1,21 @@
-// lib/gtag.js
-export const GA_MEASUREMENT_ID = 'G-73ZTXVB63Y';
-
 export const pageview = (url) => {
-  window.gtag('config', GA_MEASUREMENT_ID, {
-    page_path: url,
-  });
+  if (typeof window !== 'undefined' && typeof window.gtag === 'function') {
+    window.gtag('config', 'G-73ZTXVB63Y', {
+      page_path: url,
+    });
+  } else {
+    console.warn('Google Analytics not loaded yet');
+  }
 };
 
-export const event = ({ action, params }) => {
-  window.gtag('event', action, params);
+export const event = ({ action, category, label, value }) => {
+  if (typeof window !== 'undefined' && typeof window.gtag === 'function') {
+    window.gtag('event', action, {
+      event_category: category,
+      event_label: label,
+      value: value,
+    });
+  } else {
+    console.warn('Google Analytics not loaded yet');
+  }
 };
