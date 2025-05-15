@@ -439,79 +439,100 @@ const Ticketing = () => {
       </div>
       <Navbar />
 
-      {/* Success Dialog */}
-      <Dialog open={successDialogOpen} onOpenChange={(open) => {
-        if (!open) {
-          navigate(`/match/${match.slug}`);
-        }
-        setSuccessDialogOpen(open);
-      }}>
-        <DialogContent className="sm:max-w-[375px] rounded-2xl">
-          <DialogTitle className="text-xl font-bold text-gray-800 dark:text-gray-200">Tickets Purchased!</DialogTitle>
-          <DialogDescription>
-            <p className="text-gray-600 dark:text-gray-300 mb-4 text-sm">
-              Your tickets have been successfully purchased. Below is your unique 6-digit ticket code for entry.
-            </p>
-            <div
-              ref={cardRef}
-              className="bg-gradient-to-br from-green-500 to-green-700 rounded-xl p-6 text-white shadow-lg"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <img src="/playarenadark.png" alt="PlayArena Logo" className="h-8 w-auto" />
-                <Ticket className="h-6 w-6" />
-              </div>
-              <h2 className="text-xl font-bold mb-2">{match.title}</h2>
-              <div className="space-y-2 mb-4 text-sm">
-                <div className="flex items-center">
-                  <MapPin className="h-4 w-4 mr-2" />
-                  <span>{match.venue?.name || "Venue"}, {match.venue?.city || ""}</span>
-                </div>
-                <div className="flex items-center">
-                  <Calendar className="h-4 w-4 mr-2" />
-                  <span>
-                    {format(new Date(match.match_date), "PPP")} at{" "}
-                    {format(new Date(`1970-01-01T${match.match_time}`), "p")}
-                  </span>
-                </div>
-                <div className="flex items-center">
-                  <span className="font-semibold">Tickets: </span>
-                  <span className="ml-2">{form.getValues("number_of_tickets")}</span>
-                </div>
-                <div className="flex items-center">
-                  <span className="font-semibold">Total: </span>
-                  <span className="ml-2">
-                    ₦{(form.getValues("number_of_tickets") * (match.ticket_price || 0)).toFixed(2)}
-                  </span>
-                </div>
-              </div>
-              <div className="bg-white text-green-600 rounded-md p-4 text-center shadow-inner">
-                <p className="text-sm font-medium">Ticket Code</p>
-                <p className="text-3xl font-bold tracking-wider">{ticketCode || "N/A"}</p>
-              </div>
+{/* Success Dialog */}
+<Dialog open={successDialogOpen} onOpenChange={(open) => {
+  if (!open) {
+    navigate(`/match/${match.slug}`);
+  }
+  setSuccessDialogOpen(open);
+}}>
+  <DialogContent className="sm:max-w-[375px] rounded-2xl">
+    <DialogTitle className="text-xl font-bold text-gray-800 dark:text-gray-200">Tickets Purchased!</DialogTitle>
+    <DialogDescription>
+      <p className="text-gray-600 dark:text-gray-300 mb-4 text-sm">
+        Your tickets have been successfully purchased. Below is your unique 6-digit ticket code for entry.
+      </p>
+      <div className="relative">
+        {/* Printer Graphic */}
+        <div className="relative mx-auto w-48 h-12 bg-gray-300 dark:bg-gray-600 rounded-t-md overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-b from-gray-400 to-gray-200 dark:from-gray-700 dark:to-gray-500" />
+          <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-32 h-2 bg-gray-800 dark:bg-gray-900" />
+        </div>
+        {/* Ticket Card with Animation */}
+        <div
+          ref={cardRef}
+          className="bg-gradient-to-br from-green-500 to-green-700 rounded-xl p-6 text-white shadow-lg transform transition-transform duration-1000 ease-out animate-slide-up"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <img src="/playarenadark.png" alt="PlayArena Logo" className="h-8 w-auto" />
+            <Ticket className="h-6 w-6" />
+          </div>
+          <h2 className="text-xl font-bold mb-2">{match.title}</h2>
+          <div className="space-y-2 mb-4 text-sm">
+            <div className="flex items-center">
+              <MapPin className="h-4 w-4 mr-2" />
+              <span>{match.venue?.name || "Venue"}, {match.venue?.city || ""}</span>
             </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400 my-4">
-              <strong>Note:</strong> Save or download this ticket code. You'll need it for entry on match day.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Button
-                className="flex-1 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 transition-colors"
-                onClick={handleDownload}
-                disabled={isDownloading}
-              >
-                {isDownloading ? "Downloading..." : "Download Ticket"}
-              </Button>
-              <Button
-                className="flex-1 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 transition-colors"
-                onClick={copyTicketCode}
-                disabled={isDownloading}
-              >
-                <Copy size={16} className="mr-2" />
-                Copy Code
-              </Button>
+            <div className="flex items-center">
+              <Calendar className="h-4 w-4 mr-2" />
+              <span>
+                {format(new Date(match.match_date), "PPP")} at{" "}
+                {format(new Date(`1970-01-01T${match.match_time}`), "p")}
+              </span>
             </div>
-          </DialogDescription>
-        </DialogContent>
-      </Dialog>
+            <div className="flex items-center">
+              <span className="font-semibold">Tickets: </span>
+              <span className="ml-2">{form.getValues("number_of_tickets")}</span>
+            </div>
+            <div className="flex items-center">
+              <span className="font-semibold">Total: </span>
+              <span className="ml-2">
+                ₦{(form.getValues("number_of_tickets") * (match.ticket_price || 0)).toFixed(2)}
+              </span>
+            </div>
+          </div>
+          <div className="bg-white text-green-600 rounded-md p-4 text-center shadow-inner">
+            <p className="text-sm font-medium">Ticket Code</p>
+            <p className="text-3xl font-bold tracking-wider">{ticketCode || "N/A"}</p>
+          </div>
+        </div>
+      </div>
+      <p className="text-sm text-gray-500 dark:text-gray-400 my-4">
+        <strong>Note:</strong> Save or download this ticket code. You'll need it for entry on match day.
+      </p>
+      <div className="flex flex-col sm:flex-row gap-3 opacity-0 transition-opacity duration-500 delay-1000 animate-fade-in">
+        <div className="flex-1 relative">
+          <select
+            value={downloadFormat}
+            onChange={(e) => setDownloadFormat(e.target.value as 'png' | 'pdf')}
+            className="absolute top-0 left-0 w-20 p-2 text-sm bg-gray-100 dark:bg-gray-700 border rounded-lg"
+            aria-label="Select download format"
+          >
+            <option value="png">PNG</option>
+            <option value="pdf">PDF</option>
+          </select>
+          <Button
+            className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 pl-24 transition-colors"
+            onClick={handleDownload}
+            disabled={isDownloading}
+            aria-label={`Download ticket as ${downloadFormat.toUpperCase()}`}
+          >
+            {isDownloading ? "Downloading..." : `Download ${downloadFormat.toUpperCase()}`}
+          </Button>
+        </div>
+        <Button
+          className="flex-1 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 transition-colors"
+          onClick={copyTicketCode}
+          disabled={isDownloading}
+          aria-label="Copy ticket code"
+        >
+          <Copy size={16} className="mr-2" />
+          Copy Code
+        </Button>
+      </div>
+    </DialogDescription>
+  </DialogContent>
+</Dialog>
     </div>
   );
 };
