@@ -79,11 +79,11 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50 dark:bg-gray-900 relative">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-b from-[#e6f3f5] to-[#d1e8eb] dark:from-gray-900 dark:to-gray-800 relative">
       {/* Logo in top left corner */}
-      <div className="absolute top-4 left-4">
+      <div className="absolute top-4 left-1/2 transform -translate-x-1/2">
         <img
-          src="/android-chrome-512x512.png"
+          src="/navlogo.png"
           alt="PlayArena Logo"
           className="h-10 w-auto"
         />
@@ -141,7 +141,7 @@ const Auth = () => {
               <div className="text-right">
                 <Link
                   to="/forgot-password"
-                  className="text-sm text-[#88DBCD] hover:underline"
+                  className="text-sm text-[#17a34a] hover:underline"
                 >
                   Forgot password?
                 </Link>
@@ -149,7 +149,7 @@ const Auth = () => {
             )}
 
             <Button
-              className="w-full bg-[#88DBCD] hover:bg-[#70C4B6] text-white font-medium py-2"
+              className="w-full bg-[#17a34a] hover:bg-[#138d3a] text-white font-medium py-2"
               onClick={handleEmailAuth}
               disabled={loading || (isSignUp && !name)}
             >
@@ -202,7 +202,7 @@ const Auth = () => {
                 Already have an account?{" "}
                 <button
                   onClick={() => setIsSignUp(false)}
-                  className="text-[#88DBCD] hover:underline font-medium"
+                  className="text-[#17a34a] hover:underline font-medium"
                 >
                   Login
                 </button>
@@ -212,13 +212,20 @@ const Auth = () => {
                 Don't have an account?{" "}
                 <button
                   onClick={() => setIsSignUp(true)}
-                  className="text-[#88DBCD] hover:underline font-medium"
+                  className="text-[#17a34a] hover:underline font-medium"
                 >
                   Sign Up
                 </button>
               </>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Footer Image with Gradient Background */}
+      <div className="absolute bottom-0 left-0 w-full">
+        <div className="w-full h-32 bg-gradient-to-t from-[#e6f3f5] to-[#d1e8eb] dark:from-gray-900 dark:to-gray-800 flex justify-center items-center">
+          <img src="/AuthFooter.png" alt="Auth Footer" className="w-full h-full object-cover" />
         </div>
       </div>
 
