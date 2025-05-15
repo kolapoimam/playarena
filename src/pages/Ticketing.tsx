@@ -217,15 +217,15 @@ const onSubmit = async (data: FormValues) => {
     // Calculate total price
     const totalPrice = data.number_of_tickets * (match.ticket_price || 0);
 
-    // Insert ticket purchase with adjusted column names
+    // Insert ticket purchase
     const { error } = await supabase.from("tickets").insert({
       match_id: match.id,
-      name: data.buyer_name, // Possible column name
-      phone: data.buyer_phone, // Possible column name
+      buyer_name: data.buyer_name,
+      buyer_phone: data.buyer_phone,
       number_of_tickets: data.number_of_tickets,
-      code: ticketCode, // Possible column name
-      total_price: totalPrice, // Required
-      // Omit purchase_date if it uses created_at default
+      ticket_code: ticketCode,
+      total_price: totalPrice, // Added to satisfy NOT NULL constraint
+      purchase_date: new Date().toISOString(),
     });
 
     if (error) throw error;
