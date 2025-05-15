@@ -8,7 +8,6 @@
   min-height: 100vh;
   padding-bottom: 5rem;
   position: relative; /* For absolute positioning of loading overlay */
-  background-color: #ffffff; /* Ensure main background is white */
 }
 
 /* Loading overlay - matches your football animation */
@@ -33,11 +32,11 @@
   will-change: filter, transform;
   transition: filter 300ms, transform 300ms ease;
   border-radius: 0.5rem;
-  object-fit: contain; /* Better image handling */
+  object-fit: contain;
 }
 
 .logo:hover {
-  filter: drop-shadow(0 0 1.5rem #646cffaa); /* More transparent glow */
+  filter: drop-shadow(0 0 1.5rem #646cffaa);
   transform: scale(1.05);
 }
 
@@ -62,12 +61,12 @@
   border-radius: 0.75rem;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   transition: all 300ms ease;
-  margin: 1rem 0; /* Added spacing */
+  margin: 1rem 0;
 }
 
 .card:hover {
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
-  transform: translateY(-2px); /* Added lift effect */
+  transform: translateY(-2px);
 }
 
 /* Text styling */
@@ -87,7 +86,7 @@
   opacity: 1;
 }
 
-/* Enhanced responsive adjustments */
+/* Responsive adjustments */
 @media (max-width: 1024px) {
   #root {
     padding: 1.5rem;
@@ -159,16 +158,12 @@
   }
 }
 
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
-  .card {
-    background-color: #1e1e1e;
-    color: #ffffff;
-  }
-  
-  .read-the-docs {
-    color: #aaa;
-  }
+/* Base HTML & Body background */
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow-x: hidden;
 }
 
 /* iPhone Status Bar Background Fix */
@@ -178,16 +173,23 @@
   left: 0;
   right: 0;
   height: env(safe-area-inset-top);
-  background-color: #e8f5f4; /* Brand theme colour */
+  background-color: #e8f5f4;
   z-index: 9999;
-  pointer-events: none; /* So it doesn’t block interaction */
+  pointer-events: none;
 }
 
-/* Base HTML & Body background */
-html, body {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-  overflow-x: hidden;
-  background-color: #ffffff; /* white background */
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .card {
+    background-color: #1e1e1e;
+    color: #ffffff;
+  }
+
+  .read-the-docs {
+    color: #aaa;
+  }
+
+  .status-bar-bg {
+    background-color: #1e1e1e;
+  }
 }
