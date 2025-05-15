@@ -80,19 +80,19 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-b from-[#e6f3f5] to-[#d1e8eb] dark:from-gray-900 dark:to-gray-800 relative">
-      {/* Logo in top left corner */}
-      <div className="absolute top-4 left-1/2 transform -translate-x-1/2">
+      {/* Logo in center above the form */}
+      <div className="absolute top-6 left-1/2 transform -translate-x-1/2">
         <img
           src="/navlogo.png"
           alt="PlayArena Logo"
-          className="h-10 w-auto"
+          className="h-16 w-auto" // Increased size to h-16 (from h-10)
         />
       </div>
 
-      <div className="w-full max-w-md">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8">
+      <div className="w-full max-w-md mt-24"> {/* Added margin-top to create space below logo */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6"> {/* Reduced padding to p-6 (from p-8) */}
           <h1 className="text-2xl font-bold text-center mb-6 text-gray-800 dark:text-white">
-            {isSignUp ? "Sign Up" : "Sign In"}
+            {isSignUp ? "Join Play Arena" : "Welcome Back, Champ!"}
           </h1>
 
           <div className="space-y-4">
@@ -117,7 +117,7 @@ const Auth = () => {
               </label>
               <Input
                 type="email"
-                placeholder="Your Email"
+                placeholder="Email Address"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full"
@@ -130,7 +130,7 @@ const Auth = () => {
               </label>
               <Input
                 type="password"
-                placeholder="Your Password"
+                placeholder="Secured Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full"
@@ -156,7 +156,7 @@ const Auth = () => {
               {loading ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : isSignUp ? (
-                "Sign Up"
+                "Join Play Arena"
               ) : (
                 "Sign In"
               )}
@@ -224,7 +224,7 @@ const Auth = () => {
 
       {/* Footer Image with Gradient Background */}
       <div className="absolute bottom-0 left-0 w-full">
-        <div className="w-full h-32 bg-gradient-to-t from-[#e6f3f5] to-[#d1e8eb] dark:from-gray-900 dark:to-gray-800 flex justify-center items-center">
+        <div className="w-full h-40 bg-gradient-to-t from-[#e6f3f5] to-[#d1e8eb] dark:from-gray-900 dark:to-gray-800 flex justify-center items-center">
           <img src="/AuthFooter.png" alt="Auth Footer" className="w-full h-full object-cover" />
         </div>
       </div>
