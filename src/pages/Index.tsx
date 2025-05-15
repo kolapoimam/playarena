@@ -156,7 +156,7 @@ return (
     <div className="sticky top-0 z-50 p-4 flex items-center justify-between bg-green-50 dark:bg-green-900 shadow-md mb-4">
       <div className="flex items-center w-full max-w-[calc(100%-60px)]">
         <img
-          src="/android-chrome-512x512.png"
+          src="/navlogo.png"
           alt="PlayArena Logo"
           className="h-10 w-10 object-contain mr-4"
         />
