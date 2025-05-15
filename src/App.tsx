@@ -25,6 +25,7 @@ import ScrollToTop from "./components/ScrollToTop";
 import { Routes, Route } from 'react-router-dom';
 import TeamManagement from "./pages/TeamManagement";
 import LoadingFootball from "./components/LoadingFootball";
+import Ticketing from "./pages/Ticketing"; // Assuming a new Ticketing page component
 
 const queryClient = new QueryClient();
 
@@ -60,6 +61,7 @@ const App = () => {
                 <Route path="/venues" element={<VenueDirectory />} />
                 <Route path="/confirm-checkin" element={<ConfirmCheckin />} />
                 <Route path="/feedback" element={<Feedback />} />
+                <Route path="/ticketing" element={<Ticketing />} /> {/* New ticketing route */}
 
                 {/* Slug-Based Routes for Matches and Venues */}
                 <Route path="/match/:slug" element={<MatchDetail />} />
