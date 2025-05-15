@@ -5,9 +5,10 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft } from "lucide-react";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { ArrowLeft, Calendar, MapPin } from "lucide-react";
+import { Dialog, DialogContent, DialogTrigger, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import QRCode from "qrcode";
+import { format } from "date-fns";
 import Navbar from "@/components/Navbar";
 
 type Match = {
@@ -37,11 +38,22 @@ const Ticketing = () => {
   const [checkinCode, setCheckinCode] = useState("");
 
   useEffect(() => {
+    let isMounted = true;
     if (!slug) {
-      navigate("/matches");
+      if (isMounted) {
+        toast({
+          title: "Error",
+          description: "Invalid match URL.",
+          variant: "destructive",
+        });
+        navigate("/matches");
+      }
       return;
     }
     fetchMatchDetails();
+    return () => {
+      isMounted = false;
+    };
   }, [slug, navigate]);
 
   const fetchMatchDetails = async () => {
@@ -55,9 +67,18 @@ const Ticketing = () => {
         .eq("slug", slug)
         .single();
 
-      if (error || !data.sell_tickets) {
+      if (error) {
+        console.error("Supabase error:", error.message, error.code);
+        throw new Error("Match not found");
+      }
+
+      if (!data) {
+        throw new Error("No match data returned");
+      }
+
+      if (!data.sell_tickets) {
         toast({
-          title: "Error",
+          title: "Tickets Unavailable",
           description: "Tickets are not available for this match.",
           variant: "destructive",
         });
@@ -71,7 +92,7 @@ const Ticketing = () => {
       console.error("Error fetching match:", error);
       toast({
         title: "Error",
-        description: "Failed to load match details.",
+        description: "Failed to load match details. Please try again.",
         variant: "destructive",
       });
       navigate("/matches");
@@ -146,6 +167,9 @@ const Ticketing = () => {
         <div className="text-center py-8">
           <h2 className="text-xl font-semibold mb-2">Match Not Found</h2>
           <p className="text-muted-foreground">The match you're looking for doesn't exist or has no tickets available.</p>
+          <Button onClick={() => navigate("/matches")} className="mt-4">
+            View Available Matches
+          </Button>
         </div>
       </div>
     );
@@ -174,7 +198,7 @@ const Ticketing = () => {
           </div>
           <div className="flex items-center gap-2">
             <MapPin size={18} />
-            <span>{match.venue?.name}, {match.venue?.city}</span>
+            <span>{match.venue ? `${match.venue.name}, ${match.venue.city}` : "Venue TBD"}</span>
           </div>
           {match.ticket_price && (
             <div className="font-semibold">
@@ -254,14 +278,12 @@ const TicketPrinter = ({ match, fanName, ticketCount, qrCodeUrl, checkinCode }: 
   }, []);
 
   const handleDownload = (format: "png" | "pdf") => {
-    // Placeholder for PDF download logic (requires additional library like jsPDF)
     if (format === "png" && qrCodeUrl) {
       const link = document.createElement("a");
       link.href = qrCodeUrl;
       link.download = `Ticket-${match.title}-${fanName}.png`;
       link.click();
     }
-    // Add PDF generation logic here if needed
   };
 
   return (
@@ -284,7 +306,7 @@ const TicketPrinter = ({ match, fanName, ticketCount, qrCodeUrl, checkinCode }: 
                 <p>Tickets: {ticketCount}</p>
                 <p>Match: {match.title}</p>
                 <p>Date: {format(new Date(match.match_date), "PPP")} at {format(new Date(`2000-01-01T${match.match_time}`), "p")}</p>
-                <p>Venue: {match.venue?.name}, {match.venue?.city}</p>
+                <p>Venue: {match.venue ? `${match.venue.name}, ${match.venue.city}` : "Venue TBD"}</p>
                 <p>Checkin Code: {checkinCode}</p>
                 <p>We're going to watch {match.title}!</p>
                 {qrCodeUrl && <img src={qrCodeUrl} alt="QR Code" className="w-20 h-20 mx-auto mt-2" />}
@@ -293,12 +315,12 @@ const TicketPrinter = ({ match, fanName, ticketCount, qrCodeUrl, checkinCode }: 
           )}
           {printProgress >= totalSteps && (
             <div className="p-4 bg-white shadow-md rounded-b-lg">
-              <h3 className="font-semibold">Ticket</h3>
+              <h3 className="font  className="font-semibold">Ticket</h3>
               <p>Fan: {fanName}</p>
               <p>Tickets: {ticketCount}</p>
               <p>Match: {match.title}</p>
               <p>Date: {format(new Date(match.match_date), "PPP")} at {format(new Date(`2000-01-01T${match.match_time}`), "p")}</p>
-              <p>Venue: {match.venue?.name}, {match.venue?.city}</p>
+              <p>Venue: {match.venue ? `${match.venue.name}, ${match.venue.city}` : "Venue TBD"}</p>
               <p>Checkin Code: {checkinCode}</p>
               <p>We're going to watch {match.title}!</p>
               {qrCodeUrl && <img src={qrCodeUrl} alt="QR Code" className="w-20 h-20 mx-auto mt-2" />}
