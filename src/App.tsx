@@ -52,7 +52,7 @@ const AppRoutes = () => {
       <Route path="/venues" element={<VenueDirectory />} />
       <Route path="/confirm-checkin" element={<ConfirmCheckin />} />
       <Route path="/feedback" element={<Feedback />} />
-      <Route path="/ticketing" element={<Ticketing />} />
+      <Route path="/ticketing/:slug" element={<Ticketing />} /> {/* Fixed route */}
 
       <Route path="/match/:slug" element={<MatchDetail />} />
       <Route path="/join/:slug" element={<JoinMatch />} />
@@ -73,7 +73,7 @@ const App = () => {
   useEffect(() => {
     const seen = sessionStorage.getItem('seenSplash');
 
-    if (seen) {
+    if seen) {
       setShowSplash(false);
       return;
     }
