@@ -55,27 +55,21 @@ const formSchema = z.object({
   title: z.string()
     .min(3, { message: "Title must be at least 3 characters" })
     .max(100, { message: "Title cannot exceed 100 characters" }),
-    
   venue_id: z.string()
     .uuid({ message: "Please select a valid venue" }),
-    
   match_date: z.date({ 
     required_error: "Please select a date",
     invalid_type_error: "Please select a valid date" 
   }),
-    
   match_time: z.string()
     .regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, { 
       message: "Please enter a valid time in HH:MM format (24-hour clock)" 
     }),
-    
   total_slots: z.number()
     .int({ message: "Must be a whole number" })
     .min(2, { message: "At least 2 players are required" })
     .max(100, { message: "Maximum 100 players allowed" }),
-    
   is_paid: z.boolean().default(false),
-    
   price: z.number()
     .min(0, { message: "Price cannot be negative" })
     .max(100000, { message: "Maximum price is ₦100,000" })
@@ -84,22 +78,18 @@ const formSchema = z.object({
     .refine(val => val === null || val === undefined || val >= 0, {
       message: "Price must be positive if provided"
     }),
-    
   notes: z.string()
     .max(500, { message: "Notes cannot exceed 500 characters" })
     .optional(),
-    
   organizer_name: z.string()
     .min(3, { message: "Name must be at least 3 characters" })
     .max(50, { message: "Name cannot exceed 50 characters" }),
-    
   organizer_phone: z.string()
     .regex(/^[0-9]+$/, { message: "Must contain only numbers" })
     .length(11, { message: "Must be exactly 11 digits" })
     .optional()
     .nullable()
     .transform(val => val === "" ? null : val),
-    
   disclose_phone: z.boolean().default(false),
   player_number_required: z.boolean().default(false),
   is_private: z.boolean().default(false),
@@ -117,6 +107,12 @@ const formSchema = z.object({
     .refine(val => val === null || val === undefined || val >= 200, {
       message: "Ticket price must be at least ₦200 if provided"
     }),
+  max_tickets: z.number()
+    .int({ message: "Must be a whole number" })
+    .min(1, { message: "At least 1 ticket is required" })
+    .max(1000, { message: "Maximum 1000 tickets allowed" })
+    .optional()
+    .nullable(),
 }).refine(data => {
   const now = new Date();
   const selectedDateTime = new Date(data.match_date);
@@ -136,6 +132,14 @@ const formSchema = z.object({
 }, {
   message: "Match must be scheduled at least 1 hour from now",
   path: ["match_time"],
+}).refine(data => {
+  if (data.sell_tickets && !data.ticket_price) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Ticket price is required when selling tickets",
+  path: ["ticket_price"],
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -184,6 +188,7 @@ const Organize = () => {
       gender: null,
       sell_tickets: false,
       ticket_price: null,
+      max_tickets: null,
     },
   });
 
@@ -203,7 +208,6 @@ const Organize = () => {
     const savedForm = localStorage.getItem("organizeFormState");
     if (savedForm) {
       const parsed = JSON.parse(savedForm);
-      // Parse match_date as Date object
       if (parsed.match_date) {
         parsed.match_date = new Date(parsed.match_date);
       }
@@ -235,6 +239,10 @@ const Organize = () => {
   const gender = form.watch("gender");
   const sellTickets = form.watch("sell_tickets");
   const ticketPrice = form.watch("ticket_price");
+  const maxTickets = form.watch("max_tickets");
+
+  // Determine if preview button should be enabled
+  const isPreviewEnabled = matchTitle && selectedVenueId && matchDate && matchTime && totalSlots && organizerName;
 
   useEffect(() => {
     const fetchVenues = async () => {
@@ -311,13 +319,13 @@ const Organize = () => {
           super_code: superCode,
           sell_tickets: data.sell_tickets,
           ticket_price: data.sell_tickets ? data.ticket_price : null,
+          max_tickets: data.sell_tickets ? data.max_tickets : null,
         })
         .select('id, slug, super_code')
         .single();
 
       if (error) throw error;
 
-      // Link match to user account if logged in
       if (userId) {
         const { error: linkError } = await supabase
           .from("user_organized_matches")
@@ -333,7 +341,6 @@ const Organize = () => {
       setMatchSlug(match.slug);
       setSuccessDialogOpen(true);
 
-      // Clear localStorage after successful submission
       localStorage.removeItem("organizeFormState");
 
       toast({
@@ -562,16 +569,18 @@ const Organize = () => {
                       <Input
                         type="number"
                         min={2}
+                        max={100}
                         className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                         {...field}
+                        value={field.value ?? ""}
                         onChange={(e) => {
-                          const value = parseInt(e.target.value, 10);
-                          field.onChange(isNaN(value) ? 2 : value);
+                          const value = e.target.value;
+                          field.onChange(value === "" ? null : parseInt(value, 10));
                         }}
                       />
                     </FormControl>
                     <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
-                      Total number of players needed for this match
+                      Total number of players needed for this match (2-100)
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -732,11 +741,11 @@ const Organize = () => {
                           step="0.01"
                           className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                           {...field}
-                          onChange={(e) => {
-                            const value = parseFloat(e.target.value);
-                            field.onChange(isNaN(value) ? 0 : value);
-                          }}
                           value={field.value ?? ""}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            field.onChange(value === "" ? null : parseFloat(value));
+                          }}
                         />
                       </FormControl>
                       <FormMessage />
@@ -946,34 +955,64 @@ const Organize = () => {
               />
 
               {sellTickets && (
-                <FormField
-                  control={form.control}
-                  name="ticket_price"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Ticket Price (₦)</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          placeholder="200.00"
-                          min={200}
-                          step="0.01"
-                          className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                          {...field}
-                          onChange={(e) => {
-                            const value = parseFloat(e.target.value);
-                            field.onChange(isNaN(value) || value < 200 ? 200 : value);
-                          }}
-                          value={field.value ?? ""}
-                        />
-                      </FormControl>
-                      <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
-                        Set the price for each ticket (minimum ₦200)
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <>
+                  <FormField
+                    control={form.control}
+                    name="ticket_price"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Ticket Price (₦)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="200.00"
+                            min={200}
+                            step="0.01"
+                            className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                            {...field}
+                            value={field.value ?? ""}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              field.onChange(value === "" ? null : parseFloat(value));
+                            }}
+                          />
+                        </FormControl>
+                        <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                          Set the price for each ticket (minimum ₦200)
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="max_tickets"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Maximum Tickets (Optional)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="Enter maximum number of tickets"
+                            min={1}
+                            max={1000}
+                            className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                            {...field}
+                            value={field.value ?? ""}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              field.onChange(value === "" ? null : parseInt(value, 10));
+                            }}
+                          />
+                        </FormControl>
+                        <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                          Limit the total number of tickets available for purchase (1-1000)
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </>
               )}
             </div>
 
@@ -983,7 +1022,7 @@ const Organize = () => {
                 variant="outline"
                 className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium rounded-lg px-4 py-3 text-lg shadow-md transition-colors"
                 onClick={() => setPreviewDialogOpen(true)}
-                disabled={loading}
+                disabled={loading || !isPreviewEnabled}
               >
                 Preview Match
               </Button>
@@ -1042,6 +1081,12 @@ const Organize = () => {
                   <div className="flex items-center">
                     <span className="font-semibold">Ticket Price: </span>
                     <span className="ml-2">₦{ticketPrice?.toFixed(2) || "N/A"}</span>
+                  </div>
+                )}
+                {maxTickets && (
+                  <div className="flex items-center">
+                    <span className="font-semibold">Max Tickets: </span>
+                    <span className="ml-2">{maxTickets}</span>
                   </div>
                 )}
                 {notes && (
