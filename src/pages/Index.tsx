@@ -59,95 +59,111 @@ const Index = () => {
   const [activeFaqTab, setActiveFaqTab] = useState('general');
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const now = new Date().toLocaleString("en-US", { timeZone: "Africa/Lagos" });
-        const currentDateTime = new Date(now);
-        const currentDate = currentDateTime.toISOString().split("T")[0];
-        const currentTime = currentDateTime.toTimeString().slice(0, 5);
+const fetchData = async () => {
+  try {
+    const now = new Date().toLocaleString("en-US", { timeZone: "Africa/Lagos" });
+    const currentDateTime = new Date(now);
+    const currentDate = currentDateTime.toISOString().split("T")[0];
+    const currentTime = currentDateTime.toTimeString().slice(0, 5);
 
-        console.log("Current Date (Africa/Lagos):", currentDate);
-        console.log("Current Time (Africa/Lagos):", currentTime);
+    const { data: upcomingMatchesData, error: matchesError } = await supabase
+      .from("matches")
+      .select(`
+        id,
+        slug,
+        title,
+        match_date,
+        match_time,
+        is_paid,
+        price,
+        venue:venues(slug, name, city, image_urls)
+      `)
+      .gte("match_date", currentDate)
+      .order("match_date", { ascending: true })
+      .order("match_time", { ascending: true })
+      .limit(5);
 
-        const { data: matchesData, error: matchesError } = await supabase
-          .from("matches")
-          .select(`
-            id,
-            slug,
-            title,
-            match_date,
-            match_time,
-            is_paid,
-            price,
-            venue:venues(slug, name, city, image_urls)
-          `)
-          .gte("match_date", currentDate)
-          .order("match_date", { ascending: true })
-          .order("match_time", { ascending: true })
-          .limit(5);
+    if (matchesError) throw matchesError;
 
-        if (matchesError) throw matchesError;
+    let filteredMatches = upcomingMatchesData.filter((match: Match) => {
+      const matchDateTime = new Date(`${match.match_date}T${match.match_time}:00`);
+      const isToday = match.match_date === currentDate;
+      const isTimePassed = isToday && match.match_time < currentTime;
+      return !isTimePassed || match.match_date > currentDate;
+    });
 
-        console.log("Raw Matches Data:", matchesData);
+    if (filteredMatches.length < 5) {
+      const { data: recentMatchesData, error: recentMatchesError } = await supabase
+        .from("matches")
+        .select(`
+          id,
+          slug,
+          title,
+          match_date,
+          match_time,
+          is_paid,
+          price,
+          venue:venues(slug, name, city, image_urls)
+        `)
+        .order("match_date", { ascending: false })
+        .order("match_time", { ascending: false })
+        .limit(5 - filteredMatches.length);
 
-        const filteredMatches = matchesData.filter((match: Match) => {
-          const matchDateTime = new Date(`${match.match_date}T${match.match_time}:00`);
-          const isToday = match.match_date === currentDate;
-          const isTimePassed = isToday && match.match_time < currentTime;
-          return !isTimePassed || match.match_date > currentDate;
-        });
+      if (recentMatchesError) throw recentMatchesError;
 
-        console.log("Filtered Matches:", filteredMatches);
+      filteredMatches = [...filteredMatches, ...recentMatchesData].slice(0, 5);
+    }
 
-        const { data: venuesData, error: venuesError } = await supabase
-          .from("venues")
-          .select(`
-            id,
-            slug,
-            name,
-            city,
-            state,
-            image_urls,
-            matches:matches!venue_id(count)
-          `)
-          .order("created_at", { ascending: false })
-          .limit(5);
+    const { data: venuesData, error: venuesError } = await supabase
+      .from("venues")
+      .select(`
+        id,
+        slug,
+        name,
+        city,
+        state,
+        image_urls,
+        matches:matches!venue_id(count)
+      `)
+      .order("created_at", { ascending: false })
+      .limit(5);
 
-        if (venuesError) throw venuesError;
+    if (venuesError) throw venuesError;
 
-        const venuesWithMatchCount = venuesData.map((venue: any) => ({
-          ...venue,
-          match_count: venue.matches[0]?.count || 0,
-        }));
+    const venuesWithMatchCount = venuesData.map((venue: any) => ({
+      ...venue,
+      match_count: venue.matches[0]?.count || 0,
+    }));
 
-        setUpcomingMatches(filteredMatches as Match[]);
-        setPopularVenues(venuesWithMatchCount as Venue[]);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load data. Please try again.",
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
+    setUpcomingMatches(filteredMatches as Match[]);
+    setPopularVenues(venuesWithMatchCount as Venue[]);
+  } catch (error) {
+    console.error("Error fetching data:", error);
+    toast({
+      title: "Error",
+      description: "Failed to load data. Please try again.",
+      variant: "destructive",
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
     fetchData();
   }, [toast]);
 
   return (
-<div className="min-h-screen pb-20">
-<header className="sticky top-0 z-50 p-4 flex items-center bg-green-50 dark:bg-green-900 shadow-md mb-4">
+<header className="sticky top-0 z-50 p-4 flex items-center justify-center bg-green-50 dark:bg-green-900 shadow-md mb-4">
   <img
     src={theme === "dark" ? "/playarenadark.png" : "/playarenalight.png"}
     alt="PlayArena Logo"
     className="h-10 w-auto object-contain"
   />
-  <div className="flex-grow" />
-  <ThemeToggle />
 </header>
+
+<div className="fixed top-4 right-4 z-50">
+  <ThemeToggle />
+</div>
 
       <div className="px-4 mb-6 mt-4">
         <SearchBar />
