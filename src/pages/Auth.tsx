@@ -13,14 +13,29 @@ const Auth = () => {
   const { toast } = useToast();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const { theme } = useTheme();
 
+  const validateEmail = (email) => {
+    const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+    return emailRegex.test(email);
+  };
+
   const handleEmailAuth = async () => {
+    if (!validateEmail(email)) {
+      toast({
+        title: "Invalid Email",
+        description: "Please enter a valid email address.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       if (isSignUp) {
@@ -30,7 +45,8 @@ const Auth = () => {
           options: {
             emailRedirectTo: `${window.location.origin}/profile`,
             data: {
-              name,
+              firstName,
+              lastName,
             },
           },
         });
@@ -42,7 +58,8 @@ const Auth = () => {
             .from("profiles")
             .upsert({
               id: data.user.id,
-              name,
+              firstName,
+              lastName,
             });
 
           if (profileError) throw profileError;
@@ -80,7 +97,7 @@ const Auth = () => {
   };
 
   const handleForgotPassword = async () => {
-    if (!resetEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(resetEmail)) {
+    if (!validateEmail(resetEmail)) {
       toast({
         title: "Invalid Email",
         description: "Please enter a valid email address.",
@@ -116,7 +133,7 @@ const Auth = () => {
         <img src="/navlogo.png" alt="PlayArena Logo" className="h-16 w-auto" />
       </div>
 
-      <div className="w-full max-w-md mt-20 mb-20">
+      <div className="w-full max-w-md mt-12 mb-32">
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-8">
           <div className="flex border-b border-gray-200 dark:border-gray-700 mb-6">
             <button
@@ -143,18 +160,34 @@ const Auth = () => {
 
           <div className="space-y-4">
             {isSignUp && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Name
-                </label>
-                <Input
-                  type="text"
-                  placeholder="Your Name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full"
-                />
-              </div>
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    First Name
+                  </label>
+                  <Input
+                    type="text"
+                    placeholder="Your First Name"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    required
+                    className="w-full"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Last Name
+                  </label>
+                  <Input
+                    type="text"
+                    placeholder="Your Last Name"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    required
+                    className="w-full"
+                  />
+                </div>
+              </>
             )}
 
             <div>
@@ -166,6 +199,7 @@ const Auth = () => {
                 placeholder="Your Email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                required
                 className="w-full"
               />
             </div>
@@ -179,6 +213,7 @@ const Auth = () => {
                 placeholder="Your Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                required
                 className="w-full"
               />
             </div>
@@ -198,7 +233,7 @@ const Auth = () => {
               <Button
                 className="flex-1 bg-[#17a34a] hover:bg-[#138d3a] text-white font-medium py-2"
                 onClick={handleEmailAuth}
-                disabled={loading || (isSignUp && !name)}
+                disabled={loading || (isSignUp && (!firstName || !lastName))}
               >
                 {loading ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -252,41 +287,46 @@ const Auth = () => {
         </div>
       </div>
 
-      {/* Forgot Password Dialog */}
-      {showForgotPassword && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify Recognition of Terms and Privacy Policycenter z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 w-full max-w-sm">
-            <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">
-              Reset Password
-            </h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              Enter your email to receive a password reset link.
-            </p>
-            <Input
-              type="email"
-              placeholder="Your Email"
-              value={resetEmail}
-              onChange={(e) => setResetEmail(e.target.value)}
-              className="w-full mb-4"
-            />
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setShowForgotPassword(false)}
-                disabled={loading}
-              >
-                Cancel
-              </Button>
-              <Button
-                className="bg-[#17a34a] hover:bg-[#138d3a] text-white"
-                onClick={handleForgotPassword}
-                disabled={loading}
-              >
-                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Send Reset Link"}
-              </Button>
-            </div>
-          </div>
-        </div>
+{/* Forgot Password Dialog */}
+{showForgotPassword && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 w-full max-w-xs">
+      <div className="text-center mb-5">
+        <h2 className="text-xl font-bold text-gray-800 dark:text-white">
+          Reset Password
+        </h2>
+        <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+          Enter your email to receive a password reset link.
+        </p>
+      </div>
+      
+      <Input
+        type="email"
+        placeholder="Your Email"
+        value={resetEmail}
+        onChange={(e) => setResetEmail(e.target.value)}
+        className="w-full mb-5"
+      />
+      
+      <div className="flex justify-end gap-3">
+        <Button
+          variant="outline"
+          className="px-4 rounded-lg"
+          onClick={() => setShowForgotPassword(false)}
+          disabled={loading}
+        >
+          Cancel
+        </Button>
+        <Button
+          className="bg-[#17a34a] hover:bg-[#138d3a] text-white px-4 rounded-lg"
+          onClick={handleForgotPassword}
+          disabled={loading}
+        >
+          {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Send Link"}
+        </Button>
+      </div>
+    </div>
+  </div>
       )}
 
       {/* Footer Image with Gradient Background */}
