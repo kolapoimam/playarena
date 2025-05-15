@@ -43,6 +43,8 @@ export default defineConfig(({ mode }) => ({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        // Fix: Increase the cache file size limit to 5MB
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024
       },
       includeAssets: [
         'icons/icon-192x192.png',
