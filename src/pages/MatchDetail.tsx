@@ -33,7 +33,7 @@ import {
   DialogFooter,
   DialogHeader,
 } from "@/components/ui/dialog";
-import { format, isToday, isPast, differenceInHours, addHours } from "date-fns";
+import { format, isToday, isPast, differenceInMinutes, addMinutes } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -66,6 +66,9 @@ type Match = {
   players: {
     player_name: string;
     status: string;
+    number_of_slots: number;
+  }[];
+  tickets: {
     number_of_tickets: number;
   }[];
 };
@@ -99,7 +102,8 @@ const MatchDetail = () => {
         .select(`
           *,
           venue:venues(id, slug, name, city, map_link),
-          players(player_name, status, number_of_slots)
+          players(player_name, status, number_of_slots),
+          tickets(number_of_tickets)
         `)
         .eq("slug", matchSlug)
         .single();
@@ -193,7 +197,8 @@ const MatchDetail = () => {
         .select(`
           *,
           venue:venues(id, slug, name, city, map_link),
-          players(player_name, status, number_of_slots)
+          players(player_name, status, number_of_slots),
+          tickets(number_of_tickets)
         `)
         .eq("slug", matchSlug)
         .single();
@@ -230,19 +235,24 @@ const MatchDetail = () => {
   };
 
   const getMatchStatus = () => {
-    if (!match) return { isStarted: false, isPassed: false, isFull: false };
+    if (!match) return { isStarted: false, isPassed: false, isFull: false, isFeedbackWindow: false, canBuyTickets: false };
     
     const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
-    const now = new Date("2025-05-15T00:01:00+01:00"); // 12:01 AM WAT, May 15, 2025
-    const fortyEightHoursAfter = addHours(matchDateTime, 48);
+    const now = new Date("2025-05-15T15:55:00+01:00"); // 3:55 PM WAT, May 15, 2025
+    const thirtyMinutesAfter = addMinutes(matchDateTime, 30);
+    const fortyEightHoursAfter = addMinutes(matchDateTime, 48 * 60);
     
     const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
+    const totalTicketsSold = match.tickets.reduce((sum, ticket) => sum + (ticket.number_of_tickets || 0), 0);
     const isFull = totalPlayerSlots >= match.total_slots;
     const isStarted = now >= matchDateTime;
     const isPassed = now >= fortyEightHoursAfter;
     const isFeedbackWindow = now >= matchDateTime && now < fortyEightHoursAfter;
+    const canBuyTickets = match.sell_tickets && 
+                         (!match.max_tickets || totalTicketsSold < match.max_tickets) && 
+                         now <= thirtyMinutesAfter;
     
-    return { isStarted, isPassed, isFull, isFeedbackWindow };
+    return { isStarted, isPassed, isFull, isFeedbackWindow, canBuyTickets };
   };
 
   const shareMatch = async () => {
@@ -305,7 +315,7 @@ const MatchDetail = () => {
     const url = `${window.location.origin}/match/${match.slug}`;
     const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
     const shareText = `Join my Football Match: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. ${totalPlayerSlots}/${match.total_slots} slots. Powered by PlayArena. ${match.is_private ? ` (Access Password: ${match.access_password})` : ''}`;
-    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}"e=${encodeURIComponent(shareText)}`;
+    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(shareText)}`;
     window.open(facebookUrl, '_blank');
   };
 
@@ -367,7 +377,7 @@ const MatchDetail = () => {
         `Football Match organized by ${match.organizer_name}.\n\n` +
         `Match Link: ${window.location.origin}/match/${match.slug}\n\n` +
         `Venue: ${match.venue?.name || 'Unknown'}, ${match.venue?.city || ''}\n\n` +
-        `Additional Info: ${match.description || 'No additional information provided'}\n\n` +
+        `Additional Info: ${match.notes || 'No additional information provided'}\n\n` +
         `${match.is_private ? `Access Password: ${match.access_password}\n\n` : ''}` +
         `Powered by PlayArena`
       )}` +
@@ -437,7 +447,7 @@ const MatchDetail = () => {
     );
   }
 
-  const { isStarted, isPassed, isFull, isFeedbackWindow } = getMatchStatus();
+  const { isStarted, isPassed, isFull, isFeedbackWindow, canBuyTickets } = getMatchStatus();
   const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
 
   return (
@@ -634,7 +644,7 @@ const MatchDetail = () => {
                 </Button>
               )}
             </div>
-            {match.sell_tickets && !isPassed && !isStarted && (
+            {canBuyTickets && (
               <div className="mt-4">
                 <Button
                   className="w-full bg-yellow-500 hover:bg-yellow-600 text-white"
@@ -669,152 +679,90 @@ const MatchDetail = () => {
                   Share to Facebook
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={shareMatch}>
-                  Share via Device
+                  Copy Link
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            
             <Button 
-              variant="outline"
+              variant="outline" 
               className="flex-1"
               onClick={() => setDownloadDialogOpen(true)}
             >
               <Download size={18} className="mr-2" />
-              Download
+              Download Match Card
             </Button>
           </div>
         </div>
       </div>
-      <Navbar />
 
-      <Dialog open={downloadDialogOpen} onOpenChange={(open) => {
-        setDownloadDialogOpen(open);
-        setIsImageLoaded(false);
-        if (!open) setBackgroundOption("field");
-      }}>
-        <DialogContent className="sm:max-w-[425px] max-w-[90vw] rounded-2xl">
-          <DialogTitle>Match Details</DialogTitle>
+      <Dialog open={downloadDialogOpen} onOpenChange={setDownloadDialogOpen}>
+        <DialogContent className="sm:max-w-[375px] rounded-2xl">
+          <DialogTitle className="text-xl font-bold text-gray-800 dark:text-gray-200">Download Match Card</DialogTitle>
           <DialogDescription>
-            <p className="text-gray-600 dark:text-gray-300 mb-4">
-              Download this card to share your match details with friends. Choose any background below.
-            </p>
             <div className="mb-4">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Background:</label>
-              <div className="flex items-center space-x-4 mt-2">
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    value="field"
-                    checked={backgroundOption === "field"}
-                    onChange={() => setBackgroundOption("field")}
-                    className="form-radio text-playarena-500"
-                  />
-                  <span>Default</span>
-                </label>
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    value="white"
-                    checked={backgroundOption === "white"}
-                    onChange={() => setBackgroundOption("white")}
-                    className="form-radio text-playarena-500"
-                  />
-                  <span>White</span>
-                </label>
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    value="green"
-                    checked={backgroundOption === "green"}
-                    onChange={() => setBackgroundOption("green")}
-                    className="form-radio text-playarena-500"
-                  />
-                  <span>Green</span>
-                </label>
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    value="black"
-                    checked={backgroundOption === "black"}
-                    onChange={() => setBackgroundOption("black")}
-                    className="form-radio text-playarena-500"
-                  />
-                  <span>Black</span>
-                </label>
-              </div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Select Background
+              </label>
+              <select
+                value={backgroundOption}
+                onChange={(e) => setBackgroundOption(e.target.value)}
+                className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              >
+                <option value="field">Football Field</option>
+                <option value="stadium">Stadium</option>
+                <option value="gradient">Gradient</option>
+              </select>
             </div>
             <div 
               ref={cardRef}
-              className={`rounded-lg p-6 shadow-lg relative overflow-hidden ${backgroundOption === "field" ? "bg-cover bg-center" : ""}`}
-              style={{
-                backgroundImage: backgroundOption === "field" ? "url('/football-field.jpg')" : "",
-                backgroundColor: backgroundOption !== "field" ? backgroundOption : "transparent",
-                ...(backgroundOption === "field" && {
-                  backgroundBlendMode: "overlay",
-                  backgroundColor: "rgba(0, 0, 0, 0.5)",
-                }),
-              }}
+              className={`rounded-xl p-6 text-white shadow-lg ${
+                backgroundOption === 'field' ? 'bg-[url(/field-bg.jpg)] bg-cover' :
+                backgroundOption === 'stadium' ? 'bg-[url(/stadium-bg.jpg)] bg-cover' :
+                'bg-gradient-to-br from-green-500 to-green-700'
+              }`}
             >
-              <div className="relative z-10">
-                <div className="flex items-center justify-between mb-4">
-                  <img 
-                    src={backgroundOption === "white" ? "/playarenalight.png" : "/playarenadark.png"}
-                    alt="PlayArena Logo" 
-                    className="h-8 w-auto"
-                    onLoad={handleImageLoad}
-                    onError={() => {
-                      toast({
-                        title: "Error",
-                        description: "Failed to load logo image.",
-                        variant: "destructive",
-                      });
-                      setIsImageLoaded(true);
-                    }}
-                  />
-                  <Trophy className={`h-6 w-6 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
+              <div className="flex items-center justify-between mb-4">
+                <img 
+                  src="/playarenadark.png" 
+                  alt="PlayArena Logo" 
+                  className="h-8 w-auto"
+                  onLoad={handleImageLoad}
+                />
+                <Trophy className="h-6 w-6" />
+              </div>
+              <h2 className="text-xl font-bold mb-2">{match.title}</h2>
+              <div className="space-y-2 mb-4 text-sm">
+                <div className="flex items-center">
+                  <MapPin className="h-4 w-4 mr-2" />
+                  <span>{match.venue?.name || "Unknown Venue"}, {match.venue?.city || ""}</span>
                 </div>
-                <h2 className={`text-xl font-bold mb-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`}>{match.title}</h2>
-                <div className="space-y-2 mb-4">
-                  <div className="flex items-center">
-                    <MapPin className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-                    <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{match.venue?.name || "Venue"}, {match.venue?.city || ""}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <Calendar className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-                    <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{formatDate(match.match_date)} at {formatTime(match.match_time)}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <DollarSign className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-                    <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{match.is_paid ? `Paid (₦${match.price?.toFixed(2)})` : "Free"}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <Users className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-                    <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{totalPlayerSlots}/{match.total_slots} slots booked</span>
-                  </div>
+                <div className="flex items-center">
+                  <Calendar className="h-4 w-4 mr-2" />
+                  <span>{formatDate(match.match_date)} at {formatTime(match.match_time)}</span>
+                </div>
+                <div className="flex items-center">
+                  <Users className="h-4 w-4 mr-2" />
+                  <span>Organized by {match.organizer_name}</span>
+                </div>
+                <div className="flex items-center">
+                  <DollarSign className="h-4 w-4 mr-2" />
+                  <span>{match.is_paid ? `₦${match.price?.toFixed(2)}` : "Free"}</span>
                 </div>
               </div>
             </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400 my-4">
-              <strong>Note:</strong> Save or share this card to invite players to your match.
-            </p>
-            <div className="flex gap-2">
-              <Button 
-                className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
+            <div className="mt-4 flex justify-end">
+              <Button
+                className="bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 transition-colors"
                 onClick={handleDownload}
-                disabled={!isImageLoaded}
               >
                 Download
-              </Button>
-              <Button 
-                className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
-                onClick={() => setDownloadDialogOpen(false)}
-              >
-                Close
               </Button>
             </div>
           </DialogDescription>
         </DialogContent>
       </Dialog>
+
+      <Navbar />
     </div>
   );
 };
