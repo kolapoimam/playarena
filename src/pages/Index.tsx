@@ -151,21 +151,23 @@ const Index = () => {
     fetchData();
   }, [toast]);
 
-  return (
-    <div className="min-h-screen pb-24 relative">
-      <div className="sticky top-0 z-50 p-4 flex items-center justify-between bg-green-50 dark:bg-green-900 shadow-md mb-4">
-        <div className="flex items-center">
-          <img
-            src="/public/android-chrome-512x512.png"
-            alt="PlayArena Logo"
-            className="h-10 w-10 object-contain mr-4"
-          />
+return (
+  <div className="min-h-screen pb-24 relative">
+    <div className="sticky top-0 z-50 p-4 flex items-center justify-between bg-green-50 dark:bg-green-900 shadow-md mb-4">
+      <div className="flex items-center w-full max-w-[calc(100%-60px)]">
+        <img
+          src="/android-chrome-512x512.png"
+          alt="PlayArena Logo"
+          className="h-10 w-10 object-contain mr-4"
+        />
+        <div className="flex-1 max-w-[500px]">
           <SearchBar />
         </div>
-        <div className="fixed top-4 right-4 z-50">
-          <ThemeToggle />
-        </div>
       </div>
+      <div className="fixed top-4 right-4 z-50">
+        <ThemeToggle />
+      </div>
+    </div>
 
       <div className="grid grid-cols-3 gap-2 px-4 mb-8">
         <Button
