@@ -8,6 +8,7 @@
   min-height: 100vh;
   padding-bottom: 5rem;
   position: relative; /* For absolute positioning of loading overlay */
+  background-color: #ffffff; /* Ensure main background is white */
 }
 
 /* Loading overlay - matches your football animation */
@@ -168,4 +169,25 @@
   .read-the-docs {
     color: #aaa;
   }
+}
+
+/* iPhone Status Bar Background Fix */
+.status-bar-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: env(safe-area-inset-top);
+  background-color: #e8f5f4; /* Brand theme colour */
+  z-index: 9999;
+  pointer-events: none; /* So it doesn’t block interaction */
+}
+
+/* Base HTML & Body background */
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow-x: hidden;
+  background-color: #ffffff; /* white background */
 }
