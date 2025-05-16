@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -163,9 +163,17 @@ const PlayerManagement = ({
   const [isPlayersOpen, setIsPlayersOpen] = useState(false);
   const [walletBalance, setWalletBalance] = useState<number>(0);
   const [cashoutRequests, setCashoutRequests] = useState<any[]>([]);
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchWalletAndCashouts = async () => {
+    const fetchUserIdAndData = async () => {
+      const { data: session } = await supabase.auth.getSession();
+      if (session.session) {
+        setUserId(session.session.user.id);
+      } else {
+        setUserId(null);
+      }
+
       if (!match || !userId) return;
       
       // Fetch wallet balance
@@ -191,7 +199,7 @@ const PlayerManagement = ({
       }
     };
 
-    fetchWalletAndCashouts();
+    fetchUserIdAndData();
   }, [match, userId]);
 
   const hasCheckedInPlayers = () => {
@@ -623,7 +631,7 @@ const PlayerManagement = ({
                       <SelectContent>
                         <SelectItem value="pending">Pending</SelectItem>
                         <SelectItem value="confirmed">Confirmed</SelectItem>
-                        <SelectItem value="absent">Absent</Item>
+                        <SelectItem value="absent">Absent</SelectItem>
                       </SelectContent>
                     </Select>
                   )}
