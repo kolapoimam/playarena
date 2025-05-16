@@ -207,12 +207,16 @@ const VenueDetail = () => {
           />
         </div>
 
-        <div className="flex items-center">
-          <h1 className="text-3xl font-bold mb-2 text-gray-900 dark:text-gray-100">{venue.name}</h1>
-          {venue.is_verified && (
-            <CheckCircle size={24} className="ml-2 text-green-500" />
-          )}
-        </div>
+<div className="flex items-center">
+  <h1 className="text-3xl font-bold mb-2 text-gray-900 dark:text-gray-100">{venue.name}</h1>
+  {venue.is_verified && (
+    <img 
+      src="/green-verified.png" 
+      alt="Verified" 
+      className="ml-2 w-6 h-6" 
+    />
+  )}
+</div>
         <div className="flex items-center text-gray-600 dark:text-gray-400 mb-4">
           <MapPin size={18} className="mr-2" />
           <span>{venue.city}, {venue.state}</span>
