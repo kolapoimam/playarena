@@ -283,11 +283,11 @@ return (
               </Button>
             </div>
 
-{popularVenues.length > 0 && (
+{popularVenues.length > 0 ? (
   <div className="flex gap-4 overflow-x-auto px-4 pb-4">
     {popularVenues.map((venue) => {
       const defaultImage = "https://dailytrust.com/wp-content/uploads/2023/12/football-488714_1280.jpg";
-      const venueImage = venue.image_urls?.[0] || defaultImage;
+      const venueImage = venue.image_urls && venue.image_urls.length > 0 ? venue.image_urls[0] : defaultImage;
 
       return (
         <div
@@ -307,38 +307,29 @@ return (
                 <img 
                   src="/green-verified.png" 
                   alt="Verified" 
-                  className="w-4 h-4" 
-                  onError={(e) => {
-                    // Fallback in case image fails to load
-                    e.currentTarget.onerror = null;
-                    e.currentTarget.src = "/fallback-verified-icon.png";
-                  }}
+                  className="ml-1 w-4 h-4 object-contain" 
                 />
               )}
             </div>
-            <p className="text-sm text-muted-foreground mb-1">
-              {`${venue.city}, ${venue.state}`}
-            </p>
-            <p className="text-sm font-medium">
-              {`${venue.match_count} Match${venue.match_count !== 1 ? "es" : ""}`}
-            </p>
+            <p className="text-sm text-muted-foreground mb-1">{`${venue.city}, ${venue.state}`}</p>
+            <p className="text-sm font-medium">{`${venue.match_count} Match${venue.match_count !== 1 ? "es" : ""}`}</p>
           </div>
         </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="px-4 py-8 text-center">
-                <p className="text-muted-foreground">No venues added yet.</p>
-                <Button
-                  variant="link"
-                  className="mt-2 text-green-600"
-                  onClick={() => navigate("/venue-create")}
-                >
-                  Add the first venue!
-                </Button>
-              </div>
-            )}
+      );
+    })}
+  </div>
+) : (
+  <div className="px-4 py-8 text-center">
+    <p className="text-muted-foreground">No venues added yet.</p>
+    <Button
+      variant="link"
+      className="mt-2 text-green-600"
+      onClick={() => navigate("/venue-create")}
+    >
+      Add the first venue!
+    </Button>
+  </div>
+)}
           </section>
 
           <section className="px-4 py-6 bg-gradient-to-b from-green-50 to-white dark:from-green-900 dark:to-gray-800 rounded-lg mt-8">
