@@ -49,10 +49,10 @@ type MatchDetailsProps = {
   handleEndMatch: () => void;
   loading: boolean;
   isMatchPast: boolean;
-  walletBalance?: number; // Add wallet balance prop
+  walletBalance?: number;
 };
 
-const MatchDetails = ({ match, cashout, handleCancelMatch, handleStartMatch, handleEndMatch, loading, isMatchPast }: MatchDetailsProps) => {
+const MatchDetails = ({ match, cashout, handleCancelMatch, handleStartMatch, handleEndMatch, loading, isMatchPast, walletBalance }: MatchDetailsProps) => {
   const canCancelMatch = () => {
     if (!match) return false;
     const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
@@ -120,105 +120,108 @@ const MatchDetails = ({ match, cashout, handleCancelMatch, handleStartMatch, han
     return `${hours} hour${hours !== 1 ? "s" : ""} ${minutes} minute${minutes !== 1 ? "s" : ""}`;
   };
 
-if (!match) return null;
+  if (!match) return null;
 
-return (
-  <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700">
-    <div className="flex justify-between items-center mb-4">
-      <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Match Details</h2>
-      <div className="flex items-center gap-2">
-        {match.cancellation_status && (
-          <span className="inline-block px-3 py-1 text-sm font-medium rounded border bg-red-100 text-red-700 border-red-300">
-            Cancelled
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Match Details</h2>
+        <div className="flex items-center gap-2">
+          {match.cancellation_status && (
+            <span className="inline-block px-3 py-1 text-sm font-medium rounded border bg-red-100 text-red-700 border-red-300">
+              Cancelled
+            </span>
+          )}
+          {cashout && (
+            <span
+              className={`inline-block px-3 py-1 text-sm font-medium rounded border ${getStatusStyles(cashout.status)}`}
+            >
+              Cashout: {cashout.status.replace("_", " ").charAt(0).toUpperCase() + cashout.status.replace("_", " ").slice(1)}
+            </span>
+          )}
+        </div>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+        <div className="flex items-center gap-3">
+          <Trophy size={20} className="text-green-500" />
+          <div>
+            <p className="font-medium text-gray-900 dark:text-gray-100">{match.title || "Untitled Match"}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Organized by {match.organizer_name || "Unknown Organizer"}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <MapPin size={20} className="text-green-500" />
+          <span className="text-gray-900 dark:text-gray-100">
+            {match.venue?.name || "Unknown Venue"}, {match.venue?.city || "Unknown City"}
           </span>
+        </div>
+        <div className="flex items-center gap-3">
+          <Calendar size={20} className="text-green-500" />
+          <span className="text-gray-900 dark:text-gray-100">{match.match_date ? formatDate(match.match_date) : "Date TBD"}</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <Clock size={20} className="text-green-500" />
+          <span className="text-gray-900 dark:text-gray-100">{match.match_time ? formatTime(match.match_time) : "Time TBD"}</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <Users size={20} className="text-green-500" />
+          <span className="text-gray-900 dark:text-gray-100">{(match.players || []).length}/{match.total_slots || 0} players</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <DollarSign size={20} className="text-green-500" />
+          <span className="text-gray-900 dark:text-gray-100">{match.is_paid ? "Paid" : "Free"}</span>
+        </div>
+        {walletBalance !== undefined && (
+          <div className="flex items-center gap-3">
+            <Wallet size={20} className="text-green-500" />
+            <span className="text-gray-900 dark:text-gray-100">
+              Wallet: ₦{walletBalance.toLocaleString() || "0"}
+            </span>
+          </div>
         )}
-        {cashout && (
-          <span
-            className={`inline-block px-3 py-1 text-sm font-medium rounded border ${getStatusStyles(cashout.status)}`}
-          >
-            Cashout: {cashout.status.replace("_", " ").charAt(0).toUpperCase() + cashout.status.replace("_", " ").slice(1)}
-          </span>
+        {match.match_start_time && match.match_end_time && (
+          <div className="flex items-center gap-3 col-span-1 sm:col-span-2">
+            <Clock size={20} className="text-green-500" />
+            <span className="text-gray-900 dark:text-gray-100">
+              Match Duration: {calculateMatchDuration()}
+            </span>
+          </div>
         )}
       </div>
-    </div>
-    <div className="flex items-center gap-3">
-      <Trophy size={20} className="text-green-500" />
-      <div>
-        <p className="font-medium text-gray-900 dark:text-gray-100">{match.title || "Untitled Match"}</p>
-        <p className="text-sm text-gray-600 dark:text-gray-400">
-          Organized by {match.organizer_name || "Unknown Organizer"}
-        </p>
+      {match.cancellation_status && match.is_paid && (
+        <div className="mt-4 p-4 rounded-lg bg-red-100 dark:bg-red-900">
+          <p className="text-red-700 dark:text-red-300">
+            This match has been cancelled. Players will be contacted for a refund.
+          </p>
+        </div>
+      )}
+      {cashout && (
+        <div className="mt-4 p-4 rounded-lg bg-yellow-100 dark:bg-yellow-900">
+          <p className="text-yellow-700 dark:text-yellow-300">
+            Your cashout request is {cashout.status.replace("_", " ")}. Expected amount: {calculateExpectedAmount()}
+          </p>
+        </div>
+      )}
+      <div className="flex flex-wrap gap-4 mt-4">
+        <Button
+          onClick={handleStartMatch}
+          className="bg-green-600 hover:bg-green-700 text-white"
+          disabled={!canStartMatch() || loading}
+        >
+          Start Match
+        </Button>
+        <Button
+          onClick={handleEndMatch}
+          className="bg-green-600 hover:bg-green-700 text-white"
+          disabled={!canEndMatch() || loading}
+        >
+          End Match
+        </Button>
       </div>
     </div>
-    <div className="flex items-center gap-3">
-      <MapPin size={20} className="text-green-500" />
-      <span className="text-gray-900 dark:text-gray-100">
-        {match.venue?.name || "Unknown Venue"}, {match.venue?.city || "Unknown City"}
-      </span>
-    </div>
-    <div className="flex items-center gap-3">
-      <Calendar size={20} className="text-green-500" />
-      <span className="text-gray-900 dark:text-gray-100">{match.match_date ? formatDate(match.match_date) : "Date TBD"}</span>
-    </div>
-    <div className="flex items-center gap-3">
-      <Clock size={20} className="text-green-500" />
-      <span className="text-gray-900 dark:text-gray-100">{match.match_time ? formatTime(match.match_time) : "Time TBD"}</span>
-    </div>
-    <div className="flex items-center gap-3">
-      <Users size={20} className="text-green-500" />
-      <span className="text-gray-900 dark:text-gray-100">{(match.players || []).length}/{match.total_slots || 0} players</span>
-    </div>
-    <div className="flex items-center gap-3">
-      <DollarSign size={20} className="text-green-500" />
-      <span className="text-gray-900 dark:text-gray-100">{match.is_paid ? "Paid" : "Free"}</span>
-    </div>
-    {walletBalance !== undefined && (
-      <div className="flex items-center gap-3">
-        <Wallet size={20} className="text-green-500" />
-        <span className="text-gray-900 dark:text-gray-100">
-          Wallet: ₦{walletBalance?.toLocaleString() || "0"}
-        </span>
-      </div>
-    )}
-    {match.match_start_time && match.match_end_time && (
-      <div className="flex items-center gap-3 col-span-1 sm:col-span-2">
-        <Clock size={20} className="text-green-500" />
-        <span className="text-gray-900 dark:text-gray-100">
-          Match Duration: {calculateMatchDuration()}
-        </span>
-      </div>
-    )}
-    {match.cancellation_status && match.is_paid && (
-      <div className="mt-4 p-4 rounded-lg bg-red-100 dark:bg-red-900">
-        <p className="text-red-700 dark:text-red-300">
-          This match has been cancelled. Players will be contacted for a refund.
-        </p>
-      </div>
-    )}
-    {cashout && (
-      <div className="mt-4 p-4 rounded-lg bg-yellow-100 dark:bg-yellow-900">
-        <p className="text-yellow-700 dark:text-yellow-300">
-          Your cashout request is {cashout.status.replace("_", " ")}. Expected amount: {calculateExpectedAmount()}
-        </p>
-      </div>
-    )}
-    <div className="flex flex-wrap gap-4 mt-4">
-      <Button
-        onClick={handleStartMatch}
-        className="bg-green-600 hover:bg-green-700 text-white"
-        disabled={!canStartMatch() || loading}
-      >
-        Start Match
-      </Button>
-      <Button
-        onClick={handleEndMatch}
-        className="bg-green-600 hover:bg-green-700 text-white"
-        disabled={!canEndMatch() || loading}
-      >
-        End Match
-      </Button>
-    </div>
-  </div>
-);
+  );
+};
 
 export default MatchDetails;
