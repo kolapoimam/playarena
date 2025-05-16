@@ -49,6 +49,7 @@ type MatchDetailsProps = {
   handleEndMatch: () => void;
   loading: boolean;
   isMatchPast: boolean;
+  walletBalance?: number; // Add wallet balance prop
 };
 
 const MatchDetails = ({ match, cashout, handleCancelMatch, handleStartMatch, handleEndMatch, loading, isMatchPast }: MatchDetailsProps) => {
@@ -140,45 +141,60 @@ const MatchDetails = ({ match, cashout, handleCancelMatch, handleStartMatch, han
           )}
         </div>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="flex items-center gap-3">
-          <Trophy size={20} className="text-green-500" />
-          <div>
-            <p className="font-medium text-gray-900 dark:text-gray-100">{match.title || "Untitled Match"}</p>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Organized by {match.organizer_name || "Unknown Organizer"}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <MapPin size={20} className="text-green-500" />
-          <span className="text-gray-900 dark:text-gray-100">
-            {match.venue?.name || "Unknown Venue"}, {match.venue?.city || "Unknown City"}
-          </span>
-        </div>
-        <div className="flex items-center gap-3">
-          <Calendar size={20} className="text-green-500" />
-          <span className="text-gray-900 dark:text-gray-100">{match.match_date ? formatDate(match.match_date) : "Date TBD"}</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <Clock size={20} className="text-green-500" />
-          <span className="text-gray-900 dark:text-gray-100">{match.match_time ? formatTime(match.match_time) : "Time TBD"}</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <Users size={20} className="text-green-500" />
-          <span className="text-gray-900 dark:text-gray-100">{(match.players || []).length}/{match.total_slots || 0} players</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <DollarSign size={20} className="text-green-500" />
-          <span className="text-gray-900 dark:text-gray-100">{match.is_paid ? "Paid" : "Free"}</span>
-        </div>
-        {match.match_start_time && match.match_end_time && (
-          <div className="flex items-center gap-3 col-span-1 sm:col-span-2">
-            <Clock size={20} className="text-green-500" />
-            <span className="text-gray-900 dark:text-gray-100">
-              Match Duration: {calculateMatchDuration()}
-            </span>
-          </div>
+  <div className="flex items-center gap-3">
+    <Trophy size={20} className="text-green-500" />
+    <div>
+      <p className="font-medium text-gray-900 dark:text-gray-100">{match.title || "Untitled Match"}</p>
+      <p className="text-sm text-gray-600 dark:text-gray-400">
+        Organized by {match.organizer_name || "Unknown Organizer"}
+      </p>
+    </div>
+  </div>
+  
+  <div className="flex items-center gap-3">
+    <MapPin size={20} className="text-green-500" />
+    <span className="text-gray-900 dark:text-gray-100">
+      {match.venue?.name || "Unknown Venue"}, {match.venue?.city || "Unknown City"}
+    </span>
+  </div>
+  
+  <div className="flex items-center gap-3">
+    <Calendar size={20} className="text-green-500" />
+    <span className="text-gray-900 dark:text-gray-100">{match.match_date ? formatDate(match.match_date) : "Date TBD"}</span>
+  </div>
+  
+  <div className="flex items-center gap-3">
+    <Clock size={20} className="text-green-500" />
+    <span className="text-gray-900 dark:text-gray-100">{match.match_time ? formatTime(match.match_time) : "Time TBD"}</span>
+  </div>
+  
+  <div className="flex items-center gap-3">
+    <Users size={20} className="text-green-500" />
+    <span className="text-gray-900 dark:text-gray-100">{(match.players || []).length}/{match.total_slots || 0} players</span>
+  </div>
+  
+  <div className="flex items-center gap-3">
+    <DollarSign size={20} className="text-green-500" />
+    <span className="text-gray-900 dark:text-gray-100">{match.is_paid ? "Paid" : "Free"}</span>
+  </div>
+
+  {/* Add the wallet balance display here */}
+  {walletBalance !== undefined && (
+    <div className="flex items-center gap-3">
+      <Wallet size={20} className="text-green-500" /> {/* You might want to import Wallet icon from lucide-react */}
+      <span className="text-gray-900 dark:text-gray-100">
+        Wallet: ₦{walletBalance?.toLocaleString() || "0"}
+      </span>
+    </div>
+  )}
+
+  {match.match_start_time && match.match_end_time && (
+    <div className="flex items-center gap-3 col-span-1 sm:col-span-2">
+      <Clock size={20} className="text-green-500" />
+      <span className="text-gray-900 dark:text-gray-100">
+        Match Duration: {calculateMatchDuration()}
+      </span>
+    </div>
         )}
       </div>
       {match.cancellation_status && match.is_paid && (
