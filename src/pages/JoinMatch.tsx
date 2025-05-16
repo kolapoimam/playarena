@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dialog";
 import { format, isToday, isPast } from "date-fns";
 import html2canvas from "html2canvas";
+import { DateTime } from "luxon";
 
 type Match = {
   id: string;
@@ -32,6 +33,8 @@ type Match = {
   title: string;
   match_date: string;
   match_time: string;
+  start_time: string;
+  end_time: string;
   total_slots: number;
   organizer_name: string;
   organizer_phone: string | null;
@@ -50,6 +53,14 @@ type Match = {
     player_name: string;
     number_of_slots: number;
   }[];
+  organizer_id: string;
+};
+
+type Organizer = {
+  id: string;
+  name: string;
+  phone: string;
+  is_verified: boolean;
 };
 
 type PaymentStatus = "pending" | "success" | "failed";
@@ -65,6 +76,7 @@ const JoinMatch = () => {
   const paymentReference = reference || trxref;
 
   const [match, setMatch] = useState<Match | null>(null);
+  const [organizers, setOrganizers] = useState<Organizer[]>([]);
   const [loading, setLoading] = useState(true);
   const [joining, setJoining] = useState(false);
   const [verifyingPayment, setVerifyingPayment] = useState(false);
@@ -79,7 +91,6 @@ const JoinMatch = () => {
   const cardRef = useRef<HTMLDivElement>(null);
   const defaultEmail = "kolapoimam1@gmail.com";
 
-  // Check authentication status
   useEffect(() => {
     const checkAuth = async () => {
       const { data: session } = await supabase.auth.getSession();
@@ -88,9 +99,11 @@ const JoinMatch = () => {
       }
     };
     checkAuth();
+    fetchOrganizers();
   }, []);
 
   useEffect(() => {
+    fetchOrganizers();
     const script = document.createElement("script");
     script.src = "https://js.paystack.co/v2/inline.js";
     script.async = true;
@@ -107,6 +120,25 @@ const JoinMatch = () => {
       document.body.removeChild(script);
     };
   }, [toast]);
+
+  const fetchOrganizers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("organizers")
+        .select("id, name, phone, is_verified")
+        .order("name", { ascending: true });
+
+      if (error) throw error;
+      setOrganizers(data as Organizer[]);
+    } catch (error: any) {
+      console.error("Error fetching organizers:", error.message);
+      toast({
+        title: "Error",
+        description: "Failed to load organizers. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const createFormSchema = (requiredFields: string[] = ["name", "phone"]) => {
     const schemaFields: Record<string, any> = {};
@@ -133,7 +165,6 @@ const JoinMatch = () => {
     defaultValues: {},
   });
 
-  // Fetch match and auto-populate form for logged-in users
   useEffect(() => {
     if (!slug) return;
 
@@ -144,10 +175,11 @@ const JoinMatch = () => {
           .from("matches")
           .select(
             `
-            id, slug, title, match_date, match_time, total_slots, organizer_name, organizer_phone, disclose_phone, 
+            id, slug, title, match_date, match_time, start_time, end_time, total_slots, organizer_name, organizer_phone, disclose_phone, 
             is_paid, price, player_number_required, required_fields, allow_bulk_tickets,
             venue:venues(slug, name, city),
-            players(player_name, number_of_slots)
+            players(player_name, number_of_slots),
+            organizer_id
           `
           )
           .eq("slug", slug)
@@ -165,7 +197,6 @@ const JoinMatch = () => {
           defaultValues[field] = "";
         });
 
-        // Auto-populate form for logged-in users
         if (userId) {
           const { data: profile } = await supabase
             .from("profiles")
@@ -354,6 +385,17 @@ const JoinMatch = () => {
       return;
     }
 
+    const now = DateTime.now().setZone("Africa/Lagos");
+    const endDateTime = DateTime.fromISO(`${match.match_date}T${match.end_time}`, { zone: "utc" }).setZone("Africa/Lagos");
+    if (now > endDateTime) {
+      toast({
+        title: "Match Joining Period Ended",
+        description: "You cannot join this match after its end time.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setJoining(true);
 
     try {
@@ -388,7 +430,6 @@ const JoinMatch = () => {
 
       if (playerError) throw playerError;
 
-      // Link player to user account if logged in
       if (userId) {
         const { error: joinError } = await supabase
           .from("user_joined_matches")
@@ -430,10 +471,11 @@ const JoinMatch = () => {
         .from("matches")
         .select(
           `
-          id, slug, title, match_date, match_time, total_slots, organizer_name, organizer_phone, disclose_phone, 
+          id, slug, title, match_date, match_time, start_time, end_time, total_slots, organizer_name, organizer_phone, disclose_phone, 
           is_paid, price, player_number_required, required_fields, allow_bulk_tickets,
           venue:venues(slug, name, city),
-          players(player_name, number_of_slots)
+          players(player_name, number_of_slots),
+          organizer_id
         `
         )
         .eq("slug", slug)
@@ -500,6 +542,12 @@ const JoinMatch = () => {
   const maxSlots = Math.min(5, match.total_slots - totalPlayerSlots);
   const matchDate = new Date(`${match.match_date}T00:00:00`);
   const isPastMatch = isPast(matchDate) && !isToday(matchDate);
+  const now = DateTime.now().setZone("Africa/Lagos");
+  const endDateTime = DateTime.fromISO(`${match.match_date}T${match.end_time}`, { zone: "utc" }).setZone("Africa/Lagos");
+  const canJoin = now <= endDateTime && !isPastMatch && !isFull;
+
+  const organizer = organizers.find(org => org.id === match.organizer_id);
+  const isVerified = organizer?.is_verified || false;
 
   return (
     <div className="min-h-screen pb-24">
@@ -560,39 +608,89 @@ const JoinMatch = () => {
               </a>
             </div>
           )}
+          <p className="mt-2 text-sm text-gray-600 flex items-center">
+            Organized by: {match.organizer_name}
+            {isVerified && <img src="/green-verified.png" alt="Verified" className="w-4 h-4 ml-1" />}
+          </p>
         </div>
 
         {isPastMatch ? (
           <div className="text-center py-6 bg-muted rounded-lg shadow-sm">
             <h2 className="text-lg font-semibold text-gray-700">This match has already passed</h2>
-            <p className="text-muted-foreground mt-2">You cannot join this match anymore.</p>
-            <Button className="mt-4 bg-green-500 hover:bg-green-600 text-white" onClick={() => navigate("/matches")}>
-              Browse Other Matches
+            <p className="text-muted-foreground mt-2">
+              You can no longer join this match as it has already taken place.
+            </p>
+            <Button
+              className="mt-4 bg-green-500 hover:bg-green-600 text-white"
+              onClick={() => navigate("/matches")}
+            >
+              Find Another Match
             </Button>
           </div>
         ) : isFull ? (
           <div className="text-center py-6 bg-muted rounded-lg shadow-sm">
-            <h2 className="text-lg font-semibold text-gray-700">This match is full</h2>
-            <p className="text-muted-foreground mt-2">All player slots have been filled.</p>
-            <Button className="mt-4 bg-green-500 hover:bg-green-600 text-white" onClick={() => navigate(`/match/${match.slug}`)}>
-              View Match Details
+            <h2 className="text-lg font-semibold text-gray-700">Match is Full</h2>
+            <p className="text-muted-foreground mt-2">
+              All slots for this match have been filled.
+            </p>
+            <Button
+              className="mt-4 bg-green-500 hover:bg-green-600 text-white"
+              onClick={() => navigate("/matches")}
+            >
+              Find Another Match
+            </Button>
+          </div>
+        ) : !canJoin ? (
+          <div className="text-center py-6 bg-muted rounded-lg shadow-sm">
+            <h2 className="text-lg font-semibold text-gray-700">Joining Period Ended</h2>
+            <p className="text-muted-foreground mt-2">
+              You cannot join this match after its end time.
+            </p>
+            <Button
+              className="mt-4 bg-green-500 hover:bg-green-600 text-white"
+              onClick={() => navigate("/matches")}
+            >
+              Find Another Match
             </Button>
           </div>
         ) : (
-          <>
-            {match.is_paid && paymentStatus === "pending" ? (
-              <div className="bg-card rounded-lg shadow-md p-6 space-y-4">
-                <h3 className="text-lg font-semibold text-gray-800">Payment Required</h3>
-                <p className="text-muted-foreground">
-                  This is a paid match. Please complete the payment to join.
-                </p>
-                {match.allow_bulk_tickets && (
-                  <div className="flex items-center gap-4">
-                    <span className="text-sm font-medium">Number of Slots:</span>
-                    <div className="flex items-center gap-2">
+          <div className="bg-card rounded-lg shadow-md p-6">
+            <h2 className="text-xl font-semibold mb-4 flex items-center">
+              <Trophy size={20} className="mr-2 text-green-500" />
+              Register for the Match
+            </h2>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                {Object.keys(formSchema.shape).map((field) => (
+                  <FormField
+                    key={field}
+                    control={form.control}
+                    name={field}
+                    render={({ field: formField }) => (
+                      <FormItem>
+                        <FormLabel className="capitalize">{field}</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder={`Enter your ${field}`}
+                            {...formField}
+                            className="border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                ))}
+
+                {match.allow_bulk_tickets && maxSlots > 1 && (
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Number of Slots
+                    </label>
+                    <div className="flex items-center space-x-2">
                       <Button
+                        type="button"
                         variant="outline"
-                        size="sm"
                         onClick={() => setSelectedSlots((prev) => Math.max(1, prev - 1))}
                         disabled={selectedSlots <= 1}
                       >
@@ -600,86 +698,46 @@ const JoinMatch = () => {
                       </Button>
                       <span className="text-lg font-medium">{selectedSlots}</span>
                       <Button
+                        type="button"
                         variant="outline"
-                        size="sm"
                         onClick={() => setSelectedSlots((prev) => Math.min(maxSlots, prev + 1))}
                         disabled={selectedSlots >= maxSlots}
                       >
                         +
                       </Button>
                     </div>
-                    <span className="text-sm text-muted-foreground">
-                      Max {maxSlots} slots available
-                    </span>
+                    <p className="text-sm text-muted-foreground">
+                      {match.is_paid && match.price
+                        ? `Total: ₦${(match.price * selectedSlots).toFixed(2)}`
+                        : `Selecting ${selectedSlots} slot${selectedSlots > 1 ? "s" : ""}`}
+                    </p>
                   </div>
                 )}
-                <div className="text-sm font-medium">
-                  Total: ₦{(match.price! * selectedSlots).toFixed(2)}
-                </div>
-                <Button
-                  type="button"
-                  className="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg transition-colors"
-                  onClick={handlePaymentInitiation}
-                  disabled={joining || !paystackLoaded}
-                >
-                  {joining ? (
-                    <>
-                      <Loader size={16} className="mr-2 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    `Pay Now (₦${(match.price! * selectedSlots).toFixed(2)})`
-                  )}
-                </Button>
-              </div>
-            ) : (
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 bg-card rounded-lg shadow-md p-6">
-                  {match.is_paid && paymentStatus === "success" && (
-                    <div className="bg-green-50 p-4 rounded-md border border-green-200 text-green-700">
-                      <p className="font-medium">Payment Successful!</p>
-                      <p className="text-sm">Please complete your registration below for {selectedSlots} slot{selectedSlots > 1 ? "s" : ""}.</p>
-                      {paymentReference && (
-                        <p className="text-sm mt-1">Reference: {paymentReference}</p>
-                      )}
-                    </div>
-                  )}
-                  
-                  {match.required_fields?.map((field) => (
-                    <FormField
-                      key={field}
-                      control={form.control}
-                      name={field}
-                      render={({ field: formField }) => (
-                        <FormItem>
-                          <FormLabel className="text-gray-700">{field.charAt(0).toUpperCase() + field.slice(1)}</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder={`Enter your ${field}`}
-                              {...formField}
-                              type={field === "phone" ? "tel" : "text"}
-                              inputMode={field === "phone" ? "numeric" : "text"}
-                              className="border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
-                              {...(field === "phone" && {
-                                pattern: "[0-9]*",
-                                maxLength: 11,
-                                onChange: (e) => {
-                                  const value = e.target.value.replace(/[^0-9]/g, '');
-                                  formField.onChange(value);
-                                },
-                              })}
-                            />
-                          </FormControl>
-                          <FormMessage className="text-red-500" />
-                        </FormItem>
-                      )}
-                    />
-                  ))}
 
+                {match.is_paid && paymentStatus !== "success" ? (
+                  <Button
+                    type="button"
+                    onClick={handlePaymentInitiation}
+                    disabled={joining || !paystackLoaded}
+                    className="w-full bg-green-500 hover:bg-green-600 text-white flex items-center justify-center"
+                  >
+                    {joining ? (
+                      <>
+                        <Loader size={16} className="mr-2 animate-spin" />
+                        Processing Payment...
+                      </>
+                    ) : (
+                      <>
+                        <DollarSign size={16} className="mr-2" />
+                        Pay ₦{(match.price! * selectedSlots).toFixed(2)} to Join
+                      </>
+                    )}
+                  </Button>
+                ) : (
                   <Button
                     type="submit"
-                    className="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg transition-colors"
-                    disabled={joining}
+                    disabled={joining || (match.is_paid && paymentStatus !== "success")}
+                    className="w-full bg-green-500 hover:bg-green-600 text-white flex items-center justify-center"
                   >
                     {joining ? (
                       <>
@@ -687,162 +745,103 @@ const JoinMatch = () => {
                         Joining...
                       </>
                     ) : (
-                      `Join Match${selectedSlots > 1 ? ` (${selectedSlots} slots)` : ""}`
+                      "Join Match"
                     )}
                   </Button>
-                </form>
-              </Form>
-            )}
-          </>
+                )}
+              </form>
+            </Form>
+          </div>
         )}
-      </div>
-      <Navbar />
 
-      <Dialog open={successDialogOpen} onOpenChange={(open) => {
-        setSuccessDialogOpen(open);
-        setIsImageLoaded(false);
-        if (!open) setBackgroundOption("field");
-      }}>
-        <DialogContent className="sm:max-w-[425px] max-w-[90vw] rounded-2xl">
-          <DialogTitle>Registration Successful</DialogTitle>
-          <DialogDescription>
-            <p className="text-gray-600 dark:text-gray-300 mb-4">
-              You have successfully registered for the match for {selectedSlots} slot{selectedSlots > 1 ? "s" : ""}.
-            </p>
-            <div className="mb-4">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Background:</label>
-              <div className="flex items-center space-x-4 mt-2">
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    value="field"
-                    checked={backgroundOption === "field"}
-                    onChange={() => setBackgroundOption("field")}
-                    className="form-radio text-playarena-500"
+        <Dialog open={successDialogOpen} onOpenChange={setSuccessDialogOpen}>
+          <DialogContent className="max-w-md rounded-2xl bg-white dark:bg-gray-800 border-none shadow-lg">
+            <DialogTitle className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              Registration Successful!
+            </DialogTitle>
+            <DialogDescription className="text-sm text-gray-600 dark:text-gray-400">
+              <p>You've successfully joined the match. Here are your details:</p>
+              <div className="mt-4">
+                <div
+                  ref={cardRef}
+                  className={`relative p-6 rounded-lg shadow-md text-white ${
+                    backgroundOption === "field"
+                      ? "bg-field-pattern"
+                      : backgroundOption === "stadium"
+                      ? "bg-stadium-pattern"
+                      : "bg-gradient-to-br from-green-500 to-green-700"
+                  } overflow-hidden`}
+                >
+                  <img
+                    src={
+                      backgroundOption === "field"
+                        ? "/field-pattern.jpg"
+                        : backgroundOption === "stadium"
+                        ? "/stadium-pattern.jpg"
+                        : undefined
+                    }
+                    alt="background"
+                    className="absolute inset-0 w-full h-full object-cover opacity-30"
+                    onLoad={handleImageLoad}
+                    onError={() => setIsImageLoaded(false)}
                   />
-                  <span>Default</span>
-                </label>
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    value="white"
-                    checked={backgroundOption === "white"}
-                    onChange={() => setBackgroundOption("white")}
-                    className="form-radio text-playarena-500"
-                  />
-                  <span>White</span>
-                </label>
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    value="green"
-                    checked={backgroundOption === "green"}
-                    onChange={() => setBackgroundOption("green")}
-                    className="form-radio text-playarena-500"
-                  />
-                  <span>Green</span>
-                </label>
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    value="black"
-                    checked={backgroundOption === "black"}
-                    onChange={() => setBackgroundOption("black")}
-                    className="form-radio text-playarena-500"
-                  />
-                  <span>Black</span>
-                </label>
-              </div>
-            </div>
-            <div 
-              ref={cardRef}
-              className={`rounded-lg p-6 shadow-lg relative overflow-hidden ${backgroundOption === "field" ? "bg-cover bg-center" : ""}`}
-              style={{
-                backgroundImage: backgroundOption === "field" ? "url('/football-field.jpg')" : "",
-                backgroundColor: backgroundOption !== "field" ? backgroundOption : "transparent",
-                ...(backgroundOption === "field" && {
-                  backgroundBlendMode: "overlay",
-                  backgroundColor: "rgba(0, 0, 0, 0.5)",
-                }),
-              }}
-              >
-                <div className="relative z-10">
-                  <div className="flex items-center justify-between mb-4">
-                    <img 
-                      src={backgroundOption === "white" ? "/playarenalight.png" : "/playarenadark.png"}
-                      alt="PlayArena Logo" 
-                      className="h-8 w-auto"
-                      onLoad={handleImageLoad}
-                      onError={() => {
-                        toast({
-                          title: "Error",
-                          description: "Failed to load logo image.",
-                          variant: "destructive",
-                        });
-                        setIsImageLoaded(true);
-                      }}
-                    />
-                    <Trophy className={`h-6 w-6 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-                  </div>
-                  <h2 className={`text-xl font-bold mb-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`}>{match?.title}</h2>
-                  <div className="space-y-2 mb-4">
-                    <div className="flex items-center">
-                      <MapPin className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-                      <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{match?.venue?.name || "Venue"}, {match?.venue?.city || ""}</span>
+                  <div className="relative z-10">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-xl font-bold">{match.title}</h3>
+                      <img src="/logo.png" alt="PlayArena Logo" className="h-8" onLoad={handleImageLoad} />
                     </div>
-                    <div className="flex items-center">
-                      <Calendar className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-                      <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{match && formatDate(match.match_date)} at {match && formatTime(match.match_time)}</span>
-                    </div>
-                    <div className="flex items-center">
-                      <DollarSign className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-                      <span className={backgroundOption === "white" ? "text-black" : "text-white"}>
-                        {match?.is_paid ? `Paid (₦${match?.price?.toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} x${selectedSlots})` : "Free"}
-                      </span>
-                    </div>
-                    <div className="flex items-center">
-                      <Users className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-                      <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{totalPlayerSlots}/{match?.total_slots} slots booked</span>
-                    </div>
-                    <div className="flex items-center">
-                      <span className={`font-bold ${backgroundOption === "white" ? "text-black" : "text-white"}`}>Confirmation Code:</span>
-                      <span className={`ml-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`}>{confirmationCode}</span>
-                    </div>
-                    {selectedSlots > 1 && (
-                      <div className="flex items-center">
-                        <span className={`font-bold ${backgroundOption === "white" ? "text-black" : "text-white"}`}>Slots Registered:</span>
-                        <span className={`ml-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`}>{selectedSlots}</span>
-                      </div>
+                    <p className="mt-2 text-sm">
+                      <strong>Confirmation Code:</strong> {confirmationCode}
+                    </p>
+                    <p className="text-sm">
+                      <strong>Date:</strong> {formatDate(match.match_date)}
+                    </p>
+                    <p className="text-sm">
+                      <strong>Time:</strong> {formatTime(match.match_time)}
+                    </p>
+                    <p className="text-sm">
+                      <strong>Venue:</strong> {match.venue?.name}, {match.venue?.city}
+                    </p>
+                    <p className="text-sm">
+                      <strong>Slots:</strong> {selectedSlots}
+                    </p>
+                    {match.is_paid && (
+                      <p className="text-sm">
+                        <strong>Amount Paid:</strong> ₦{(match.price! * selectedSlots).toFixed(2)}
+                      </p>
                     )}
                   </div>
                 </div>
-              </div>
-              <p className="text-sm text-gray-500 dark:text-gray-400 my-4">
-                <strong>Note:</strong> Save this card to present your confirmation code at check-in.
-              </p>
-              <div className="flex gap-2">
-                <Button 
-                  className="w-full bg-green-500 hover:bg-green-600 text-white"
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Select Background
+                  </label>
+                  <select
+                    value={backgroundOption}
+                    onChange={(e) => setBackgroundOption(e.target.value)}
+                    className="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  >
+                    <option value="field">Field Pattern</option>
+                    <option value="stadium">Stadium Pattern</option>
+                    <option value="gradient">Green Gradient</option>
+                  </select>
+                </div>
+                <Button
                   onClick={handleDownload}
                   disabled={!isImageLoaded}
+                  className="mt-4 w-full bg-green-500 hover:bg-green-600 text-white"
                 >
-                  Download
-                </Button>
-                <Button 
-                  className="w-full bg-green-500 hover:bg-green-600 text-white"
-                  onClick={() => {
-                    setSuccessDialogOpen(false);
-                    navigate(`/match/${match.slug}`);
-                  }}
-                >
-                  Close
+                  Download Registration Card
                 </Button>
               </div>
             </DialogDescription>
           </DialogContent>
         </Dialog>
       </div>
-    );
+
+      <Navbar />
+    </div>
+  );
 };
 
 export default JoinMatch;
