@@ -287,7 +287,7 @@ return (
   <div className="flex gap-4 overflow-x-auto px-4 pb-4">
     {popularVenues.map((venue) => {
       const defaultImage = "https://dailytrust.com/wp-content/uploads/2023/12/football-488714_1280.jpg";
-      const venueImage = venue.image_urls && venue.image_urls.length > 0 ? venue.image_urls[0] : defaultImage;
+      const venueImage = venue.image_urls?.[0] || defaultImage;
 
       return (
         <div
@@ -307,12 +307,21 @@ return (
                 <img 
                   src="/green-verified.png" 
                   alt="Verified" 
-                  className="ml-1 w-4 h-4 object-contain" 
+                  className="ml-1 w-4 h-4 object-contain"
+                  onError={(e) => {
+                    // Fallback if image fails to load
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%234CAF50'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z'/%3E%3C/svg%3E";
+                  }}
                 />
               )}
             </div>
-            <p className="text-sm text-muted-foreground mb-1">{`${venue.city}, ${venue.state}`}</p>
-            <p className="text-sm font-medium">{`${venue.match_count} Match${venue.match_count !== 1 ? "es" : ""}`}</p>
+            <p className="text-sm text-muted-foreground mb-1">
+              {`${venue.city}, ${venue.state}`}
+            </p>
+            <p className="text-sm font-medium">
+              {`${venue.match_count} Match${venue.match_count !== 1 ? "es" : ""}`}
+            </p>
           </div>
         </div>
       );
