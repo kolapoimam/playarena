@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Calendar, Users, MapPin } from "lucide-react";
 import { format } from "date-fns";
 import { utcToZonedTime } from "date-fns-tz";
+import { DateTime } from "luxon";
 
 type Match = {
   id: string;
@@ -16,6 +17,8 @@ type Match = {
   slug: string;
   match_date: string;
   match_time: string;
+  start_time: string;
+  end_time: string;
   super_code?: string;
   confirmation_code?: string;
   status: string;
@@ -35,6 +38,13 @@ type Profile = {
   first_name?: string;
 };
 
+type Organizer = {
+  id: string;
+  name: string;
+  phone: string;
+  is_verified: boolean;
+};
+
 type UserMatchesProps = {
   profile: Profile | null;
 };
@@ -44,15 +54,36 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
   const { toast } = useToast();
   const [organizedMatches, setOrganizedMatches] = useState<Match[]>([]);
   const [joinedMatches, setJoinedMatches] = useState<Match[]>([]);
+  const [organizers, setOrganizers] = useState<Organizer[]>([]);
   const [cancelMatchId, setCancelMatchId] = useState<string | null>(null);
   const [cancelIsJoined, setCancelIsJoined] = useState<boolean>(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
 
   useEffect(() => {
     if (profile) {
+      fetchOrganizers();
       fetchMatches();
     }
   }, [profile]);
+
+  const fetchOrganizers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("organizers")
+        .select("id, name, phone, is_verified")
+        .order("name", { ascending: true });
+
+      if (error) throw error;
+      setOrganizers(data as Organizer[]);
+    } catch (error: any) {
+      console.error("Error fetching organizers:", error.message);
+      toast({
+        title: "Error",
+        description: "Failed to load organizers. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const fetchMatches = async () => {
     const { data: session } = await supabase.auth.getSession();
@@ -63,7 +94,7 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
       .from("user_organized_matches")
       .select(`
         match_id,
-        matches(id, title, slug, match_date, match_time, super_code, status, cancellation_status, is_paid, venue_id, total_slots, venues(name))
+        matches(id, title, slug, match_date, match_time, start_time, end_time, super_code, status, cancellation_status, is_paid, venue_id, total_slots, venues(name))
       `)
       .eq("user_id", session.session.user.id)
       .order("created_at", { ascending: false })
@@ -108,7 +139,7 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
       .select(`
         match_id,
         player_id,
-        matches(id, title, slug, match_date, match_time, status, cancellation_status, is_paid, venue_id, total_slots, venues(name)),
+        matches(id, title, slug, match_date, match_time, start_time, end_time, status, cancellation_status, is_paid, venue_id, total_slots, venues(name)),
         players(confirmation_code, number_of_slots, status, cancellation_status)
       `)
       .eq("user_id", session.session.user.id)
@@ -172,7 +203,7 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
     const now = new Date();
     const { data: match, error: matchError } = await supabase
       .from("matches")
-      .select("match_date, match_time, cancellation_status")
+      .select("match_date, match_time, start_time, end_time, cancellation_status")
       .eq("id", cancelMatchId)
       .single();
 
@@ -268,20 +299,21 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
     }
   };
 
+  const getMatchStatus = (matchDate: string, startTime: string, endTime: string) => {
+    const now = DateTime.now().setZone("Africa/Lagos");
+    const matchDateTime = DateTime.fromISO(`${matchDate}T${startTime}`, { zone: "utc" }).setZone("Africa/Lagos");
+    const endDateTime = DateTime.fromISO(`${matchDate}T${endTime}`, { zone: "utc" }).setZone("Africa/Lagos");
+
+    if (now < matchDateTime) return { text: "Upcoming", className: "bg-blue-100 text-blue-800" };
+    if (now.hasSame(matchDateTime, "day") && now < matchDateTime) return { text: "Today", className: "bg-green-100 text-green-700" };
+    if (now >= matchDateTime && now <= endDateTime) return { text: "Live", className: "bg-green-100 text-green-800" };
+    return { text: "Passed", className: "bg-gray-100 text-gray-800" };
+  };
+
   const getStatusLabel = (status: string, isCancelled: boolean) => {
     if (isCancelled) return { text: "Cancelled", className: "bg-red-100 text-red-800" };
-    switch (status) {
-      case "upcoming":
-        return { text: "Upcoming", className: "bg-blue-100 text-blue-800" };
-      case "live":
-        return { text: "Live", className: "bg-green-100 text-green-800" };
-      case "completed":
-        return { text: "Completed", className: "bg-gray-100 text-gray-800" };
-      case "cancelled":
-        return { text: "Cancelled", className: "bg-red-100 text-red-800" };
-      default:
-        return { text: "Registered", className: "bg-yellow-100 text-yellow-800" };
-    }
+    const matchStatus = getMatchStatus(status === "registered" ? status : matchDate, startTime, endTime);
+    return matchStatus;
   };
 
   return (
@@ -311,6 +343,8 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
           <TabsContent value="organizing">
             {organizedMatches.length > 0 ? (
               organizedMatches.map((match) => {
+                const organizer = organizers.find(org => org.id === match.id);
+                const isVerified = organizer?.is_verified || false;
                 const { dateStr, timeStr } = formatMatchDateTime(match.match_date, match.match_time);
                 const statusLabel = getStatusLabel(match.status, match.cancellation_status);
                 return (
@@ -339,6 +373,10 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
                         </p>
                         <p className="text-base font-medium text-gray-900 dark:text-gray-100">
                           Slots: <span className="text-green-600 dark:text-green-400">{match.booked_slots}</span>/{match.total_slots}
+                        </p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
+                          Organized by: {match.organizer_name}
+                          {isVerified && <img src="/green-verified.png" alt="Verified" className="w-4 h-4 ml-1" />}
                         </p>
                       </div>
                     </div>
@@ -388,6 +426,8 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
           <TabsContent value="playing">
             {joinedMatches.length > 0 ? (
               joinedMatches.map((match) => {
+                const organizer = organizers.find(org => org.id === match.id);
+                const isVerified = organizer?.is_verified || false;
                 const { dateStr, timeStr } = formatMatchDateTime(match.match_date, match.match_time);
                 const statusLabel = getStatusLabel(match.player_status || "registered", match.player_cancellation_status || match.cancellation_status);
                 return (
@@ -419,6 +459,10 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
                             Slots Purchased: <span className="text-green-600 dark:text-green-400">{match.number_of_slots}</span>
                           </p>
                         )}
+                        <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
+                          Organized by: {match.organizer_name}
+                          {isVerified && <img src="/green-verified.png" alt="Verified" className="w-4 h-4 ml-1" />}
+                        </p>
                       </div>
                     </div>
                     <div className="mt-4 flex gap-2">
