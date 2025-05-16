@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { MapPin, ArrowLeft, ExternalLink, Calendar, Clock, MessageCircle, CalendarPlus, Star } from "lucide-react";
+import { MapPin, ArrowLeft, ExternalLink, Calendar, Clock, MessageCircle, CalendarPlus, Star, CheckCircle } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { RichTextEditor } from "@mantine/tiptap";
 import { useEditor } from "@tiptap/react";
@@ -26,6 +26,7 @@ type Venue = {
   pricing: string | null;
   booking_fee: number | null;
   aggregated_rating: number | null;
+  is_verified: boolean;
 };
 
 type Match = {
@@ -72,7 +73,7 @@ const VenueDetail = () => {
       try {
         const { data, error } = await supabase
           .from("venues")
-          .select("id, slug, name, address, city, state, description, map_link, venue_phone, image_urls, facilities, opening_hours, pricing, booking_fee, aggregated_rating")
+          .select("id, slug, name, address, city, state, description, map_link, venue_phone, image_urls, facilities, opening_hours, pricing, booking_fee, aggregated_rating, is_verified")
           .eq("slug", slug)
           .single();
 
@@ -206,7 +207,12 @@ const VenueDetail = () => {
           />
         </div>
 
-        <h1 className="text-3xl font-bold mb-2 text-gray-900 dark:text-gray-100">{venue.name}</h1>
+        <div className="flex items-center">
+          <h1 className="text-3xl font-bold mb-2 text-gray-900 dark:text-gray-100">{venue.name}</h1>
+          {venue.is_verified && (
+            <CheckCircle size={24} className="ml-2 text-green-500" />
+          )}
+        </div>
         <div className="flex items-center text-gray-600 dark:text-gray-400 mb-4">
           <MapPin size={18} className="mr-2" />
           <span>{venue.city}, {venue.state}</span>
