@@ -272,7 +272,7 @@ const VenueDirectory = () => {
     <img 
       src="/green-verified.png" 
       alt="Verified" 
-      className="ml-2 w-4.5 h-4.5 object-contain" 
+      className="ml-1 w-4 h-4 object-contain"  // Changed to w-4 h-4 (16px)
     />
   )}
 </div>
