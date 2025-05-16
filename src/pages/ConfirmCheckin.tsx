@@ -161,43 +161,6 @@ const ConfirmCheckin = () => {
         }))
       );
 
-      // Update players with confirmed status to absent if past end_time
-      if (matchData.match_end_time && isPast(new Date(matchData.match_end_time))) {
-        const confirmedPlayers = matchData.players?.filter(p => p.status === "confirmed") || [];
-        for (const player of confirmedPlayers) {
-          await supabase
-            .from("players")
-            .update({ status: "absent", updated_at: new Date().toISOString() })
-            .eq("id", player.id);
-        }
-        // Refresh match data after updating statuses
-        const { data: updatedData } = await supabase
-          .from("matches")
-          .select(`
-            id, slug, title, match_date, match_time, match_start_time, match_end_time, total_slots, organizer_name, super_code, is_paid, price, cancellation_status, status,
-            venue:venues(name, city),
-            players(id, player_name, status, confirmation_code, details)
-          `)
-          .eq("super_code", superCode)
-          .single();
-        if (updatedData) {
-          setMatch({
-            ...updatedData,
-            venue: updatedData.venue ? { name: updatedData.venue.name ?? "Unknown Venue", city: updatedData.venue.city ?? "Unknown City" } : null,
-            players: Array.isArray(updatedData.players) ? updatedData.players : [],
-            cancellation_status: updatedData.cancellation_status ?? false,
-            status: updatedData.status ?? "upcoming",
-          });
-          setPlayerStatuses(
-            (updatedData.players || []).map((player) => ({
-              id: player.id,
-              status: player.status,
-              checkinCode: "",
-            }))
-          );
-        }
-      }
-
       try {
         const { data: cashoutData, error: cashoutError } = await supabase
           .from("cashouts")
@@ -233,6 +196,20 @@ const ConfirmCheckin = () => {
           description: "Failed to fetch cashout information. Please try again later.",
           variant: "destructive",
         });
+      }
+
+      // Update absent status for players who haven't checked in after match end time
+      if (matchData.match_end_time && isPast(new Date(matchData.match_end_time))) {
+        const updates = matchData.players
+          ?.filter(p => p.status === "confirmed" && p.status !== "checked_in")
+          .map(p => 
+            supabase
+              .from("players")
+              .update({ status: "absent", updated_at: new Date().toISOString() })
+              .eq("id", p.id)
+          ) || [];
+        
+        await Promise.all(updates);
       }
     } catch (error: any) {
       console.error("Error fetching match:", error.message, error.details || error);
