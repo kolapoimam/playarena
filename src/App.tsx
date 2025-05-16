@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 
 import SplashScreen from "@/components/SplashScreen";
 import ScrollToTop from "./components/ScrollToTop";
-import InstallPrompt from "./components/InstallPrompt"; // ⬅️ NEW
+import InstallPrompt from "./components/InstallPrompt";
 
 import Index from "./pages/Index";
 import Search from "./pages/Search";
@@ -28,6 +28,7 @@ import Guides from "./pages/Guides";
 import Auth from "./pages/Auth";
 import TeamManagement from "./pages/TeamManagement";
 import Ticketing from "./pages/Ticketing";
+import TermsAndPrivacy from "./pages/TermsAndPrivacy"; // ⬅️ NEW
 
 import * as gtag from "./lib/gtag";
 
@@ -54,6 +55,7 @@ const AppRoutes = () => {
       <Route path="/confirm-checkin" element={<ConfirmCheckin />} />
       <Route path="/feedback" element={<Feedback />} />
       <Route path="/ticketing/:slug/*" element={<Ticketing />} />
+      <Route path="/terms-privacy" element={<TermsAndPrivacy />} /> {/* ⬅️ NEW */}
 
       <Route path="/match/:slug" element={<MatchDetail />} />
       <Route path="/join/:slug" element={<JoinMatch />} />
@@ -115,7 +117,7 @@ const App = () => {
           <Router>
             <ScrollToTop />
             <AppRoutes />
-            <InstallPrompt /> {/* ⬅️ NEW */}
+            <InstallPrompt />
           </Router>
         </TooltipProvider>
       </MantineProvider>
