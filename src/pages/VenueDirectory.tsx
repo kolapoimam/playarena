@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, ChevronDown, ChevronUp, Store, Star } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronUp, Store, Star, CheckCircle } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,7 @@ type Venue = {
   match_count: number;
   match_dates?: string[];
   aggregated_rating: number | null;
+  is_verified: boolean;
 };
 
 // List of Nigerian states
@@ -68,6 +69,7 @@ const VenueDirectory = () => {
             state,
             image_urls,
             aggregated_rating,
+            is_verified,
             matches:matches!venue_id (match_date)
           `)
           .order("created_at", { ascending: false });
@@ -264,7 +266,12 @@ const VenueDirectory = () => {
                       className="w-full h-36 object-cover rounded-t-xl"
                     />
                     <div className="p-3">
-                      <h3 className="font-bold text-lg text-gray-900 dark:text-gray-100 mb-1">{venue.name}</h3>
+                      <div className="flex items-center">
+                        <h3 className="font-bold text-lg text-gray-900 dark:text-gray-100 mb-1">{venue.name}</h3>
+                        {venue.is_verified && (
+                          <CheckCircle size={18} className="ml-2 text-green-500" />
+                        )}
+                      </div>
                       <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{`${venue.city}, ${venue.state}`}</p>
                       <div className="flex items-center text-sm text-yellow-500 mb-1">
                         <Star size={14} className="mr-1 fill-yellow-500" />
