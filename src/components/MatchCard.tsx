@@ -8,7 +8,11 @@ interface MatchCardProps {
   image: string;
   is_paid: boolean;
   price: number | null;
-  match_time: string; // e.g. "2025-05-10T14:00:00Z"
+  match_time: string;
+  start_time: string;
+  end_time: string;
+  organizer_name: string;
+  organizer_id: string;
 }
 
 export default function MatchCard({
@@ -19,31 +23,30 @@ export default function MatchCard({
   is_paid,
   price,
   match_time,
+  start_time,
+  end_time,
+  organizer_name,
+  organizer_id,
 }: MatchCardProps) {
   const navigate = useNavigate();
-
   const matchDate = DateTime.fromISO(match_time, { zone: "utc" }).setZone("Africa/Lagos");
   const now = DateTime.now().setZone("Africa/Lagos");
   const tomorrow = now.plus({ days: 1 }).startOf("day");
+  const startDateTime = DateTime.fromISO(`${matchDate.toISODate()}T${start_time}`, { zone: "utc" }).setZone("Africa/Lagos");
+  const endDateTime = DateTime.fromISO(`${matchDate.toISODate()}T${end_time}`, { zone: "utc" }).setZone("Africa/Lagos");
 
   let statusLabel = "";
   let statusClass = "";
 
-  if (matchDate < now) {
-    statusLabel = "Match Passed";
+  if (now > endDateTime) {
+    statusLabel = "Passed";
     statusClass = "bg-gray-200 text-gray-600";
-  } else if (matchDate.hasSame(now, "day")) {
-    const hoursDiff = matchDate.diff(now, "hours").hours;
-    if (hoursDiff >= 0 && hoursDiff <= 2) {
-      statusLabel = "Live";
-      statusClass = "bg-red-100 text-red-700 animate-pulse";
-    } else if (hoursDiff > 2) {
-      statusLabel = "Today's Match";
-      statusClass = "bg-green-100 text-green-700";
-    } else {
-      statusLabel = "Passed";
-      statusClass = "bg-gray-200 text-gray-600";
-    }
+  } else if (now >= startDateTime && now <= endDateTime) {
+    statusLabel = "Live";
+    statusClass = "bg-red-100 text-red-700 animate-pulse";
+  } else if (now.hasSame(matchDate, "day") && now < startDateTime) {
+    statusLabel = "Today";
+    statusClass = "bg-green-100 text-green-700";
   } else if (matchDate > tomorrow) {
     statusLabel = "Upcoming";
     statusClass = "bg-blue-100 text-blue-800";
@@ -82,7 +85,7 @@ export default function MatchCard({
         <h3 className="text-lg font-bold">{title}</h3>
         <p className="text-muted-foreground">{details}</p>
         <p className="text-xs text-muted-foreground mt-1">
-          Match time: {matchDate.toFormat("DDDD 'at' HH:mm")}
+          Match time: {startDateTime.toFormat("DDDD 'at' HH:mm")}
         </p>
         <div className="mt-2">
           {is_paid ? (
