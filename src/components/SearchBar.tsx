@@ -22,7 +22,7 @@ export default function SearchBar() {
       </div>
       <Input
         type="text"
-        className="pl-12 pr-24 py-2 w-full rounded-full bg-secondary focus:outline-none focus:ring-2 focus:ring-primary transition-all text-foreground"
+        className="pl-12 pr-12 py-2 w-full rounded-full bg-secondary focus:outline-none focus:ring-2 focus:ring-primary transition-all text-foreground"
         placeholder="Matches, Venues..."
         value={searchTerm}
         onChange={(e) => {
@@ -33,7 +33,7 @@ export default function SearchBar() {
       <Button
         type="submit"
         size="sm"
-        className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-green-500 hover:bg-green-600 text-white rounded-full px-4"
+        className="absolute right-1 top-1/2 transform -translate-y-1/2 bg-green-500 hover:bg-green-600 text-white rounded-full px-4 h-[calc(100%-8px)]"
       >
         Search
       </Button>
