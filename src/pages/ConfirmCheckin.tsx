@@ -51,6 +51,8 @@ type Cashout = {
   temp_identifier?: string;
 };
 
+const [walletBalance, setWalletBalance] = useState<number | null>(null);
+
 const codeSchema = z
   .string()
   .regex(/^\d{6}$/, { message: "Code must be exactly 6 digits" });
@@ -129,8 +131,18 @@ const ConfirmCheckin = () => {
           variant: "destructive",
         });
         return;
-      }
-
+    
+      if (userId) {
+  const { data: walletData, error: walletError } = await supabase
+    .from("wallets")
+    .select("balance")
+    .eq("organizer_id", userId)
+    .single();
+  
+  if (!walletError && walletData) {
+    setWalletBalance(walletData.balance);
+  }
+}
       const matchData: Match = {
         ...data,
         venue: data.venue ? { name: data.venue.name ?? "Unknown Venue", city: data.venue.city ?? "Unknown City" } : null,
@@ -386,15 +398,16 @@ const ConfirmCheckin = () => {
 
         {match && !error && (
           <div className="animate-fade-in space-y-6">
-            <MatchDetails
-              match={match}
-              cashout={cashout}
-              handleCancelMatch={handleCancelMatch}
-              handleStartMatch={handleStartMatch}
-              handleEndMatch={handleEndMatch}
-              loading={loading}
-              isMatchPast={isMatchPast}
-            />
+<MatchDetails
+  match={match}
+  cashout={cashout}
+  handleCancelMatch={handleCancelMatch}
+  handleStartMatch={handleStartMatch}
+  handleEndMatch={handleEndMatch}
+  loading={loading}
+  isMatchPast={isMatchPast}
+  walletBalance={walletBalance || 0}
+/>
             <PlayerManagement
               match={match}
               tempIdentifier={tempIdentifier}
