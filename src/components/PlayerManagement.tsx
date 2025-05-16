@@ -159,60 +159,48 @@ const PlayerManagement = ({
     return match?.players?.some(p => p.status === "checked_in") || false;
   };
 
-  const isCashoutEligible = () => {
-    if (!match || match.cancellation_status) return false;
-    if (!match.is_paid) return false;
-    const checkedInPlayers = match.players?.filter(p => p.status === "checked_in").length || 0;
-    if (checkedInPlayers === 0) return false;
-    const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
-    const now = new Date();
-    const minutesToStart = differenceInMinutes(matchDateTime, now);
-    return minutesToStart <= 30 && minutesToStart >= -30;
-  };
+const isCashoutEligible = () => {
+  if (!match || match.cancellation_status) return false;
+  if (!match.is_paid) return false;
+  const checkedInPlayers = match.players?.filter(p => p.status === "checked_in").length || 0;
+  return checkedInPlayers > 0;
+};
 
-  const canCancelMatch = () => {
-    if (!match) return false;
-    const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
-    const now = new Date();
-    const minutesToStart = differenceInMinutes(matchDateTime, now);
-    return minutesToStart > 60 && !match.cancellation_status;
-  };
+const canCancelMatch = () => {
+  if (!match || match.cancellation_status) return false;
+  const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
+  const now = new Date();
+  const minutesToStart = differenceInMinutes(matchDateTime, now);
+  return minutesToStart > 60; // Can cancel if more than 60 minutes before start
+};
 
-  const handleConfirmMode = () => {
-    if (!match || match.cancellation_status) return;
-    if (!canConfirmPlayers) {
-      toast({
-        title: "Action Not Available",
-        description: "Confirming players is only available until 1 hour into the match.",
-        variant: "destructive",
-      });
-      return;
-    }
-    setMode("confirm");
-  };
+const handleCheckinMode = () => {
+  if (!match || match.cancellation_status) return;
+  
+  const now = new Date();
+  const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
+  const matchEndTime = match.match_end_time ? new Date(match.match_end_time) : 
+    new Date(matchDateTime.getTime() + 2 * 60 * 60 * 1000); // Default 2 hours if no end time
+  
+  if (now > matchEndTime) {
+    toast({
+      title: "Check-in Period Ended",
+      description: "Check-in is no longer available as the match has ended.",
+      variant: "destructive",
+    });
+    return;
+  }
 
-  const handleCheckinMode = () => {
-    if (!match || match.cancellation_status) return;
-    if (isMatchPast) {
-      toast({
-        title: "Action Not Available",
-        description: "This match has passed. No further actions are allowed.",
-        variant: "destructive",
-      });
-      return;
-    }
-    const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
-    const now = new Date();
-    if (differenceInMinutes(matchDateTime, now) > 120) {
-      toast({
-        title: "Check-in Not Available",
-        description: "Check-in is only available 2 hours before the match starts.",
-        variant: "destructive",
-      });
-      return;
-    }
-    setMode("checkin");
-  };
+  if (differenceInMinutes(matchDateTime, now) > 120) {
+    toast({
+      title: "Check-in Not Available",
+      description: "Check-in is only available 2 hours before the match starts.",
+      variant: "destructive",
+    });
+    return;
+  }
+  setMode("checkin");
+};
 
   const handleCashoutMode = () => {
     if (!isCashoutEligible()) {
@@ -413,22 +401,21 @@ const PlayerManagement = ({
         >
           Check-in Players
         </Button>
-        <Button
-          onClick={handleCancelMatch}
-          className={`bg-red-500 hover:bg-red-600 text-white ${!canCancelMatch() ? "opacity-50 cursor-not-allowed" : ""}`}
-          disabled={!canCancelMatch() || loading}
-        >
-          Cancel Match
-        </Button>
-        {match.is_paid && (
-          hasCheckedInPlayers() ? (
-            <Button
-              onClick={handleCashoutMode}
-              className="bg-yellow-500 hover:bg-yellow-600 text-white"
-              disabled={!isCashoutEligible() || match.cancellation_status}
-            >
-              Request Cashout
-            </Button>
+<Button
+  onClick={handleCancelMatch}
+  className={`bg-red-500 hover:bg-red-600 text-white ${!canCancelMatch() ? "opacity-50 cursor-not-allowed" : ""}`}
+  disabled={!canCancelMatch() || loading}
+>
+  Cancel Match
+</Button>
+{match.is_paid && (
+  <Button
+    onClick={handleCashoutMode}
+    className="bg-yellow-500 hover:bg-yellow-600 text-white"
+    disabled={!isCashoutEligible() || match.cancellation_status}
+  >
+    Request Cashout
+  </Button>
           ) : (
             <div className="flex items-center text-red-600 dark:text-red-400">
               Not eligible for cashout. All players will be refunded.
@@ -511,6 +498,11 @@ const PlayerManagement = ({
         )}
       </div>
 
+      {mode === "checkin" && player.status === "checked_in" && (
+  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+    Check-in code: {player.confirmation_code}
+  </p>
+)}
       {(mode === "confirm" || mode === "checkin") && (
         <Button
           onClick={handleSave}
