@@ -63,6 +63,11 @@ const accountNameSchema = z
   .regex(/^[A-Za-z\s]+$/, { message: "Account name must contain only letters and spaces" })
   .min(2, { message: "Account name must be at least 2 characters" });
 
+const amountSchema = z
+  .number()
+  .min(1, { message: "Amount must be at least 1" })
+  .positive({ message: "Amount must be positive" });
+
 const nigerianBanks = [
   "Access Bank",
   "Citibank Nigeria",
@@ -151,19 +156,61 @@ const PlayerManagement = ({
   const [bankAccountNumber, setBankAccountNumber] = useState("");
   const [bankName, setBankName] = useState("");
   const [accountName, setAccountName] = useState("");
+  const [cashoutAmount, setCashoutAmount] = useState("");
   const [bankAccountError, setBankAccountError] = useState<string | null>(null);
   const [accountNameError, setAccountNameError] = useState<string | null>(null);
+  const [amountError, setAmountError] = useState<string | null>(null);
   const [isPlayersOpen, setIsPlayersOpen] = useState(false);
+  const [walletBalance, setWalletBalance] = useState<number>(0);
+  const [cashoutRequests, setCashoutRequests] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchWalletAndCashouts = async () => {
+      if (!match || !userId) return;
+      
+      // Fetch wallet balance
+      const { data: walletData, error: walletError } = await supabase
+        .from("wallets")
+        .select("balance")
+        .eq("organizer_id", userId)
+        .single();
+
+      if (!walletError && walletData) {
+        setWalletBalance(walletData.balance);
+      }
+
+      // Fetch cashout requests
+      const { data: cashoutData, error: cashoutError } = await supabase
+        .from("cashout_requests")
+        .select("*")
+        .eq("match_id", match.id)
+        .order("created_at", { ascending: false });
+
+      if (!cashoutError && cashoutData) {
+        setCashoutRequests(cashoutData);
+      }
+    };
+
+    fetchWalletAndCashouts();
+  }, [match, userId]);
 
   const hasCheckedInPlayers = () => {
     return match?.players?.some(p => p.status === "checked_in") || false;
   };
 
   const isCashoutEligible = () => {
-    if (!match || match.cancellation_status) return false;
-    if (!match.is_paid) return false;
+    if (!match || match.cancellation_status || !match.is_paid) return false;
     const checkedInPlayers = match.players?.filter(p => p.status === "checked_in").length || 0;
-    return checkedInPlayers > 0;
+    return checkedInPlayers > 0 && walletBalance > 0;
+  };
+
+  const canCheckin = () => {
+    if (!match || match.cancellation_status) return false;
+    const now = new Date();
+    const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
+    const matchEndTime = match.match_end_time ? new Date(match.match_end_time) : 
+      new Date(matchDateTime.getTime() + 2 * 60 * 60 * 1000);
+    return now <= matchEndTime;
   };
 
   const canCancelMatch = () => {
@@ -181,12 +228,7 @@ const PlayerManagement = ({
   const handleCheckinMode = () => {
     if (!match || match.cancellation_status) return;
     
-    const now = new Date();
-    const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
-    const matchEndTime = match.match_end_time ? new Date(match.match_end_time) : 
-      new Date(matchDateTime.getTime() + 2 * 60 * 60 * 1000);
-    
-    if (now > matchEndTime) {
+    if (!canCheckin()) {
       toast({
         title: "Check-in Period Ended",
         description: "Check-in is no longer available as the match has ended.",
@@ -195,7 +237,7 @@ const PlayerManagement = ({
       return;
     }
 
-    if (differenceInMinutes(matchDateTime, now) > 120) {
+    if (differenceInMinutes(new Date(`${match.match_date}T${match.match_time}`), new Date()) > 120) {
       toast({
         title: "Check-in Not Available",
         description: "Check-in is only available 2 hours before the match starts.",
@@ -210,7 +252,9 @@ const PlayerManagement = ({
     if (!isCashoutEligible()) {
       toast({
         title: "Cashout Not Available",
-        description: "Cashout is only available 30 minutes before the match starts for paid matches with checked-in players.",
+        description: match.is_paid 
+          ? "Cashout is only available for paid matches with checked-in players and sufficient wallet balance."
+          : "Cashout is not available for free matches.",
         variant: "destructive",
       });
       return;
@@ -219,10 +263,11 @@ const PlayerManagement = ({
   };
 
   const handleCashoutSubmit = async () => {
-    if (!match) return;
+    if (!match || !userId) return;
 
     const bankAccountValidation = bankAccountSchema.safeParse(bankAccountNumber);
     const accountNameValidation = accountNameSchema.safeParse(accountName);
+    const amountValidation = amountSchema.safeParse(Number(cashoutAmount));
 
     if (!bankAccountValidation.success) {
       setBankAccountError(bankAccountValidation.error.errors[0].message);
@@ -230,6 +275,10 @@ const PlayerManagement = ({
     }
     if (!accountNameValidation.success) {
       setAccountNameError(accountNameValidation.error.errors[0].message);
+      return;
+    }
+    if (!amountValidation.success) {
+      setAmountError(amountValidation.error.errors[0].message);
       return;
     }
     if (!bankName) {
@@ -240,31 +289,71 @@ const PlayerManagement = ({
       });
       return;
     }
+    if (Number(cashoutAmount) > walletBalance) {
+      setAmountError("Amount exceeds available wallet balance");
+      return;
+    }
 
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("cashouts")
-        .insert({
-          match_id: match.id,
-          super_code: match.super_code,
-          bank_account_number: bankAccountNumber,
-          bank_name: bankName,
-          account_name: accountName,
-          status: "under_review",
-          temp_identifier: tempIdentifier,
-        })
-        .select()
+      // Start transaction
+      const { data: walletData, error: walletError } = await supabase
+        .from("wallets")
+        .select("balance")
+        .eq("organizer_id", userId)
         .single();
 
-      if (error) throw error;
+      if (walletError || !walletData) throw new Error("Failed to fetch wallet balance");
+
+      const newBalance = walletData.balance - Number(cashoutAmount);
+      if (newBalance < 0) throw new Error("Insufficient funds");
+
+      const { error: cashoutError } = await supabase
+        .from("cashout_requests")
+        .insert({
+          organizer_id: userId,
+          match_id: match.id,
+          amount: Number(cashoutAmount),
+          account_details: {
+            bank_account_number: bankAccountNumber,
+            bank_name: bankName,
+            account_name: accountName,
+          },
+          status: "review",
+          temp_identifier: tempIdentifier,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+
+      if (cashoutError) throw cashoutError;
+
+      const { error: walletUpdateError } = await supabase
+        .from("wallets")
+        .update({ balance: newBalance, updated_at: new Date().toISOString() })
+        .eq("organizer_id", userId);
+
+      if (walletUpdateError) throw walletUpdateError;
+
+      // Refresh cashout requests
+      const { data: cashoutData, error: cashoutFetchError } = await supabase
+        .from("cashout_requests")
+        .select("*")
+        .eq("match_id", match.id)
+        .order("created_at", { ascending: false });
+
+      if (!cashoutFetchError && cashoutData) {
+        setCashoutRequests(cashoutData);
+      }
 
       setCashoutDialogOpen(false);
       setBankAccountNumber("");
       setBankName("");
       setAccountName("");
+      setCashoutAmount("");
       setBankAccountError(null);
       setAccountNameError(null);
+      setAmountError(null);
+      setWalletBalance(newBalance);
       toast({
         title: "Success",
         description: "Cashout request submitted successfully. It is now under review.",
@@ -317,14 +406,31 @@ const PlayerManagement = ({
     }
 
     const player = match?.players?.find((p) => p.id === playerId);
-    if (player?.confirmation_code === code) {
+    if (!player) return;
+
+    if (player.status === "checked_in") {
+      toast({
+        title: "Error",
+        description: "Player is already checked in. This action cannot be undone.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (player.confirmation_code === code) {
       handleStatusChange(playerId, "checked_in");
+      await supabase
+        .from("players")
+        .update({ status: "checked_in", updated_at: new Date().toISOString() })
+        .eq("id", playerId);
+        
       toast({
         title: "Success",
-        description: `${player.player_name} has been checked in.`,
+        description: `${player.player_name} has been checked in. This action is irreversible.`,
       });
       setCheckinCodes((prev) => ({ ...prev, [playerId]: "" }));
       setCheckinCodeErrors((prev) => ({ ...prev, [playerId]: null }));
+      fetchMatch();
     } else {
       setCheckinCodeErrors((prev) => ({
         ...prev,
@@ -343,9 +449,17 @@ const PlayerManagement = ({
     setLoading(true);
     try {
       for (const player of playerStatuses) {
+        if (player.status === "checked_in") {
+          toast({
+            title: "Error",
+            description: "Cannot modify checked-in status. Check-in is irreversible.",
+            variant: "destructive",
+          });
+          continue;
+        }
         await supabase
           .from("players")
-          .update({ status: player.status })
+          .update({ status: player.status, updated_at: new Date().toISOString() })
           .eq("id", player.id);
       }
       toast({
@@ -379,6 +493,7 @@ const PlayerManagement = ({
       case "absent":
         return "bg-gray-100 text-gray-700 border-gray-300";
       case "under_review":
+      case "review":
         return "bg-yellow-100 text-yellow-700 border-yellow-300";
       default:
         return "bg-yellow-100 text-yellow-700 border-yellow-300";
@@ -390,6 +505,13 @@ const PlayerManagement = ({
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700">
       <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Manage Players</h2>
+      
+      <div className="mb-4">
+        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          Wallet Balance: ₦{walletBalance.toFixed(2)}
+        </p>
+      </div>
+
       <div className="flex flex-wrap gap-4 mb-4">
         <Button
           onClick={handleConfirmMode}
@@ -401,7 +523,7 @@ const PlayerManagement = ({
         <Button
           onClick={handleCheckinMode}
           className="bg-blue-500 hover:bg-blue-600 text-white"
-          disabled={isMatchPast || match.cancellation_status}
+          disabled={!canCheckin() || match.cancellation_status}
         >
           Check-in Players
         </Button>
@@ -412,20 +534,49 @@ const PlayerManagement = ({
         >
           Cancel Match
         </Button>
-        {!match.is_paid ? (
-          <div className="flex items-center text-red-600 dark:text-red-400">
-            Not eligible for cashout. All players will be refunded.
-          </div>
-        ) : (
-          <Button
-            onClick={handleCashoutMode}
-            className="bg-yellow-500 hover:bg-yellow-600 text-white"
-            disabled={!isCashoutEligible() || match.cancellation_status}
-          >
-            Request Cashout
-          </Button>
-        )}
+        <Button
+          onClick={handleCashoutMode}
+          className={`bg-yellow-500 hover:bg-yellow-600 text-white ${!isCashoutEligible() ? "opacity-50 cursor-not-allowed" : ""}`}
+          disabled={!isCashoutEligible() || match.cancellation_status}
+        >
+          Request Cashout
+        </Button>
       </div>
+
+      {cashoutRequests.length > 0 && (
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">Cashout Requests</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+              <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+                <tr>
+                  <th className="px-4 py-2">Amount</th>
+                  <th className="px-4 py-2">Bank Details</th>
+                  <th className="px-4 py-2">Status</th>
+                  <th className="px-4 py-2">Created At</th>
+                </tr>
+              </thead>
+              <tbody>
+                {cashoutRequests.map((request) => (
+                  <tr key={request.id} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
+                    <td className="px-4 py-2">₦{request.amount.toFixed(2)}</td>
+                    <td className="px-4 py-2">
+                      {request.account_details.account_name} <br />
+                      {request.account_details.bank_account_number} ({request.account_details.bank_name})
+                    </td>
+                    <td className="px-4 py-2">
+                      <span className={`inline-block px-2 py-1 rounded ${getStatusStyles(request.status)}`}>
+                        {request.status.replace("_", " ").charAt(0).toUpperCase() + request.status.replace("_", " ").slice(1)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2">{new Date(request.created_at).toLocaleString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       <div className="max-h-[400px] overflow-y-auto">
         <button
@@ -455,13 +606,13 @@ const PlayerManagement = ({
                     >
                       {player.status.replace("_", " ").charAt(0).toUpperCase() + player.status.replace("_", " ").slice(1)}
                     </span>
-                    {mode === "checkin" && player.status === "checked_in" && (
+                    {player.status === "checked_in" && (
                       <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                         Check-in code: {player.confirmation_code}
                       </p>
                     )}
                   </div>
-                  {mode === "confirm" && (
+                  {mode === "confirm" && player.status !== "checked_in" && (
                     <Select
                       value={playerStatuses.find((p) => p.id === player.id)?.status || player.status}
                       onValueChange={(value) => handleStatusChange(player.id, value)}
@@ -472,11 +623,11 @@ const PlayerManagement = ({
                       <SelectContent>
                         <SelectItem value="pending">Pending</SelectItem>
                         <SelectItem value="confirmed">Confirmed</SelectItem>
-                        <SelectItem value="absent">Absent</SelectItem>
+                        <SelectItem value="absent">Absent</Item>
                       </SelectContent>
                     </Select>
                   )}
-                  {mode === "checkin" && (
+                  {mode === "checkin" && player.status !== "checked_in" && (
                     <div className="flex gap-2 w-full sm:w-auto">
                       <Input
                         placeholder="Enter check-in code"
@@ -486,11 +637,12 @@ const PlayerManagement = ({
                         pattern="[0-9]*"
                         maxLength={6}
                         className="w-full sm:w-[150px]"
+                        disabled={!canCheckin()}
                       />
                       <Button
                         onClick={() => validateCheckinCode(player.id)}
                         className="bg-blue-500 hover:bg-blue-600 text-white"
-                        disabled={!!checkinCodeErrors[player.id] || !checkinCodes[player.id]}
+                        disabled={!!checkinCodeErrors[player.id] || !checkinCodes[player.id] || !canCheckin()}
                       >
                         Verify
                       </Button>
@@ -528,10 +680,28 @@ const PlayerManagement = ({
           <DialogHeader>
             <DialogTitle>Request Cashout</DialogTitle>
             <DialogDescription>
-              Enter your bank details to request a cashout for this match. You may need to log in later to verify your request.
+              Enter your bank details and amount to request a cashout for this match. Amount must not exceed your wallet balance (₦{walletBalance.toFixed(2)}).
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Amount (₦)
+              </label>
+              <Input
+                type="number"
+                value={cashoutAmount}
+                onChange={(e) => {
+                  setCashoutAmount(e.target.value);
+                  setAmountError(null);
+                }}
+                className="mt-1"
+                min="1"
+              />
+              {amountError && (
+                <p className="text-sm text-red-600 mt-1">{amountError}</p>
+              )}
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Bank Account Number
