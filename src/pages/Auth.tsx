@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Loader2 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { useTheme } from "next-themes";
+import { NavLink } from "react-router-dom";
 
 const Auth = () => {
   const navigate = useNavigate();
