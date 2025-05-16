@@ -1,4 +1,4 @@
-import { Star, MessageCircle } from "lucide-react";
+import { Star, MessageCircle, CheckCircle } from "lucide-react";
 
 interface VenueItemProps {
   name: string;
@@ -6,9 +6,10 @@ interface VenueItemProps {
   image_urls: string[] | null;
   venue_phone: string | null;
   aggregated_rating: number | null;
+  is_verified: boolean;
 }
 
-export default function VenueItem({ name, location, image_urls, venue_phone, aggregated_rating }: VenueItemProps) {
+export default function VenueItem({ name, location, image_urls, venue_phone, aggregated_rating, is_verified }: VenueItemProps) {
   const defaultImage = "https://dailytrust.com/wp-content/uploads/2023/12/football-488714_1280.jpg";
   const image = image_urls && image_urls.length > 0 ? image_urls[0] : defaultImage;
 
@@ -29,7 +30,12 @@ export default function VenueItem({ name, location, image_urls, venue_phone, agg
         />
       </div>
       <div className="flex-1">
-        <h3 className="font-bold text-gray-900 dark:text-gray-100">{name}</h3>
+        <div className="flex items-center">
+          <h3 className="font-bold text-gray-900 dark:text-gray-100">{name}</h3>
+          {is_verified && (
+            <CheckCircle size={16} className="ml-2 text-green-500" />
+          )}
+        </div>
         <p className="text-sm text-gray-600 dark:text-gray-400">{location}</p>
         {aggregated_rating !== null ? (
           <div className="flex items-center text-sm text-yellow-500 mt-1">
