@@ -19,11 +19,14 @@ type Match = {
   title: string;
   match_date: string;
   match_time: string;
+  start_time: string;
+  end_time: string;
   total_slots: number;
   is_paid: boolean;
   price: number | null;
   notes: string | null;
   organizer_name: string;
+  organizer_id: string;
   is_private: boolean;
   access_password: string | null;
   venue: {
@@ -38,6 +41,13 @@ type Match = {
   created_at: string;
 };
 
+type Organizer = {
+  id: string;
+  name: string;
+  phone: string;
+  is_verified: boolean;
+};
+
 // Venue type for filter dropdown
 type Venue = {
   id: string;
@@ -48,6 +58,7 @@ type Venue = {
 const Matches = () => {
   const [matches, setMatches] = useState<Match[]>([]);
   const [venues, setVenues] = useState<Venue[]>([]);
+  const [organizers, setOrganizers] = useState<Organizer[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalMatches, setTotalMatches] = useState(0);
@@ -66,8 +77,28 @@ const Matches = () => {
 
   useEffect(() => {
     fetchVenues();
+    fetchOrganizers();
     fetchMatches();
   }, [currentPage, isPaidFilter, venueFilter, durationFilter, timeStart, statusFilter, stateFilter]);
+
+  const fetchOrganizers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("organizers")
+        .select("id, name, phone, is_verified")
+        .order("name", { ascending: true });
+
+      if (error) throw error;
+      setOrganizers(data as Organizer[]);
+    } catch (error: any) {
+      console.error("Error fetching organizers:", error.message);
+      toast({
+        title: "Error",
+        description: "Failed to load organizers. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const fetchVenues = async () => {
     try {
@@ -95,7 +126,7 @@ const Matches = () => {
         .from("matches")
         .select(
           `
-          id, slug, title, match_date, match_time, total_slots, is_paid, price, notes, organizer_name, is_private, access_password,
+          id, slug, title, match_date, match_time, start_time, end_time, total_slots, is_paid, price, notes, organizer_name, organizer_id, is_private, access_password,
           venue:venues(slug, name, city, state),
           players(*),
           created_at
@@ -188,6 +219,17 @@ const Matches = () => {
     }
   };
 
+  const getMatchStatus = (matchDate: string, startTime: string, endTime: string) => {
+    const now = DateTime.now().setZone(LAGOS_TIMEZONE);
+    const matchDateTime = DateTime.fromISO(`${matchDate}T${startTime}`, { zone: "utc" }).setZone(LAGOS_TIMEZONE);
+    const endDateTime = DateTime.fromISO(`${matchDate}T${endTime}`, { zone: "utc" }).setZone(LAGOS_TIMEZONE);
+
+    if (now < matchDateTime) return { statusLabel: "Upcoming Match", statusClass: "bg-blue-100 text-blue-800" };
+    if (now.hasSame(matchDateTime, "day") && now < matchDateTime) return { statusLabel: "Today", statusClass: "bg-green-100 text-green-700" };
+    if (now >= matchDateTime && now <= endDateTime) return { statusLabel: "Live Match", statusClass: "bg-red-100 text-red-700 animate-pulse" };
+    return { statusLabel: "Passed", statusClass: "bg-gray-200 text-gray-600" };
+  };
+
   const formatDate = (dateString: string) => {
     const date = DateTime.fromISO(dateString, { zone: "utc" }).setZone(LAGOS_TIMEZONE);
     return date.toFormat("ccc, d LLL");
@@ -196,31 +238,6 @@ const Matches = () => {
   const formatTime = (timeString: string) => {
     const time = DateTime.fromISO(`2000-01-01T${timeString}Z`, { zone: "utc" }).setZone(LAGOS_TIMEZONE);
     return time.toFormat("hh:mm a");
-  };
-
-  const getMatchStatus = (matchDate: string, matchTime: string) => {
-    const matchDateTime = DateTime.fromISO(`${matchDate}T${matchTime}`, { zone: "utc" }).setZone(LAGOS_TIMEZONE);
-    const now = DateTime.now().setZone(LAGOS_TIMEZONE);
-    const twoHoursLater = now.plus({ hours: 2 });
-
-    let statusLabel = "Upcoming Match";
-    let statusClass = "bg-blue-100 text-blue-800";
-
-    if (matchDateTime < now) {
-      statusLabel = "Match Passed";
-      statusClass = "bg-gray-200 text-gray-600";
-    } else if (matchDateTime.hasSame(now, "day")) {
-      const hoursDiff = matchDateTime.diff(now, "hours").hours;
-      if (hoursDiff >= 0 && hoursDiff <= 2) {
-        statusLabel = "Live Match";
-        statusClass = "bg-red-100 text-red-700 animate-pulse";
-      } else if (hoursDiff > 2) {
-        statusLabel = "Today's Match";
-        statusClass = "bg-green-100 text-green-700";
-      }
-    }
-
-    return { statusLabel, statusClass };
   };
 
   const hasAccess = (matchSlug: string) => {
@@ -420,7 +437,9 @@ const Matches = () => {
       ) : matches.length > 0 ? (
         <div className="px-4 space-y-4">
           {matches.map((match) => {
-            const { statusLabel, statusClass } = getMatchStatus(match.match_date, match.match_time);
+            const { statusLabel, statusClass } = getMatchStatus(match.match_date, match.start_time, match.end_time);
+            const organizer = organizers.find(org => org.id === match.organizer_id);
+            const isVerified = organizer?.is_verified || false;
             const isAccessible = !match.is_private || hasAccess(match.slug);
             
             return (
@@ -497,7 +516,10 @@ const Matches = () => {
                   <div className="mt-4 flex justify-between items-center">
                     <div>
                       <span className="text-xs text-muted-foreground">Organized by:</span>
-                      <p className="font-medium text-gray-800 dark:text-gray-200">{match.organizer_name}</p>
+                      <p className="font-medium text-gray-800 dark:text-gray-200 flex items-center">
+                        {match.organizer_name}
+                        {isVerified && <img src="/green-verified.png" alt="Verified" className="w-4 h-4 ml-1" />}
+                      </p>
                     </div>
                     
                     <Button 
