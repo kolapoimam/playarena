@@ -47,9 +47,9 @@ import Navbar from "@/components/Navbar";
 import html2canvas from "html2canvas";
 
 // Define enums for dropdown options
-const skillLevels = ["Beginner", "Amateur", "Intermediate", "Advanced", "Professional"] as const;
-const matchTypes = ["4-a-side", "5-a-side", "7-a-side", "11-a-side (Regular)", "Double", "Friendly"] as const;
-const genders = ["Male", "Female"] as const;
+const skillLevels = ["Beginner", "Amateur", "Intermediate", "Advanced", "Professional", "All", "None"] as const;
+const matchTypes = ["4-a-side", "5-a-side", "7-a-side", "11-a-side (Regular)", "Double", "Friendly", "All", "None"] as const;
+const genders = ["Male", "Female", "All", "None"] as const;
 
 const formSchema = z.object({
   title: z.string()
@@ -99,9 +99,24 @@ const formSchema = z.object({
   is_private: z.boolean().default(false),
   access_password: z.string().nullable().optional(),
   allow_bulk_tickets: z.boolean().default(false),
-  skill_level: z.enum(skillLevels).optional().nullable(),
-  match_type: z.enum(matchTypes).optional().nullable(),
-  gender: z.enum(genders).optional().nullable(),
+  skill_level: z.enum(skillLevels).optional().nullable()
+    .transform(val => {
+      if (val === "All") return null;
+      if (val === "None") return "";
+      return val;
+    }),
+  match_type: z.enum(matchTypes).optional().nullable()
+    .transform(val => {
+      if (val === "All") return null;
+      if (val === "None") return "";
+      return val;
+    }),
+  gender: z.enum(genders).optional().nullable()
+    .transform(val => {
+      if (val === "All") return null;
+      if (val === "None") return "";
+      return val;
+    }),
   sell_tickets: z.boolean().default(false),
   ticket_price: z.number()
     .min(200, { message: "Ticket price must be at least ₦200" })
@@ -118,7 +133,7 @@ const formSchema = z.object({
     .optional()
     .nullable(),
 }).refine(data => {
-  const now = new Date("2025-05-16T21:32:00+01:00"); // Current time in WAT
+  const now = new Date("2025-05-16T21:44:00+01:00"); // Current time in WAT
   const selectedDateTime = new Date(data.match_date);
   const [startHours, startMinutes] = data.start_time.split(':').map(Number);
   selectedDateTime.setHours(startHours, startMinutes, 0, 0);
@@ -153,6 +168,13 @@ const formSchema = z.object({
   message: "Start time must be before end time",
   path: ["end_time"],
 });
+
+const formatTimeTo12Hour = (time: string): string => {
+  const [hours, minutes] = time.split(':').map(Number);
+  const period = hours >= 12 ? 'PM' : 'AM';
+  const adjustedHours = hours % 12 || 12; // Convert 0 or 12 to 12 for 12 AM/PM
+  return `${adjustedHours}:${minutes.toString().padStart(2, '0')} ${period}`;
+};
 
 type FormValues = z.infer<typeof formSchema>;
 
@@ -656,100 +678,100 @@ const Organize = () => {
               />
             </div>
 
-            {/* Preferences Section (Collapsible) */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
-              <div className="flex justify-between items-center cursor-pointer" onClick={() => setIsPreferencesOpen(!isPreferencesOpen)}>
-                <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Preferences (Optional)</h2>
-                <span>{isPreferencesOpen ? '-' : '+'}</span>
-              </div>
-              {isPreferencesOpen && (
-                <>
-                  <FormField
-                    control={form.control}
-                    name="skill_level"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Skill Level</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || undefined}>
-                          <FormControl>
-                            <SelectTrigger className="w-full text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white">
-                              <SelectValue placeholder="Select Skill Level" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {skillLevels.map((level) => (
-                              <SelectItem key={level} value={level} className="text-base">
-                                {level}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
-                          Select the preferred skill level for this match (optional)
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+         {/* Preferences Section (Collapsible) */}
+<div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
+  <div className="flex justify-between items-center cursor-pointer" onClick={() => setIsPreferencesOpen(!isPreferencesOpen)}>
+    <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Preferences (Optional)</h2>
+    <span>{isPreferencesOpen ? '-' : '+'}</span>
+  </div>
+  {isPreferencesOpen && (
+    <>
+      <FormField
+        control={form.control}
+        name="skill_level"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Skill Level</FormLabel>
+            <Select onValueChange={field.onChange} value={field.value || undefined}>
+              <FormControl>
+                <SelectTrigger className="w-full text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white">
+                  <SelectValue placeholder="Select Skill Level" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                {skillLevels.map((level) => (
+                  <SelectItem key={level} value={level} className="text-base">
+                    {level}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+              Select the preferred skill level for this match (optional)
+            </FormDescription>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
 
-                  <FormField
-                    control={form.control}
-                    name="match_type"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Match Type</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || undefined}>
-                          <FormControl>
-                            <SelectTrigger className="w-full text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white">
-                              <SelectValue placeholder="Select Match Type" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {matchTypes.map((type) => (
-                              <SelectItem key={type} value={type} className="text-base">
-                                {type}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
-                          Select the type of match (optional)
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+      <FormField
+        control={form.control}
+        name="match_type"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Match Type</FormLabel>
+            <Select onValueChange={field.onChange} value={field.value || undefined}>
+              <FormControl>
+                <SelectTrigger className="w-full text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white">
+                  <SelectValue placeholder="Select Match Type" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                {matchTypes.map((type) => (
+                  <SelectItem key={type} value={type} className="text-base">
+                    {type}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+              Select the type of match (optional)
+            </FormDescription>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
 
-                  <FormField
-                    control={form.control}
-                    name="gender"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Gender Preference</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || undefined}>
-                          <FormControl>
-                            <SelectTrigger className="w-full text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white">
-                              <SelectValue placeholder="Select Gender" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {genders.map((gender) => (
-                              <SelectItem key={gender} value={gender} className="text-base">
-                                {gender}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
-                          Select the preferred gender for this match (optional)
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </>
-              )}
-            </div>
+      <FormField
+        control={form.control}
+        name="gender"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Gender Preference</FormLabel>
+            <Select onValueChange={field.onChange} value={field.value || undefined}>
+              <FormControl>
+                <SelectTrigger className="w-full text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white">
+                  <SelectValue placeholder="Select Gender" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                {genders.map((gender) => (
+                  <SelectItem key={gender} value={gender} className="text-base">
+                    {gender}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+              Select the preferred gender for this match (optional)
+            </FormDescription>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+    </>
+  )}
+</div>
 
             {/* Payment & Privacy Section (Collapsible) */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
@@ -1104,190 +1126,190 @@ const Organize = () => {
       </div>
       <Navbar />
 
-      {/* Preview Dialog */}
-      <Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
-        <DialogContent className="sm:max-w-[375px] rounded-2xl">
-          <DialogTitle className="text-xl font-bold text-gray-800 dark:text-gray-200">Match Preview</DialogTitle>
-          <DialogDescription>
-            <div className="bg-gradient-to-br from-green-500 to-green-700 rounded-xl p-6 text-white shadow-lg">
-              <div className="flex items-center justify-between mb-4">
-                <img 
-                  src="/playarenadark.png" 
-                  alt="PlayArena Logo" 
-                  className="h-8 w-auto"
-                />
-                <Trophy className="h-6 w-6" />
-              </div>
-              <h2 className="text-xl font-bold mb-2">{matchTitle || "Your Match"}</h2>
-              <div className="space-y-2 mb-4 text-sm">
-                <div className="flex items-center">
-                  <MapPin className="h-4 w-4 mr-2" />
-                  <span>{selectedVenue?.name || "Venue"}</span>
-                </div>
-                <div className="flex items-center">
-                  <CalendarIcon className="h-4 w-4 mr-2" />
-                  <span>{matchDate ? format(matchDate, "PPP") : "Date"}</span>
-                </div>
-                <div className="flex items-center">
-                  <Clock className="h-4 w-4 mr-2" />
-                  <span>From {startTime || "Start"} to {endTime || "End"}</span>
-                </div>
-                <div className="flex items-center">
-                  <User className="h-4 w-4 mr-2" />
-                  <span>Organized by {organizerName || "Organizer"}</span>
-                </div>
-                <div className="flex items-center">
-                  <span className="font-semibold">Players: </span>
-                  <span className="ml-2">{totalSlots || "N/A"}</span>
-                </div>
-                {isPaid && (
-                  <div className="flex items-center">
-                    <span className="font-semibold">Price: </span>
-                    <span className="ml-2">₦{form.watch("price")?.toFixed(2) || "0.00"}</span>
-                  </div>
-                )}
-                {sellTickets && (
-                  <div className="flex items-center">
-                    <span className="font-semibold">Ticket Price: </span>
-                    <span className="ml-2">₦{ticketPrice?.toFixed(2) || "N/A"}</span>
-                  </div>
-                )}
-                {maxTickets && (
-                  <div className="flex items-center">
-                    <span className="font-semibold">Max Tickets: </span>
-                    <span className="ml-2">{maxTickets}</span>
-                  </div>
-                )}
-                {notes && (
-                  <div className="flex items-center">
-                    <span className="font-semibold">Notes: </span>
-                    <span className="ml-2">{notes}</span>
-                  </div>
-                )}
-                {skillLevel && (
-                  <div className="flex items-center">
-                    <span className="font-semibold">Skill Level: </span>
-                    <span className="ml-2">{skillLevel}</span>
-                  </div>
-                )}
-                {matchType && (
-                  <div className="flex items-center">
-                    <span className="font-semibold">Match Type: </span>
-                    <span className="ml-2">{matchType}</span>
-                  </div>
-                )}
-                {gender && (
-                  <div className="flex items-center">
-                    <span className="font-semibold">Gender: </span>
-                    <span className="ml-2">{gender}</span>
-                  </div>
-                )}
-                {isPrivate && (
-                  <div className="flex items-center">
-                    <span className="font-semibold">Access Password: </span>
-                    <span className="ml-2 font-mono">{accessPassword || "N/A"}</span>
-                  </div>
-                )}
-              </div>
+{/* Preview Dialog */}
+<Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
+  <DialogContent className="sm:max-w-[375px] rounded-2xl">
+    <DialogTitle className="text-xl font-bold text-gray-800 dark:text-gray-200">Match Preview</DialogTitle>
+    <DialogDescription>
+      <div className="bg-gradient-to-br from-green-500 to-green-700 rounded-xl p-6 text-white shadow-lg">
+        <div className="flex items-center justify-between mb-4">
+          <img 
+            src="/playarenadark.png" 
+            alt="PlayArena Logo" 
+            className="h-8 w-auto"
+          />
+          <Trophy className="h-6 w-6" />
+        </div>
+        <h2 className="text-xl font-bold mb-2">{matchTitle || "Your Match"}</h2>
+        <div className="space-y-2 mb-4 text-sm">
+          <div className="flex items-center">
+            <MapPin className="h-4 w-4 mr-2" />
+            <span>{selectedVenue?.name || "Venue"}</span>
+          </div>
+          <div className="flex items-center">
+            <CalendarIcon className="h-4 w-4 mr-2" />
+            <span>{matchDate ? format(matchDate, "PPP") : "Date"}</span>
+          </div>
+          <div className="flex items-center">
+            <Clock className="h-4 w-4 mr-2" />
+            <span>From {startTime ? formatTimeTo12Hour(startTime) : "Start"} to {endTime ? formatTimeTo12Hour(endTime) : "End"}</span>
+          </div>
+          <div className="flex items-center">
+            <User className="h-4 w-4 mr-2" />
+            <span>Organized by {organizerName || "Organizer"}</span>
+          </div>
+          <div className="flex items-center">
+            <span className="font-semibold">Players: </span>
+            <span className="ml-2">{totalSlots || "N/A"}</span>
+          </div>
+          {isPaid && (
+            <div className="flex items-center">
+              <span className="font-semibold">Price: </span>
+              <span className="ml-2">₦{form.watch("price")?.toFixed(2) || "0.00"}</span>
             </div>
-            <div className="mt-4 flex justify-end">
-              <Button
-                className="bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 transition-colors"
-                onClick={() => setPreviewDialogOpen(false)}
-              >
-                Close
-              </Button>
+          )}
+          {sellTickets && (
+            <div className="flex items-center">
+              <span className="font-semibold">Ticket Price: </span>
+              <span className="ml-2">₦{ticketPrice?.toFixed(2) || "N/A"}</span>
             </div>
-          </DialogDescription>
-        </DialogContent>
-      </Dialog>
+          )}
+          {maxTickets && (
+            <div className="flex items-center">
+              <span className="font-semibold">Max Tickets: </span>
+              <span className="ml-2">{maxTickets}</span>
+            </div>
+          )}
+          {notes && (
+            <div className="flex items-center">
+              <span className="font-semibold">Notes: </span>
+              <span className="ml-2">{notes}</span>
+            </div>
+          )}
+          {skillLevel && skillLevel !== "" && (
+            <div className="flex items-center">
+              <span className="font-semibold">Skill Level: </span>
+              <span className="ml-2">{skillLevel}</span>
+            </div>
+          )}
+          {matchType && matchType !== "" && (
+            <div className="flex items-center">
+              <span className="font-semibold">Match Type: </span>
+              <span className="ml-2">{matchType}</span>
+            </div>
+          )}
+          {gender && gender !== "" && (
+            <div className="flex items-center">
+              <span className="font-semibold">Gender: </span>
+              <span className="ml-2">{gender}</span>
+            </div>
+          )}
+          {isPrivate && (
+            <div className="flex items-center">
+              <span className="font-semibold">Access Password: </span>
+              <span className="ml-2 font-mono">{accessPassword || "N/A"}</span>
+            </div>
+          )}
+        </div>
+      </div>
+      <div className="mt-4 flex justify-end">
+        <Button
+          className="bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 transition-colors"
+          onClick={() => setPreviewDialogOpen(false)}
+        >
+          Close
+        </Button>
+      </div>
+    </DialogDescription>
+  </DialogContent>
+</Dialog>
 
-      {/* Success Dialog */}
-      <Dialog open={successDialogOpen} onOpenChange={(open) => {
-        if (!open && matchSlug) {
-          navigate(`/match/${matchSlug}`);
-        }
-        setSuccessDialogOpen(open);
-      }}>
-        <DialogContent className="sm:max-w-[375px] rounded-2xl">
-          <DialogTitle className="text-xl font-bold text-gray-800 dark:text-gray-200">Match Created Successfully!</DialogTitle>
-          <DialogDescription>
-            <p className="text-gray-600 dark:text-gray-300 mb-4 text-sm">
-              Your match has been created. Below is your unique 6-digit supercode for check-ins on match day.
-              {isPrivate && " Also, note the access password to share with invited players."}
-            </p>
-            <div 
-              ref={cardRef}
-              className="bg-gradient-to-br from-green-500 to-green-700 rounded-xl p-6 text-white shadow-lg"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <img 
-                  src="/playarenadark.png" 
-                  alt="PlayArena Logo" 
-                  className="h-8 w-auto"
-                />
-                <Trophy className="h-6 w-6" />
-              </div>
-              <h2 className="text-xl font-bold mb-2">{matchTitle}</h2>
-              <div className="space-y-2 mb-4 text-sm">
-                <div className="flex items-center">
-                  <MapPin className="h-4 w-4 mr-2" />
-                  <span>{selectedVenue?.name || "Venue"}</span>
-                </div>
-                <div className="flex items-center">
-                  <CalendarIcon className="h-4 w-4 mr-2" />
-                  <span>{matchDate ? format(matchDate, "PPP") : "Date"}</span>
-                </div>
-                <div className="flex items-center">
-                  <Clock className="h-4 w-4 mr-2" />
-                  <span>From {startTime || "Start"} to {endTime || "End"}</span>
-                </div>
-                <div className="flex items-center">
-                  <User className="h-4 w-4 mr-2" />
-                  <span>Organized by {organizerName}</span>
-                </div>
-                {isPrivate && (
-                  <div className="flex items-center">
-                    <span className="font-semibold">Access Password: </span>
-                    <span className="ml-2 font-mono">{accessPassword || "N/A"}</span>
-                  </div>
-                )}
-              </div>
-              <div className="bg-white text-green-600 rounded-md p-4 text-center shadow-inner">
-                <p className="text-sm font-medium">Supercode</p>
-                <p className="text-3xl font-bold tracking-wider">{supercode || "N/A"}</p>
-              </div>
+    {/* Success Dialog */}
+<Dialog open={successDialogOpen} onOpenChange={(open) => {
+  if (!open && matchSlug) {
+    navigate(`/match/${matchSlug}`);
+  }
+  setSuccessDialogOpen(open);
+}}>
+  <DialogContent className="sm:max-w-[375px] rounded-2xl">
+    <DialogTitle className="text-xl font-bold text-gray-800 dark:text-gray-200">Match Created Successfully!</DialogTitle>
+    <DialogDescription>
+      <p className="text-gray-600 dark:text-gray-300 mb-4 text-sm">
+        Your match has been created. Below is your unique 6-digit supercode for check-ins on match day.
+        {isPrivate && " Also, note the access password to share with invited players."}
+      </p>
+      <div 
+        ref={cardRef}
+        className="bg-gradient-to-br from-green-500 to-green-700 rounded-xl p-6 text-white shadow-lg"
+      >
+        <div className="flex items-center justify-between mb-4">
+          <img 
+            src="/playarenadark.png" 
+            alt="PlayArena Logo" 
+            className="h-8 w-auto"
+          />
+          <Trophy className="h-6 w-6" />
+        </div>
+        <h2 className="text-xl font-bold mb-2">{matchTitle}</h2>
+        <div className="space-y-2 mb-4 text-sm">
+          <div className="flex items-center">
+            <MapPin className="h-4 w-4 mr-2" />
+            <span>{selectedVenue?.name || "Venue"}</span>
+          </div>
+          <div className="flex items-center">
+            <CalendarIcon className="h-4 w-4 mr-2" />
+            <span>{matchDate ? format(matchDate, "PPP") : "Date"}</span>
+          </div>
+          <div className="flex items-center">
+            <Clock className="h-4 w-4 mr-2" />
+            <span>From {startTime ? formatTimeTo12Hour(startTime) : "Start"} to {endTime ? formatTimeTo12Hour(endTime) : "End"}</span>
+          </div>
+          <div className="flex items-center">
+            <User className="h-4 w-4 mr-2" />
+            <span>Organized by {organizerName}</span>
+          </div>
+          {isPrivate && (
+            <div className="flex items-center">
+              <span className="font-semibold">Access Password: </span>
+              <span className="ml-2 font-mono">{accessPassword || "N/A"}</span>
             </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400 my-4">
-              <strong>Note:</strong> Save or download this code. You'll need it to confirm and check in players on match day.
-              {isPrivate && " Share the access password with invited players to allow them to join."}
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Button 
-                className="flex-1 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 transition-colors"
-                onClick={handleDownload}
-                disabled={isDownloading}
-              >
-                {isDownloading ? "Downloading..." : "Download Supercode"}
-              </Button>
-              <Button 
-                className="flex-1 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 transition-colors"
-                onClick={() => {
-                  if (!isDownloading) {
-                    setSuccessDialogOpen(false);
-                    if (matchSlug) {
-                      navigate(`/match/${matchSlug}`);
-                    }
-                  }
-                }}
-                disabled={isDownloading}
-              >
-                Go to Match Details
-              </Button>
-            </div>
-          </DialogDescription>
-        </DialogContent>
-      </Dialog>
+          )}
+        </div>
+        <div className="bg-white text-green-600 rounded-md p-4 text-center shadow-inner">
+          <p className="text-sm font-medium">Supercode</p>
+          <p className="text-3xl font-bold tracking-wider">{supercode || "N/A"}</p>
+        </div>
+      </div>
+      <p className="text-sm text-gray-500 dark:text-gray-400 my-4">
+        <strong>Note:</strong> Save or download this code. You'll need it to confirm and check in players on match day.
+        {isPrivate && " Share the access password with invited players to allow them to join."}
+      </p>
+      <div className="flex flex-col sm:flex-row gap-3">
+        <Button 
+          className="flex-1 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 transition-colors"
+          onClick={handleDownload}
+          disabled={isDownloading}
+        >
+          {isDownloading ? "Downloading..." : "Download Supercode"}
+        </Button>
+        <Button 
+          className="flex-1 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 transition-colors"
+          onClick={() => {
+            if (!isDownloading) {
+              setSuccessDialogOpen(false);
+              if (matchSlug) {
+                navigate(`/match/${matchSlug}`);
+              }
+            }
+          }}
+          disabled={isDownloading}
+        >
+          Go to Match Details
+        </Button>
+      </div>
+    </DialogDescription>
+  </DialogContent>
+</Dialog>
     </div>
   );
 };
