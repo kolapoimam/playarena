@@ -279,16 +279,14 @@ const Auth = () => {
             </div>
 
             {isSignUp && (
-              <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+             <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
                 By signing up, you agree to our{' '}
-                <a
-                  href="https://playarenagames.vercel.app/terms-privacy"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <NavLink
+                  to="/terms-privacy"
                   className="text-green-500 hover:text-green-600 underline transition-colors"
                 >
                   Terms & Privacy Policy
-                </a>
+                </NavLink>
               </p>
             )}
           </div>
