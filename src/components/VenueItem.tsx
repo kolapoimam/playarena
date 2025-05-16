@@ -30,12 +30,16 @@ export default function VenueItem({ name, location, image_urls, venue_phone, agg
         />
       </div>
       <div className="flex-1">
-        <div className="flex items-center">
-          <h3 className="font-bold text-gray-900 dark:text-gray-100">{name}</h3>
-          {is_verified && (
-            <CheckCircle size={16} className="ml-2 text-green-500" />
-          )}
-        </div>
+<div className="flex items-center">
+  <h3 className="font-bold text-gray-900 dark:text-gray-100">{name}</h3>
+  {is_verified && (
+    <img 
+      src="/green-verified.png" 
+      alt="Verified" 
+      className="ml-2 w-4 h-4"
+    />
+  )}
+</div>
         <p className="text-sm text-gray-600 dark:text-gray-400">{location}</p>
         {aggregated_rating !== null ? (
           <div className="flex items-center text-sm text-yellow-500 mt-1">
