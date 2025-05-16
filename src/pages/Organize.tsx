@@ -329,77 +329,78 @@ const Organize = () => {
     }
   }, [isPrivate, accessPassword, form]);
 
-  const onSubmit = async (data: FormValues) => {
-    setLoading(true);
+const onSubmit = async (data: FormValues) => {
+  setLoading(true);
 
-    try {
-      const superCode = Math.floor(100000 + Math.random() * 900000).toString();
+  try {
+    const superCode = Math.floor(100000 + Math.random() * 900000).toString();
 
-      const { data: match, error } = await supabase
-        .from("matches")
+    const { data: match, error } = await supabase
+      .from("matches")
+      .insert({
+        title: data.title,
+        venue_id: data.venue_id,
+        match_date: format(data.match_date, "yyyy-MM-dd"),
+        match_time: data.start_time, // Map start_time to match_time to satisfy NOT NULL constraint
+        start_time: data.start_time,
+        end_time: data.end_time,
+        total_slots: data.total_slots,
+        is_paid: data.is_paid,
+        price: data.is_paid ? data.price : null,
+        notes: data.notes || null,
+        organizer_name: data.organizer_name,
+        organizer_phone: data.organizer_phone || null,
+        disclose_phone: data.disclose_phone,
+        player_number_required: data.player_number_required,
+        is_private: data.is_private,
+        access_password: data.is_private ? data.access_password : null,
+        allow_bulk_tickets: data.allow_bulk_tickets,
+        skill_level: data.skill_level || null,
+        match_type: data.match_type || null,
+        gender: data.gender || null,
+        super_code: superCode,
+        sell_tickets: data.sell_tickets,
+        ticket_price: data.sell_tickets ? data.ticket_price : null,
+        max_tickets: data.sell_tickets ? data.max_tickets : null,
+        total_tickets_available: data.sell_tickets && data.max_tickets ? data.max_tickets : 0,
+      })
+      .select('id, slug, super_code')
+      .single();
+
+    if (error) throw error;
+
+    if (userId) {
+      const { error: linkError } = await supabase
+        .from("user_organized_matches")
         .insert({
-          title: data.title,
-          venue_id: data.venue_id,
-          match_date: format(data.match_date, "yyyy-MM-dd"),
-          start_time: data.start_time,
-          end_time: data.end_time,
-          total_slots: data.total_slots,
-          is_paid: data.is_paid,
-          price: data.is_paid ? data.price : null,
-          notes: data.notes || null,
-          organizer_name: data.organizer_name,
-          organizer_phone: data.organizer_phone || null,
-          disclose_phone: data.disclose_phone,
-          player_number_required: data.player_number_required,
-          is_private: data.is_private,
-          access_password: data.is_private ? data.access_password : null,
-          allow_bulk_tickets: data.allow_bulk_tickets,
-          skill_level: data.skill_level || null,
-          match_type: data.match_type || null,
-          gender: data.gender || null,
-          super_code: superCode,
-          sell_tickets: data.sell_tickets,
-          ticket_price: data.sell_tickets ? data.ticket_price : null,
-          max_tickets: data.sell_tickets ? data.max_tickets : null,
-          total_tickets_available: data.sell_tickets && data.max_tickets ? data.max_tickets : 0,
-        })
-        .select('id, slug, super_code')
-        .single();
+          user_id: userId,
+          match_id: match.id,
+        });
 
-      if (error) throw error;
-
-      if (userId) {
-        const { error: linkError } = await supabase
-          .from("user_organized_matches")
-          .insert({
-            user_id: userId,
-            match_id: match.id,
-          });
-
-        if (linkError) throw linkError;
-      }
-
-      setSupercode(match.super_code || "N/A");
-      setMatchSlug(match.slug);
-      setSuccessDialogOpen(true);
-
-      localStorage.removeItem("organizeFormState");
-
-      toast({
-        title: "Success!",
-        description: "Your match has been created.",
-      });
-    } catch (error) {
-      console.error("Error creating match:", error);
-      toast({
-        title: "Error",
-        description: "Failed to create match. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
+      if (linkError) throw linkError;
     }
-  };
+
+    setSupercode(match.super_code || "N/A");
+    setMatchSlug(match.slug);
+    setSuccessDialogOpen(true);
+
+    localStorage.removeItem("organizeFormState");
+
+    toast({
+      title: "Success!",
+      description: "Your match has been created.",
+    });
+  } catch (error) {
+    console.error("Error creating match:", error);
+    toast({
+      title: "Error",
+      description: "Failed to create match. Please try again.",
+      variant: "destructive",
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleVenueCreated = (venueId: string, venueSlug: string, venueName: string) => {
     setVenues(prev => [{ id: venueId, slug: venueSlug, name: venueName, city: "" }, ...prev]);
