@@ -283,29 +283,38 @@ return (
               </Button>
             </div>
 
-            {popularVenues.length > 0 ? (
-              <div className="flex gap-4 overflow-x-auto px-4 pb-4">
-                {popularVenues.map((venue) => {
-                  const defaultImage = "https://dailytrust.com/wp-content/uploads/2023/12/football-488714_1280.jpg";
-                  const venueImage = venue.image_urls && venue.image_urls.length > 0 ? venue.image_urls[0] : defaultImage;
+{popularVenues.length > 0 ? (
+  <div className="flex gap-4 overflow-x-auto px-4 pb-4">
+    {popularVenues.map((venue) => {
+      const defaultImage = "https://dailytrust.com/wp-content/uploads/2023/12/football-488714_1280.jpg";
+      const venueImage = venue.image_urls && venue.image_urls.length > 0 ? venue.image_urls[0] : defaultImage;
 
-                  return (
-                    <div
-                      key={venue.id}
-                      className="min-w-[280px] bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 cursor-pointer"
-                      onClick={() => navigate(`/venue/${venue.slug}`)}
-                    >
-                      <img
-                        src={venueImage}
-                        alt={venue.name}
-                        className="w-full h-40 object-cover rounded-t-lg"
-                      />
-                      <div className="p-4">
-                        <h3 className="font-bold text-lg mb-2">{venue.name}</h3>
-                        <p className="text-sm text-muted-foreground mb-1">{`${venue.city}, ${venue.state}`}</p>
-                        <p className="text-sm font-medium">{`${venue.match_count} Match${venue.match_count !== 1 ? "es" : ""}`}</p>
-                      </div>
-                    </div>
+      return (
+        <div
+          key={venue.id}
+          className="min-w-[280px] bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 cursor-pointer"
+          onClick={() => navigate(`/venue/${venue.slug}`)}
+        >
+          <img
+            src={venueImage}
+            alt={venue.name}
+            className="w-full h-40 object-cover rounded-t-lg"
+          />
+          <div className="p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <h3 className="font-bold text-lg">{venue.name}</h3>
+              {venue.is_verified && (
+                <img 
+                  src="/green-verified.png" 
+                  alt="Verified" 
+                  className="w-5 h-5 object-contain" 
+                />
+              )}
+            </div>
+            <p className="text-sm text-muted-foreground mb-1">{`${venue.city}, ${venue.state}`}</p>
+            <p className="text-sm font-medium">{`${venue.match_count} Match${venue.match_count !== 1 ? "es" : ""}`}</p>
+          </div>
+        </div>
                   );
                 })}
               </div>
