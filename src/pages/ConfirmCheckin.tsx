@@ -51,8 +51,6 @@ type Cashout = {
   temp_identifier?: string;
 };
 
-const [walletBalance, setWalletBalance] = useState<number | null>(null);
-
 const codeSchema = z
   .string()
   .regex(/^\d{6}$/, { message: "Code must be exactly 6 digits" });
@@ -75,6 +73,7 @@ const ConfirmCheckin = () => {
   const [error, setError] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [recentSuperCodes, setRecentSuperCodes] = useState<string[]>([]);
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchUserId = async () => {
@@ -131,18 +130,20 @@ const ConfirmCheckin = () => {
           variant: "destructive",
         });
         return;
-    
+      }
+
       if (userId) {
-  const { data: walletData, error: walletError } = await supabase
-    .from("wallets")
-    .select("balance")
-    .eq("organizer_id", userId)
-    .single();
-  
-  if (!walletError && walletData) {
-    setWalletBalance(walletData.balance);
-  }
-}
+        const { data: walletData, error: walletError } = await supabase
+          .from("wallets")
+          .select("balance")
+          .eq("organizer_id", userId)
+          .single();
+
+        if (!walletError && walletData) {
+          setWalletBalance(walletData.balance);
+        }
+      }
+
       const matchData: Match = {
         ...data,
         venue: data.venue ? { name: data.venue.name ?? "Unknown Venue", city: data.venue.city ?? "Unknown City" } : null,
@@ -222,7 +223,7 @@ const ConfirmCheckin = () => {
     const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
     const now = new Date();
     const minutesSinceStart = differenceInMinutes(now, matchDateTime);
-    return minutesSinceStart <= 60; // Allow confirming players up to 1 hour into the match
+    return minutesSinceStart <= 60;
   };
 
   const handleCancelMatch = async () => {
@@ -261,7 +262,7 @@ const ConfirmCheckin = () => {
         description: "Match cancelled successfully.",
       });
       await fetchMatch();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error cancelling match:", error);
       toast({
         title: "Error",
@@ -291,7 +292,7 @@ const ConfirmCheckin = () => {
         description: "Match started successfully.",
       });
       await fetchMatch();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error starting match:", error);
       toast({
         title: "Error",
@@ -321,7 +322,7 @@ const ConfirmCheckin = () => {
         description: "Match ended successfully.",
       });
       await fetchMatch();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error ending match:", error);
       toast({
         title: "Error",
@@ -334,7 +335,7 @@ const ConfirmCheckin = () => {
   };
 
   useEffect(() => {
-    resetState(); // Reset state on super code change or page refresh
+    resetState();
     if (superCode && codeSchema.safeParse(superCode).success) {
       fetchMatch();
     }
@@ -398,16 +399,16 @@ const ConfirmCheckin = () => {
 
         {match && !error && (
           <div className="animate-fade-in space-y-6">
-<MatchDetails
-  match={match}
-  cashout={cashout}
-  handleCancelMatch={handleCancelMatch}
-  handleStartMatch={handleStartMatch}
-  handleEndMatch={handleEndMatch}
-  loading={loading}
-  isMatchPast={isMatchPast}
-  walletBalance={walletBalance || 0}
-/>
+            <MatchDetails
+              match={match}
+              cashout={cashout}
+              handleCancelMatch={handleCancelMatch}
+              handleStartMatch={handleStartMatch}
+              handleEndMatch={handleEndMatch}
+              loading={loading}
+              isMatchPast={isMatchPast}
+              walletBalance={walletBalance || 0}
+            />
             <PlayerManagement
               match={match}
               tempIdentifier={tempIdentifier}
