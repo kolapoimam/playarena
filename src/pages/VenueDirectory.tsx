@@ -266,12 +266,16 @@ const VenueDirectory = () => {
                       className="w-full h-36 object-cover rounded-t-xl"
                     />
                     <div className="p-3">
-                      <div className="flex items-center">
-                        <h3 className="font-bold text-lg text-gray-900 dark:text-gray-100 mb-1">{venue.name}</h3>
-                        {venue.is_verified && (
-                          <CheckCircle size={18} className="ml-2 text-green-500" />
-                        )}
-                      </div>
+<div className="flex items-center">
+  <h3 className="font-bold text-lg text-gray-900 dark:text-gray-100 mb-1">{venue.name}</h3>
+  {venue.is_verified && (
+    <img 
+      src="/green-verified.png" 
+      alt="Verified" 
+      className="ml-2 w-4.5 h-4.5 object-contain" 
+    />
+  )}
+</div>
                       <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{`${venue.city}, ${venue.state}`}</p>
                       <div className="flex items-center text-sm text-yellow-500 mb-1">
                         <Star size={14} className="mr-1 fill-yellow-500" />
