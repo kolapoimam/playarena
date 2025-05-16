@@ -65,6 +65,14 @@ const formSchema = z.object({
     .regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, { 
       message: "Please enter a valid time in HH:MM format (24-hour clock)" 
     }),
+  start_time: z.string()
+    .regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, { 
+      message: "Please enter a valid start time in HH:MM format (24-hour clock)" 
+    }),
+  end_time: z.string()
+    .regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, { 
+      message: "Please enter a valid end time in HH:MM format (24-hour clock)" 
+    }),
   total_slots: z.number()
     .int({ message: "Must be a whole number" })
     .min(2, { message: "At least 2 players are required" })
@@ -114,23 +122,19 @@ const formSchema = z.object({
     .optional()
     .nullable(),
 }).refine(data => {
-  const now = new Date();
+  const now = new Date("2025-05-16T21:20:00+01:00"); // Current time in WAT
   const selectedDateTime = new Date(data.match_date);
   const [hours, minutes] = data.match_time.split(':').map(Number);
   selectedDateTime.setHours(hours, minutes, 0, 0);
 
-  if (selectedDateTime < now) {
-    return false;
-  }
-
-  const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
-  if (selectedDateTime.toDateString() === now.toDateString() && selectedDateTime < oneHourLater) {
+  const tenMinutesLater = new Date(now.getTime() + 10 * 60 * 1000);
+  if (selectedDateTime < tenMinutesLater) {
     return false;
   }
 
   return true;
 }, {
-  message: "Match must be scheduled at least 1 hour from now",
+  message: "Match must be scheduled at least 10 minutes from now",
   path: ["match_time"],
 }).refine(data => {
   if (data.sell_tickets && !data.ticket_price) {
@@ -140,6 +144,18 @@ const formSchema = z.object({
 }, {
   message: "Ticket price is required when selling tickets",
   path: ["ticket_price"],
+}).refine(data => {
+  const [startHours, startMinutes] = data.start_time.split(':').map(Number);
+  const [endHours, endMinutes] = data.end_time.split(':').map(Number);
+  const startDateTime = new Date(data.match_date);
+  const endDateTime = new Date(data.match_date);
+  startDateTime.setHours(startHours, startMinutes, 0, 0);
+  endDateTime.setHours(endHours, endMinutes, 0, 0);
+
+  return startDateTime < endDateTime;
+}, {
+  message: "Start time must be before end time",
+  path: ["end_time"],
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -189,6 +205,8 @@ const Organize = () => {
       sell_tickets: false,
       ticket_price: null,
       max_tickets: null,
+      start_time: "",
+      end_time: "",
     },
   });
 
@@ -229,6 +247,8 @@ const Organize = () => {
   const matchTitle = form.watch("title");
   const matchDate = form.watch("match_date");
   const matchTime = form.watch("match_time");
+  const startTime = form.watch("start_time");
+  const endTime = form.watch("end_time");
   const organizerName = form.watch("organizer_name");
   const accessPassword = form.watch("access_password");
   const organizerPhone = form.watch("organizer_phone");
@@ -242,7 +262,7 @@ const Organize = () => {
   const maxTickets = form.watch("max_tickets");
 
   // Determine if preview button should be enabled
-  const isPreviewEnabled = matchTitle && selectedVenueId && matchDate && matchTime && totalSlots && organizerName;
+  const isPreviewEnabled = matchTitle && selectedVenueId && matchDate && matchTime && totalSlots && organizerName && startTime && endTime;
 
   useEffect(() => {
     const fetchVenues = async () => {
@@ -302,6 +322,8 @@ const Organize = () => {
           venue_id: data.venue_id,
           match_date: format(data.match_date, "yyyy-MM-dd"),
           match_time: data.match_time,
+          start_time: data.start_time,
+          end_time: data.end_time,
           total_slots: data.total_slots,
           is_paid: data.is_paid,
           price: data.is_paid ? data.price : null,
@@ -320,6 +342,7 @@ const Organize = () => {
           sell_tickets: data.sell_tickets,
           ticket_price: data.sell_tickets ? data.ticket_price : null,
           max_tickets: data.sell_tickets ? data.max_tickets : null,
+          total_tickets_available: data.sell_tickets && data.max_tickets ? data.max_tickets : 0,
         })
         .select('id, slug, super_code')
         .single();
@@ -553,6 +576,58 @@ const Organize = () => {
                           <Clock className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
                         </div>
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="start_time"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Start Time</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input
+                            type="time"
+                            placeholder="HH:MM"
+                            className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                            {...field}
+                          />
+                          <Clock className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                        </div>
+                      </FormControl>
+                      <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                        Match start time (Africa/Lagos timezone)
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="end_time"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">End Time</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input
+                            type="time"
+                            placeholder="HH:MM"
+                            className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                            {...field}
+                          />
+                          <Clock className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                        </div>
+                      </FormControl>
+                      <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                        Match end time (Africa/Lagos timezone)
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -1064,6 +1139,10 @@ const Organize = () => {
                   <span>{matchDate ? format(matchDate, "PPP") : "Date"} at {matchTime || "Time"}</span>
                 </div>
                 <div className="flex items-center">
+                  <Clock className="h-4 w-4 mr-2" />
+                  <span>From {startTime || "Start"} to {endTime || "End"}</span>
+                </div>
+                <div className="flex items-center">
                   <User className="h-4 w-4 mr-2" />
                   <span>Organized by {organizerName || "Organizer"}</span>
                 </div>
@@ -1168,6 +1247,10 @@ const Organize = () => {
                 <div className="flex items-center">
                   <CalendarIcon className="h-4 w-4 mr-2" />
                   <span>{matchDate ? format(matchDate, "PPP") : "Date"} at {matchTime || "Time"}</span>
+                </div>
+                <div className="flex items-center">
+                  <Clock className="h-4 w-4 mr-2" />
+                  <span>From {startTime || "Start"} to {endTime || "End"}</span>
                 </div>
                 <div className="flex items-center">
                   <User className="h-4 w-4 mr-2" />
