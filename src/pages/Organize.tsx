@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+mport { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -61,10 +61,6 @@ const formSchema = z.object({
     required_error: "Please select a date",
     invalid_type_error: "Please select a valid date" 
   }),
-  match_time: z.string()
-    .regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, { 
-      message: "Please enter a valid time in HH:MM format (24-hour clock)" 
-    }),
   start_time: z.string()
     .regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, { 
       message: "Please enter a valid start time in HH:MM format (24-hour clock)" 
@@ -122,10 +118,10 @@ const formSchema = z.object({
     .optional()
     .nullable(),
 }).refine(data => {
-  const now = new Date("2025-05-16T21:20:00+01:00"); // Current time in WAT
+  const now = new Date("2025-05-16T21:32:00+01:00"); // Current time in WAT
   const selectedDateTime = new Date(data.match_date);
-  const [hours, minutes] = data.match_time.split(':').map(Number);
-  selectedDateTime.setHours(hours, minutes, 0, 0);
+  const [startHours, startMinutes] = data.start_time.split(':').map(Number);
+  selectedDateTime.setHours(startHours, startMinutes, 0, 0);
 
   const tenMinutesLater = new Date(now.getTime() + 10 * 60 * 1000);
   if (selectedDateTime < tenMinutesLater) {
@@ -135,7 +131,7 @@ const formSchema = z.object({
   return true;
 }, {
   message: "Match must be scheduled at least 10 minutes from now",
-  path: ["match_time"],
+  path: ["start_time"],
 }).refine(data => {
   if (data.sell_tickets && !data.ticket_price) {
     return false;
@@ -178,6 +174,9 @@ const Organize = () => {
   const [venueDialogOpen, setVenueDialogOpen] = useState(false);
   const [successDialogOpen, setSuccessDialogOpen] = useState(false);
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
+  const [isPreferencesOpen, setIsPreferencesOpen] = useState(false);
+  const [isPaymentOpen, setIsPaymentOpen] = useState(false);
+  const [isTicketSalesOpen, setIsTicketSalesOpen] = useState(false);
   const [supercode, setSupercode] = useState<string | null>(null);
   const [matchSlug, setMatchSlug] = useState<string | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -246,7 +245,6 @@ const Organize = () => {
   const selectedVenueId = form.watch("venue_id");
   const matchTitle = form.watch("title");
   const matchDate = form.watch("match_date");
-  const matchTime = form.watch("match_time");
   const startTime = form.watch("start_time");
   const endTime = form.watch("end_time");
   const organizerName = form.watch("organizer_name");
@@ -262,7 +260,7 @@ const Organize = () => {
   const maxTickets = form.watch("max_tickets");
 
   // Determine if preview button should be enabled
-  const isPreviewEnabled = matchTitle && selectedVenueId && matchDate && matchTime && totalSlots && organizerName && startTime && endTime;
+  const isPreviewEnabled = matchTitle && selectedVenueId && matchDate && startTime && endTime && totalSlots && organizerName;
 
   useEffect(() => {
     const fetchVenues = async () => {
@@ -321,7 +319,6 @@ const Organize = () => {
           title: data.title,
           venue_id: data.venue_id,
           match_date: format(data.match_date, "yyyy-MM-dd"),
-          match_time: data.match_time,
           start_time: data.start_time,
           end_time: data.end_time,
           total_slots: data.total_slots,
@@ -442,7 +439,7 @@ const Organize = () => {
       <div className="p-6 max-w-3xl mx-auto">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            {/* Match Details Section */}
+            {/* Match Details Section (Expanded by default) */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
               <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Match Details</h2>
               
@@ -558,28 +555,6 @@ const Organize = () => {
                     </FormItem>
                   )}
                 />
-
-                <FormField
-                  control={form.control}
-                  name="match_time"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Time</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <Input
-                            type="time"
-                            placeholder="HH:MM"
-                            className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                            {...field}
-                          />
-                          <Clock className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -681,246 +656,351 @@ const Organize = () => {
               />
             </div>
 
-            {/* Preferences (Optional) Section */}
+            {/* Preferences Section (Collapsible) */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
-              <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Preferences (Optional)</h2>
+              <div className="flex justify-between items-center cursor-pointer" onClick={() => setIsPreferencesOpen(!isPreferencesOpen)}>
+                <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Preferences (Optional)</h2>
+                <span>{isPreferencesOpen ? '-' : '+'}</span>
+              </div>
+              {isPreferencesOpen && (
+                <>
+                  <FormField
+                    control={form.control}
+                    name="skill_level"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Skill Level</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || undefined}>
+                          <FormControl>
+                            <SelectTrigger className="w-full text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white">
+                              <SelectValue placeholder="Select Skill Level" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {skillLevels.map((level) => (
+                              <SelectItem key={level} value={level} className="text-base">
+                                {level}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                          Select the preferred skill level for this match (optional)
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-              <FormField
-                control={form.control}
-                name="skill_level"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Skill Level</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || undefined}>
-                      <FormControl>
-                        <SelectTrigger className="w-full text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white">
-                          <SelectValue placeholder="All Skills" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="All Skills">All Skills</SelectItem>
-                        {skillLevels.map((level) => (
-                          <SelectItem key={level} value={level} className="text-base">
-                            {level}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
-                      Select the preferred skill level for this match (optional)
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                  <FormField
+                    control={form.control}
+                    name="match_type"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Match Type</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || undefined}>
+                          <FormControl>
+                            <SelectTrigger className="w-full text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white">
+                              <SelectValue placeholder="Select Match Type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {matchTypes.map((type) => (
+                              <SelectItem key={type} value={type} className="text-base">
+                                {type}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                          Select the type of match (optional)
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-              <FormField
-                control={form.control}
-                name="match_type"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Match Type</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || undefined}>
-                      <FormControl>
-                        <SelectTrigger className="w-full text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white">
-                          <SelectValue placeholder="Select Match Type" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="Select Match Type">Select Match Type</SelectItem>
-                        {matchTypes.map((type) => (
-                          <SelectItem key={type} value={type} className="text-base">
-                            {type}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
-                      Select the type of match (optional)
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="gender"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Gender Preference</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || undefined}>
-                      <FormControl>
-                        <SelectTrigger className="w-full text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white">
-                          <SelectValue placeholder="All Genders" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="All Genders">All Genders</SelectItem>
-                        {genders.map((gender) => (
-                          <SelectItem key={gender} value={gender} className="text-base">
-                            {gender}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
-                      Select the preferred gender for this match (optional)
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                  <FormField
+                    control={form.control}
+                    name="gender"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Gender Preference</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || undefined}>
+                          <FormControl>
+                            <SelectTrigger className="w-full text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white">
+                              <SelectValue placeholder="Select Gender" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {genders.map((gender) => (
+                              <SelectItem key={gender} value={gender} className="text-base">
+                                {gender}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                          Select the preferred gender for this match (optional)
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </>
+              )}
             </div>
 
-            {/* Payment and Privacy Section */}
+            {/* Payment & Privacy Section (Collapsible) */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
-              <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Payment & Privacy</h2>
-
-              <FormField
-                control={form.control}
-                name="is_paid"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 dark:border-gray-600">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-base font-medium text-gray-700 dark:text-gray-300">
-                        Paid Match
-                      </FormLabel>
-                      <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
-                        Toggle if players need to pay to join this match
-                      </FormDescription>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        className="data-[state=checked]:bg-green-500"
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-
-              {isPaid && (
-                <FormField
-                  control={form.control}
-                  name="price"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Price per Player (₦)</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          placeholder="0.00"
-                          min={0}
-                          step="0.01"
-                          className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                          {...field}
-                          value={field.value ?? ""}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            field.onChange(value === "" ? null : parseFloat(value));
-                          }}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
-
-              {isPaid && (
-                <FormField
-                  control={form.control}
-                  name="allow_bulk_tickets"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 dark:border-gray-600">
-                      <div className="space-y-0.5">
-                        <FormLabel className="text-base font-medium text-gray-700 dark:text-gray-300">
-                          Allow Bulk Ticket Purchase
-                        </FormLabel>
-                        <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
-                          Toggle to allow players to purchase multiple slots (up to 5 or available slots)
-                        </FormDescription>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                          className="data-[state=checked]:bg-green-500"
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              )}
-
-              <FormField
-                control={form.control}
-                name="is_private"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 dark:border-gray-600">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-base font-medium text-gray-700 dark:text-gray-300">
-                        Private Match
-                      </FormLabel>
-                      <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
-                        Toggle to restrict access to invited players only
-                      </FormDescription>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        className="data-[state=checked]:bg-green-500"
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-
-              {isPrivate && (
-                <FormField
-                  control={form.control}
-                  name="access_password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Access Password</FormLabel>
-                      <div className="flex items-center gap-2">
+              <div className="flex justify-between items-center cursor-pointer" onClick={() => setIsPaymentOpen(!isPaymentOpen)}>
+                <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Payment & Privacy</h2>
+                <span>{isPaymentOpen ? '-' : '+'}</span>
+              </div>
+              {isPaymentOpen && (
+                <>
+                  <FormField
+                    control={form.control}
+                    name="is_paid"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 dark:border-gray-600">
+                        <div className="space-y-0.5">
+                          <FormLabel className="text-base font-medium text-gray-700 dark:text-gray-300">
+                            Paid Match
+                          </FormLabel>
+                          <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                            Toggle if players need to pay to join this match
+                          </FormDescription>
+                        </div>
                         <FormControl>
-                          <Input
-                            value={field.value || ''}
-                            readOnly
-                            className="font-mono text-base border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            className="data-[state=checked]:bg-green-500"
                           />
                         </FormControl>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="text-sm font-medium hover:bg-green-50 dark:hover:bg-gray-700 transition-colors"
-                          onClick={() => {
-                            navigator.clipboard.writeText(field.value || '');
-                            toast({
-                              title: "Copied!",
-                              description: "Password copied to clipboard",
-                            });
-                          }}
-                        >
-                          <Copy size={16} className="mr-2" />
-                          Copy
-                        </Button>
-                      </div>
-                      <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
-                        Share this password with players you want to invite
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
+                      </FormItem>
+                    )}
+                  />
+
+                  {isPaid && (
+                    <FormField
+                      control={form.control}
+                      name="price"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Price per Player (₦)</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              placeholder="0.00"
+                              min={0}
+                              step="0.01"
+                              className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                              {...field}
+                              value={field.value ?? ""}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                field.onChange(value === "" ? null : parseFloat(value));
+                              }}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   )}
-                />
+
+                  {isPaid && (
+                    <FormField
+                      control={form.control}
+                      name="allow_bulk_tickets"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 dark:border-gray-600">
+                          <div className="space-y-0.5">
+                            <FormLabel className="text-base font-medium text-gray-700 dark:text-gray-300">
+                              Allow Bulk Ticket Purchase
+                            </FormLabel>
+                            <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                              Toggle to allow players to purchase multiple slots (up to 5 or available slots)
+                            </FormDescription>
+                          </div>
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              className="data-[state=checked]:bg-green-500"
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  )}
+
+                  <FormField
+                    control={form.control}
+                    name="is_private"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 dark:border-gray-600">
+                        <div className="space-y-0.5">
+                          <FormLabel className="text-base font-medium text-gray-700 dark:text-gray-300">
+                            Private Match
+                          </FormLabel>
+                          <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                            Toggle to restrict access to invited players only
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            className="data-[state=checked]:bg-green-500"
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  {isPrivate && (
+                    <FormField
+                      control={form.control}
+                      name="access_password"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Access Password</FormLabel>
+                          <div className="flex items-center gap-2">
+                            <FormControl>
+                              <Input
+                                value={field.value || ''}
+                                readOnly
+                                className="font-mono text-base border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                              />
+                            </FormControl>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="text-sm font-medium hover:bg-green-50 dark:hover:bg-gray-700 transition-colors"
+                              onClick={() => {
+                                navigator.clipboard.writeText(field.value || '');
+                                toast({
+                                  title: "Copied!",
+                                  description: "Password copied to clipboard",
+                                });
+                              }}
+                            >
+                              <Copy size={16} className="mr-2" />
+                              Copy
+                            </Button>
+                          </div>
+                          <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                            Share this password with players you want to invite
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                </>
               )}
             </div>
 
-            {/* Organizer Details Section */}
+            {/* Ticket Sales Section (Collapsible) */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
+              <div className="flex justify-between items-center cursor-pointer" onClick={() => setIsTicketSalesOpen(!isTicketSalesOpen)}>
+                <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Ticket Sales</h2>
+                <span>{isTicketSalesOpen ? '-' : '+'}</span>
+              </div>
+              {isTicketSalesOpen && (
+                <>
+                  <FormField
+                    control={form.control}
+                    name="sell_tickets"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 dark:border-gray-600">
+                        <div className="space-y-0.5">
+                          <FormLabel className="text-base font-medium text-gray-700 dark:text-gray-300">
+                            Sell Tickets to Fans
+                          </FormLabel>
+                          <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                            Toggle to allow fans to purchase tickets to watch the match
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            className="data-[state=checked]:bg-green-500"
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  {sellTickets && (
+                    <>
+                      <FormField
+                        control={form.control}
+                        name="ticket_price"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Ticket Price (₦)</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                placeholder="200.00"
+                                min={200}
+                                step="0.01"
+                                className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                                {...field}
+                                value={field.value ?? ""}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  field.onChange(value === "" ? null : parseFloat(value));
+                                }}
+                              />
+                            </FormControl>
+                            <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                              Set the price for each ticket (minimum ₦200)
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="max_tickets"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Maximum Tickets (Optional)</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                placeholder="Enter maximum number of tickets"
+                                min={1}
+                                max={1000}
+                                className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                                {...field}
+                                value={field.value ?? ""}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  field.onChange(value === "" ? null : parseInt(value, 10));
+                                }}
+                              />
+                            </FormControl>
+                            <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                              Limit the total number of tickets available for purchase (1-1000)
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* Organizer Details Section (Expanded by default) */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
               <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Organizer Details</h2>
 
@@ -1001,96 +1081,6 @@ const Organize = () => {
               />
             </div>
 
-            {/* Ticket Sales Section */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
-              <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Ticket Sales</h2>
-
-              <FormField
-                control={form.control}
-                name="sell_tickets"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 dark:border-gray-600">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-base font-medium text-gray-700 dark:text-gray-300">
-                        Sell Tickets to Fans
-                      </FormLabel>
-                      <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
-                        Toggle to allow fans to purchase tickets to watch the match
-                      </FormDescription>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        className="data-[state=checked]:bg-green-500"
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-
-              {sellTickets && (
-                <>
-                  <FormField
-                    control={form.control}
-                    name="ticket_price"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Ticket Price (₦)</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            placeholder="200.00"
-                            min={200}
-                            step="0.01"
-                            className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                            {...field}
-                            value={field.value ?? ""}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              field.onChange(value === "" ? null : parseFloat(value));
-                            }}
-                          />
-                        </FormControl>
-                        <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
-                          Set the price for each ticket (minimum ₦200)
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="max_tickets"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Maximum Tickets (Optional)</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            placeholder="Enter maximum number of tickets"
-                            min={1}
-                            max={1000}
-                            className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                            {...field}
-                            value={field.value ?? ""}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              field.onChange(value === "" ? null : parseInt(value, 10));
-                            }}
-                          />
-                        </FormControl>
-                        <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
-                          Limit the total number of tickets available for purchase (1-1000)
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </>
-              )}
-            </div>
-
             <div className="flex gap-4">
               <Button
                 type="button"
@@ -1136,7 +1126,7 @@ const Organize = () => {
                 </div>
                 <div className="flex items-center">
                   <CalendarIcon className="h-4 w-4 mr-2" />
-                  <span>{matchDate ? format(matchDate, "PPP") : "Date"} at {matchTime || "Time"}</span>
+                  <span>{matchDate ? format(matchDate, "PPP") : "Date"}</span>
                 </div>
                 <div className="flex items-center">
                   <Clock className="h-4 w-4 mr-2" />
@@ -1246,7 +1236,7 @@ const Organize = () => {
                 </div>
                 <div className="flex items-center">
                   <CalendarIcon className="h-4 w-4 mr-2" />
-                  <span>{matchDate ? format(matchDate, "PPP") : "Date"} at {matchTime || "Time"}</span>
+                  <span>{matchDate ? format(matchDate, "PPP") : "Date"}</span>
                 </div>
                 <div className="flex items-center">
                   <Clock className="h-4 w-4 mr-2" />
