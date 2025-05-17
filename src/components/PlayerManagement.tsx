@@ -4,12 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
-import { differenceInMinutes } from "date-fns";
+import { differenceInMinutes, isPast, addHours } from "date-fns";
 
 type Match = {
   id: string;
@@ -154,6 +153,7 @@ const PlayerManagement = ({
   const { toast } = useToast();
   const [mode, setMode] = useState<"checkin" | null>(null);
   const [cashoutDialogOpen, setCashoutDialogOpen] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [bankAccountNumber, setBankAccountNumber] = useState("");
   const [bankName, setBankName] = useState("");
   const [accountName, setAccountName] = useState("");
@@ -177,7 +177,6 @@ const PlayerManagement = ({
 
       if (!match || !userId) return;
       
-      // Fetch wallet balance
       const { data: walletData, error: walletError } = await supabase
         .from("wallets")
         .select("balance")
@@ -188,7 +187,6 @@ const PlayerManagement = ({
         setWalletBalance(walletData.balance);
       }
 
-      // Fetch cashout requests
       const { data: cashoutData, error: cashoutError } = await supabase
         .from("cashout_requests")
         .select("*")
@@ -216,9 +214,21 @@ const PlayerManagement = ({
   const canCheckin = () => {
     if (!match || match.cancellation_status || !match.players?.length) return false;
     const now = new Date();
-    const matchEndTime = match.match_end_time ? new Date(match.match_end_time) : 
-      new Date(`${match.match_date}T${match.match_time}`) + 2 * 60 * 60 * 1000;
-    return now <= matchEndTime;
+    let matchEndTime: Date;
+    if (match.match_end_time) {
+      matchEndTime = new Date(match.match_end_time);
+    } else {
+      // Assume 2-hour duration from match start if end time is not set
+      matchEndTime = addHours(new Date(`${match.match_date}T${match.match_time}`), 2);
+    }
+    const isEndTimeFuture = !isPast(matchEndTime);
+    console.log("canCheckin Debug:", {
+      playersLength: match.players?.length,
+      matchEndTime: matchEndTime.toISOString(),
+      isEndTimeFuture,
+      now: now.toISOString()
+    });
+    return match.players.length > 0 && isEndTimeFuture;
   };
 
   const canCancelMatch = () => {
@@ -298,7 +308,6 @@ const PlayerManagement = ({
 
     setLoading(true);
     try {
-      // Start transaction
       const { data: walletData, error: walletError } = await supabase
         .from("wallets")
         .select("balance")
@@ -336,7 +345,6 @@ const PlayerManagement = ({
 
       if (walletUpdateError) throw walletUpdateError;
 
-      // Refresh cashout requests
       const { data: cashoutData, error: cashoutFetchError } = await supabase
         .from("cashout_requests")
         .select("*")
@@ -419,7 +427,6 @@ const PlayerManagement = ({
       );
       setLoading(true);
       try {
-        // Update player status
         const { error: playerError } = await supabase
           .from("players")
           .update({ status: "checked_in", updated_at: new Date().toISOString() })
@@ -427,7 +434,6 @@ const PlayerManagement = ({
 
         if (playerError) throw playerError;
 
-        // Update wallet balance if paid match
         if (match?.is_paid && match.price && userId) {
           const { data: walletData, error: walletError } = await supabase
             .from("wallets")
@@ -528,7 +534,7 @@ const PlayerManagement = ({
           Check-in Players
         </Button>
         <Button
-          onClick={handleCancelMatch}
+          onClick={() => setCancelDialogOpen(true)}
           className={`bg-red-500 hover:bg-red-600 text-white ${!canCancelMatch() ? "opacity-50 cursor-not-allowed" : ""}`}
           disabled={!canCancelMatch() || loading}
         >
@@ -661,7 +667,7 @@ const PlayerManagement = ({
       )}
 
       <Dialog open={cashoutDialogOpen} onOpenChange={setCashoutDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-md rounded-lg">
           <DialogHeader>
             <DialogTitle>Request Cashout</DialogTitle>
             <DialogDescription>
@@ -710,18 +716,16 @@ const PlayerManagement = ({
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Bank Name
               </label>
-              <Select onValueChange={setBankName} value={bankName}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Select bank" />
-                </SelectTrigger>
-                <SelectContent>
-                  {nigerianBanks.map((bank) => (
-                    <SelectItem key={bank} value={bank}>
-                      {bank}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <select
+                value={bankName}
+                onChange={(e) => setBankName(e.target.value)}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+              >
+                <option value="">Select a bank</option>
+                {nigerianBanks.map((bank) => (
+                  <option key={bank} value={bank}>{bank}</option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -740,7 +744,7 @@ const PlayerManagement = ({
               )}
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="mt-6">
             <Button
               variant="outline"
               onClick={() => setCashoutDialogOpen(false)}
@@ -760,6 +764,32 @@ const PlayerManagement = ({
               ) : (
                 "Submit Cashout"
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <DialogContent className="max-w-md rounded-lg">
+          <DialogHeader>
+            <DialogTitle>Confirm Match Cancellation</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to cancel this match? This action cannot be undone, and players will be notified.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setCancelDialogOpen(false)}
+            >
+              No, Keep Match
+            </Button>
+            <Button
+              onClick={handleCancelMatch}
+              className="bg-red-500 hover:bg-red-600 text-white"
+              disabled={loading}
+            >
+              Yes, Cancel Match
             </Button>
           </DialogFooter>
         </DialogContent>
