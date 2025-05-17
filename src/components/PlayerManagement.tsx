@@ -51,70 +51,24 @@ type Cashout = {
   temp_identifier?: string;
 };
 
-const codeSchema = z
-  .string()
-  .regex(/^\d{6}$/, { message: "Code must be exactly 6 digits" });
-
-const bankAccountSchema = z
-  .string()
-  .regex(/^\d{10}$/, { message: "Bank account number must be exactly 10 digits" });
-
-const accountNameSchema = z
-  .string()
-  .regex(/^[A-Za-z\s]+$/, { message: "Account name must contain only letters and spaces" })
-  .min(2, { message: "Account name must be at least 2 characters" });
-
-const amountSchema = z
-  .number()
-  .min(1, { message: "Amount must be at least 1" })
-  .positive({ message: "Amount must be positive" });
+const codeSchema = z.string().regex(/^\d{6}$/, { message: "Code must be exactly 6 digits" });
+const bankAccountSchema = z.string().regex(/^\d{10}$/, { message: "Bank account number must be exactly 10 digits" });
+const accountNameSchema = z.string().regex(/^[A-Za-z\s]+$/, { message: "Account name must contain only letters and spaces" }).min(2, { message: "Account name must be at least 2 characters" });
+const amountSchema = z.number().min(1, { message: "Amount must be at least 1" }).positive({ message: "Amount must be positive" });
 
 const nigerianBanks = [
-  "Access Bank",
-  "Citibank Nigeria",
-  "Ecobank Nigeria",
-  "Fidelity Bank",
-  "First Bank of Nigeria",
-  "First City Monument Bank (FCMB)",
-  "Globus Bank",
-  "Guaranty Trust Bank (GTB)",
-  "Heritage Bank",
-  "Keystone Bank",
-  "Polaris Bank",
-  "Providus Bank",
-  "Stanbic IBTC Bank",
-  "Standard Chartered Bank",
-  "Sterling Bank",
-  "Titan Trust Bank",
-  "Union Bank of Nigeria",
-  "United Bank for Africa (UBA)",
-  "Unity Bank",
-  "Wema Bank",
-  "Zenith Bank",
-  "SunTrust Bank Nigeria Limited",
-  "Parallex Bank",
-  "TAJ Bank",
-  "Lotus Bank",
-  "Opay (Paycom MFB)",
-  "PalmPay (PalmPay Ltd. MFB)",
-  "Moniepoint MFB",
-  "Kuda Bank (Kuda MFB)",
-  "Rubies Bank (Rubies MFB)",
-  "Sparkle MFB",
-  "VFD MFB",
-  "FairMoney MFB",
-  "Carbon (One Finance MFB)",
-  "Mint MFB",
-  "Eyowo MFB",
-  "GoMoney (Go Financial Services)",
-  "ALAT by Wema",
-  "Branch MFB",
-  "9Pay MFB",
-  "MKOBO MFB",
-  "PayDay (Africhange Technologies)",
-  "Chipper Cash (Chipper Technologies)",
-  "Paga",
-  "NowNow MFB",
+  "Access Bank", "Citibank Nigeria", "Ecobank Nigeria", "Fidelity Bank", 
+  "First Bank of Nigeria", "First City Monument Bank (FCMB)", "Globus Bank",
+  "Guaranty Trust Bank (GTB)", "Heritage Bank", "Keystone Bank", "Polaris Bank",
+  "Providus Bank", "Stanbic IBTC Bank", "Standard Chartered Bank", "Sterling Bank",
+  "Titan Trust Bank", "Union Bank of Nigeria", "United Bank for Africa (UBA)",
+  "Unity Bank", "Wema Bank", "Zenith Bank", "SunTrust Bank Nigeria Limited",
+  "Parallex Bank", "TAJ Bank", "Lotus Bank", "Opay (Paycom MFB)",
+  "PalmPay (PalmPay Ltd. MFB)", "Moniepoint MFB", "Kuda Bank (Kuda MFB)",
+  "Rubies Bank (Rubies MFB)", "Sparkle MFB", "VFD MFB", "FairMoney MFB",
+  "Carbon (One Finance MFB)", "Mint MFB", "Eyowo MFB", "GoMoney (Go Financial Services)",
+  "ALAT by Wema", "Branch MFB", "9Pay MFB", "MKOBO MFB", "PayDay (Africhange Technologies)",
+  "Chipper Cash (Chipper Technologies)", "Paga", "NowNow MFB"
 ];
 
 type PlayerManagementProps = {
@@ -216,14 +170,7 @@ const PlayerManagement = ({
   };
 
   const canCheckin = () => {
-    if (!match || match.cancellation_status || !match.players?.length) {
-      console.log("canCheckin failed:", {
-        hasMatch: !!match,
-        cancellationStatus: match?.cancellation_status,
-        playersLength: match?.players?.length
-      });
-      return false;
-    }
+    if (!match || match.cancellation_status || !match.players?.length) return false;
     const now = new Date();
     let matchEndTime: Date;
     try {
@@ -233,29 +180,12 @@ const PlayerManagement = ({
         matchEndTime = addHours(new Date(`${match.match_date}T${match.match_time}`), 2);
       }
       if (isNaN(matchEndTime.getTime())) {
-        console.warn("Invalid match end time detected, using fallback time (03:00 PM WAT today)");
-        matchEndTime = new Date("2025-05-17T15:00:00+01:00"); // 03:00 PM WAT fallback
+        matchEndTime = new Date("2025-05-17T15:00:00+01:00");
       }
     } catch (error) {
-      console.error("Error calculating matchEndTime:", error, {
-        matchEndTime: match.match_end_time,
-        matchDate: match.match_date,
-        matchTime: match.match_time
-      });
-      matchEndTime = new Date("2025-05-17T15:00:00+01:00"); // Fallback to 03:00 PM WAT
+      matchEndTime = new Date("2025-05-17T15:00:00+01:00");
     }
     const isEndTimeFuture = !isPast(matchEndTime);
-    console.log("canCheckin Debug:", {
-      matchId: match.id,
-      cancellationStatus: match.cancellation_status,
-      playersLength: match.players?.length,
-      matchEndTimeRaw: match.match_end_time,
-      matchDate: match.match_date,
-      matchTime: match.match_time,
-      matchEndTime: matchEndTime.toISOString(),
-      isEndTimeFuture,
-      now: now.toISOString()
-    });
     return match.players.length > 0 && isEndTimeFuture;
   };
 
@@ -417,7 +347,6 @@ const PlayerManagement = ({
 
   const validateCheckinCode = async (playerId: string) => {
     const code = checkinCodes[playerId];
-    const validation = codeSchema.safeParse(code);
     if (!code || code.length !== 6) {
       toast({
         title: "Invalid Code",
@@ -426,7 +355,7 @@ const PlayerManagement = ({
       });
       return;
     }
-  
+
     const player = match?.players?.find(p => p.id === playerId);
     if (!player) {
       toast({
@@ -436,56 +365,46 @@ const PlayerManagement = ({
       });
       return;
     }
-  
+
     setCheckingInPlayers(prev => ({ ...prev, [playerId]: true }));
-  
+
     try {
-      // Verify against Supabase
       const { data, error } = await supabase
         .from('players')
-        .select('confirmation_code, player_status')
+        .select('id, confirmation_code, status, player_status')
         .eq('id', playerId)
         .single();
-  
-      if (error || !data) {
-        throw new Error(error?.message || "Player not found in database");
-      }
-  
-      if (data.player_status !== 'Registered') {
-        throw new Error("Player is already checked in or absent");
-      }
-  
-      if (data.confirmation_code !== code) {
-        throw new Error("Invalid confirmation code");
-      }
-  
-      // Update player status in Supabase
+
+      if (error || !data) throw new Error(error?.message || "Player not found in database");
+
+      const currentStatus = data.player_status || data.status;
+      if (currentStatus !== 'Registered') throw new Error("Player is already checked in or absent");
+      if (data.confirmation_code !== code) throw new Error("Invalid confirmation code");
+
       const { error: updateError } = await supabase
         .from('players')
         .update({ 
           player_status: 'Checked In',
+          status: 'Checked In',
           updated_at: new Date().toISOString()
         })
         .eq('id', playerId);
-  
+
       if (updateError) throw updateError;
-  
-      // Update local state
+
       setPlayerStatuses(prev =>
         prev.map(p => p.id === playerId ? { ...p, status: 'Checked In' } : p)
       );
-  
-      // Refresh match data to sync UI with Supabase
-      await fetchMatch();
-  
+
       toast({
         title: "Success",
         description: `${player.player_name} has been checked in successfully`,
       });
-  
-      // Clear input and errors
+
       setCheckinCodes(prev => ({ ...prev, [playerId]: "" }));
       setCheckinCodeErrors(prev => ({ ...prev, [playerId]: null }));
+      await fetchMatch();
+
     } catch (error: any) {
       toast({
         title: "Error",
@@ -499,23 +418,14 @@ const PlayerManagement = ({
 
   const getStatusStyles = (status: string) => {
     switch (status) {
-      case 'Registered':
-        return "bg-yellow-500 text-white border-yellow-600";
-      case 'Checked In':
-        return "bg-green-500 text-white border-green-600";
-      case 'Absent':
-        return "bg-red-500 text-white border-red-600";
-      case "successful":
-        return "bg-green-100 text-green-700 border-green-300";
-      case "failed":
-        return "bg-red-100 text-red-700 border-red-300";
-      case "processed":
-        return "bg-blue-100 text-blue-700 border-blue-300";
-      case "under_review":
-      case "review":
-        return "bg-yellow-100 text-yellow-700 border-yellow-300";
-      default:
-        return "bg-yellow-100 text-yellow-700 border-yellow-300";
+      case 'Registered': return "bg-yellow-500 text-white border-yellow-600";
+      case 'Checked In': return "bg-green-500 text-white border-green-600";
+      case 'Absent': return "bg-red-500 text-white border-red-600";
+      case "successful": return "bg-green-100 text-green-700 border-green-300";
+      case "failed": return "bg-red-100 text-red-700 border-red-300";
+      case "processed": return "bg-blue-100 text-blue-700 border-blue-300";
+      case "under_review": case "review": return "bg-yellow-100 text-yellow-700 border-yellow-300";
+      default: return "bg-yellow-100 text-yellow-700 border-yellow-300";
     }
   };
 
@@ -610,9 +520,9 @@ const PlayerManagement = ({
                       )}
                     </p>
                     <span
-                      className={`inline-block mt-1 px-2 py-1 text-xs font-medium rounded border ${getStatusStyles(player.player_status)}`}
+                      className={`inline-block mt-1 px-2 py-1 text-xs font-medium rounded border ${getStatusStyles(player.player_status || player.status)}`}
                     >
-                      {player.player_status}
+                      {player.player_status || player.status}
                     </span>
                   </div>
                   {mode === "checkin" && (
