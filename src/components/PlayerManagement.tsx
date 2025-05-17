@@ -714,7 +714,12 @@ const PlayerManagement = ({
     <Button
       onClick={() => validateCheckinCode(player.id)}
       className="bg-blue-500 hover:bg-blue-600 text-white"
-      disabled={!!checkinCodeErrors[player.id] || !checkinCodes[player.id] || player.player_status !== 'Registered' || checkingInPlayers[player.id]}
+      disabled={
+        !checkinCodes[player.id] || 
+        checkinCodes[player.id].length !== 6 || 
+        player.player_status !== 'Registered' || 
+        checkingInPlayers[player.id]
+      }
     >
       {checkingInPlayers[player.id] ? (
         <Loader2 size={16} className="mr-2 animate-spin" />
