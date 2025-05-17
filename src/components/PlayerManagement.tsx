@@ -215,18 +215,41 @@ const PlayerManagement = ({
   };
 
   const canCheckin = () => {
-    if (!match || match.cancellation_status || !match.players?.length) return false;
+    if (!match || match.cancellation_status || !match.players?.length) {
+      console.log("canCheckin failed:", {
+        hasMatch: !!match,
+        cancellationStatus: match?.cancellation_status,
+        playersLength: match?.players?.length
+      });
+      return false;
+    }
     const now = new Date();
     let matchEndTime: Date;
-    if (match.match_end_time) {
-      matchEndTime = new Date(match.match_end_time);
-    } else {
-      // Assume 2-hour duration from match start if end time is not set
-      matchEndTime = addHours(new Date(`${match.match_date}T${match.match_time}`), 2);
+    try {
+      if (match.match_end_time) {
+        matchEndTime = new Date(match.match_end_time);
+      } else {
+        matchEndTime = addHours(new Date(`${match.match_date}T${match.match_time}`), 2);
+      }
+      if (isNaN(matchEndTime.getTime())) {
+        throw new Error("Invalid match end time");
+      }
+    } catch (error) {
+      console.error("Error calculating matchEndTime:", error, {
+        matchEndTime: match.match_end_time,
+        matchDate: match.match_date,
+        matchTime: match.match_time
+      });
+      return false;
     }
     const isEndTimeFuture = !isPast(matchEndTime);
     console.log("canCheckin Debug:", {
+      matchId: match.id,
+      cancellationStatus: match.cancellation_status,
       playersLength: match.players?.length,
+      matchEndTimeRaw: match.match_end_time,
+      matchDate: match.match_date,
+      matchTime: match.match_time,
       matchEndTime: matchEndTime.toISOString(),
       isEndTimeFuture,
       now: now.toISOString()
@@ -249,12 +272,22 @@ const PlayerManagement = ({
   };
 
   const handleCheckinMode = () => {
-    if (!match || match.cancellation_status) return;
-    
-    if (!canCheckin()) {
+    if (!match || match.cancellation_status) {
       toast({
         title: "Check-in Not Available",
-        description: "Check-in is not available as there are no registered players or the match has ended.",
+        description: "Match data is unavailable or the match is canceled.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!canCheckin()) {
+      const reason = !match.players?.length
+        ? "No players are registered for this match."
+        : "The match has ended or check-in is no longer available.";
+      toast({
+        title: "Check-in Not Available",
+        description: reason,
         variant: "destructive",
       });
       return;
@@ -628,7 +661,7 @@ const PlayerManagement = ({
                 <tr>
                   <th className="px-4 py-2">Amount</th>
                   <th className="px-4 py-2">Bank Details</th>
-                  <th className="px-4 py-2">Status</th>
+                  <th className="px-4 py-2">Status phase</th>
                   <th className="px-4 py-2">Created At</th>
                 </tr>
               </thead>
