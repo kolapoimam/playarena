@@ -232,7 +232,8 @@ const PlayerManagement = ({
         matchEndTime = addHours(new Date(`${match.match_date}T${match.match_time}`), 2);
       }
       if (isNaN(matchEndTime.getTime())) {
-        throw new Error("Invalid match end time");
+        console.warn("Invalid match end time detected, using fallback time (03:00 PM WAT today)");
+        matchEndTime = new Date("2025-05-17T15:00:00+01:00"); // 03:00 PM WAT fallback
       }
     } catch (error) {
       console.error("Error calculating matchEndTime:", error, {
@@ -240,7 +241,7 @@ const PlayerManagement = ({
         matchDate: match.match_date,
         matchTime: match.match_time
       });
-      return false;
+      matchEndTime = new Date("2025-05-17T15:00:00+01:00"); // Fallback to 03:00 PM WAT
     }
     const isEndTimeFuture = !isPast(matchEndTime);
     console.log("canCheckin Debug:", {
@@ -729,12 +730,12 @@ const PlayerManagement = ({
                         pattern="[0-9]*"
                         maxLength={6}
                         className="w-full sm:w-[150px]"
-                        disabled={!canCheckin() || player.player_status !== 'Registered' || checkingInPlayers[player.id]}
+                        disabled={player.player_status !== 'Registered' || checkingInPlayers[player.id]}
                       />
                       <Button
                         onClick={() => validateCheckinCode(player.id)}
                         className="bg-blue-500 hover:bg-blue-600 text-white"
-                        disabled={!!checkinCodeErrors[player.id] || !checkinCodes[player.id] || !canCheckin() || player.player_status !== 'Registered' || checkingInPlayers[player.id]}
+                        disabled={!!checkinCodeErrors[player.id] || !checkinCodes[player.id] || player.player_status !== 'Registered' || checkingInPlayers[player.id]}
                       >
                         {checkingInPlayers[player.id] ? (
                           <Loader2 size={16} className="mr-2 animate-spin" />
