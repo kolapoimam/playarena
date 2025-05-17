@@ -445,45 +445,28 @@ const PlayerManagement = ({
 
     setLoading(true);
     try {
-      console.log("Checking in player:", { playerId, playerName: player.player_name, code });
-      const { error: playerError } = await supabase
-        .from("players")
-        .update({ status: "checked_in", updated_at: new Date().toISOString() })
-        .eq("id", playerId);
+      console.log("Initiating check-in for player:", { playerId, playerName: player.player_name, code });
 
-      if (playerError) {
-        console.error("Database error updating player status:", playerError);
-        throw playerError;
+      // Attempt to update player status with retries
+      let updateError: any = null;
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        console.log(`Attempt ${attempt} to update player status for player:`, playerId);
+        const { error } = await supabase
+          .from("players")
+          .update({ status: "checked_in", updated_at: new Date().toISOString() })
+          .eq("id", playerId);
+
+        if (!error) {
+          updateError = null;
+          break;
+        }
+        updateError = error;
+        console.warn(`Attempt ${attempt} failed to update player status:`, updateError);
       }
 
-      if (match?.is_paid && match.price && userId) {
-        const slotsPurchased = player.slots_purchased || 1; // Default to 1 slot if not specified
-        const amountToAdd = match.price * slotsPurchased;
-
-        const { data: walletData, error: walletError } = await supabase
-          .from("wallets")
-          .select("balance")
-          .eq("organizer_id", userId)
-          .single();
-
-        if (walletError || !walletData) {
-          console.error("Failed to fetch wallet balance:", walletError);
-          throw new Error("Failed to fetch wallet balance");
-        }
-
-        const newBalance = walletData.balance + amountToAdd;
-        const { error: walletUpdateError } = await supabase
-          .from("wallets")
-          .update({ balance: newBalance, updated_at: new Date().toISOString() })
-          .eq("organizer_id", userId);
-
-        if (walletUpdateError) {
-          console.error("Failed to update wallet balance:", walletUpdateError);
-          throw walletUpdateError;
-        }
-
-        setWalletBalance(newBalance);
-        console.log("Wallet updated:", { newBalance, amountAdded: amountToAdd, slotsPurchased });
+      if (updateError) {
+        console.error("Failed to update player status after retries:", updateError);
+        throw updateError;
       }
 
       // Update local state to reflect check-in
@@ -498,6 +481,7 @@ const PlayerManagement = ({
       setCheckinCodeErrors((prev) => ({ ...prev, [playerId]: null }));
 
       // Re-fetch match to ensure UI sync
+      console.log("Re-fetching match data to sync UI for player:", playerId);
       await fetchMatch();
 
       console.log("Check-in successful for player:", playerId);
@@ -541,15 +525,6 @@ const PlayerManagement = ({
 
   if (!match) return null;
 
-  // Sort players: checked_in players first, then others
-  const sortedPlayers = match.players
-    ? [...match.players].sort((a, b) => {
-        if (a.status === "checked_in" && b.status !== "checked_in") return -1;
-        if (b.status === "checked_in" && a.status !== "checked_in") return 1;
-        return 0;
-      })
-    : [];
-
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700">
       <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Manage Players</h2>
@@ -560,31 +535,31 @@ const PlayerManagement = ({
         </p>
       </div>
 
-      <div className="flex flex-wrap gap-4 mb-4">
+      <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 mb-4">
         <Button
           onClick={handleTeamManagement}
-          className="bg-green-500 hover:bg-green-600 text-white"
+          className="bg-green-500 hover:bg-green-600 text-white w-full sm:w-auto"
           disabled={!canConfirmPlayers || match.cancellation_status}
         >
           Team Management
         </Button>
         <Button
           onClick={handleCheckinMode}
-          className="bg-blue-500 hover:bg-blue-600 text-white"
+          className="bg-blue-500 hover:bg-blue-600 text-white w-full sm:w-auto"
           disabled={!canCheckin() || match.cancellation_status}
         >
           Check-in Players
         </Button>
         <Button
           onClick={() => setCancelDialogOpen(true)}
-          className={`bg-red-500 hover:bg-red-600 text-white ${!canCancelMatch() ? "opacity-50 cursor-not-allowed" : ""}`}
+          className={`bg-red-500 hover:bg-red-600 text-white w-full sm:w-auto ${!canCancelMatch() ? "opacity-50 cursor-not-allowed" : ""}`}
           disabled={!canCancelMatch() || loading}
         >
           Cancel Match
         </Button>
         <Button
           onClick={handleCashoutMode}
-          className={`bg-yellow-500 hover:bg-yellow-600 text-white ${!isCashoutEligible() ? "opacity-50 cursor-not-allowed" : ""}`}
+          className={`bg-yellow-500 hover:bg-yellow-600 text-white w-full sm:w-auto ${!isCashoutEligible() ? "opacity-50 cursor-not-allowed" : ""}`}
           disabled={!isCashoutEligible() || match.cancellation_status}
         >
           Request Cashout
@@ -636,10 +611,10 @@ const PlayerManagement = ({
         </button>
         {isPlayersOpen && (
           <div className="space-y-4">
-            {sortedPlayers.length === 0 ? (
+            {(match.players || []).length === 0 ? (
               <p className="text-gray-600 dark:text-gray-400">No players registered for this match.</p>
             ) : (
-              sortedPlayers.map((player) => (
+              match.players?.map((player) => (
                 <div
                   key={player.id}
                   className="flex flex-col sm:flex-row gap-4 items-start sm:items-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg"
@@ -658,7 +633,7 @@ const PlayerManagement = ({
                       {player.status.replace("_", " ").charAt(0).toUpperCase() + player.status.replace("_", " ").slice(1)}
                     </span>
                   </div>
-                  {mode === "checkin" && player.status !== "checked_in" && (
+                  {mode === "checkin" && (
                     <div className="flex gap-2 w-full sm:w-auto">
                       <Input
                         placeholder="Enter check-in code"
@@ -668,12 +643,12 @@ const PlayerManagement = ({
                         pattern="[0-9]*"
                         maxLength={6}
                         className="w-full sm:w-[150px]"
-                        disabled={!canCheckin()}
+                        disabled={!canCheckin() || player.status === "checked_in"}
                       />
                       <Button
                         onClick={() => validateCheckinCode(player.id)}
                         className="bg-blue-500 hover:bg-blue-600 text-white"
-                        disabled={!!checkinCodeErrors[player.id] || !checkinCodes[player.id] || !canCheckin()}
+                        disabled={!!checkinCodeErrors[player.id] || !checkinCodes[player.id] || !canCheckin() || player.status === "checked_in"}
                       >
                         Verify
                       </Button>
