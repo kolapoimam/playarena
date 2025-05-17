@@ -32,11 +32,11 @@ type Match = {
   players: {
     id: string;
     player_name: string;
-    status: string; // Legacy status column
-    player_status: 'Registered' | 'Checked In' | 'Absent'; // New ENUM column
+    status: string;
+    player_status: 'Registered' | 'Checked In' | 'Absent';
     confirmation_code: string;
     details: { phone: string } | null;
-    slots_purchased?: number;
+    number_of_slots?: number;
   }[] | null;
 };
 
@@ -155,7 +155,8 @@ const PlayerManagement = ({
   const { toast } = useToast();
   const [mode, setMode] = useState<"checkin" | null>(null);
   const [cashoutDialogOpen, setCashoutDialogOpen] = useState(false);
-  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [checkinDialogOpen, setCheckinDialogOpen] = useState(false);
+  const [checkinPlayer, setCheckinPlayer] = useState<{ name: string; slots: number } | null>(null);
   const [bankAccountNumber, setBankAccountNumber] = useState("");
   const [bankName, setBankName] = useState("");
   const [accountName, setAccountName] = useState("");
@@ -176,6 +177,14 @@ const PlayerManagement = ({
         setUserId(session.session.user.id);
       } else {
         setUserId(null);
+      }
+
+      if (!match || !userId) return;
+      
+      const { data: walletData, error: walletError } = await supabase
+        .from("wallets")
+        .select("balance")
+        .eq("organizer_id",かく); setUserId(null);
       }
 
       if (!match || !userId) return;
@@ -256,20 +265,6 @@ const PlayerManagement = ({
       now: now.toISOString()
     });
     return match.players.length > 0 && isEndTimeFuture;
-  };
-
-  const canCancelMatch = () => {
-    if (!match || match.cancellation_status) return false;
-    const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
-    const now = new Date();
-    const minutesToStart = differenceInMinutes(matchDateTime, now);
-    return minutesToStart > 0;
-  };
-
-  const handleTeamManagement = () => {
-    if (match) {
-      navigate(`/team-management/${match.slug}`);
-    }
   };
 
   const handleCheckinMode = () => {
@@ -496,8 +491,9 @@ const PlayerManagement = ({
       // Verify player exists in Supabase
       const { data: playerCheck, error: playerCheckError } = await supabase
         .from("players")
-        .select("id, player_status")
+        .select("id, player_status, number_of_slots")
         .eq("id", playerId)
+        .eq("match_id", match!.id)
         .single();
 
       if (playerCheckError || !playerCheck) {
@@ -522,6 +518,7 @@ const PlayerManagement = ({
         const { error } = await supabase
           .from("players")
           .update({
+            status: "checked_in",
             player_status: 'Checked In',
             updated_at: new Date().toISOString()
           })
@@ -556,6 +553,13 @@ const PlayerManagement = ({
         )
       );
 
+      // Show confirmation dialog
+      setCheckinPlayer({
+        name: player.player_name,
+        slots: playerCheck.number_of_slots || 1
+      });
+      setCheckinDialogOpen(true);
+
       // Clear input and errors
       setCheckinCodes((prev) => ({ ...prev, [playerId]: "" }));
       setCheckinCodeErrors((prev) => ({ ...prev, [playerId]: null }));
@@ -567,7 +571,7 @@ const PlayerManagement = ({
       console.log("Check-in successful for player:", playerId);
       toast({
         title: "Success",
-        description: `${player.player_name} has been checked in. This action is irreversible.`,
+        description: `${player.player_name} has been checked in with ${playerCheck.number_of_slots || 1} slot(s). This action is irreversible.`,
       });
     } catch (error: any) {
       console.error("Error checking in player:", {
@@ -582,9 +586,6 @@ const PlayerManagement = ({
     } finally {
       setCheckingInPlayers((prev) => ({ ...prev, [playerId]: false }));
       setLoading(false);
-      // Always attempt to fetch latest match data
-      console.log("Final fetchMatch to ensure UI sync");
-      await fetchMatch();
     }
   };
 
@@ -622,31 +623,17 @@ const PlayerManagement = ({
         </p>
       </div>
 
-      <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 mb-4">
-        <Button
-          onClick={handleTeamManagement}
-          className="bg-green-500 hover:bg-green-600 text-white w-full sm:w-auto"
-          disabled={!canConfirmPlayers || match.cancellation_status}
-        >
-          Team Management
-        </Button>
+      <div className="flex gap-3 mb-4">
         <Button
           onClick={handleCheckinMode}
-          className="bg-blue-500 hover:bg-blue-600 text-white w-full sm:w-auto"
+          className="bg-blue-500 hover:bg-blue-600 text-white flex-1"
           disabled={!canCheckin() || match.cancellation_status}
         >
           Check-in Players
         </Button>
         <Button
-          onClick={() => setCancelDialogOpen(true)}
-          className={`bg-red-500 hover:bg-red-600 text-white w-full sm:w-auto ${!canCancelMatch() ? "opacity-50 cursor-not-allowed" : ""}`}
-          disabled={!canCancelMatch() || loading}
-        >
-          Cancel Match
-        </Button>
-        <Button
           onClick={handleCashoutMode}
-          className={`bg-yellow-500 hover:bg-yellow-600 text-white w-full sm:w-auto ${!isCashoutEligible() ? "opacity-50 cursor-not-allowed" : ""}`}
+          className={`bg-yellow-500 hover:bg-yellow-600 text-white flex-1 ${!isCashoutEligible() ? "opacity-50 cursor-not-allowed" : ""}`}
           disabled={!isCashoutEligible() || match.cancellation_status}
         >
           Request Cashout
@@ -662,7 +649,7 @@ const PlayerManagement = ({
                 <tr>
                   <th className="px-4 py-2">Amount</th>
                   <th className="px-4 py-2">Bank Details</th>
-                  <th className="px-4 py-2">Status phase</th>
+                  <th className="px-4 py-2">Status</th>
                   <th className="px-4 py-2">Created At</th>
                 </tr>
               </thead>
@@ -875,31 +862,30 @@ const PlayerManagement = ({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
-        <DialogContent className="max-w-md rounded-lg">
-          <DialogHeader>
-            <DialogTitle>Confirm Match Cancellation</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to cancel this match? This action cannot be undone, and players will be notified.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setCancelDialogOpen(false)}
-            >
-              No, Keep Match
-            </Button>
-            <Button
-              onClick={handleCancelMatch}
-              className="bg-red-500 hover:bg-red-600 text-white"
-              disabled={loading}
-            >
-              Yes, Cancel Match
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+<Dialog open={checkinDialogOpen} onOpenChange={setCheckinDialogOpen}>
+  <DialogContent className="max-w-xs rounded-2xl p-6">
+    <DialogHeader>
+      <DialogTitle className="text-lg font-semibold text-center">
+        Check-in Successful
+      </DialogTitle>
+      <DialogDescription className="text-sm text-center mt-2">
+        {checkinPlayer && (
+          <>
+            Successfully checked in {checkinPlayer.name} with {checkinPlayer.slots} slot{checkinPlayer.slots !== 1 ? 's' : ''}.
+          </>
+        )}
+      </DialogDescription>
+    </DialogHeader>
+    <DialogFooter className="mt-4 flex justify-center">
+      <Button
+        onClick={() => setCheckinDialogOpen(false)}
+        className="bg-green-500 hover:bg-green-600 text-white rounded-full px-6 py-2"
+      >
+        Close
+      </Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
     </div>
   );
 };
