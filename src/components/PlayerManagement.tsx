@@ -35,6 +35,7 @@ type Match = {
     status: string;
     confirmation_code: string;
     details: { phone: string } | null;
+    slots_purchased?: number;
   }[] | null;
 };
 
@@ -408,9 +409,18 @@ const PlayerManagement = ({
     }
 
     const player = match?.players?.find((p) => p.id === playerId);
-    if (!player) return;
+    if (!player) {
+      console.error("Player not found:", playerId);
+      toast({
+        title: "Error",
+        description: "Player not found.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     if (player.status === "checked_in") {
+      console.warn("Attempted to check in already checked-in player:", playerId);
       toast({
         title: "Error",
         description: "Player is already checked in. This action cannot be undone.",
@@ -419,59 +429,8 @@ const PlayerManagement = ({
       return;
     }
 
-    if (player.confirmation_code === code) {
-      setPlayerStatuses((prev) =>
-        prev.map((p) =>
-          p.id === playerId ? { ...p, status: "checked_in" } : p
-        )
-      );
-      setLoading(true);
-      try {
-        const { error: playerError } = await supabase
-          .from("players")
-          .update({ status: "checked_in", updated_at: new Date().toISOString() })
-          .eq("id", playerId);
-
-        if (playerError) throw playerError;
-
-        if (match?.is_paid && match.price && userId) {
-          const { data: walletData, error: walletError } = await supabase
-            .from("wallets")
-            .select("balance")
-            .eq("organizer_id", userId)
-            .single();
-
-          if (walletError || !walletData) throw new Error("Failed to fetch wallet balance");
-
-          const newBalance = walletData.balance + match.price;
-          const { error: walletUpdateError } = await supabase
-            .from("wallets")
-            .update({ balance: newBalance, updated_at: new Date().toISOString() })
-            .eq("organizer_id", userId);
-
-          if (walletUpdateError) throw walletUpdateError;
-
-          setWalletBalance(newBalance);
-        }
-
-        toast({
-          title: "Success",
-          description: `${player.player_name} has been checked in. This action is irreversible.`,
-        });
-        setCheckinCodes((prev) => ({ ...prev, [playerId]: "" }));
-        setCheckinCodeErrors((prev) => ({ ...prev, [playerId]: null }));
-        fetchMatch();
-      } catch (error) {
-        console.error("Error checking in player:", error);
-        toast({
-          title: "Error",
-          description: "Failed to check in player. Please try again.",
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
-      }
-    } else {
+    if (player.confirmation_code !== code) {
+      console.log("Invalid check-in code for player:", playerId, { entered: code, expected: player.confirmation_code });
       setCheckinCodeErrors((prev) => ({
         ...prev,
         [playerId]: "Invalid confirmation code",
@@ -481,6 +440,80 @@ const PlayerManagement = ({
         description: "Invalid confirmation code.",
         variant: "destructive",
       });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      console.log("Checking in player:", { playerId, playerName: player.player_name, code });
+      const { error: playerError } = await supabase
+        .from("players")
+        .update({ status: "checked_in", updated_at: new Date().toISOString() })
+        .eq("id", playerId);
+
+      if (playerError) {
+        console.error("Database error updating player status:", playerError);
+        throw playerError;
+      }
+
+      if (match?.is_paid && match.price && userId) {
+        const slotsPurchased = player.slots_purchased || 1; // Default to 1 slot if not specified
+        const amountToAdd = match.price * slotsPurchased;
+
+        const { data: walletData, error: walletError } = await supabase
+          .from("wallets")
+          .select("balance")
+          .eq("organizer_id", userId)
+          .single();
+
+        if (walletError || !walletData) {
+          console.error("Failed to fetch wallet balance:", walletError);
+          throw new Error("Failed to fetch wallet balance");
+        }
+
+        const newBalance = walletData.balance + amountToAdd;
+        const { error: walletUpdateError } = await supabase
+          .from("wallets")
+          .update({ balance: newBalance, updated_at: new Date().toISOString() })
+          .eq("organizer_id", userId);
+
+        if (walletUpdateError) {
+          console.error("Failed to update wallet balance:", walletUpdateError);
+          throw walletUpdateError;
+        }
+
+        setWalletBalance(newBalance);
+        console.log("Wallet updated:", { newBalance, amountAdded: amountToAdd, slotsPurchased });
+      }
+
+      // Update local state to reflect check-in
+      setPlayerStatuses((prev) =>
+        prev.map((p) =>
+          p.id === playerId ? { ...p, status: "checked_in" } : p
+        )
+      );
+
+      // Clear input and errors
+      setCheckinCodes((prev) => ({ ...prev, [playerId]: "" }));
+      setCheckinCodeErrors((prev) => ({ ...prev, [playerId]: null }));
+
+      // Re-fetch match to ensure UI sync
+      await fetchMatch();
+
+      console.log("Check-in successful for player:", playerId);
+      toast({
+        title: "Success",
+        description: `${player.player_name} has been checked in. This action is irreversible.`,
+      });
+    } catch (error) {
+      console.error("Error checking in player:", error);
+      toast({
+        title: "Error",
+        description: "Failed to check in player. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -507,6 +540,15 @@ const PlayerManagement = ({
   };
 
   if (!match) return null;
+
+  // Sort players: checked_in players first, then others
+  const sortedPlayers = match.players
+    ? [...match.players].sort((a, b) => {
+        if (a.status === "checked_in" && b.status !== "checked_in") return -1;
+        if (b.status === "checked_in" && a.status !== "checked_in") return 1;
+        return 0;
+      })
+    : [];
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700">
@@ -594,10 +636,10 @@ const PlayerManagement = ({
         </button>
         {isPlayersOpen && (
           <div className="space-y-4">
-            {(match.players || []).length === 0 ? (
+            {sortedPlayers.length === 0 ? (
               <p className="text-gray-600 dark:text-gray-400">No players registered for this match.</p>
             ) : (
-              match.players?.map((player) => (
+              sortedPlayers.map((player) => (
                 <div
                   key={player.id}
                   className="flex flex-col sm:flex-row gap-4 items-start sm:items-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg"
@@ -606,17 +648,15 @@ const PlayerManagement = ({
                     <p className="font-medium text-gray-900 dark:text-gray-100">{player.player_name}</p>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
                       Phone: {player.details?.phone || "Not provided"}
+                      {player.status === "checked_in" && (
+                        <span> | Code: {player.confirmation_code}</span>
+                      )}
                     </p>
                     <span
                       className={`inline-block mt-1 px-2 py-1 text-xs font-medium rounded border ${getStatusStyles(player.status)}`}
                     >
                       {player.status.replace("_", " ").charAt(0).toUpperCase() + player.status.replace("_", " ").slice(1)}
                     </span>
-                    {player.status === "checked_in" && (
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        Check-in code: {player.confirmation_code}
-                      </p>
-                    )}
                   </div>
                   {mode === "checkin" && player.status !== "checked_in" && (
                     <div className="flex gap-2 w-full sm:w-auto">
