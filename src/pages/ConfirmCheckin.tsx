@@ -192,7 +192,8 @@ const ConfirmCheckin = () => {
           }
         }
       } catch (cashoutError: any) {
-        console.error("Error fetching cashout:", cashoutError.message); setCashout(null);
+        console.error("Error fetching cashout:", cashoutError.message);
+        setCashout(null);
         toast({
           title: "Error",
           description: "Failed to fetch cashout information. Please try again later.",
@@ -409,31 +410,41 @@ const ConfirmCheckin = () => {
         )}
       </div>
 
-      <Dialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
-        <DialogContent className="max-w-md rounded-lg">
-          <DialogHeader>
-            <DialogTitle>Confirm Match Cancellation</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to cancel this match? This action cannot be undone, and players will be notified.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsCancelDialogOpen(false)}
-            >
-              No, Keep Match
-            </Button>
-            <Button
-              onClick={handleCancelMatch}
-              className="bg-red-500 hover:bg-red-600 text-white"
-              disabled={loading}
-            >
-              Yes, Cancel Match
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+<Dialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
+  <DialogContent className="max-w-sm rounded-2xl p-6">
+    <DialogHeader>
+      <DialogTitle className="text-lg font-semibold text-center">
+        Confirm Match Cancellation
+      </DialogTitle>
+      <DialogDescription className="text-sm text-center mt-2 text-gray-600">
+        Are you sure you want to cancel this match? This action cannot be undone, and players will be notified.
+      </DialogDescription>
+    </DialogHeader>
+    <DialogFooter className="mt-6 flex flex-col sm:flex-row justify-center gap-3">
+      <Button
+        variant="outline"
+        onClick={() => setIsCancelDialogOpen(false)}
+        className="rounded-full px-6 py-2 border-gray-300 hover:bg-gray-50"
+      >
+        No, Keep Match
+      </Button>
+      <Button
+        onClick={handleCancelMatch}
+        className="bg-red-500 hover:bg-red-600 text-white rounded-full px-6 py-2"
+        disabled={loading}
+      >
+        {loading ? (
+          <span className="flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Processing...
+          </span>
+        ) : (
+          "Yes, Cancel Match"
+        )}
+      </Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
 
       <Navbar />
     </div>
