@@ -27,6 +27,7 @@ type Match = {
     status: string;
     confirmation_code: string;
     details: { phone: string } | null;
+    number_of_slots?: number;
   }[] | null;
 };
 
