@@ -25,7 +25,7 @@ type Player = {
   id: string;
   name: string;
   avatar?: string;
-  skill: number; // 1-5
+  skill: number;
   position: string;
 };
 
@@ -59,8 +59,8 @@ type Match = {
   slug: string;
   super_code: string;
   title: string;
-  teamA: Team;
-  teamB: Team;
+  teama: Team;
+  teamb: Team;
   scoreA: number;
   scoreB: number;
   events: MatchEvent[];
@@ -292,7 +292,7 @@ const TeamManagement = () => {
       try {
         const { data, error } = await supabase
           .from("matches")
-          .select("id, slug, super_code, title, teamA, teamB, scoreA, scoreB, events, analytics, is_public, match_date, match_time")
+          .select("id, slug, super_code, title, teama, teamb, scoreA, scoreB, events, analytics, is_public, match_date, match_time")
           .eq("slug", slug)
           .single();
 
@@ -300,8 +300,8 @@ const TeamManagement = () => {
 
         setMatch(data);
         setTeams({
-          teamA: data.teamA || [],
-          teamB: data.teamB || [],
+          teamA: data.teama || [],
+          teamB: data.teamb || [],
         });
         setScoreA(data.scoreA || 0);
         setScoreB(data.scoreB || 0);
@@ -396,8 +396,8 @@ const TeamManagement = () => {
       const { error } = await supabase
         .from("matches")
         .update({
-          teamA: teams.teamA,
-          teamB: teams.teamB,
+          teama: teams.teamA,
+          teamb: teams.teamB,
         })
         .eq("id", match.id);
 
@@ -485,33 +485,45 @@ const TeamManagement = () => {
   const togglePrivacy = async () => {
     setIsPublic((prev) => !prev);
     if (match) {
-      await supabase
-        .from("matches")
-        .update({ is_public: !isPublic })
-        .eq("id", match.id);
+      try {
+        await supabase
+          .from("matches")
+          .update({ is_public: !isPublic })
+          .eq("id", match.id);
+        toast({
+          title: "Success",
+          description: `Match is now ${!isPublic ? "public" : "private"}.`,
+        });
+      } catch (error) {
+        console.error("Error updating privacy:", error);
+        toast({
+          title: "Error",
+          description: "Failed to update match privacy.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
   // Export report
-  const handleExport = async () => {
+  const exportReport = async () => {
     if (!reportRef.current) return;
-
     setIsExporting(true);
     try {
-      const canvas = await html2canvas(reportRef.current, { scale: 2 });
+      const canvas = await html2canvas(reportRef.current);
       const link = document.createElement("a");
-      link.download = `Match-Report-${match?.slug}.png`;
       link.href = canvas.toDataURL("image/png");
+      link.download = `match-report-${match?.slug}.png`;
       link.click();
       toast({
-        title: "Report Exported",
-        description: "Match report downloaded as an image.",
+        title: "Success",
+        description: "Match report exported as PNG.",
       });
     } catch (error) {
       console.error("Error exporting report:", error);
       toast({
         title: "Error",
-        description: "Failed to export report.",
+        description: "Failed to export match report.",
         variant: "destructive",
       });
     } finally {
@@ -519,36 +531,23 @@ const TeamManagement = () => {
     }
   };
 
-  // Generate shareable link
-  const handleShare = () => {
-    const url = `${window.location.origin}/match/${match?.slug}`;
-    navigator.clipboard.writeText(url);
-    toast({
-      title: "Link Copied",
-      description: "Match URL copied to clipboard.",
-    });
-  };
-
-  const isMatchPast = match ? isPast(new Date(`${match.match_date}T${match.match_time}`)) : false;
-
   if (!match) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-100 dark:bg-gray-900">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <p className="text-gray-600 dark:text-gray-400">Loading match details...</p>
       </div>
     );
   }
 
   return (
     <DndProvider backend={typeof window !== "undefined" && "ontouchstart" in window ? TouchBackend : HTML5Backend}>
-      <div className="min-h-screen pb-20 bg-gray-100 dark:bg-gray-900">
-        {/* Header */}
-        <header className="sticky top-0 z-50 bg-gradient-to-r from-green-500 to-green-700 text-white shadow-lg">
-          <div className="p-4 flex items-center justify-between max-w-7xl mx-auto">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-24">
+        <header className="sticky top-0 z-50 bg-green-500 text-white shadow-md">
+          <div className="p-4 flex items-center justify-between">
             <Button
               variant="ghost"
-              className="text-white hover:bg-green-600 transition-colors"
               onClick={() => navigate(-1)}
+              className="text-white hover:text-gray-200"
             >
               <ArrowLeft size={18} className="mr-2" />
               Back
@@ -558,26 +557,19 @@ const TeamManagement = () => {
           </div>
         </header>
 
-        {/* Main Content */}
-        <div className="p-6 max-w-4xl mx-auto space-y-8">
-          {/* Supercode Verification */}
-          <Dialog open={verificationOpen && !isVerified} onOpenChange={setVerificationOpen}>
-            <DialogContent className="sm:max-w-[375px] rounded-2xl">
-              <DialogTitle className="text-xl font-bold text-gray-800 dark:text-gray-200">Enter Supercode</DialogTitle>
+        <div className="max-w-7xl mx-auto p-6">
+          <Dialog open={verificationOpen} onOpenChange={setVerificationOpen}>
+            <DialogContent>
+              <DialogTitle>Verify Supercode</DialogTitle>
               <DialogDescription>
-                <p className="text-gray-600 dark:text-gray-300 mb-4 text-sm">
-                  Enter the 6-digit supercode to manage teams and record the match.
-                </p>
+                <p className="mb-4">Enter the supercode to manage this match.</p>
                 <Input
                   value={supercodeInput}
                   onChange={(e) => setSupercodeInput(e.target.value)}
                   placeholder="Enter supercode"
                   className="mb-4"
                 />
-                <Button
-                  onClick={handleVerifySupercode}
-                  className="w-full bg-green-500 hover:bg-green-600 text-white"
-                >
+                <Button onClick={handleVerifySupercode} className="w-full bg-green-500 hover:bg-green-600 text-white">
                   Verify
                 </Button>
               </DialogDescription>
@@ -585,276 +577,190 @@ const TeamManagement = () => {
           </Dialog>
 
           {isVerified && (
-            <>
-              {/* Team Distribution Section */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
-                <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Team Distribution</h2>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <Switch
-                      checked={mode === "manual"}
-                      onCheckedChange={() => setMode(mode === "automatic" ? "manual" : "automatic")}
-                      className="data-[state=checked]:bg-green-500"
-                    />
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      {mode === "automatic" ? "Automatic Mode" : "Manual Mode"}
-                    </span>
+            <div className="space-y-6">
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700">
+                <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">{match.title}</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="flex items-center gap-3">
+                    <Trophy size={20} className="text-green-500" />
+                    <span className="text-gray-900 dark:text-gray-100">Score: {scoreA} - {scoreB}</span>
                   </div>
-                  {mode === "automatic" ? (
-                    <DialogTrigger asChild>
-                      <Button onClick={() => setTeamSelectionOpen(true)} className="bg-green-500 hover:bg-green-600 text-white" disabled={isMatchPast}>
-                        Suggest Best Fit
-                      </Button>
-                    </DialogTrigger>
-                  ) : (
-                    <div className="flex space-x-2">
-                      <Button onClick={handleUndo} disabled={historyIndex <= 0 || isMatchPast} variant="outline">
-                        Undo
-                      </Button>
-                      <Button onClick={handleRedo} disabled={historyIndex >= history.length - 1 || isMatchPast} variant="outline">
-                        Redo
-                      </Button>
-                    </div>
-                  )}
+                  <div className="flex items-center gap-3">
+                    <Clock size={20} className="text-green-500" />
+                    <span className="text-gray-900 dark:text-gray-100">{match.match_date} {match.match_time}</span>
+                  </div>
                 </div>
-                <div className="flex flex-col md:flex-row gap-4">
-                  <TeamColumn team="teamA" players={teams.teamA} setTeams={setTeams} label="Team A" />
-                  <TeamColumn team="teamB" players={teams.teamB} setTeams={setTeams} label="Team B" />
-                </div>
-                <Button onClick={saveTeams} className="w-full bg-green-500 hover:bg-green-600 text-white" disabled={isMatchPast}>
-                  Save Teams
-                </Button>
-                <DialogTrigger asChild>
-                  <Button onClick={() => setRulesTemplateOpen(true)} className="mt-2 w-full bg-green-500 hover:bg-green-600 text-white" disabled={isMatchPast}>
-                    Apply Match Rules
-                  </Button>
-                </DialogTrigger>
               </div>
 
-              {/* Match Analytics Section */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
-                <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Match Analytics</h2>
-                {/* Scoreboard */}
-                <div className="flex items-center justify-center space-x-4">
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Team A</p>
-                    <Input
-                      type="number"
-                      value={scoreA}
-                      onChange={(e) => handleScoreChange("teamA", e.target.value)}
-                      className="text-center text-2xl font-bold"
-                      disabled={isMatchPast}
-                    />
-                  </div>
-                  <span className="text-xl font-bold text-gray-700 dark:text-gray-300">-</span>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Team B</p>
-                    <Input
-                      type="number"
-                      value={scoreB}
-                      onChange={(e) => handleScoreChange("teamB", e.target.value)}
-                      className="text-center text-2xl font-bold"
-                      disabled={isMatchPast}
-                    />
-                  </div>
-                </div>
-                {/* Event Buttons */}
-                <div className="flex flex-wrap gap-2">
+              <div className="flex justify-between items-center mb-4">
+                <div className="flex gap-4">
                   <Button
-                    onClick={() => addEvent("goal", "teamA", "Goal by Team A")}
-                    variant="outline"
-                    className="flex-1"
-                    disabled={isMatchPast}
+                    onClick={() => setMode(mode === "automatic" ? "manual" : "automatic")}
+                    className="bg-blue-500 hover:bg-blue-600 text-white"
                   >
-                    Goal (A)
+                    {mode === "automatic" ? "Manual Mode" : "Automatic Mode"}
                   </Button>
-                  <Button
-                    onClick={() => addEvent("goal", "teamB", "Goal by Team B")}
-                    variant="outline"
-                    className="flex-1"
-                    disabled={isMatchPast}
-                  >
-                    Goal (B)
-                  </Button>
-                  <Button
-                    onClick={() => addEvent("card", "teamA", "Card for Team A")}
-                    variant="outline"
-                    className="flex-1"
-                    disabled={isMatchPast}
-                  >
-                    Card (A)
-                  </Button>
-                  <Button
-                    onClick={() => addEvent("card", "teamB", "Card for Team B")}
-                    variant="outline"
-                    className="flex-1"
-                    disabled={isMatchPast}
-                  >
-                    Card (B)
-                  </Button>
-                </div>
-                {/* Event Timeline */}
-                <div className="space-y-2 max-h-40 overflow-y-auto">
-                  {events.map((event) => (
-                    <div key={event.id} className="flex items-center space-x-2 text-sm">
-                      <Clock size={16} className="text-gray-500" />
-                      <span className="text-gray-700 dark:text-gray-300">
-                        {event.minute}' - {event.description}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-                {/* Stats Dashboard */}
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Possession</p>
-                    <div className="flex items-center space-x-2">
-                      <Input
-                        type="number"
-                        value={analytics.teamA.possession}
-                        onChange={(e) =>
-                          updateAnalytics("teamA", "possession", parseInt(e.target.value))
-                        }
-                        className="w-20"
-                        disabled={isMatchPast}
-                      />
-                      <span className="text-gray-700 dark:text-gray-300">%</span>
-                      <Input
-                        type="number"
-                        value={analytics.teamB.possession}
-                        onChange={(e) =>
-                          updateAnalytics("teamB", "possession", parseInt(e.target.value))
-                        }
-                        className="w-20"
-                        disabled={isMatchPast}
-                      />
-                      <span className="text-gray-700 dark:text-gray-300">%</span>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Shots (Team A)</p>
-                      <Input
-                        type="number"
-                        value={analytics.teamA.shots}
-                        onChange={(e) => updateAnalytics("teamA", "shots", parseInt(e.target.value))}
-                        className="w-full"
-                        disabled={isMatchPast}
-                      />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Shots (Team B)</p>
-                      <Input
-                        type="number"
-                        value={analytics.teamB.shots}
-                        onChange={(e) => updateAnalytics("teamB", "shots", parseInt(e.target.value))}
-                        className="w-full"
-                        disabled={isMatchPast}
-                      />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Fouls (Team A)</p>
-                      <Input
-                        type="number"
-                        value={analytics.teamA.fouls}
-                        onChange={(e) => updateAnalytics("teamA", "fouls", parseInt(e.target.value))}
-                        className="w-full"
-                        disabled={isMatchPast}
-                      />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Fouls (Team B)</p>
-                      <Input
-                        type="number"
-                        value={analytics.teamB.fouls}
-                        onChange={(e) => updateAnalytics("teamB", "fouls", parseInt(e.target.value))}
-                        className="w-full"
-                        disabled={isMatchPast}
-                      />
-                    </div>
-                  </div>
-                </div>
-                {/* Privacy Toggle */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Public Results</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Toggle to make match results public
-                    </p>
-                  </div>
-                  <Switch
-                    checked={isPublic}
-                    onCheckedChange={togglePrivacy}
-                    className="data-[state=checked]:bg-green-500"
-                    disabled={isMatchPast}
+                  <DialogTrigger asChild>
+                    <Button
+                      onClick={() => setTeamSelectionOpen(true)}
+                      className="bg-green-500 hover:bg-green-600 text-white"
+                    >
+                      Generate Teams
+                    </Button>
+                  </DialogTrigger>
+                  <TeamSelectionDialog
+                    players={players}
+                    teams={teams}
+                    setTeams={setTeams}
+                    isOpen={teamSelectionOpen}
+                    onClose={() => setTeamSelectionOpen(false)}
+                    matchDate={match.match_date}
+                    matchTime={match.match_time}
                   />
+                  <Button
+                    onClick={saveTeams}
+                    className="bg-yellow-500 hover:bg-yellow-600 text-white"
+                  >
+                    Save Teams
+                  </Button>
                 </div>
-                {/* Report Export */}
+                <div className="flex gap-4">
+                  <Button
+                    onClick={handleUndo}
+                    disabled={historyIndex <= 0}
+                    className="bg-gray-500 hover:bg-gray-600 text-white"
+                  >
+                    Undo
+                  </Button>
+                  <Button
+                    onClick={handleRedo}
+                    disabled={historyIndex >= history.length - 1}
+                    className="bg-gray-500 hover:bg-gray-600 text-white"
+                  >
+                    Redo
+                  </Button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <TeamColumn
+                  team="teamA"
+                  players={teams.teamA}
+                  setTeams={setTeams}
+                  label="Team A"
+                />
+                <TeamColumn
+                  team="teamB"
+                  players={teams.teamB}
+                  setTeams={setTeams}
+                  label="Team B"
+                />
+              </div>
+
+              <div ref={reportRef} className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700">
+                <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Match Report</h2>
                 <div className="space-y-4">
-                  <div ref={reportRef} className="bg-gradient-to-br from-green-500 to-green-700 rounded-xl p-6 text-white shadow-lg">
-                    <div className="flex items-center justify-between mb-4">
-                      <img src="/playarenadark.png" alt="PlayArena Logo" className="h-8 w-auto" />
-                      <Trophy className="h-6 w-6" />
-                    </div>
-                    <h2 className="text-xl font-bold mb-2">{match.title}</h2>
-                    <p className="text-3xl font-bold text-center mb-4">
-                      {scoreA} - {scoreB}
-                    </p>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex items-center">
-                        <Users className="h-4 w-4 mr-2" />
-                        <span>Team A: {teams.teamA.map((p) => p.name).join(", ")}</span>
-                      </div>
-                      <div className="flex items-center">
-                        <Users className="h-4 w-4 mr-2" />
-                        <span>Team B: {teams.teamB.map((p) => p.name).join(", ")}</span>
-                      </div>
-                      <div className="flex items-center">
-                        <Target className="h-4 w-4 mr-2" />
-                        <span>Shots: {analytics.teamA.shots} (A) vs {analytics.teamB.shots} (B)</span>
-                      </div>
-                      <div className="flex items-center">
-                        <Shield className="h-4 w-4 mr-2" />
-                        <span>Fouls: {analytics.teamA.fouls} (A) vs {analytics.teamB.fouls} (B)</span>
-                      </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Score</h3>
+                    <div className="flex gap-4">
+                      <Input
+                        type="number"
+                        value={scoreA}
+                        onChange={(e) => handleScoreChange("teamA", e.target.value)}
+                        className="w-20"
+                        min="0"
+                        max="29"
+                      />
+                      <span className="text-gray-900 dark:text-gray-100">-</span>
+                      <Input
+                        type="number"
+                        value={scoreB}
+                        onChange={(e) => handleScoreChange("teamB", e.target.value)}
+                        className="w-20"
+                        min="0"
+                        max="29"
+                      />
                     </div>
                   </div>
-                  <div className="flex space-x-2">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Events</h3>
+                    {events.map((event) => (
+                      <p key={event.id} className="text-gray-600 dark:text-gray-400">
+                        {event.minute}' - {event.type} ({event.team}): {event.description}
+                      </p>
+                    ))}
                     <Button
-                      onClick={handleExport}
-                      className="flex-1 bg-green-500 hover:bg-green-600 text-white"
-                      disabled={isExporting || isMatchPast}
+                      onClick={() => addEvent("goal", "teamA", "Goal scored")}
+                      className="mt-2 bg-green-500 hover:bg-green-600 text-white"
                     >
-                      <Download size={16} className="mr-2" />
-                      {isExporting ? "Exporting..." : "Export Report"}
+                      Add Goal (Team A)
                     </Button>
-                    <Button
-                      onClick={handleShare}
-                      className="flex-1 bg-green-500 hover:bg-green-600 text-white"
-                      disabled={isMatchPast}
-                    >
-                      <Share2 size={16} className="mr-2" />
-                      Share
-                    </Button>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Analytics</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-gray-600 dark:text-gray-400">Team A Possession: {analytics.teamA.possession}%</p>
+                        <Input
+                          type="number"
+                          value={analytics.teamA.possession}
+                          onChange={(e) => updateAnalytics("teamA", "possession", parseInt(e.target.value))}
+                          className="w-20"
+                          min="0"
+                          max="100"
+                        />
+                      </div>
+                      <div>
+                        <p className="text-gray-600 dark:text-gray-400">Team B Possession: {analytics.teamB.possession}%</p>
+                        <Input
+                          type="number"
+                          value={analytics.teamB.possession}
+                          onChange={(e) => updateAnalytics("teamB", "possession", parseInt(e.target.value))}
+                          className="w-20"
+                          min="0"
+                          max="100"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-            </>
+
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <Shield size={20} className="text-green-500" />
+                  <span className="text-gray-900 dark:text-gray-100">Public Match</span>
+                  <Switch checked={isPublic} onCheckedChange={togglePrivacy} />
+                </div>
+                <div className="flex gap-4">
+                  <Button
+                    onClick={() => setRulesTemplateOpen(true)}
+                    className="bg-blue-500 hover:bg-blue-600 text-white"
+                  >
+                    Apply Rules
+                  </Button>
+                  <RulesTemplateDialog
+                    isOpen={rulesTemplateOpen}
+                    onClose={() => setRulesTemplateOpen(false)}
+                    matchId={match.id}
+                  />
+                  <Button
+                    onClick={exportReport}
+                    className="bg-yellow-500 hover:bg-yellow-600 text-white"
+                    disabled={isExporting}
+                  >
+                    {isExporting ? "Exporting..." : <><Download size={18} className="mr-2" /> Export Report</>}
+                  </Button>
+                  <Button
+                    className="bg-green-500 hover:bg-green-600 text-white"
+                  >
+                    <Share2 size={18} className="mr-2" />
+                    Share
+                  </Button>
+                </div>
+              </div>
+            </div>
           )}
-          <TeamSelectionDialog
-            players={players}
-            teams={teams}
-            setTeams={setTeams}
-            isOpen={teamSelectionOpen}
-            onClose={() => setTeamSelectionOpen(false)}
-            matchDate={match?.match_date || ""}
-            matchTime={match?.match_time || ""}
-          />
-          <RulesTemplateDialog
-            isOpen={rulesTemplateOpen}
-            onClose={() => setRulesTemplateOpen(false)}
-            matchId={match?.id || ""}
-          />
         </div>
         <Navbar />
       </div>
