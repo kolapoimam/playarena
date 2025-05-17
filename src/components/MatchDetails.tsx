@@ -1,4 +1,4 @@
-import { format, differenceInMinutes, differenceInHours } from "date-fns";
+import { format, differenceInMinutes } from "date-fns";
 import { Trophy, MapPin, Calendar, Clock, Users, DollarSign, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -45,30 +45,18 @@ type MatchDetailsProps = {
   match: Match | null;
   cashout: Cashout | null;
   handleCancelMatch: () => void;
-  handleStartMatch: () => void;
-  handleEndMatch: () => void;
   loading: boolean;
   isMatchPast: boolean;
   walletBalance?: number;
 };
 
-const MatchDetails = ({ match, cashout, handleCancelMatch, handleStartMatch, handleEndMatch, loading, isMatchPast, walletBalance }: MatchDetailsProps) => {
+const MatchDetails = ({ match, cashout, handleCancelMatch, loading, isMatchPast, walletBalance }: MatchDetailsProps) => {
   const canCancelMatch = () => {
     if (!match) return false;
     const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
     const now = new Date();
     const minutesToStart = differenceInMinutes(matchDateTime, now);
-    return minutesToStart > 60 && !match.cancellation_status;
-  };
-
-  const canStartMatch = () => {
-    if (!match || match.cancellation_status || match.match_start_time) return false;
-    return isMatchPast;
-  };
-
-  const canEndMatch = () => {
-    if (!match || match.cancellation_status || !match.match_start_time || match.match_end_time) return false;
-    return true;
+    return minutesToStart > 0 && !match.cancellation_status;
   };
 
   const formatDate = (dateString: string) => {
@@ -82,22 +70,20 @@ const MatchDetails = ({ match, cashout, handleCancelMatch, handleStartMatch, han
   };
 
   const formatTime = (timeString: string) => {
-    return timeString.slice(0, 5);
+    const [hours, minutes] = timeString.split(':').map(Number);
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const adjustedHours = hours % 12 || 12;
+    return `${adjustedHours}:${minutes.toString().padStart(2, '0')} ${period}`;
   };
 
   const getStatusStyles = (status: string) => {
     switch (status) {
-      case "confirmed":
       case "successful":
         return "bg-green-100 text-green-700 border-green-300";
-      case "pending":
       case "failed":
         return "bg-red-100 text-red-700 border-red-300";
-      case "checked_in":
       case "processed":
         return "bg-blue-100 text-blue-700 border-blue-300";
-      case "absent":
-        return "bg-gray-100 text-gray-700 border-gray-300";
       case "under_review":
         return "bg-yellow-100 text-yellow-700 border-yellow-300";
       default:
@@ -108,16 +94,7 @@ const MatchDetails = ({ match, cashout, handleCancelMatch, handleStartMatch, han
   const calculateExpectedAmount = () => {
     if (!match || !match.is_paid || !match.price) return "N/A";
     const checkedInPlayers = match.players?.filter(p => p.status === "checked_in").length || 0;
-    return `₦${(checkedInPlayers * (match.price || 5000)).toLocaleString()}`;
-  };
-
-  const calculateMatchDuration = () => {
-    if (!match || !match.match_start_time || !match.match_end_time) return null;
-    const start = new Date(match.match_start_time);
-    const end = new Date(match.match_end_time);
-    const hours = differenceInHours(end, start);
-    const minutes = differenceInMinutes(end, start) % 60;
-    return `${hours} hour${hours !== 1 ? "s" : ""} ${minutes} minute${minutes !== 1 ? "s" : ""}`;
+    return `₦${(checkedInPlayers * match.price).toLocaleString()}`;
   };
 
   if (!match) return null;
@@ -171,21 +148,15 @@ const MatchDetails = ({ match, cashout, handleCancelMatch, handleStartMatch, han
         </div>
         <div className="flex items-center gap-3">
           <DollarSign size={20} className="text-green-500" />
-          <span className="text-gray-900 dark:text-gray-100">{match.is_paid ? "Paid" : "Free"}</span>
+          <span className="text-gray-900 dark:text-gray-100">
+            {match.is_paid ? `₦${match.price?.toLocaleString() || "0"} per ticket` : "Free"}
+          </span>
         </div>
         {walletBalance !== undefined && (
           <div className="flex items-center gap-3">
             <Wallet size={20} className="text-green-500" />
             <span className="text-gray-900 dark:text-gray-100">
               Wallet: ₦{walletBalance.toLocaleString() || "0"}
-            </span>
-          </div>
-        )}
-        {match.match_start_time && match.match_end_time && (
-          <div className="flex items-center gap-3 col-span-1 sm:col-span-2">
-            <Clock size={20} className="text-green-500" />
-            <span className="text-gray-900 dark:text-gray-100">
-              Match Duration: {calculateMatchDuration()}
             </span>
           </div>
         )}
@@ -206,18 +177,11 @@ const MatchDetails = ({ match, cashout, handleCancelMatch, handleStartMatch, han
       )}
       <div className="flex flex-wrap gap-4 mt-4">
         <Button
-          onClick={handleStartMatch}
-          className="bg-green-600 hover:bg-green-700 text-white"
-          disabled={!canStartMatch() || loading}
+          onClick={handleCancelMatch}
+          className={`bg-red-500 hover:bg-red-600 text-white ${!canCancelMatch() ? "opacity-50 cursor-not-allowed" : ""}`}
+          disabled={!canCancelMatch() || loading}
         >
-          Start Match
-        </Button>
-        <Button
-          onClick={handleEndMatch}
-          className="bg-green-600 hover:bg-green-700 text-white"
-          disabled={!canEndMatch() || loading}
-        >
-          End Match
+          Cancel Match
         </Button>
       </div>
     </div>
