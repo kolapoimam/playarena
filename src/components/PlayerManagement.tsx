@@ -699,30 +699,30 @@ const PlayerManagement = ({
           {player.player_status}
         </span>
       </div>
-      {mode === "checkin" && (
-        <div className="flex gap-2 w-full sm:w-auto">
-          <Input
-            placeholder="Enter check-in code"
-            value={checkinCodes[player.id] || ""}
-            onChange={(e) => handleCheckinCodeChange(player.id, e.target.value)}
-            inputMode="numeric"
-            pattern="[0-9]*"
-            maxLength={6}
-            className="w-full sm:w-[150px]"
-            disabled={player.player_status !== 'Registered' || checkingInPlayers[player.id]}
-          />
-          <Button
-            onClick={() => validateCheckinCode(player.id)}
-            className="bg-blue-500 hover:bg-blue-600 text-white"
-            disabled={!!checkinCodeErrors[player.id] || !checkinCodes[player.id] || player.player_status !== 'Registered' || checkingInPlayers[player.id]}
-          >
-            {checkingInPlayers[player.id] ? (
-              <Loader2 size={16} className="mr-2 animate-spin" />
-            ) : (
-              "Verify"
-            )}
-          </Button>
-        </div>
+{mode === "checkin" && (
+  <div className="flex gap-2 w-full sm:w-auto">
+    <Input
+      placeholder="Enter check-in code"
+      value={checkinCodes[player.id] || ""}
+      onChange={(e) => handleCheckinCodeChange(player.id, e.target.value)}
+      inputMode="numeric"
+      pattern="[0-9]*"
+      maxLength={6}
+      className="w-full sm:w-[150px]"
+      disabled={player.player_status === 'Checked In' || player.player_status === 'Absent' || checkingInPlayers[player.id]}
+    />
+    <Button
+      onClick={() => validateCheckinCode(player.id)}
+      className="bg-blue-500 hover:bg-blue-600 text-white"
+      disabled={!!checkinCodeErrors[player.id] || !checkinCodes[player.id] || player.player_status !== 'Registered' || checkingInPlayers[player.id]}
+    >
+      {checkingInPlayers[player.id] ? (
+        <Loader2 size={16} className="mr-2 animate-spin" />
+      ) : (
+        "Verify"
+      )}
+    </Button>
+  </div>
       )}
       {checkinCodeErrors[player.id] && (
         <p className="text-sm text-red-600 mt-1">{checkinCodeErrors[player.id]}</p>
