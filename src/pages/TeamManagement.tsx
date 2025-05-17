@@ -61,8 +61,8 @@ type Match = {
   title: string;
   teama: Team;
   teamb: Team;
-  scoreA: number;
-  scoreB: number;
+  scorea: number;
+  scoreb: number;
   events: MatchEvent[];
   analytics: MatchAnalytics;
   is_public: boolean;
@@ -269,8 +269,8 @@ const TeamManagement = () => {
   const [supercodeInput, setSupercodeInput] = useState("");
   const [isVerified, setIsVerified] = useState(false);
   const [verificationOpen, setVerificationOpen] = useState(true);
-  const [scoreA, setScoreA] = useState(0);
-  const [scoreB, setScoreB] = useState(0);
+  const [scorea, setScorea] = useState(0);
+  const [scoreb, setScoreb] = useState(0);
   const [events, setEvents] = useState<MatchEvent[]>([]);
   const [analytics, setAnalytics] = useState<MatchAnalytics>({
     teamA: { possession: 50, shots: 0, fouls: 0 },
@@ -292,7 +292,7 @@ const TeamManagement = () => {
       try {
         const { data, error } = await supabase
           .from("matches")
-          .select("id, slug, super_code, title, teama, teamb, scoreA, scoreB, events, analytics, is_public, match_date, match_time")
+          .select("id, slug, super_code, title, teama, teamb, scorea, scoreb, events, analytics, is_public, match_date, match_time")
           .eq("slug", slug)
           .single();
 
@@ -303,8 +303,8 @@ const TeamManagement = () => {
           teamA: data.teama || [],
           teamB: data.teamb || [],
         });
-        setScoreA(data.scoreA || 0);
-        setScoreB(data.scoreB || 0);
+        setScorea(data.scorea || 0);
+        setScoreb(data.scoreb || 0);
         setEvents(data.events || []);
         setAnalytics(data.analytics || {
           teamA: { possession: 50, shots: 0, fouls: 0 },
@@ -420,7 +420,7 @@ const TeamManagement = () => {
   // Score validation and update
   const validateScore = (value: string) => /^\d+$/.test(value) && parseInt(value) < 30;
 
-  const handleScoreChange = (team: "teamA" | "teamB", value: string) => {
+  const handleScoreChange = async (team: "teamA" | "teamB", value: string) => {
     if (!validateScore(value)) {
       toast({
         title: "Invalid Score",
@@ -432,16 +432,26 @@ const TeamManagement = () => {
 
     const score = parseInt(value);
     if (team === "teamA") {
-      setScoreA(score);
+      setScorea(score);
     } else {
-      setScoreB(score);
+      setScoreb(score);
     }
 
     if (match) {
-      supabase
-        .from("matches")
-        .update({ [`score${team === "teamA" ? "A" : "B"}`]: score })
-        .eq("id", match.id);
+      try {
+        const { error } = await supabase
+          .from("matches")
+          .update({ [team === "teamA" ? "scorea" : "scoreb"]: score })
+          .eq("id", match.id);
+        if (error) throw error;
+      } catch (error) {
+        console.error("Error updating score:", error);
+        toast({
+          title: "Error",
+          description: "Failed to update score.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -583,7 +593,7 @@ const TeamManagement = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="flex items-center gap-3">
                     <Trophy size={20} className="text-green-500" />
-                    <span className="text-gray-900 dark:text-gray-100">Score: {scoreA} - {scoreB}</span>
+                    <span className="text-gray-900 dark:text-gray-100">Score: {scorea} - {scoreb}</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <Clock size={20} className="text-green-500" />
@@ -665,7 +675,7 @@ const TeamManagement = () => {
                     <div className="flex gap-4">
                       <Input
                         type="number"
-                        value={scoreA}
+                        value={scorea}
                         onChange={(e) => handleScoreChange("teamA", e.target.value)}
                         className="w-20"
                         min="0"
@@ -674,7 +684,7 @@ const TeamManagement = () => {
                       <span className="text-gray-900 dark:text-gray-100">-</span>
                       <Input
                         type="number"
-                        value={scoreB}
+                        value={scoreb}
                         onChange={(e) => handleScoreChange("teamB", e.target.value)}
                         className="w-20"
                         min="0"
