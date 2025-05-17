@@ -184,14 +184,6 @@ const PlayerManagement = ({
       const { data: walletData, error: walletError } = await supabase
         .from("wallets")
         .select("balance")
-        .eq("organizer_id",かく); setUserId(null);
-      }
-
-      if (!match || !userId) return;
-      
-      const { data: walletData, error: walletError } = await supabase
-        .from("wallets")
-        .select("balance")
         .eq("organizer_id", userId)
         .single();
 
@@ -862,30 +854,28 @@ const PlayerManagement = ({
         </DialogContent>
       </Dialog>
 
-<Dialog open={checkinDialogOpen} onOpenChange={setCheckinDialogOpen}>
-  <DialogContent className="max-w-xs rounded-2xl p-6">
-    <DialogHeader>
-      <DialogTitle className="text-lg font-semibold text-center">
-        Check-in Successful
-      </DialogTitle>
-      <DialogDescription className="text-sm text-center mt-2">
-        {checkinPlayer && (
-          <>
-            Successfully checked in {checkinPlayer.name} with {checkinPlayer.slots} slot{checkinPlayer.slots !== 1 ? 's' : ''}.
-          </>
-        )}
-      </DialogDescription>
-    </DialogHeader>
-    <DialogFooter className="mt-4 flex justify-center">
-      <Button
-        onClick={() => setCheckinDialogOpen(false)}
-        className="bg-green-500 hover:bg-green-600 text-white rounded-full px-6 py-2"
-      >
-        Close
-      </Button>
-    </DialogFooter>
-  </DialogContent>
-</Dialog>
+      <Dialog open={checkinDialogOpen} onOpenChange={setCheckinDialogOpen}>
+        <DialogContent className="max-w-md rounded-lg">
+          <DialogHeader>
+            <DialogTitle>Check-in Successful</DialogTitle>
+            <DialogDescription>
+              {checkinPlayer && (
+                <>
+                  Successfully checked in {checkinPlayer.name} with {checkinPlayer.slots} slot{checkinPlayer.slots !== 1 ? 's' : ''}.
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              onClick={() => setCheckinDialogOpen(false)}
+              className="bg-green-500 hover:bg-green-600 text-white"
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
