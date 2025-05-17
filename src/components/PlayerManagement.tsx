@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { NavigateFunction } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -131,6 +131,7 @@ type PlayerManagementProps = {
   isMatchPast: boolean;
   canConfirmPlayers: boolean;
   handleCancelMatch: () => void;
+  navigate: NavigateFunction;
 };
 
 const PlayerManagement = ({
@@ -148,10 +149,10 @@ const PlayerManagement = ({
   isMatchPast,
   canConfirmPlayers,
   handleCancelMatch,
+  navigate,
 }: PlayerManagementProps) => {
-  const navigate = useNavigate();
   const { toast } = useToast();
-  const [mode, setMode] = useState<"confirm" | "checkin" | "cashout" | null>(null);
+  const [mode, setMode] = useState<"checkin" | null>(null);
   const [cashoutDialogOpen, setCashoutDialogOpen] = useState(false);
   const [bankAccountNumber, setBankAccountNumber] = useState("");
   const [bankName, setBankName] = useState("");
@@ -213,11 +214,10 @@ const PlayerManagement = ({
   };
 
   const canCheckin = () => {
-    if (!match || match.cancellation_status) return false;
+    if (!match || match.cancellation_status || !match.players?.length) return false;
     const now = new Date();
-    const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
     const matchEndTime = match.match_end_time ? new Date(match.match_end_time) : 
-      new Date(matchDateTime.getTime() + 2 * 60 * 60 * 1000);
+      new Date(`${match.match_date}T${match.match_time}`) + 2 * 60 * 60 * 1000;
     return now <= matchEndTime;
   };
 
@@ -226,11 +226,13 @@ const PlayerManagement = ({
     const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
     const now = new Date();
     const minutesToStart = differenceInMinutes(matchDateTime, now);
-    return minutesToStart > 60;
+    return minutesToStart > 0;
   };
 
-  const handleConfirmMode = () => {
-    setMode("confirm");
+  const handleTeamManagement = () => {
+    if (match) {
+      navigate(`/team-management/${match.slug}`);
+    }
   };
 
   const handleCheckinMode = () => {
@@ -238,21 +240,13 @@ const PlayerManagement = ({
     
     if (!canCheckin()) {
       toast({
-        title: "Check-in Period Ended",
-        description: "Check-in is no longer available as the match has ended.",
+        title: "Check-in Not Available",
+        description: "Check-in is not available as there are no registered players or the match has ended.",
         variant: "destructive",
       });
       return;
     }
 
-    if (differenceInMinutes(new Date(`${match.match_date}T${match.match_time}`), new Date()) > 120) {
-      toast({
-        title: "Check-in Not Available",
-        description: "Check-in is only available 2 hours before the match starts.",
-        variant: "destructive",
-      });
-      return;
-    }
     setMode("checkin");
   };
 
@@ -261,7 +255,7 @@ const PlayerManagement = ({
       toast({
         title: "Cashout Not Available",
         description: match.is_paid 
-          ? "Cashout is only available for paid matches with checked-in players and sufficient wallet balance."
+          ? "Cashout requires at least one checked-in player and a positive wallet balance."
           : "Cashout is not available for free matches.",
         variant: "destructive",
       });
@@ -379,14 +373,6 @@ const PlayerManagement = ({
     }
   };
 
-  const handleStatusChange = (playerId: string, newStatus: string) => {
-    setPlayerStatuses((prev) =>
-      prev.map((p) =>
-        p.id === playerId ? { ...p, status: newStatus } : p
-      )
-    );
-  };
-
   const handleCheckinCodeChange = (playerId: string, code: string) => {
     const numericCode = code.replace(/[^0-9]/g, "").slice(0, 6);
     setCheckinCodes((prev) => ({ ...prev, [playerId]: numericCode }));
@@ -426,19 +412,59 @@ const PlayerManagement = ({
     }
 
     if (player.confirmation_code === code) {
-      handleStatusChange(playerId, "checked_in");
-      await supabase
-        .from("players")
-        .update({ status: "checked_in", updated_at: new Date().toISOString() })
-        .eq("id", playerId);
-        
-      toast({
-        title: "Success",
-        description: `${player.player_name} has been checked in. This action is irreversible.`,
-      });
-      setCheckinCodes((prev) => ({ ...prev, [playerId]: "" }));
-      setCheckinCodeErrors((prev) => ({ ...prev, [playerId]: null }));
-      fetchMatch();
+      setPlayerStatuses((prev) =>
+        prev.map((p) =>
+          p.id === playerId ? { ...p, status: "checked_in" } : p
+        )
+      );
+      setLoading(true);
+      try {
+        // Update player status
+        const { error: playerError } = await supabase
+          .from("players")
+          .update({ status: "checked_in", updated_at: new Date().toISOString() })
+          .eq("id", playerId);
+
+        if (playerError) throw playerError;
+
+        // Update wallet balance if paid match
+        if (match?.is_paid && match.price && userId) {
+          const { data: walletData, error: walletError } = await supabase
+            .from("wallets")
+            .select("balance")
+            .eq("organizer_id", userId)
+            .single();
+
+          if (walletError || !walletData) throw new Error("Failed to fetch wallet balance");
+
+          const newBalance = walletData.balance + match.price;
+          const { error: walletUpdateError } = await supabase
+            .from("wallets")
+            .update({ balance: newBalance, updated_at: new Date().toISOString() })
+            .eq("organizer_id", userId);
+
+          if (walletUpdateError) throw walletUpdateError;
+
+          setWalletBalance(newBalance);
+        }
+
+        toast({
+          title: "Success",
+          description: `${player.player_name} has been checked in. This action is irreversible.`,
+        });
+        setCheckinCodes((prev) => ({ ...prev, [playerId]: "" }));
+        setCheckinCodeErrors((prev) => ({ ...prev, [playerId]: null }));
+        fetchMatch();
+      } catch (error) {
+        console.error("Error checking in player:", error);
+        toast({
+          title: "Error",
+          description: "Failed to check in player. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
     } else {
       setCheckinCodeErrors((prev) => ({
         ...prev,
@@ -452,54 +478,20 @@ const PlayerManagement = ({
     }
   };
 
-  const handleSave = async () => {
-    if (!match) return;
-    setLoading(true);
-    try {
-      for (const player of playerStatuses) {
-        if (player.status === "checked_in") {
-          toast({
-            title: "Error",
-            description: "Cannot modify checked-in status. Check-in is irreversible.",
-            variant: "destructive",
-          });
-          continue;
-        }
-        await supabase
-          .from("players")
-          .update({ status: player.status, updated_at: new Date().toISOString() })
-          .eq("id", player.id);
-      }
-      toast({
-        title: "Success",
-        description: "Player statuses updated successfully.",
-      });
-      await fetchMatch();
-    } catch (error) {
-      console.error("Error saving statuses:", error);
-      toast({
-        title: "Error",
-        description: "Failed to save changes. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const getStatusStyles = (status: string) => {
     switch (status) {
-      case "confirmed":
-      case "successful":
-        return "bg-green-100 text-green-700 border-green-300";
-      case "pending":
-      case "failed":
-        return "bg-red-100 text-red-700 border-red-300";
+      case "registered":
+        return "bg-yellow-100 text-yellow-700 border-yellow-300";
       case "checked_in":
-      case "processed":
         return "bg-blue-100 text-blue-700 border-blue-300";
       case "absent":
         return "bg-gray-100 text-gray-700 border-gray-300";
+      case "successful":
+        return "bg-green-100 text-green-700 border-green-300";
+      case "failed":
+        return "bg-red-100 text-red-700 border-red-300";
+      case "processed":
+        return "bg-blue-100 text-blue-700 border-blue-300";
       case "under_review":
       case "review":
         return "bg-yellow-100 text-yellow-700 border-yellow-300";
@@ -522,11 +514,11 @@ const PlayerManagement = ({
 
       <div className="flex flex-wrap gap-4 mb-4">
         <Button
-          onClick={handleConfirmMode}
+          onClick={handleTeamManagement}
           className="bg-green-500 hover:bg-green-600 text-white"
           disabled={!canConfirmPlayers || match.cancellation_status}
         >
-          Confirm Players
+          Team Management
         </Button>
         <Button
           onClick={handleCheckinMode}
@@ -620,21 +612,6 @@ const PlayerManagement = ({
                       </p>
                     )}
                   </div>
-                  {mode === "confirm" && player.status !== "checked_in" && (
-                    <Select
-                      value={playerStatuses.find((p) => p.id === player.id)?.status || player.status}
-                      onValueChange={(value) => handleStatusChange(player.id, value)}
-                    >
-                      <SelectTrigger className="w-[150px]">
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="confirmed">Confirmed</SelectItem>
-                        <SelectItem value="absent">Absent</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  )}
                   {mode === "checkin" && player.status !== "checked_in" && (
                     <div className="flex gap-2 w-full sm:w-auto">
                       <Input
@@ -666,9 +643,9 @@ const PlayerManagement = ({
         )}
       </div>
 
-      {(mode === "confirm" || mode === "checkin") && (
+      {mode === "checkin" && (
         <Button
-          onClick={handleSave}
+          onClick={() => setMode(null)}
           className="mt-4 bg-green-500 hover:bg-green-600 text-white"
           disabled={loading}
         >
@@ -678,7 +655,7 @@ const PlayerManagement = ({
               Saving...
             </>
           ) : (
-            "Save Changes"
+            "Done"
           )}
         </Button>
       )}
