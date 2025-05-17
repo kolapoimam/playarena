@@ -415,179 +415,79 @@ const PlayerManagement = ({
     }));
   };
 
-const validateCheckinCode = async (playerId: string) => {
-  const code = checkinCodes[playerId];
-    const validation = codeSchema.safeParse(code);  if (!code || code.length !== 6) {
-    toast({
-      title: "Invalid Code",
-      description: "Please enter a 6-digit code",
-      variant: "destructive",
-    });
-    return;
-  }
-
-  const player = match?.players?.find(p => p.id === playerId);
-  if (!player) {
-    toast({
-      title: "Error",
-      description: "Player not found",
-      variant: "destructive",
-    });
-    return;
-  }
-
-  setCheckingInPlayers(prev => ({ ...prev, [playerId]: true }));
-
-  try {
-    // Verify against Supabase
-    const { data, error } = await supabase
-      .from('players')
-      .select('confirmation_code, player_status')
-      .eq('id', playerId)
-      .single();
-
-    if (error || !data) {
-      throw new Error(error?.message || "Player not found in database");
-    }
-
-    if (data.player_status !== 'Registered') {
-      throw new Error("Player is already checked in or absent");
-    }
-
-    if (data.confirmation_code !== code) {
-      throw new Error("Invalid confirmation code");
-    }
-
-    // Update player status
-    const { error: updateError } = await supabase
-      .from('players')
-      .update({ 
-        player_status: 'Checked In',
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', playerId);
-
-    if (updateError) throw updateError;
-
-    // Update local state
-    setPlayerStatuses(prev =>
-      prev.map(p => p.id === playerId ? { ...p, status: 'Checked In' } : p)
-    );
-
-    toast({
-      title: "Success",
-      description: `${player.player_name} has been checked in successfully`,
-    });
-
-  } catch (error: any) {
-    toast({
-      title: "Error",
-      description: error.message || "Failed to verify code",
-      variant: "destructive",
-    });
-  } finally {
-    setCheckingInPlayers(prev => ({ ...prev, [playerId]: false }));
-    try {
-      console.log("Initiating check-in for player:", { playerId, playerName: player.player_name, code });
-
-      // Verify player exists in Supabase
-      const { data: playerCheck, error: playerCheckError } = await supabase
-        .from("players")
-        .select("id, player_status, number_of_slots")
-        .eq("id", playerId)
-        .eq("match_id", match!.id)
-        .single();
-
-      if (playerCheckError || !playerCheck) {
-        console.error("Player verification failed:", playerCheckError?.message || "No player found");
-        throw new Error("Player not found in database");
-      }
-
-      if (playerCheck.player_status === 'Checked In') {
-        console.warn("Player already checked in on server:", playerId);
-        throw new Error("Player is already checked in");
-      }
-
-      if (playerCheck.player_status === 'Absent') {
-        console.warn("Player marked absent on server:", playerId);
-        throw new Error("Player is marked absent and cannot be checked in");
-      }
-
-      // Attempt to update player_status with retries
-      let updateError: any = null;
-      for (let attempt = 1; attempt <= 3; attempt++) {
-        console.log(`Attempt ${attempt} to update player status for player:`, playerId);
-        const { error } = await supabase
-          .from("players")
-          .update({
-            status: "checked_in",
-            player_status: 'Checked In',
-            updated_at: new Date().toISOString()
-          })
-          .eq("id", playerId);
-
-        if (!error) {
-          updateError = null;
-          break;
-        }
-        updateError = error;
-        console.warn(`Attempt ${attempt} to update player status failed:`, {
-          message: updateError.message,
-          code: updateError.code,
-          details: updateError.details
-        });
-        if (updateError.code === "403") {
-          console.error("Permission denied for update:", updateError);
-          break; // No retry for permission errors
-        }
-        await new Promise(resolve => setTimeout(resolve, 500)); // Wait 500ms before retry
-      }
-
-      if (updateError) {
-        console.error("Failed to update player status after retries:", updateError);
-        throw new Error(`Failed to update player status: ${updateError.message}`);
-      }
-
-      // Update local state optimistically
-      setPlayerStatuses((prev) =>
-        prev.map((p) =>
-          p.id === playerId ? { ...p, status: 'Checked In' } : p
-        )
-      );
-
-      // Show confirmation dialog
-      setCheckinPlayer({
-        name: player.player_name,
-        slots: playerCheck.number_of_slots || 1
-      });
-      setCheckinDialogOpen(true);
-
-      // Clear input and errors
-      setCheckinCodes((prev) => ({ ...prev, [playerId]: "" }));
-      setCheckinCodeErrors((prev) => ({ ...prev, [playerId]: null }));
-
-      // Re-fetch match to sync UI
-      console.log("Re-fetching match data to sync UI for player:", playerId);
-      await fetchMatch();
-
-      console.log("Check-in successful for player:", playerId);
+  const validateCheckinCode = async (playerId: string) => {
+    const code = checkinCodes[playerId];
+    const validation = codeSchema.safeParse(code);
+    if (!code || code.length !== 6) {
       toast({
-        title: "Success",
-        description: `${player.player_name} has been checked in with ${playerCheck.number_of_slots || 1} slot(s). This action is irreversible.`,
+        title: "Invalid Code",
+        description: "Please enter a 6-digit code",
+        variant: "destructive",
       });
-    } catch (error: any) {
-      console.error("Error checking in player:", {
-        message: error.message,
-        stack: error.stack
-      });
+      return;
+    }
+
+    const player = match?.players?.find(p => p.id === playerId);
+    if (!player) {
       toast({
         title: "Error",
-        description: error.message || "Failed to check in player. Please try again.",
+        description: "Player not found",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setCheckingInPlayers(prev => ({ ...prev, [playerId]: true }));
+
+    try {
+      // Verify against Supabase
+      const { data, error } = await supabase
+        .from('players')
+        .select('confirmation_code, player_status')
+        .eq('id', playerId)
+        .single();
+
+      if (error || !data) {
+        throw new Error(error?.message || "Player not found in database");
+      }
+
+      if (data.player_status !== 'Registered') {
+        throw new Error("Player is already checked in or absent");
+      }
+
+      if (data.confirmation_code !== code) {
+        throw new Error("Invalid confirmation code");
+      }
+
+      // Update player status
+      const { error: updateError } = await supabase
+        .from('players')
+        .update({ 
+          player_status: 'Checked In',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', playerId);
+
+      if (updateError) throw updateError;
+
+      // Update local state
+      setPlayerStatuses(prev =>
+        prev.map(p => p.id === playerId ? { ...p, status: 'Checked In' } : p)
+      );
+
+      toast({
+        title: "Success",
+        description: `${player.player_name} has been checked in successfully`,
+      });
+
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to verify code",
         variant: "destructive",
       });
     } finally {
-      setCheckingInPlayers((prev) => ({ ...prev, [playerId]: false }));
-      setLoading(false);
+      setCheckingInPlayers(prev => ({ ...prev, [playerId]: false }));
     }
   };
 
@@ -689,62 +589,57 @@ const validateCheckinCode = async (playerId: string) => {
           <div className="space-y-4">
             {(match.players || []).length === 0 ? (
               <p className="text-gray-600 dark:text-gray-400">No players registered for this match.</p>
-) : (
-  match.players?.map((player) => (
-    <div
-      key={player.id}
-      className="flex flex-col sm:flex-row gap-4 items-start sm:items-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg"
-    >
-      <div className="flex-1">
-        <p className="font-medium text-gray-900 dark:text-gray-100">{player.player_name}</p>
-        <p className="text-sm text-gray-600 dark:text-gray-400">
-          Phone: {player.details?.phone || "Not provided"}
-          {player.player_status === 'Checked In' && (
-            <span> | Code: {player.confirmation_code}</span>
-          )}
-        </p>
-        <span
-          className={`inline-block mt-1 px-2 py-1 text-xs font-medium rounded border ${getStatusStyles(player.player_status)}`}
-        >
-          {player.player_status}
-        </span>
-      </div>
-{mode === "checkin" && (
-  <div className="flex gap-2 w-full sm:w-auto">
-    <Input
-      placeholder="Enter check-in code"
-      value={checkinCodes[player.id] || ""}
-      onChange={(e) => handleCheckinCodeChange(player.id, e.target.value)}
-      inputMode="numeric"
-      pattern="[0-9]*"
-      maxLength={6}
-      className="w-full sm:w-[150px]"
-      disabled={player.player_status !== 'Registered' || checkingInPlayers[player.id]}
-    />
-    <Button
-      onClick={() => validateCheckinCode(player.id)}
-      className="bg-blue-500 hover:bg-blue-600 text-white"
-      disabled={
-        !checkinCodes[player.id] || 
-        checkinCodes[player.id].length !== 6 || 
-        player.player_status !== 'Registered' || 
-        checkingInPlayers[player.id]
-      }
-    >
-      {checkingInPlayers[player.id] ? (
-        <Loader2 size={16} className="mr-2 animate-spin" />
-      ) : (
-        "Verify"
-      )}
-    </Button>
-  </div>
-      )}
-      {checkinCodeErrors[player.id] && (
-        <p className="text-sm text-red-600 mt-1">{checkinCodeErrors[player.id]}</p>
-      )}
-    </div>
-  ))
-)}
+            ) : (
+              match.players?.map((player) => (
+                <div
+                  key={player.id}
+                  className="flex flex-col sm:flex-row gap-4 items-start sm:items-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg"
+                >
+                  <div className="flex-1">
+                    <p className="font-medium text-gray-900 dark:text-gray-100">{player.player_name}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Phone: {player.details?.phone || "Not provided"}
+                      {player.player_status === 'Checked In' && (
+                        <span> | Code: {player.confirmation_code}</span>
+                      )}
+                    </p>
+                    <span
+                      className={`inline-block mt-1 px-2 py-1 text-xs font-medium rounded border ${getStatusStyles(player.player_status)}`}
+                    >
+                      {player.player_status}
+                    </span>
+                  </div>
+                  {mode === "checkin" && (
+                    <div className="flex gap-2 w-full sm:w-auto">
+                      <Input
+                        placeholder="Enter check-in code"
+                        value={checkinCodes[player.id] || ""}
+                        onChange={(e) => handleCheckinCodeChange(player.id, e.target.value)}
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        maxLength={6}
+                        className="w-full sm:w-[150px]"
+                        disabled={player.player_status !== 'Registered' || checkingInPlayers[player.id]}
+                      />
+                      <Button
+                        onClick={() => validateCheckinCode(player.id)}
+                        className="bg-blue-500 hover:bg-blue-600 text-white"
+                        disabled={!!checkinCodeErrors[player.id] || !checkinCodes[player.id] || checkinCodes[player.id].length !== 6 || player.player_status !== 'Registered' || checkingInPlayers[player.id]}
+                      >
+                        {checkingInPlayers[player.id] ? (
+                          <Loader2 size={16} className="mr-2 animate-spin" />
+                        ) : (
+                          "Verify"
+                        )}
+                      </Button>
+                    </div>
+                  )}
+                  {checkinCodeErrors[player.id] && (
+                    <p className="text-sm text-red-600 mt-1">{checkinCodeErrors[player.id]}</p>
+                  )}
+                </div>
+              ))
+            )}
           </div>
         )}
       </div>
@@ -895,4 +790,4 @@ const validateCheckinCode = async (playerId: string) => {
   );
 };
 
-export default PlayerManagement; // <-- Proper export at the end
+export default PlayerManagement;
