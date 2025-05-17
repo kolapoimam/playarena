@@ -6,6 +6,7 @@ import { isPast, differenceInMinutes } from "date-fns";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, AlertCircle, Loader2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
 import MatchCodeInput from "@/components/MatchCodeInput";
@@ -74,6 +75,7 @@ const ConfirmCheckin = () => {
   const [userId, setUserId] = useState<string | null>(null);
   const [recentSuperCodes, setRecentSuperCodes] = useState<string[]>([]);
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
+  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
 
   useEffect(() => {
     const fetchUserId = async () => {
@@ -234,7 +236,7 @@ const ConfirmCheckin = () => {
 
   const canConfirmPlayers = () => {
     if (!match || match.cancellation_status || isMatchPast) return false;
-    return !!match.players?.length; // Enable if there are registered players
+    return !!match.players?.length;
   };
 
   const handleCancelMatch = async () => {
@@ -249,6 +251,7 @@ const ConfirmCheckin = () => {
         description: "Cannot cancel match after it has started.",
         variant: "destructive",
       });
+      setIsCancelDialogOpen(false);
       return;
     }
 
@@ -282,6 +285,7 @@ const ConfirmCheckin = () => {
       });
     } finally {
       setLoading(false);
+      setIsCancelDialogOpen(false);
     }
   };
 
@@ -353,7 +357,7 @@ const ConfirmCheckin = () => {
             <MatchDetails
               match={match}
               cashout={cashout}
-              handleCancelMatch={handleCancelMatch}
+              handleCancelMatch={() => setIsCancelDialogOpen(true)}
               loading={loading}
               isMatchPast={isMatchPast}
               walletBalance={walletBalance || 0}
@@ -372,12 +376,39 @@ const ConfirmCheckin = () => {
               setLoading={setLoading}
               isMatchPast={isMatchPast}
               canConfirmPlayers={canConfirmPlayers()}
-              handleCancelMatch={handleCancelMatch}
-              navigate={navigate} // Added for Team Management navigation
+              handleCancelMatch={() => setIsCancelDialogOpen(true)}
+              navigate={navigate}
             />
           </div>
         )}
       </div>
+
+      <Dialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
+        <DialogContent className="max-w-md rounded-lg">
+          <DialogHeader>
+            <DialogTitle>Confirm Match Cancellation</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to cancel this match? This action cannot be undone, and players will be notified.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsCancelDialogOpen(false)}
+            >
+              No, Keep Match
+            </Button>
+            <Button
+              onClick={handleCancelMatch}
+              className="bg-red-500 hover:bg-red-600 text-white"
+              disabled={loading}
+            >
+              Yes, Cancel Match
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Navbar />
     </div>
   );
