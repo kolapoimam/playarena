@@ -38,6 +38,7 @@ type Match = {
     status: string;
     confirmation_code: string;
     details: { phone: string } | null;
+    number_of_slots?: number;
   }[] | null;
 };
 
@@ -116,7 +117,7 @@ const ConfirmCheckin = () => {
         .select(`
           id, slug, title, match_date, match_time, match_start_time, match_end_time, total_slots, organizer_name, super_code, is_paid, price, cancellation_status, status,
           venue:venues(name, city),
-          players(id, player_name, status, confirmation_code, details)
+          players(id, player_name, status, confirmation_code, details, number_of_slots)
         `)
         .eq("super_code", superCode)
         .single();
@@ -191,8 +192,7 @@ const ConfirmCheckin = () => {
           }
         }
       } catch (cashoutError: any) {
-        console.error("Error fetching cashout:", cashoutError.message);
-        setCashout(null);
+        console.error("Error fetching cashout:", cashoutError.message); setCashout(null);
         toast({
           title: "Error",
           description: "Failed to fetch cashout information. Please try again later.",
@@ -207,7 +207,7 @@ const ConfirmCheckin = () => {
           .map(p => 
             supabase
               .from("players")
-              .update({ status: "absent", updated_at: new Date().toISOString() })
+              .update({ status: "absent", player_status: 'Absent', updated_at: new Date().toISOString() })
               .eq("id", p.id)
           ) || [];
         
@@ -266,7 +266,7 @@ const ConfirmCheckin = () => {
 
       const { error: playersError } = await supabase
         .from("players")
-        .update({ status: "cancelled", cancellation_status: true, updated_at: new Date().toISOString() })
+        .update({ status: "cancelled", cancellation_status: true, player_status: 'Absent', updated_at: new Date().toISOString() })
         .eq("match_id", match.id);
 
       if (playersError) throw playersError;
@@ -295,6 +295,32 @@ const ConfirmCheckin = () => {
       fetchMatch();
     }
   }, [superCode]);
+
+  // Set up Supabase real-time subscription for players table
+  useEffect(() => {
+    if (!match?.id) return;
+
+    const subscription = supabase
+      .channel(`players_match_${match.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'players',
+          filter: `match_id=eq.${match.id}`,
+        },
+        (payload) => {
+          console.log('Player update received:', payload);
+          fetchMatch(); // Refresh match data on player status change
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(subscription);
+    };
+  }, [match?.id]);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-24">
