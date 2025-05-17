@@ -415,180 +415,90 @@ const PlayerManagement = ({
     }));
   };
 
-  const validateCheckinCode = async (playerId: string) => {
-    const code = checkinCodes[playerId];
-    const validation = codeSchema.safeParse(code);
-    if (!code || code.length !== 6) {
-      toast({
-        title: "Invalid Code",
-        description: "Please enter a 6-digit code",
-        variant: "destructive",
-      });
-      return;
+const validateCheckinCode = async (playerId: string) => {
+  const code = checkinCodes[playerId];
+  const validation = codeSchema.safeParse(code);
+  if (!code || code.length !== 6) {
+    toast({
+      title: "Invalid Code",
+      description: "Please enter a 6-digit code",
+      variant: "destructive",
+    });
+    return;
+  }
+
+  const player = match?.players?.find(p => p.id === playerId);
+  if (!player) {
+    toast({
+      title: "Error",
+      description: "Player not found",
+      variant: "destructive",
+    });
+    return;
+  }
+
+  setCheckingInPlayers(prev => ({ ...prev, [playerId]: true }));
+
+  try {
+    // Verify against Supabase
+    const { data, error } = await supabase
+      .from('players')
+      .select('confirmation_code, player_status')
+      .eq('id', playerId)
+      .single();
+
+    if (error || !data) {
+      throw new Error(error?.message || "Player not found in database");
     }
 
-    const player = match?.players?.find(p => p.id === playerId);
-    if (!player) {
-      toast({
-        title: "Error",
-        description: "Player not found",
-        variant: "destructive",
-      });
-      return;
+    if (data.player_status !== 'Registered') {
+      throw new Error("Player is already checked in or absent");
     }
 
-    setCheckingInPlayers(prev => ({ ...prev, [playerId]: true }));
-
-    try {
-      // Verify against Supabase
-      const { data, error } = await supabase
-        .from('players')
-        .select('confirmation_code, player_status')
-        .eq('id', playerId)
-        .single();
-
-      if (error || !data) {
-        throw new Error(error?.message || "Player not found in database");
-      }
-
-      if (data.player_status !== 'Registered') {
-        throw new Error("Player is already checked in or absent");
-      }
-
-      if (data.confirmation_code !== code) {
-        throw new Error("Invalid confirmation code");
-      }
-
-      // Update player status
-      const { error: updateError } = await supabase
-        .from('players')
-        .update({ 
-          player_status: 'Checked In',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', playerId);
-
-      if (updateError) throw updateError;
-
-      // Update local state
-      setPlayerStatuses(prev =>
-        prev.map(p => p.id === playerId ? { ...p, status: 'Checked In' } : p)
-      );
-
-      toast({
-        title: "Success",
-        description: `${player.player_name} has been checked in successfully`,
-      });
-
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to verify code",
-        variant: "destructive",
-      });
-    } finally {
-      setCheckingInPlayers(prev => ({ ...prev, [playerId]: false }));
+    if (data.confirmation_code !== code) {
+      throw new Error("Invalid confirmation code");
     }
-  };
 
-  const getStatusStyles = (status: string) => {
-    switch (status) {
-      case 'Registered':
-        return "bg-yellow-500 text-white border-yellow-600";
-      case 'Checked In':
-        return "bg-green-500 text-white border-green-600";
-      case 'Absent':
-        return "bg-red-500 text-white border-red-600";
-      case "successful":
-        return "bg-green-100 text-green-700 border-green-300";
-      case "failed":
-        return "bg-red-100 text-red-700 border-red-300";
-      case "processed":
-        return "bg-blue-100 text-blue-700 border-blue-300";
-      case "under_review":
-      case "review":
-        return "bg-yellow-100 text-yellow-700 border-yellow-300";
-      default:
-        return "bg-yellow-100 text-yellow-700 border-yellow-300";
-    }
-  };
+    // Update player status in Supabase
+    const { error: updateError } = await supabase
+      .from('players')
+      .update({ 
+        player_status: 'Checked In',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', playerId);
 
-  if (!match) return null;
+    if (updateError) throw updateError;
 
-  return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700">
-      <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Manage Players</h2>
-      
-      <div className="mb-4">
-        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-          Wallet Balance: ₦{walletBalance.toFixed(2)}
-        </p>
-      </div>
+    // Update local state
+    setPlayerStatuses(prev =>
+      prev.map(p => p.id === playerId ? { ...p, status: 'Checked In' } : p)
+    );
 
-      <div className="flex gap-3 mb-4">
-        <Button
-          onClick={handleCheckinMode}
-          className="bg-blue-500 hover:bg-blue-600 text-white flex-1"
-          disabled={!canCheckin() || match.cancellation_status}
-        >
-          Check-in Players
-        </Button>
-        <Button
-          onClick={handleCashoutMode}
-          className={`bg-yellow-500 hover:bg-yellow-600 text-white flex-1 ${!isCashoutEligible() ? "opacity-50 cursor-not-allowed" : ""}`}
-          disabled={!isCashoutEligible() || match.cancellation_status}
-        >
-          Request Cashout
-        </Button>
-      </div>
+    // Refresh match data to sync UI with Supabase
+    await fetchMatch();
 
-      {cashoutRequests.length > 0 && (
-        <div className="mb-6">
-          <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">Cashout Requests</h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-              <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
-                <tr>
-                  <th className="px-4 py-2">Amount</th>
-                  <th className="px-4 py-2">Bank Details</th>
-                  <th className="px-4 py-2">Status</th>
-                  <th className="px-4 py-2">Created At</th>
-                </tr>
-              </thead>
-              <tbody>
-                {cashoutRequests.map((request) => (
-                  <tr key={request.id} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
-                    <td className="px-4 py-2">₦{request.amount.toFixed(2)}</td>
-                    <td className="px-4 py-2">
-                      {request.account_details.account_name} <br />
-                      {request.account_details.bank_account_number} ({request.account_details.bank_name})
-                    </td>
-                    <td className="px-4 py-2">
-                      <span className={`inline-block px-2 py-1 rounded ${getStatusStyles(request.status)}`}>
-                        {request.status.replace("_", " ").charAt(0).toUpperCase() + request.status.replace("_", " ").slice(1)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2">{new Date(request.created_at).toLocaleString()}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+    toast({
+      title: "Success",
+      description: `${player.player_name} has been checked in successfully`,
+    });
 
-      <div className="max-h-[400px] overflow-y-auto">
-        <button
-          onClick={() => setIsPlayersOpen(!isPlayersOpen)}
-          className="flex items-center gap-2 w-full text-left text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4"
-        >
-          Players
-          {isPlayersOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-        </button>
-        {isPlayersOpen && (
-          <div className="space-y-4">
-            {(match.players || []).length === 0 ? (
-              <p className="text-gray-600 dark:text-gray-400">No players registered for this match.</p>
+    // Clear input and errors
+    setCheckinCodes(prev => ({ ...prev, [playerId]: "" }));
+    setCheckinCodeErrors(prev => ({ ...prev, [playerId]: null }));
+  } catch (error: any) {
+    toast({
+      title: "Error",
+      description: error.message || "Failed to verify code",
+      variant: "destructive",
+    });
+  } finally {
+    setCheckingInPlayers(prev => ({ ...prev, [playerId]: false }));
+  }
+};
+
+{(match.players || []).length === 0 ? (
+  <p className="text-gray-600 dark:text-gray-400">No players registered for this match.</p>
 ) : (
   match.players?.map((player) => (
     <div
