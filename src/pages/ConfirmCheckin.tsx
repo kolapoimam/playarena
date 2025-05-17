@@ -201,7 +201,7 @@ const ConfirmCheckin = () => {
       // Update absent status for players who haven't checked in after match end time
       if (matchData.match_end_time && isPast(new Date(matchData.match_end_time))) {
         const updates = matchData.players
-          ?.filter(p => p.status === "confirmed" && p.status !== "checked_in")
+          ?.filter(p => p.status === "registered" && p.status !== "checked_in")
           .map(p => 
             supabase
               .from("players")
@@ -234,10 +234,7 @@ const ConfirmCheckin = () => {
 
   const canConfirmPlayers = () => {
     if (!match || match.cancellation_status || isMatchPast) return false;
-    const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
-    const now = new Date();
-    const minutesSinceStart = differenceInMinutes(now, matchDateTime);
-    return minutesSinceStart <= 60;
+    return !!match.players?.length; // Enable if there are registered players
   };
 
   const handleCancelMatch = async () => {
@@ -246,10 +243,10 @@ const ConfirmCheckin = () => {
     const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
     const now = new Date();
     const minutesToStart = differenceInMinutes(matchDateTime, now);
-    if (minutesToStart <= 60) {
+    if (minutesToStart <= 0) {
       toast({
         title: "Error",
-        description: "Cannot cancel match within 1 hour of start time.",
+        description: "Cannot cancel match after it has started.",
         variant: "destructive",
       });
       return;
@@ -281,66 +278,6 @@ const ConfirmCheckin = () => {
       toast({
         title: "Error",
         description: "Failed to cancel match. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleStartMatch = async () => {
-    if (!match || match.match_start_time || match.cancellation_status) return;
-
-    setLoading(true);
-    try {
-      const now = new Date().toISOString();
-      const { error } = await supabase
-        .from("matches")
-        .update({ match_start_time: now, status: "live" })
-        .eq("id", match.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Match started successfully.",
-      });
-      await fetchMatch();
-    } catch (error: any) {
-      console.error("Error starting match:", error);
-      toast({
-        title: "Error",
-        description: "Failed to start match. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleEndMatch = async () => {
-    if (!match || !match.match_start_time || match.match_end_time || match.cancellation_status) return;
-
-    setLoading(true);
-    try {
-      const now = new Date().toISOString();
-      const { error } = await supabase
-        .from("matches")
-        .update({ match_end_time: now, status: "completed" })
-        .eq("id", match.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Match ended successfully.",
-      });
-      await fetchMatch();
-    } catch (error: any) {
-      console.error("Error ending match:", error);
-      toast({
-        title: "Error",
-        description: "Empty match cannot be ended. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -417,8 +354,6 @@ const ConfirmCheckin = () => {
               match={match}
               cashout={cashout}
               handleCancelMatch={handleCancelMatch}
-              handleStartMatch={handleStartMatch}
-              handleEndMatch={handleEndMatch}
               loading={loading}
               isMatchPast={isMatchPast}
               walletBalance={walletBalance || 0}
@@ -438,6 +373,7 @@ const ConfirmCheckin = () => {
               isMatchPast={isMatchPast}
               canConfirmPlayers={canConfirmPlayers()}
               handleCancelMatch={handleCancelMatch}
+              navigate={navigate} // Added for Team Management navigation
             />
           </div>
         )}
