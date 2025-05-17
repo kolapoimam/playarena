@@ -431,6 +431,16 @@ const PlayerManagement = ({
       return;
     }
 
+    if (player.player_status === 'Absent') {
+      console.warn("Attempted to check in absent player:", playerId);
+      toast({
+        title: "Error",
+        description: "Player is marked absent and cannot be checked in after the match has ended.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (player.confirmation_code !== code) {
       console.log("Invalid check-in code for player:", playerId, { entered: code, expected: player.confirmation_code });
       setCheckinCodeErrors((prev) => ({
@@ -464,6 +474,11 @@ const PlayerManagement = ({
       if (playerCheck.player_status === 'Checked In') {
         console.warn("Player already checked in on server:", playerId);
         throw new Error("Player is already checked in");
+      }
+
+      if (playerCheck.player_status === 'Absent') {
+        console.warn("Player marked absent on server:", playerId);
+        throw new Error("Player is marked absent and cannot be checked in");
       }
 
       // Attempt to update player_status with retries
@@ -515,16 +530,6 @@ const PlayerManagement = ({
       console.log("Re-fetching match data to sync UI for player:", playerId);
       await fetchMatch();
 
-      // Fallback: Update match.players locally if fetchMatch fails
-      if (match?.players) {
-        setMatch({
-          ...match,
-          players: match.players.map(p =>
-            p.id === playerId ? { ...p, player_status: 'Checked In' } : p
-          )
-        });
-      }
-
       console.log("Check-in successful for player:", playerId);
       toast({
         title: "Success",
@@ -549,23 +554,14 @@ const PlayerManagement = ({
     }
   };
 
-  const handleMarkAbsent = (playerId: string) => {
-    // Placeholder for marking player as Absent (to be implemented later)
-    toast({
-      title: "Not Implemented",
-      description: "Marking a player as Absent is not yet available.",
-      variant: "destructive",
-    });
-  };
-
   const getStatusStyles = (status: string) => {
     switch (status) {
       case 'Registered':
-        return "bg-yellow-100 text-yellow-700 border-yellow-300";
+        return "bg-yellow-500 text-white border-yellow-600";
       case 'Checked In':
-        return "bg-blue-100 text-blue-700 border-blue-300";
+        return "bg-green-500 text-white border-green-600";
       case 'Absent':
-        return "bg-gray-100 text-gray-700 border-gray-300";
+        return "bg-red-500 text-white border-red-600";
       case "successful":
         return "bg-green-100 text-green-700 border-green-300";
       case "failed":
@@ -700,25 +696,18 @@ const PlayerManagement = ({
                         pattern="[0-9]*"
                         maxLength={6}
                         className="w-full sm:w-[150px]"
-                        disabled={!canCheckin() || player.player_status === 'Checked In' || playerStatuses.find(p => p.id === player.id)?.status === 'Checked In' || checkingInPlayers[player.id]}
+                        disabled={!canCheckin() || player.player_status !== 'Registered' || checkingInPlayers[player.id]}
                       />
                       <Button
                         onClick={() => validateCheckinCode(player.id)}
                         className="bg-blue-500 hover:bg-blue-600 text-white"
-                        disabled={!!checkinCodeErrors[player.id] || !checkinCodes[player.id] || !canCheckin() || player.player_status === 'Checked In' || playerStatuses.find(p => p.id === player.id)?.status === 'Checked In' || checkingInPlayers[player.id]}
+                        disabled={!!checkinCodeErrors[player.id] || !checkinCodes[player.id] || !canCheckin() || player.player_status !== 'Registered' || checkingInPlayers[player.id]}
                       >
                         {checkingInPlayers[player.id] ? (
                           <Loader2 size={16} className="mr-2 animate-spin" />
                         ) : (
                           "Verify"
                         )}
-                      </Button>
-                      <Button
-                        onClick={() => handleMarkAbsent(player.id)}
-                        className="bg-gray-500 hover:bg-gray-600 text-white"
-                        disabled={true} // Disabled until Absent functionality is implemented
-                      >
-                        Mark Absent
                       </Button>
                     </div>
                   )}
