@@ -32,7 +32,8 @@ type Match = {
   players: {
     id: string;
     player_name: string;
-    status: string;
+    status: string; // Legacy status column
+    player_status: 'Registered' | 'Checked In' | 'Absent'; // New ENUM column
     confirmation_code: string;
     details: { phone: string } | null;
     slots_purchased?: number;
@@ -119,8 +120,8 @@ const nigerianBanks = [
 type PlayerManagementProps = {
   match: Match | null;
   tempIdentifier: string;
-  playerStatuses: { id: string; status: string; checkinCode: string }[];
-  setPlayerStatuses: (statuses: { id: string; status: string; checkinCode: string }[]) => void;
+  playerStatuses: { id: string; status: 'Registered' | 'Checked In' | 'Absent'; checkinCode: string }[];
+  setPlayerStatuses: (statuses: { id: string; status: 'Registered' | 'Checked In' | 'Absent'; checkinCode: string }[]) => void;
   checkinCodes: { [key: string]: string };
   setCheckinCodes: (codes: { [key: string]: string }) => void;
   checkinCodeErrors: { [key: string]: string | null };
@@ -166,6 +167,7 @@ const PlayerManagement = ({
   const [walletBalance, setWalletBalance] = useState<number>(0);
   const [cashoutRequests, setCashoutRequests] = useState<any[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
+  const [checkingInPlayers, setCheckingInPlayers] = useState<{ [key: string]: boolean }>({});
 
   useEffect(() => {
     const fetchUserIdAndData = async () => {
@@ -203,12 +205,12 @@ const PlayerManagement = ({
   }, [match, userId]);
 
   const hasCheckedInPlayers = () => {
-    return match?.players?.some(p => p.status === "checked_in") || false;
+    return match?.players?.some(p => p.player_status === 'Checked In') || false;
   };
 
   const isCashoutEligible = () => {
     if (!match || match.cancellation_status || !match.is_paid) return false;
-    const checkedInPlayers = match.players?.filter(p => p.status === "checked_in").length || 0;
+    const checkedInPlayers = match.players?.filter(p => p.player_status === 'Checked In').length || 0;
     return checkedInPlayers > 0 && walletBalance > 0;
   };
 
@@ -419,7 +421,7 @@ const PlayerManagement = ({
       return;
     }
 
-    if (player.status === "checked_in") {
+    if (player.player_status === 'Checked In' || playerStatuses.find(p => p.id === playerId)?.status === 'Checked In') {
       console.warn("Attempted to check in already checked-in player:", playerId);
       toast({
         title: "Error",
@@ -443,17 +445,37 @@ const PlayerManagement = ({
       return;
     }
 
-    setLoading(true);
+    setCheckingInPlayers((prev) => ({ ...prev, [playerId]: true }));
     try {
       console.log("Initiating check-in for player:", { playerId, playerName: player.player_name, code });
 
-      // Attempt to update player status with retries
+      // Verify player exists in Supabase
+      const { data: playerCheck, error: playerCheckError } = await supabase
+        .from("players")
+        .select("id, player_status")
+        .eq("id", playerId)
+        .single();
+
+      if (playerCheckError || !playerCheck) {
+        console.error("Player verification failed:", playerCheckError?.message || "No player found");
+        throw new Error("Player not found in database");
+      }
+
+      if (playerCheck.player_status === 'Checked In') {
+        console.warn("Player already checked in on server:", playerId);
+        throw new Error("Player is already checked in");
+      }
+
+      // Attempt to update player_status with retries
       let updateError: any = null;
-      for (let attempt = 1; attempt <= 2; attempt++) {
+      for (let attempt = 1; attempt <= 3; attempt++) {
         console.log(`Attempt ${attempt} to update player status for player:`, playerId);
         const { error } = await supabase
           .from("players")
-          .update({ status: "checked_in", updated_at: new Date().toISOString() })
+          .update({
+            player_status: 'Checked In',
+            updated_at: new Date().toISOString()
+          })
           .eq("id", playerId);
 
         if (!error) {
@@ -461,18 +483,27 @@ const PlayerManagement = ({
           break;
         }
         updateError = error;
-        console.warn(`Attempt ${attempt} failed to update player status:`, updateError);
+        console.warn(`Attempt ${attempt} to update player status failed:`, {
+          message: updateError.message,
+          code: updateError.code,
+          details: updateError.details
+        });
+        if (updateError.code === "403") {
+          console.error("Permission denied for update:", updateError);
+          break; // No retry for permission errors
+        }
+        await new Promise(resolve => setTimeout(resolve, 500)); // Wait 500ms before retry
       }
 
       if (updateError) {
         console.error("Failed to update player status after retries:", updateError);
-        throw updateError;
+        throw new Error(`Failed to update player status: ${updateError.message}`);
       }
 
-      // Update local state to reflect check-in
+      // Update local state optimistically
       setPlayerStatuses((prev) =>
         prev.map((p) =>
-          p.id === playerId ? { ...p, status: "checked_in" } : p
+          p.id === playerId ? { ...p, status: 'Checked In' } : p
         )
       );
 
@@ -480,34 +511,60 @@ const PlayerManagement = ({
       setCheckinCodes((prev) => ({ ...prev, [playerId]: "" }));
       setCheckinCodeErrors((prev) => ({ ...prev, [playerId]: null }));
 
-      // Re-fetch match to ensure UI sync
+      // Re-fetch match to sync UI
       console.log("Re-fetching match data to sync UI for player:", playerId);
       await fetchMatch();
+
+      // Fallback: Update match.players locally if fetchMatch fails
+      if (match?.players) {
+        setMatch({
+          ...match,
+          players: match.players.map(p =>
+            p.id === playerId ? { ...p, player_status: 'Checked In' } : p
+          )
+        });
+      }
 
       console.log("Check-in successful for player:", playerId);
       toast({
         title: "Success",
         description: `${player.player_name} has been checked in. This action is irreversible.`,
       });
-    } catch (error) {
-      console.error("Error checking in player:", error);
+    } catch (error: any) {
+      console.error("Error checking in player:", {
+        message: error.message,
+        stack: error.stack
+      });
       toast({
         title: "Error",
-        description: "Failed to check in player. Please try again.",
+        description: error.message || "Failed to check in player. Please try again.",
         variant: "destructive",
       });
     } finally {
+      setCheckingInPlayers((prev) => ({ ...prev, [playerId]: false }));
       setLoading(false);
+      // Always attempt to fetch latest match data
+      console.log("Final fetchMatch to ensure UI sync");
+      await fetchMatch();
     }
+  };
+
+  const handleMarkAbsent = (playerId: string) => {
+    // Placeholder for marking player as Absent (to be implemented later)
+    toast({
+      title: "Not Implemented",
+      description: "Marking a player as Absent is not yet available.",
+      variant: "destructive",
+    });
   };
 
   const getStatusStyles = (status: string) => {
     switch (status) {
-      case "registered":
+      case 'Registered':
         return "bg-yellow-100 text-yellow-700 border-yellow-300";
-      case "checked_in":
+      case 'Checked In':
         return "bg-blue-100 text-blue-700 border-blue-300";
-      case "absent":
+      case 'Absent':
         return "bg-gray-100 text-gray-700 border-gray-300";
       case "successful":
         return "bg-green-100 text-green-700 border-green-300";
@@ -623,14 +680,14 @@ const PlayerManagement = ({
                     <p className="font-medium text-gray-900 dark:text-gray-100">{player.player_name}</p>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
                       Phone: {player.details?.phone || "Not provided"}
-                      {player.status === "checked_in" && (
+                      {player.player_status === 'Checked In' && (
                         <span> | Code: {player.confirmation_code}</span>
                       )}
                     </p>
                     <span
-                      className={`inline-block mt-1 px-2 py-1 text-xs font-medium rounded border ${getStatusStyles(player.status)}`}
+                      className={`inline-block mt-1 px-2 py-1 text-xs font-medium rounded border ${getStatusStyles(player.player_status)}`}
                     >
-                      {player.status.replace("_", " ").charAt(0).toUpperCase() + player.status.replace("_", " ").slice(1)}
+                      {player.player_status}
                     </span>
                   </div>
                   {mode === "checkin" && (
@@ -643,14 +700,25 @@ const PlayerManagement = ({
                         pattern="[0-9]*"
                         maxLength={6}
                         className="w-full sm:w-[150px]"
-                        disabled={!canCheckin() || player.status === "checked_in"}
+                        disabled={!canCheckin() || player.player_status === 'Checked In' || playerStatuses.find(p => p.id === player.id)?.status === 'Checked In' || checkingInPlayers[player.id]}
                       />
                       <Button
                         onClick={() => validateCheckinCode(player.id)}
                         className="bg-blue-500 hover:bg-blue-600 text-white"
-                        disabled={!!checkinCodeErrors[player.id] || !checkinCodes[player.id] || !canCheckin() || player.status === "checked_in"}
+                        disabled={!!checkinCodeErrors[player.id] || !checkinCodes[player.id] || !canCheckin() || player.player_status === 'Checked In' || playerStatuses.find(p => p.id === player.id)?.status === 'Checked In' || checkingInPlayers[player.id]}
                       >
-                        Verify
+                        {checkingInPlayers[player.id] ? (
+                          <Loader2 size={16} className="mr-2 animate-spin" />
+                        ) : (
+                          "Verify"
+                        )}
+                      </Button>
+                      <Button
+                        onClick={() => handleMarkAbsent(player.id)}
+                        className="bg-gray-500 hover:bg-gray-600 text-white"
+                        disabled={true} // Disabled until Absent functionality is implemented
+                      >
+                        Mark Absent
                       </Button>
                     </div>
                   )}
