@@ -165,10 +165,63 @@ const PlayerManagement = ({
       }
 
       setWalletBalance(balance < 0 ? 0 : balance);
+
+      // Check if match has ended and update players to Absent if necessary
+      const now = new Date();
+      let matchEndTime: Date;
+      try {
+        if (match.match_end_time) {
+          matchEndTime = new Date(match.match_end_time);
+        } else {
+          matchEndTime = addHours(new Date(`${match.match_date}T${match.match_time}`), 2);
+        }
+        if (isNaN(matchEndTime.getTime())) {
+          matchEndTime = new Date("2025-05-17T15:00:00+01:00");
+        }
+      } catch (error) {
+        matchEndTime = new Date("2025-05-17T15:00:00+01:00");
+      }
+
+      if (isPast(matchEndTime) && match.players) {
+        const registeredPlayers = match.players.filter(p => p.player_status === 'Registered');
+        if (registeredPlayers.length > 0) {
+          try {
+            const { error: updateError } = await supabase
+              .from('players')
+              .update({ 
+                player_status: 'Absent',
+                updated_at: new Date().toISOString()
+              })
+              .eq('match_id', match.id)
+              .eq('player_status', 'Registered');
+
+            if (updateError) throw updateError;
+
+            // Update playerStatuses to reflect the change
+            setPlayerStatuses(prev =>
+              prev.map(p => 
+                registeredPlayers.some(rp => rp.id === p.id) 
+                  ? { ...p, status: 'Absent' } 
+                  : p
+              )
+            );
+
+            // Refresh match data to reflect the updated statuses in the UI
+            await fetchMatch();
+          } catch (error) {
+            console.error("Error updating players to Absent:", error);
+            toast({
+              title: "Error",
+              description: "Failed to update player statuses to Absent.",
+              variant: "destructive",
+            });
+          }
+        }
+      }
     };
 
     fetchUserIdAndData();
-  }, [match, userId]);
+  }, [match, userId, fetchMatch, setPlayerStatuses, toast]);
 
   const hasCheckedInPlayers = () => {
     return match?.players?.some(p => p.player_status === 'Checked In') || false;
@@ -401,7 +454,6 @@ const PlayerManagement = ({
       setCheckinCodes(prev => ({ ...prev, [playerId]: "" }));
       setCheckinCodeErrors(prev => ({ ...prev, [playerId]: null }));
       await fetchMatch();
-
     } catch (error: any) {
       toast({
         title: "Error",
@@ -517,23 +569,25 @@ const PlayerManagement = ({
               match.players?.map((player) => (
                 <div
                   key={player.id}
-                  className="flex flex-col sm:flex-row gap-4 items-start sm:items-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg"
+                  className="relative flex flex-col sm:flex-row gap-4 items-start sm:items-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg"
                 >
                   <div className="flex-1">
                     <p className="font-medium text-gray-900 dark:text-gray-100">{player.player_name}</p>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
                       Phone: {player.details?.phone || "Not provided"}
-                      {player.player_status === 'Checked In' && (
-                        <span> | Code: {player.confirmation_code}</span>
-                      )}
                     </p>
-                    <span
-                      className={`inline-block mt-1 px-2 py-1 text-xs font-medium rounded border ${getStatusStyles(player.player_status || player.status)}`}
-                    >
-                      {player.player_status || player.status}
-                    </span>
+                    {player.player_status === 'Checked In' && (
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        Code: {player.confirmation_code}
+                      </p>
+                    )}
                   </div>
-                  {mode === "checkin" && (
+                  <span
+                    className={`absolute top-2 right-2 px-2 py-1 text-xs font-medium rounded border ${getStatusStyles(player.player_status)}`}
+                  >
+                    {player.player_status}
+                  </span>
+                  {mode === "checkin" && player.player_status !== 'Checked In' && (
                     <div className="flex gap-2 w-full sm:w-auto">
                       <Input
                         placeholder="Enter check-in code"
