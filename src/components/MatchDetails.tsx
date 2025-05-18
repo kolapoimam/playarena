@@ -70,6 +70,13 @@ type Match = {
   }[];
 };
 
+type Cashout = {
+  id: string;
+  match_id: string;
+  amount: number;
+  status: "under_review" | "processed" | "failed" | "successful";
+};
+
 const formatStatus = (status: string) => {
   return status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, " ");
 };
@@ -85,6 +92,7 @@ const MatchDetail = () => {
   const [backgroundOption, setBackgroundOption] = useState("field");
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [password, setPassword] = useState("");
+  const [walletBalance, setWalletBalance] = useState<number>(0);
   const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -111,7 +119,7 @@ const MatchDetail = () => {
         setPasswordDialogOpen(true);
         setLoading(false);
       } else {
-        setMatch(matchData);
+        await fetchMatchDetails(matchData);
         setLoading(false);
       }
     } catch (error) {
@@ -122,6 +130,51 @@ const MatchDetail = () => {
         variant: "destructive",
       });
       navigate("/matches");
+    }
+  };
+
+  const fetchMatchDetails = async (matchData: Match) => {
+    try {
+      const { data: playersData, error: playersError } = await supabase
+        .from('players')
+        .select('player_status, number_of_slots')
+        .eq('match_id', matchData.id);
+
+      if (playersError) throw playersError;
+
+      const { data: cashoutData, error: cashoutError } = await supabase
+        .from("cashout_requests")
+        .select("amount, status")
+        .eq("match_id", matchData.id)
+        .in("status", ["processed", "successful"]);
+
+      if (cashoutError) throw cashoutError;
+
+      const totalPlayerSlots = playersData.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
+      let balance = 0;
+      if (matchData.is_paid && matchData.price) {
+        const checkedInPlayers = playersData.filter(p => p.player_status === 'Checked In');
+        balance = checkedInPlayers.reduce(
+          (sum, player) => sum + ((player.number_of_slots || 1) * (matchData.price || 0)),
+          0
+        );
+      }
+      const cashoutTotal = cashoutData ? cashoutData.reduce((sum, request) => sum + (request.amount || 0), 0) : 0;
+      balance -= cashoutTotal;
+      setWalletBalance(balance < 0 ? 0 : balance);
+
+      setMatch({ ...matchData, players: playersData.map(p => ({
+        player_name: p.player_name || '',
+        player_status: p.player_status as 'Registered' | 'Checked In' | 'Absent',
+        number_of_slots: p.number_of_slots || 1
+      })) });
+    } catch (error) {
+      console.error("Error fetching match details:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load match details. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -200,7 +253,7 @@ const MatchDetail = () => {
 
       if (error) throw error;
 
-      setMatch(data as Match);
+      await fetchMatchDetails(data as Match);
     } catch (error) {
       console.error("Error fetching match:", error);
       toast({
@@ -234,9 +287,9 @@ const MatchDetail = () => {
     
     const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
     const matchEndTime = addHours(matchDateTime, 2); // Match duration is 2 hours
-    const now = new Date("2025-05-18T21:04:00+01:00"); // 09:04 PM WAT, May 18, 2025
+    const now = new Date("2025-05-18T21:29:00+01:00"); // 09:29 PM WAT, May 18, 2025
     
-    const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
+    const totalPlayerSlots = match.players ? match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0) : 0;
     const isFull = totalPlayerSlots >= match.total_slots;
     const isStarted = now >= matchDateTime && now < matchEndTime;
     const isEnded = now >= matchEndTime;
@@ -261,7 +314,7 @@ const MatchDetail = () => {
     if (!match) return;
     
     const url = `${window.location.origin}/match/${match.slug}`;
-    const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
+    const totalPlayerSlots = match.players ? match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0) : 0;
     const shareText = `Join my Football Match: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. ${totalPlayerSlots}/${match.total_slots} slots. Powered by PlayArena. ${url}${match.is_private ? ` (Access Password: ${match.access_password})` : ''}`;
     
     if (navigator.share) {
@@ -295,7 +348,7 @@ const MatchDetail = () => {
     if (!match) return;
     
     const url = `${window.location.origin}/match/${match.slug}`;
-    const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
+    const totalPlayerSlots = match.players ? match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0) : 0;
     const shareText = `Join my Football Match: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. ${totalPlayerSlots}/${match.total_slots} slots. Powered by PlayArena. ${url}${match.is_private ? ` (Access Password: ${match.access_password})` : ''}`;
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
     window.open(whatsappUrl, '_blank');
@@ -305,7 +358,7 @@ const MatchDetail = () => {
     if (!match) return;
     
     const url = `${window.location.origin}/match/${match.slug}`;
-    const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
+    const totalPlayerSlots = match.players ? match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0) : 0;
     const shareText = `Join my Football Match: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. ${totalPlayerSlots}/${match.total_slots} slots. Powered by PlayArena. ${url}${match.is_private ? ` (Access Password: ${match.access_password})` : ''}`;
     const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
     window.open(twitterUrl, '_blank');
@@ -315,7 +368,7 @@ const MatchDetail = () => {
     if (!match) return;
     
     const url = `${window.location.origin}/match/${match.slug}`;
-    const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
+    const totalPlayerSlots = match.players ? match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0) : 0;
     const shareText = `Join my Football Match: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. ${totalPlayerSlots}/${match.total_slots} slots. Powered by PlayArena. ${match.is_private ? ` (Access Password: ${match.access_password})` : ''}`;
     const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}"e=${encodeURIComponent(shareText)}`;
     window.open(facebookUrl, '_blank');
@@ -450,7 +503,7 @@ const MatchDetail = () => {
   }
 
   const { isStarted, isEnded, isFull } = getMatchStatus();
-  const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
+  const totalPlayerSlots = match.players ? match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0) : 0;
 
   return (
     <div className="min-h-screen pb-24">
@@ -494,6 +547,9 @@ const MatchDetail = () => {
               Verified
             </span>
           </div>
+          <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            Wallet Balance: â�¦{walletBalance.toFixed(2)}
+          </p>
         </div>
         
         {isEnded ? (
@@ -567,14 +623,14 @@ const MatchDetail = () => {
               <div className="flex items-center gap-2">
                 <Users size={18} />
                 <span>
-                  {totalPlayerSlots}/{match.total_slots} spots filled
+                  {totalPlayerSlots}/{match.total_slots} slots filled
                   {isFull && " (FULL)"}
                 </span>
               </div>
               
               {match.is_paid && (
                 <div className="font-semibold mt-2">
-                  Price: ₦{match.price?.toFixed(2)}
+                  Price: â�¦{match.price?.toFixed(2)}
                 </div>
               )}
               
@@ -792,7 +848,7 @@ const MatchDetail = () => {
                   </div>
                   <div className="flex items-center">
                     <DollarSign className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-                    <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{match.is_paid ? `Paid (₦${match.price?.toFixed(2)})` : "Free"}</span>
+                    <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{match.is_paid ? `Paid (â�¦${match.price?.toFixed(2)})` : "Free"}</span>
                   </div>
                   <div className="flex items-center">
                     <Users className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
