@@ -322,7 +322,7 @@ const VenueDetail = () => {
             )}
           </div>
 
-          <div className="mt-6 flex flex-col sm:flex-row gap-4">
+          <div className="mt-6 flex flex-row gap-4 w-full">
             <Button
               className="flex-1 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 w-full sm:w-auto"
               onClick={() => navigate(`/organize?venue=${venue.slug}`)}
@@ -336,7 +336,7 @@ const VenueDetail = () => {
               disabled={!venue.venue_phone}
             >
               <MessageCircle size={16} className="mr-2" />
-              Book Venue
+              Contact
             </Button>
           </div>
         </div>
