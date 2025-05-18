@@ -39,13 +39,6 @@ import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import html2canvas from "html2canvas";
 
-type Organizer = {
-  id: string;
-  name: string;
-  phone: string;
-  is_verified: boolean;
-};
-
 type Match = {
   id: string;
   slug: string;
@@ -56,7 +49,7 @@ type Match = {
   is_paid: boolean;
   price: number | null;
   notes: string | null;
-  organizer: Organizer;
+  organizer_name: string;
   player_number_required: boolean;
   is_private: boolean;
   access_password: string | null;
@@ -106,8 +99,7 @@ const MatchDetail = () => {
         .select(`
           *,
           venue:venues(id, slug, name, city, map_link),
-          players(player_name, player_status, number_of_slots),
-          organizer:organizers(id, name, phone, is_verified)
+          players(player_name, player_status, number_of_slots)
         `)
         .eq("slug", matchSlug)
         .single();
@@ -201,8 +193,7 @@ const MatchDetail = () => {
         .select(`
           *,
           venue:venues(id, slug, name, city, map_link),
-          players(player_name, player_status, number_of_slots),
-          organizer:organizers(id, name, phone, is_verified)
+          players(player_name, player_status, number_of_slots)
         `)
         .eq("slug", matchSlug)
         .single();
@@ -243,7 +234,7 @@ const MatchDetail = () => {
     
     const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
     const matchEndTime = addHours(matchDateTime, 2); // Match duration is 2 hours
-    const now = new Date("2025-05-18T20:36:00+01:00"); // 08:36 PM WAT, May 18, 2025
+    const now = new Date("2025-05-18T19:45:00+01:00"); // 07:45 PM WAT, May 18, 2025
     
     const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
     const isFull = totalPlayerSlots >= match.total_slots;
@@ -326,7 +317,7 @@ const MatchDetail = () => {
     const url = `${window.location.origin}/match/${match.slug}`;
     const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
     const shareText = `Join my Football Match: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. ${totalPlayerSlots}/${match.total_slots} slots. Powered by PlayArena. ${match.is_private ? ` (Access Password: ${match.access_password})` : ''}`;
-    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}"e=${encodeURIComponent(shareText)}`;
+    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(shareText)}`;
     window.open(facebookUrl, '_blank');
   };
 
@@ -385,7 +376,7 @@ const MatchDetail = () => {
       `&dates=${formatGoogleDate(matchDateTime)}/${formatGoogleDate(endDateTime)}` +
       `&location=${encodeURIComponent(match.venue ? `${match.venue.name}, ${match.venue.city}` : 'Unknown Venue')}` +
       `&details=${encodeURIComponent(
-        `Football Match organized by ${match.organizer.name}.\n\n` +
+        `Football Match organized by ${match.organizer_name}.\n\n` +
         `Match Link: ${window.location.origin}/match/${match.slug}\n\n` +
         `Venue: ${match.venue?.name || 'Unknown'}, ${match.venue?.city || ''}\n\n` +
         `Additional Info: ${match.notes || 'No additional information provided'}\n\n` +
@@ -498,10 +489,10 @@ const MatchDetail = () => {
         </h1>
         <div className="flex justify-between items-center mb-4">
           <div className="flex items-center gap-2">
-            <p className="text-muted-foreground">Organized by {match.organizer.name}</p>
-            {match.organizer.is_verified && (
-              <img src="/green-verified.png" alt="Verified" className="h-5 w-5" />
-            )}
+            <p className="text-muted-foreground">Organized by {match.organizer_name}</p>
+            <span className="inline-block px-2 py-1 text-xs font-medium rounded bg-green-100 text-green-700 border-green-300">
+              Verified
+            </span>
           </div>
         </div>
         
@@ -521,18 +512,7 @@ const MatchDetail = () => {
         
         <div className="space-y-4">
           <div className="border rounded-lg p-4 bg-card shadow-md">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="font-semibold">Match Details</h2>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={addToCalendar}
-                className="flex items-center gap-1"
-              >
-                <CalendarPlus size={16} />
-                Add to Calendar
-              </Button>
-            </div>
+            <h2 className="font-semibold mb-3">Match Details</h2>
             
             <div className="space-y-3">
               <div className="flex items-center gap-2">
@@ -787,7 +767,18 @@ const MatchDetail = () => {
                   />
                   <Trophy className={`h-6 w-6 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
                 </div>
-                <h2 className={`text-xl font-bold mb-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`}>{match.title}</h2>
+                <div className="flex items-center justify-between mb-2">
+                  <h2 className={`text-xl font-bold ${backgroundOption === "white" ? "text-black" : "text-white"}`}>{match.title}</h2>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={addToCalendar}
+                    className={`text-sm ${backgroundOption === "white" ? "text-black border-black" : "text-white border-white"}`}
+                  >
+                    <CalendarPlus size={16} className="mr-1" />
+                    Add to Calendar
+                  </Button>
+                </div>
                 <div className="space-y-2 mb-4">
                   <div className="flex items-center">
                     <MapPin className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
