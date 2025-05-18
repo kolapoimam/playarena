@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { NavigateFunction } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -225,6 +225,21 @@ const PlayerManagement = ({
     setMode("checkin");
   };
 
+  const handleCashoutMode = useCallback(() => {
+    console.log("handleCashoutMode called"); // Debugging
+    if (!isCashoutEligible()) {
+      toast({
+        title: "Cashout Not Available",
+        description: match.is_paid 
+          ? "Cashout requires at least one checked-in player and a positive wallet balance."
+          : "Cashout is not available for free matches.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setCashoutDialogOpen(true);
+  }, [match, isCashoutEligible, toast]);
+
   const handleCashoutSubmit = async () => {
     if (!match || !userId) return;
 
@@ -432,7 +447,18 @@ const PlayerManagement = ({
           Check-in Players
         </Button>
         <Button
-          onClick={handleCashoutMode}
+          onClick={() => {
+            if (handleCashoutMode) {
+              handleCashoutMode();
+            } else {
+              console.error("handleCashoutMode is undefined");
+              toast({
+                title: "Error",
+                description: "Cashout functionality is temporarily unavailable.",
+                variant: "destructive",
+              });
+            }
+          }}
           className={`bg-yellow-500 hover:bg-yellow-600 text-white flex-1 ${!isCashoutEligible() ? "opacity-50 cursor-not-allowed" : ""}`}
           disabled={!isCashoutEligible() || match.cancellation_status}
         >
