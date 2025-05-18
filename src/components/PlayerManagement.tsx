@@ -453,7 +453,10 @@ const PlayerManagement = ({
 
       setCheckinCodes(prev => ({ ...prev, [playerId]: "" }));
       setCheckinCodeErrors(prev => ({ ...prev, [playerId]: null }));
+      
+      // Refresh match data and log the updated players
       await fetchMatch();
+      console.log("Updated match players after fetchMatch:", match?.players);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -474,7 +477,7 @@ const PlayerManagement = ({
       case "failed": return "bg-red-100 text-red-700 border-red-300";
       case "processed": return "bg-blue-100 text-blue-700 border-blue-300";
       case "under_review": case "review": return "bg-yellow-100 text-yellow-700 border-yellow-300";
-      default: return "bg-yellow-100 text-yellow-700 border-yellow-300";
+      default: return "bg-gray-500 text-white border-gray-600";
     }
   };
 
@@ -585,7 +588,7 @@ const PlayerManagement = ({
                   <span
                     className={`absolute top-2 right-2 px-2 py-1 text-xs font-medium rounded border ${getStatusStyles(player.player_status)}`}
                   >
-                    {player.player_status}
+                    {player.player_status || 'Unknown'}
                   </span>
                   {mode === "checkin" && player.player_status !== 'Checked In' && (
                     <div className="flex gap-2 w-full sm:w-auto">
