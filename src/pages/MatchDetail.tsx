@@ -317,7 +317,7 @@ const MatchDetail = () => {
     const url = `${window.location.origin}/match/${match.slug}`;
     const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
     const shareText = `Join my Football Match: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. ${totalPlayerSlots}/${match.total_slots} slots. Powered by PlayArena. ${match.is_private ? ` (Access Password: ${match.access_password})` : ''}`;
-    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(shareText)}`;
+    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}"e=${encodeURIComponent(shareText)}`;
     window.open(facebookUrl, '_blank');
   };
 
@@ -466,6 +466,15 @@ const MatchDetail = () => {
           </Button>
           <div className="text-center">
             <h1 className="text-2xl font-bold">Match Details</h1>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={addToCalendar}
+              className="text-white border-white mt-2"
+            >
+              <CalendarPlus size={16} className="mr-1" />
+              Add to Calendar
+            </Button>
           </div>
           <div className="w-10"></div>
         </div>
@@ -769,15 +778,6 @@ const MatchDetail = () => {
                 </div>
                 <div className="flex items-center justify-between mb-2">
                   <h2 className={`text-xl font-bold ${backgroundOption === "white" ? "text-black" : "text-white"}`}>{match.title}</h2>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={addToCalendar}
-                    className={`text-sm ${backgroundOption === "white" ? "text-black border-black" : "text-white border-white"}`}
-                  >
-                    <CalendarPlus size={16} className="mr-1" />
-                    Add to Calendar
-                  </Button>
                 </div>
                 <div className="space-y-2 mb-4">
                   <div className="flex items-center">
