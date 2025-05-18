@@ -1,6 +1,8 @@
 import { format, differenceInMinutes } from "date-fns";
 import { Trophy, MapPin, Calendar, Clock, Users, DollarSign, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 type Match = {
   id: string;
@@ -52,12 +54,15 @@ type MatchDetailsProps = {
 };
 
 const MatchDetails = ({ match, cashout, handleCancelMatch, loading, isMatchPast, walletBalance }: MatchDetailsProps) => {
+  const { toast } = useToast();
+
   const canCancelMatch = () => {
     if (!match) return false;
     const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
     const now = new Date();
     const minutesToStart = differenceInMinutes(matchDateTime, now);
-    return minutesToStart > 0 && !match.cancellation_status;
+    const hasCheckedInPlayers = match.players?.some(p => p.status === "Checked In") || false;
+    return minutesToStart > 0 && !match.cancellation_status && !hasCheckedInPlayers;
   };
 
   const formatDate = (dateString: string) => {
@@ -94,8 +99,39 @@ const MatchDetails = ({ match, cashout, handleCancelMatch, loading, isMatchPast,
 
   const calculateExpectedAmount = () => {
     if (!match || !match.is_paid || !match.price) return "N/A";
-    const checkedInPlayers = match.players?.filter(p => p.status === "checked_in").length || 0;
+    const checkedInPlayers = match.players?.filter(p => p.status === "Checked In").length || 0;
     return `₦${(checkedInPlayers * match.price).toLocaleString()}`;
+  };
+
+  const handleCancel = async () => {
+    if (!match) return;
+
+    try {
+      const { error } = await supabase
+        .from("matches")
+        .update({
+          cancellation_status: true,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", match.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Match has been successfully cancelled.",
+      });
+
+      // Call the original handleCancelMatch to ensure parent component updates
+      handleCancelMatch();
+    } catch (error) {
+      console.error("Error cancelling match:", error);
+      toast({
+        title: "Error",
+        description: "Failed to cancel match. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   if (!match) return null;
@@ -178,7 +214,7 @@ const MatchDetails = ({ match, cashout, handleCancelMatch, loading, isMatchPast,
       )}
       <div className="flex flex-wrap gap-4 mt-4">
         <Button
-          onClick={handleCancelMatch}
+          onClick={handleCancel}
           className={`bg-red-500 hover:bg-red-600 text-white ${!canCancelMatch() ? "opacity-50 cursor-not-allowed" : ""}`}
           disabled={!canCancelMatch() || loading}
         >
