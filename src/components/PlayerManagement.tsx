@@ -48,6 +48,7 @@ type Cashout = {
   bank_name: string;
   account_name: string;
   status: "under_review" | "processed" | "failed" | "successful";
+  amount: number;
   temp_identifier?: string;
 };
 
@@ -120,7 +121,7 @@ const PlayerManagement = ({
   const [amountError, setAmountError] = useState<string | null>(null);
   const [isPlayersOpen, setIsPlayersOpen] = useState(false);
   const [walletBalance, setWalletBalance] = useState<number>(0);
-  const [cashoutRequests, setCashoutRequests] = useState<any[]>([]);
+  const [cashoutRequests, setCashoutRequests] = useState<Cashout[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
   const [checkingInPlayers, setCheckingInPlayers] = useState<{ [key: string]: boolean }>({});
 
@@ -133,27 +134,37 @@ const PlayerManagement = ({
         setUserId(null);
       }
 
-      if (!match || !userId) return;
-      
-      const { data: walletData, error: walletError } = await supabase
-        .from("wallets")
-        .select("balance")
-        .eq("organizer_id", userId)
-        .single();
-
-      if (!walletError && walletData) {
-        setWalletBalance(walletData.balance);
+      if (!match || !userId) {
+        setWalletBalance(0);
+        setCashoutRequests([]);
+        return;
       }
 
+      // Calculate wallet balance for the specific match
+      let balance = 0;
+      if (match.is_paid && match.price && match.players) {
+        const checkedInPlayers = match.players.filter(p => p.player_status === 'Checked In');
+        balance = checkedInPlayers.reduce((sum, player) => sum + ((player.number_of_slots || 1) * (match.price || 0)), 0);
+      }
+
+      // Subtract cashout amounts for this match
       const { data: cashoutData, error: cashoutError } = await supabase
         .from("cashout_requests")
         .select("*")
         .eq("match_id", match.id)
+        .in("status", ["processed", "successful"])
         .order("created_at", { ascending: false });
 
       if (!cashoutError && cashoutData) {
+        const cashoutTotal = cashoutData.reduce((sum, request) => sum + (request.amount || 0), 0);
+        balance -= cashoutTotal;
         setCashoutRequests(cashoutData);
+      } else if (cashoutError) {
+        console.error("Error fetching cashout requests:", cashoutError);
+        setCashoutRequests([]);
       }
+
+      setWalletBalance(balance < 0 ? 0 : balance);
     };
 
     fetchUserIdAndData();
@@ -214,20 +225,6 @@ const PlayerManagement = ({
     setMode("checkin");
   };
 
-  const handleCashoutMode = () => {
-    if (!isCashoutEligible()) {
-      toast({
-        title: "Cashout Not Available",
-        description: match.is_paid 
-          ? "Cashout requires at least one checked-in player and a positive wallet balance."
-          : "Cashout is not available for free matches.",
-        variant: "destructive",
-      });
-      return;
-    }
-    setCashoutDialogOpen(true);
-  };
-
   const handleCashoutSubmit = async () => {
     if (!match || !userId) return;
 
@@ -262,17 +259,6 @@ const PlayerManagement = ({
 
     setLoading(true);
     try {
-      const { data: walletData, error: walletError } = await supabase
-        .from("wallets")
-        .select("balance")
-        .eq("organizer_id", userId)
-        .single();
-
-      if (walletError || !walletData) throw new Error("Failed to fetch wallet balance");
-
-      const newBalance = walletData.balance - Number(cashoutAmount);
-      if (newBalance < 0) throw new Error("Insufficient funds");
-
       const { error: cashoutError } = await supabase
         .from("cashout_requests")
         .insert({
@@ -292,13 +278,6 @@ const PlayerManagement = ({
 
       if (cashoutError) throw cashoutError;
 
-      const { error: walletUpdateError } = await supabase
-        .from("wallets")
-        .update({ balance: newBalance, updated_at: new Date().toISOString() })
-        .eq("organizer_id", userId);
-
-      if (walletUpdateError) throw walletUpdateError;
-
       const { data: cashoutData, error: cashoutFetchError } = await supabase
         .from("cashout_requests")
         .select("*")
@@ -309,6 +288,9 @@ const PlayerManagement = ({
         setCashoutRequests(cashoutData);
       }
 
+      // Update wallet balance after cashout
+      setWalletBalance(prev => prev - Number(cashoutAmount) < 0 ? 0 : prev - Number(cashoutAmount));
+
       setCashoutDialogOpen(false);
       setBankAccountNumber("");
       setBankName("");
@@ -317,7 +299,6 @@ const PlayerManagement = ({
       setBankAccountError(null);
       setAccountNameError(null);
       setAmountError(null);
-      setWalletBalance(newBalance);
       toast({
         title: "Success",
         description: "Cashout request submitted successfully. It is now under review.",
@@ -371,21 +352,19 @@ const PlayerManagement = ({
     try {
       const { data, error } = await supabase
         .from('players')
-        .select('id, confirmation_code, status, player_status')
+        .select('id, confirmation_code, player_status')
         .eq('id', playerId)
         .single();
 
       if (error || !data) throw new Error(error?.message || "Player not found in database");
 
-      const currentStatus = data.player_status || data.status;
-      if (currentStatus !== 'Registered') throw new Error("Player is already checked in or absent");
+      if (data.player_status !== 'Registered') throw new Error("Player is already checked in or absent");
       if (data.confirmation_code !== code) throw new Error("Invalid confirmation code");
 
       const { error: updateError } = await supabase
         .from('players')
         .update({ 
           player_status: 'Checked In',
-          status: 'Checked In',
           updated_at: new Date().toISOString()
         })
         .eq('id', playerId);
@@ -395,6 +374,9 @@ const PlayerManagement = ({
       setPlayerStatuses(prev =>
         prev.map(p => p.id === playerId ? { ...p, status: 'Checked In' } : p)
       );
+
+      setCheckinPlayer({ name: player.player_name, slots: player.number_of_slots || 1 });
+      setCheckinDialogOpen(true);
 
       toast({
         title: "Success",
