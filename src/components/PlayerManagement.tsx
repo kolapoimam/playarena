@@ -124,17 +124,47 @@ const PlayerManagement = ({
   const [userId, setUserId] = useState<string | null>(null);
   const [checkingInPlayers, setCheckingInPlayers] = useState<{ [key: string]: boolean }>({});
 
-  // Initialize playerStatuses based on match.players when the component mounts or match changes
+  // Initialize playerStatuses with fresh data from Supabase
   useEffect(() => {
-    if (match?.players) {
-      const initialStatuses = match.players.map(player => ({
-        id: player.id,
-        status: (player.player_status || 'Registered') as 'Registered' | 'Checked In' | 'Absent',
-        checkinCode: checkinCodes[player.id] || ''
-      }));
-      setPlayerStatuses(initialStatuses);
-    }
-  }, [match, setPlayerStatuses, checkinCodes]);
+    if (!match?.id) return;
+
+    const fetchPlayerStatuses = async () => {
+      try {
+        // Fetch the latest player data directly from Supabase
+        const { data: playersData, error } = await supabase
+          .from('players')
+          .select('id, player_status, confirmation_code')
+          .eq('match_id', match.id);
+
+        if (error) throw error;
+
+        const initialStatuses = playersData.map(player => ({
+          id: player.id,
+          status: (player.player_status || 'Registered') as 'Registered' | 'Checked In' | 'Absent',
+          checkinCode: checkinCodes[player.id] || ''
+        }));
+        setPlayerStatuses(initialStatuses);
+      } catch (error) {
+        console.error("Error fetching player statuses from Supabase:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load player statuses.",
+          variant: "destructive",
+        });
+        // Fallback to match.players if Supabase fetch fails
+        if (match?.players) {
+          const initialStatuses = match.players.map(player => ({
+            id: player.id,
+            status: (player.player_status || 'Registered') as 'Registered' | 'Checked In' | 'Absent',
+            checkinCode: checkinCodes[player.id] || ''
+          }));
+          setPlayerStatuses(initialStatuses);
+        }
+      }
+    };
+
+    fetchPlayerStatuses();
+  }, [match, setPlayerStatuses, checkinCodes, toast]);
 
   useEffect(() => {
     const fetchUserIdAndData = async () => {
@@ -151,83 +181,104 @@ const PlayerManagement = ({
         return;
       }
 
-      // Calculate wallet balance for the specific match
-      let balance = 0;
-      if (match.is_paid && match.price && match.players) {
-        const checkedInPlayers = match.players.filter(p => p.player_status === 'Checked In');
-        balance = checkedInPlayers.reduce((sum, player) => sum + ((player.number_of_slots || 1) * (match.price || 0)), 0);
-      }
-
-      // Subtract cashout amounts for this match
-      const { data: cashoutData, error: cashoutError } = await supabase
-        .from("cashout_requests")
-        .select("*")
-        .eq("match_id", match.id)
-        .in("status", ["processed", "successful"])
-        .order("created_at", { ascending: false });
-
-      if (!cashoutError && cashoutData) {
-        const cashoutTotal = cashoutData.reduce((sum, request) => sum + (request.amount || 0), 0);
-        balance -= cashoutTotal;
-        setCashoutRequests(cashoutData);
-      } else if (cashoutError) {
-        console.error("Error fetching cashout requests:", cashoutError);
-        setCashoutRequests([]);
-      }
-
-      setWalletBalance(balance < 0 ? 0 : balance);
-
-      // Check if match has ended and update players to Absent if necessary
-      const now = new Date();
-      let matchEndTime: Date;
+      // Fetch fresh player data from Supabase for wallet balance calculation
       try {
-        if (match.match_end_time) {
-          matchEndTime = new Date(match.match_end_time);
-        } else {
-          matchEndTime = addHours(new Date(`${match.match_date}T${match.match_time}`), 2);
+        const { data: playersData, error: playersError } = await supabase
+          .from('players')
+          .select('player_status, number_of_slots')
+          .eq('match_id', match.id);
+
+        if (playersError) throw playersError;
+
+        // Calculate wallet balance for the specific match
+        let balance = 0;
+        if (match.is_paid && match.price) {
+          const checkedInPlayers = playersData.filter(p => p.player_status === 'Checked In');
+          balance = checkedInPlayers.reduce(
+            (sum, player) => sum + ((player.number_of_slots || 1) * (match.price || 0)),
+            0
+          );
         }
-        if (isNaN(matchEndTime.getTime())) {
+
+        // Subtract cashout amounts for this match
+        const { data: cashoutData, error: cashoutError } = await supabase
+          .from("cashout_requests")
+          .select("*")
+          .eq("match_id", match.id)
+          .in("status", ["processed", "successful"])
+          .order("created_at", { ascending: false });
+
+        if (!cashoutError && cashoutData) {
+          const cashoutTotal = cashoutData.reduce((sum, request) => sum + (request.amount || 0), 0);
+          balance -= cashoutTotal;
+          setCashoutRequests(cashoutData);
+        } else if (cashoutError) {
+          console.error("Error fetching cashout requests:", cashoutError);
+          setCashoutRequests([]);
+        }
+
+        setWalletBalance(balance < 0 ? 0 : balance);
+
+        // Check if match has ended and update players to Absent if necessary
+        const now = new Date();
+        let matchEndTime: Date;
+        try {
+          if (match.match_end_time) {
+            matchEndTime = new Date(match.match_end_time);
+          } else {
+            matchEndTime = addHours(new Date(`${match.match_date}T${match.match_time}`), 2);
+          }
+          if (isNaN(matchEndTime.getTime())) {
+            matchEndTime = new Date("2025-05-17T15:00:00+01:00");
+          }
+        } catch (error) {
           matchEndTime = new Date("2025-05-17T15:00:00+01:00");
         }
-      } catch (error) {
-        matchEndTime = new Date("2025-05-17T15:00:00+01:00");
-      }
 
-      if (isPast(matchEndTime) && match.players) {
-        const registeredPlayers = match.players.filter(p => p.player_status === 'Registered');
-        if (registeredPlayers.length > 0) {
-          try {
-            const { error: updateError } = await supabase
-              .from('players')
-              .update({ 
-                player_status: 'Absent',
-                updated_at: new Date().toISOString()
-              })
-              .eq('match_id', match.id)
-              .eq('player_status', 'Registered');
+        if (isPast(matchEndTime) && playersData.length > 0) {
+          const registeredPlayers = playersData.filter(p => p.player_status === 'Registered');
+          if (registeredPlayers.length > 0) {
+            try {
+              const { error: updateError } = await supabase
+                .from('players')
+                .update({ 
+                  player_status: 'Absent',
+                  updated_at: new Date().toISOString()
+                })
+                .eq('match_id', match.id)
+                .eq('player_status', 'Registered');
 
-            if (updateError) throw updateError;
+              if (updateError) throw updateError;
 
-            // Update playerStatuses to reflect the change
-            setPlayerStatuses(prev =>
-              prev.map(p => 
-                registeredPlayers.some(rp => rp.id === p.id) 
-                  ? { ...p, status: 'Absent' } 
-                  : p
-              )
-            );
+              // Update playerStatuses to reflect the change
+              setPlayerStatuses(prev =>
+                prev.map(p => 
+                  registeredPlayers.some(rp => rp.id === p.id) 
+                    ? { ...p, status: 'Absent' } 
+                    : p
+                )
+              );
 
-            // Refresh match data to reflect the updated statuses in the UI
-            await fetchMatch();
-          } catch (error) {
-            console.error("Error updating players to Absent:", error);
-            toast({
-              title: "Error",
-              description: "Failed to update player statuses to Absent.",
-              variant: "destructive",
-            });
+              // Refresh match data to reflect the updated statuses in the UI
+              await fetchMatch();
+            } catch (error) {
+              console.error("Error updating players to Absent:", error);
+              toast({
+                title: "Error",
+                description: "Failed to update player statuses to Absent.",
+                variant: "destructive",
+              });
+            }
           }
         }
+      } catch (error) {
+        console.error("Error fetching player data for wallet balance:", error);
+        toast({
+          title: "Error",
+          description: "Failed to calculate wallet balance.",
+          variant: "destructive",
+        });
+        setWalletBalance(0);
       }
     };
 
@@ -290,7 +341,7 @@ const PlayerManagement = ({
   };
 
   const handleCashoutMode = useCallback(() => {
-    console.log("handleCashoutMode called"); // Debugging
+    console.log("handleCashoutMode called");
     if (!isCashoutEligible()) {
       toast({
         title: "Cashout Not Available",
@@ -479,7 +530,7 @@ const PlayerManagement = ({
       setCheckinCodes(prev => ({ ...prev, [playerId]: "" }));
       setCheckinCodeErrors(prev => ({ ...prev, [playerId]: null }));
       
-      // Still call fetchMatch to update the parent component, but we no longer rely solely on it
+      // Still call fetchMatch to update the parent component
       await fetchMatch();
     } catch (error: any) {
       // If the player is already checked in, fetch the latest status to update the UI
@@ -626,7 +677,6 @@ const PlayerManagement = ({
               <p className="text-gray-600 dark:text-gray-400">No players registered for this match.</p>
             ) : (
               match.players?.map((player) => {
-                // Use playerStatuses for the displayed status
                 const playerStatusEntry = playerStatuses.find(p => p.id === player.id);
                 const displayStatus = playerStatusEntry?.status || player.player_status || 'Registered';
 
