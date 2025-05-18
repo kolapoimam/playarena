@@ -234,7 +234,7 @@ const MatchDetail = () => {
     
     const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
     const matchEndTime = addHours(matchDateTime, 2); // Match duration is 2 hours
-    const now = new Date("2025-05-18T19:45:00+01:00"); // 07:45 PM WAT, May 18, 2025
+    const now = new Date("2025-05-18T20:03:00+01:00"); // 08:03 PM WAT, May 18, 2025
     
     const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
     const isFull = totalPlayerSlots >= match.total_slots;
@@ -317,7 +317,7 @@ const MatchDetail = () => {
     const url = `${window.location.origin}/match/${match.slug}`;
     const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
     const shareText = `Join my Football Match: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. ${totalPlayerSlots}/${match.total_slots} slots. Powered by PlayArena. ${match.is_private ? ` (Access Password: ${match.access_password})` : ''}`;
-    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(shareText)}`;
+    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}"e=${encodeURIComponent(shareText)}`;
     window.open(facebookUrl, '_blank');
   };
 
@@ -512,7 +512,18 @@ const MatchDetail = () => {
         
         <div className="space-y-4">
           <div className="border rounded-lg p-4 bg-card shadow-md">
-            <h2 className="font-semibold mb-3">Match Details</h2>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-semibold">Match Details</h2>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={addToCalendar}
+                className="flex items-center gap-1"
+              >
+                <CalendarPlus size={16} />
+                Add to Calendar
+              </Button>
+            </div>
             
             <div className="space-y-3">
               <div className="flex items-center gap-2">
@@ -649,7 +660,7 @@ const MatchDetail = () => {
                 >
                   <Share2 size={18} className="mr-2" />
                   Share
-                  <ChevronDown size={16} className="ml-2" />
+                  <ChevronDown size={16} className aboard="ml-2" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-[200px]">
@@ -767,18 +778,7 @@ const MatchDetail = () => {
                   />
                   <Trophy className={`h-6 w-6 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
                 </div>
-                <div className="flex items-center justify-between mb-2">
-                  <h2 className={`text-xl font-bold ${backgroundOption === "white" ? "text-black" : "text-white"}`}>{match.title}</h2>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={addToCalendar}
-                    className={`text-sm ${backgroundOption === "white" ? "text-black border-black" : "text-white border-white"}`}
-                  >
-                    <CalendarPlus size={16} className="mr-1" />
-                    Add to Calendar
-                  </Button>
-                </div>
+                <h2 className={`text-xl font-bold mb-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`}>{match.title}</h2>
                 <div className="space-y-2 mb-4">
                   <div className="flex items-center">
                     <MapPin className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
