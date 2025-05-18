@@ -122,7 +122,6 @@ const MatchDetails = ({ match, cashout, handleCancelMatch, loading, isMatchPast,
         description: "Match has been successfully cancelled.",
       });
 
-      // Call the original handleCancelMatch to ensure parent component updates
       handleCancelMatch();
     } catch (error) {
       console.error("Error cancelling match:", error);
