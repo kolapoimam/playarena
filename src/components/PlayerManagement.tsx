@@ -182,3 +182,703 @@ const PlayerManagement = ({
       try {
         // Fetch fresh player data from Supabase for wallet balance calculation
         const { data: playersData, error: playersError } = await supabase
+          .from('players')
+          .select('player_status, number_of_slots')
+          .eq('match_id', match.id);
+
+        if (playersError) throw playersError;
+
+        // Calculate wallet balance
+        let balance = 0;
+        if (match.is_paid && match.price) {
+          const checkedInPlayers = playersData.filter(p => p.player_status === 'Checked In');
+          balance = checkedInPlayers.reduce(
+            (sum, player) => sum + ((player.number_of_slots || 1) * (match.price || 0)),
+            0
+          );
+        } // For free matches, balance remains 0
+
+        // Subtract cashout amounts for this match
+        const { data: cashoutData, error: cashoutError } = await supabase
+          .from("cashout_requests")
+          .select("amount, status")
+          .eq("match_id", match.id)
+          .in("status", ["processed", "successful"]);
+
+        if (cashoutError) throw cashoutError;
+
+        if (cashoutData) {
+          const cashoutTotal = cashoutData.reduce((sum, request) => sum + (request.amount || 0), 0);
+          balance -= cashoutTotal;
+          setCashoutRequests(cashoutData);
+        } else {
+          setCashoutRequests([]);
+        }
+
+        setWalletBalance(balance < 0 ? 0 : balance);
+
+        // Check if match has ended and update players to Absent if necessary
+        const now = new Date();
+        let matchEndTime: Date;
+        try {
+          if (match.match_end_time) {
+            matchEndTime = new Date(match.match_end_time);
+          } else {
+            matchEndTime = addHours(new Date(`${match.match_date}T${match.match_time}`), 2);
+          }
+          if (isNaN(matchEndTime.getTime())) {
+            matchEndTime = new Date("2025-05-17T15:00:00+01:00");
+          }
+        } catch (error) {
+          matchEndTime = new Date("2025-05-17T15:00:00+01:00");
+        }
+
+        if (isPast(matchEndTime) && playersData.length > 0) {
+          const registeredPlayers = playersData.filter(p => p.player_status === 'Registered');
+          if (registeredPlayers.length > 0) {
+            try {
+              const { error: updateError } = await supabase
+                .from('players')
+                .update({ 
+                  player_status: 'Absent',
+                  updated_at: new Date().toISOString()
+                })
+                .eq('match_id', match.id)
+                .eq('player_status', 'Registered');
+
+              if (updateError) throw updateError;
+
+              setPlayerStatuses(prev =>
+                prev.map(p => 
+                  registeredPlayers.some(rp => rp.id === p.id) 
+                    ? { ...p, status: 'Absent' } 
+                    : p
+                )
+              );
+
+              await fetchMatch();
+            } catch (error) {
+              console.error("Error updating players to Absent:", error);
+              toast({
+                title: "Error",
+                description: "Failed to update player statuses to Absent.",
+                variant: "destructive",
+              });
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching data for wallet balance:", error);
+        toast({
+          title: "Error",
+          description: "Failed to calculate wallet balance.",
+          variant: "destructive",
+        });
+        setWalletBalance(0);
+        setCashoutRequests([]);
+      }
+    };
+
+    fetchUserIdAndData();
+  }, [match, userId, fetchMatch, setPlayerStatuses, toast]);
+
+  const hasCheckedInPlayers = () => {
+    return playerStatuses.some(p => p.status === 'Checked In') || false;
+  };
+
+  const isCashoutEligible = () => {
+    if (!match || match.cancellation_status || !match.is_paid) return false;
+    const checkedInPlayers = playerStatuses.filter(p => p.status === 'Checked In').length;
+    return checkedInPlayers > 0 && walletBalance > 0;
+  };
+
+  const canCheckin = () => {
+    if (!match || match.cancellation_status || !match.players?.length) return false;
+    const now = new Date();
+    let matchEndTime: Date;
+    try {
+      if (match.match_end_time) {
+        matchEndTime = new Date(match.match_end_time);
+      } else {
+        matchEndTime = addHours(new Date(`${match.match_date}T${match.match_time}`), 2);
+      }
+      if (isNaN(matchEndTime.getTime())) {
+        matchEndTime = new Date("2025-05-17T15:00:00+01:00");
+      }
+    } catch (error) {
+      matchEndTime = new Date("2025-05-17T15:00:00+01:00");
+    }
+    const isEndTimeFuture = !isPast(matchEndTime);
+    return match.players.length > 0 && isEndTimeFuture;
+  };
+
+  const handleCheckinMode = () => {
+    if (!match || match.cancellation_status) {
+      toast({
+        title: "Check-in Not Available",
+        description: "Match data is unavailable or the match is canceled.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!canCheckin()) {
+      const reason = !match.players?.length
+        ? "No players are registered for this match."
+        : "The match has ended or check-in is no longer available.";
+      toast({
+        title: "Check-in Not Available",
+        description: reason,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setMode("checkin");
+  };
+
+  const handleCashoutMode = useCallback(() => {
+    console.log("handleCashoutMode called");
+    if (!isCashoutEligible()) {
+      toast({
+        title: "Cashout Not Available",
+        description: match.is_paid 
+          ? "Cashout requires at least one checked-in player and a positive wallet balance."
+          : "Cashout is not available for free matches.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setCashoutDialogOpen(true);
+  }, [match, isCashoutEligible, toast]);
+
+  const handleCashoutSubmit = async () => {
+    if (!match || !userId) return;
+
+    const bankAccountValidation = bankAccountSchema.safeParse(bankAccountNumber);
+    const accountNameValidation = accountNameSchema.safeParse(accountName);
+    const amountValidation = amountSchema.safeParse(Number(cashoutAmount));
+
+    if (!bankAccountValidation.success) {
+      setBankAccountError(bankAccountValidation.error.errors[0].message);
+      return;
+    }
+    if (!accountNameValidation.success) {
+      setAccountNameError(accountNameValidation.error.errors[0].message);
+      return;
+    }
+    if (!amountValidation.success) {
+      setAmountError(amountValidation.error.errors[0].message);
+      return;
+    }
+    if (!bankName) {
+      toast({
+        title: "Error",
+        description: "Please select a bank.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (Number(cashoutAmount) > walletBalance) {
+      setAmountError("Amount exceeds available wallet balance");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { error: cashoutError } = await supabase
+        .from("cashout_requests")
+        .insert({
+          organizer_id: userId,
+          match_id: match.id,
+          amount: Number(cashoutAmount),
+          account_details: {
+            bank_account_number: bankAccountNumber,
+            bank_name: bankName,
+            account_name: accountName,
+          },
+          status: "review",
+          temp_identifier: tempIdentifier,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+
+      if (cashoutError) throw cashoutError;
+
+      const { data: cashoutData, error: cashoutFetchError } = await supabase
+        .from("cashout_requests")
+        .select("*")
+        .eq("match_id", match.id)
+        .order("created_at", { ascending: false });
+
+      if (!cashoutFetchError && cashoutData) {
+        setCashoutRequests(cashoutData);
+      }
+
+      // Update wallet balance after cashout
+      setWalletBalance(prev => prev - Number(cashoutAmount) < 0 ? 0 : prev - Number(cashoutAmount));
+
+      setCashoutDialogOpen(false);
+      setBankAccountNumber("");
+      setBankName("");
+      setAccountName("");
+      setCashoutAmount("");
+      setBankAccountError(null);
+      setAccountNameError(null);
+      setAmountError(null);
+      toast({
+        title: "Success",
+        description: "Cashout request submitted successfully. It is now under review.",
+      });
+      fetchMatch();
+    } catch (error) {
+      console.error("Error submitting cashout:", error);
+      toast({
+        title: "Error",
+        description: "Failed to submit cashout request. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCheckinCodeChange = (playerId: string, code: string) => {
+    const numericCode = code.replace(/[^0-9]/g, "").slice(0, 6);
+    setCheckinCodes((prev) => ({ ...prev, [playerId]: numericCode }));
+    const validation = codeSchema.safeParse(numericCode);
+    setCheckinCodeErrors((prev) => ({
+      ...prev,
+      [playerId]: validation.success ? null : validation.error?.errors[0].message,
+    }));
+  };
+
+  const validateCheckinCode = async (playerId: string) => {
+    const code = checkinCodes[playerId];
+    if (!code || code.length !== 6) {
+      toast({
+        title: "Invalid Code",
+        description: "Please enter a 6-digit code",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const player = match?.players?.find(p => p.id === playerId);
+    if (!player) {
+      toast({
+        title: "Error",
+        description: "Player not found",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setCheckingInPlayers(prev => ({ ...prev, [playerId]: true }));
+
+    try {
+      const { data, error } = await supabase
+        .from('players')
+        .select('id, confirmation_code, player_status')
+        .eq('id', playerId)
+        .single();
+
+      if (error || !data) throw new Error(error?.message || "Player not found in database");
+
+      if (data.player_status !== 'Registered') throw new Error("Player is already checked in or absent");
+      if (data.confirmation_code !== code) throw new Error("Invalid confirmation code");
+
+      const { error: updateError } = await supabase
+        .from('players')
+        .update({ 
+          player_status: 'Checked In',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', playerId);
+
+      if (updateError) throw updateError;
+
+      // Fetch the updated player data directly from Supabase
+      const { data: updatedPlayerData, error: fetchError } = await supabase
+        .from('players')
+        .select('id, player_status')
+        .eq('id', playerId)
+        .single();
+
+      if (fetchError || !updatedPlayerData) throw new Error(fetchError?.message || "Failed to fetch updated player data");
+
+      setPlayerStatuses(prev =>
+        prev.map(p =>
+          p.id === playerId
+            ? { ...p, status: updatedPlayerData.player_status as 'Registered' | 'Checked In' | 'Absent' }
+            : p
+        )
+      );
+
+      setCheckinPlayer({ name: player.player_name, slots: player.number_of_slots || 1 });
+      setCheckinDialogOpen(true);
+
+      toast({
+        title: "Success",
+        description: `${player.player_name} has been checked in successfully`,
+      });
+
+      setCheckinCodes(prev => ({ ...prev, [playerId]: "" }));
+      setCheckinCodeErrors(prev => ({ ...prev, [playerId]: null }));
+      
+      await fetchMatch();
+    } catch (error: any) {
+      if (error.message === "Player is already checked in or absent") {
+        const { data: updatedPlayerData, error: fetchError } = await supabase
+          .from('players')
+          .select('id, player_status')
+          .eq('id', playerId)
+          .single();
+
+        if (fetchError || !updatedPlayerData) {
+          toast({
+            title: "Error",
+            description: "Failed to fetch updated player status.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        setPlayerStatuses(prev =>
+          prev.map(p =>
+            p.id === playerId
+              ? { ...p, status: updatedPlayerData.player_status as 'Registered' | 'Checked In' | 'Absent' }
+              : p
+          )
+        );
+
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to verify code",
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setCheckingInPlayers(prev => ({ ...prev, [playerId]: false }));
+    }
+  };
+
+  const getStatusStyles = (status: string) => {
+    switch (status) {
+      case 'Registered': return "bg-yellow-500 text-white border-yellow-600";
+      case 'Checked In': return "bg-green-500 text-white border-green-600";
+      case 'Absent': return "bg-red-500 text-white border-red-600";
+      case "successful": return "bg-green-100 text-green-700 border-green-300";
+      case "failed": return "bg-red-100 text-red-700 border-red-300";
+      case "processed": return "bg-blue-100 text-blue-700 border-blue-300";
+      case "under_review": case "review": return "bg-yellow-100 text-yellow-700 border-yellow-300";
+      default: return "bg-gray-500 text-white border-gray-600";
+    }
+  };
+
+  if (!match) return null;
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700">
+      <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Manage Players</h2>
+      
+      <div className="mb-4">
+        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          Wallet Balance: ₦{walletBalance.toFixed(2)}
+        </p>
+      </div>
+
+      <div className="flex gap-3 mb-4">
+        <Button
+          onClick={handleCheckinMode}
+          className="bg-blue-500 hover:bg-blue-600 text-white flex-1"
+          disabled={!canCheckin() || match.cancellation_status}
+        >
+          Check-in Players
+        </Button>
+        <Button
+          onClick={() => {
+            if (handleCashoutMode) {
+              handleCashoutMode();
+            } else {
+              console.error("handleCashoutMode is undefined");
+              toast({
+                title: "Error",
+                description: "Cashout functionality is temporarily unavailable.",
+                variant: "destructive",
+              });
+            }
+          }}
+          className={`bg-yellow-500 hover:bg-yellow-600 text-white flex-1 ${!isCashoutEligible() ? "opacity-50 cursor-not-allowed" : ""}`}
+          disabled={!isCashoutEligible() || match.cancellation_status}
+        >
+          Request Cashout
+        </Button>
+      </div>
+
+      {cashoutRequests.length > 0 && (
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">Cashout Requests</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+              <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+                <tr>
+                  <th className="px-4 py-2">Amount</th>
+                  <th className="px-4 py-2">Bank Details</th>
+                  <th className="px-4 py-2">Status</th>
+                  <th className="px-4 py-2">Created At</th>
+                </tr>
+              </thead>
+              <tbody>
+                {cashoutRequests.map((request) => (
+                  <tr key={request.id} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
+                    <td className="px-4 py-2">₦{request.amount.toFixed(2)}</td>
+                    <td className="px-4 py-2">
+                      {request.account_details.account_name} <br />
+                      {request.account_details.bank_account_number} ({request.account_details.bank_name})
+                    </td>
+                    <td className="px-4 py-2">
+                      <span className={`inline-block px-2 py-1 rounded ${getStatusStyles(request.status)}`}>
+                        {request.status.replace("_", " ").charAt(0).toUpperCase() + request.status.replace("_", " ").slice(1)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2">{new Date(request.created_at).toLocaleString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      <div className="max-h-[400px] overflow-y-auto">
+        <button
+          onClick={() => setIsPlayersOpen(!isPlayersOpen)}
+          className="flex items-center gap-2 w-full text-left text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4"
+        >
+          Players
+          {isPlayersOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+        </button>
+        {isPlayersOpen && (
+          <div className="space-y-4">
+            {(match.players || []).length === 0 ? (
+              <p className="text-gray-600 dark:text-gray-400">No players registered for this match.</p>
+            ) : (
+              match.players?.map((player) => {
+                const playerStatusEntry = playerStatuses.find(p => p.id === player.id);
+                const displayStatus = playerStatusEntry?.status || player.player_status || 'Registered';
+
+                return (
+                  <div
+                    key={player.id}
+                    className="relative flex flex-col sm:flex-row gap-4 items-start sm:items-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg"
+                  >
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-900 dark:text-gray-100">{player.player_name}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        Phone: {player.details?.phone || "Not provided"}
+                      </p>
+                      {displayStatus === 'Checked In' && (
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          Code: {player.confirmation_code}
+                        </p>
+                      )}
+                    </div>
+                    <span
+                      className={`absolute top-2 right-2 px-2 py-1 text-xs font-medium rounded border ${getStatusStyles(displayStatus)}`}
+                    >
+                      {displayStatus}
+                    </span>
+                    {mode === "checkin" && displayStatus !== 'Checked In' && (
+                      <div className="flex gap-2 w-full sm:w-auto">
+                        <Input
+                          placeholder="Enter check-in code"
+                          value={checkinCodes[player.id] || ""}
+                          onChange={(e) => handleCheckinCodeChange(player.id, e.target.value)}
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          maxLength={6}
+                          className="w-full sm:w-[150px]"
+                          disabled={checkingInPlayers[player.id]}
+                        />
+                        <Button
+                          onClick={() => validateCheckinCode(player.id)}
+                          className="bg-blue-500 hover:bg-blue-600 text-white"
+                          disabled={
+                            !checkinCodes[player.id] ||
+                            checkinCodes[player.id].length !== 6 ||
+                            checkingInPlayers[player.id]
+                          }
+                        >
+                          {checkingInPlayers[player.id] ? (
+                            <Loader2 size={16} className="mr-2 animate-spin" />
+                          ) : (
+                            "Verify"
+                          )}
+                        </Button>
+                      </div>
+                    )}
+                    {checkinCodeErrors[player.id] && (
+                      <p className="text-sm text-red-600 mt-1">{checkinCodeErrors[player.id]}</p>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
+      </div>
+
+      {mode === "checkin" && (
+        <Button
+          onClick={() => setMode(null)}
+          className="mt-4 bg-green-500 hover:bg-green-600 text-white"
+          disabled={loading}
+        >
+          {loading ? (
+            <>
+              <Loader2 size={16} className="mr-2 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            "Done"
+          )}
+        </Button>
+      )}
+
+      <Dialog open={cashoutDialogOpen} onOpenChange={setCashoutDialogOpen}>
+        <DialogContent className="max-w-md rounded-lg">
+          <DialogHeader>
+            <DialogTitle>Request Cashout</DialogTitle>
+            <DialogDescription>
+              Enter your bank details and amount to request a cashout for this match. Amount must not exceed your wallet balance (₦{walletBalance.toFixed(2)}).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Amount (₦)
+              </label>
+              <Input
+                type="number"
+                value={cashoutAmount}
+                onChange={(e) => {
+                  setCashoutAmount(e.target.value);
+                  setAmountError(null);
+                }}
+                className="mt-1"
+                min="1"
+              />
+              {amountError && (
+                <p className="text-sm text-red-600 mt-1">{amountError}</p>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Bank Account Number
+              </label>
+              <Input
+                value={bankAccountNumber}
+                onChange={(e) => {
+                  setBankAccountNumber(e.target.value.replace(/[^0-9]/g, "").slice(0, 10));
+                  setBankAccountError(null);
+                }}
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={10}
+                className="mt-1"
+              />
+              {bankAccountError && (
+                <p className="text-sm text-red-600 mt-1">{bankAccountError}</p>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Bank Name
+              </label>
+              <select
+                value={bankName}
+                onChange={(e) => setBankName(e.target.value)}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+              >
+                <option value="">Select a bank</option>
+                {nigerianBanks.map((bank) => (
+                  <option key={bank} value={bank}>{bank}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Account Name
+              </label>
+              <Input
+                value={accountName}
+                onChange={(e) => {
+                  setAccountName(e.target.value);
+                  setAccountNameError(null);
+                }}
+                className="mt-1"
+              />
+              {accountNameError && (
+                <p className="text-sm text-red-600 mt-1">{accountNameError}</p>
+              )}
+            </div>
+          </div>
+          <DialogFooter className="mt-6">
+            <Button
+              variant="outline"
+              onClick={() => setCashoutDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCashoutSubmit}
+              className="bg-green-500 hover:bg-green-600 text-white"
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <Loader2 size={16} className="mr-2 animate-spin" />
+                  Submitting...
+                </>
+              ) : (
+                "Submit Cashout"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={checkinDialogOpen} onOpenChange={setCheckinDialogOpen}>
+        <DialogContent className="max-w-md rounded-lg">
+          <DialogHeader>
+            <DialogTitle>Check-in Successful</DialogTitle>
+            <DialogDescription>
+              {checkinPlayer && (
+                <>
+                  Successfully checked in {checkinPlayer.name} with {checkinPlayer.slots} slot{checkinPlayer.slots !== 1 ? 's' : ''}.
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              onClick={() => setCheckinDialogOpen(false)}
+              className="bg-green-500 hover:bg-green-600 text-white"
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+export default PlayerManagement;
