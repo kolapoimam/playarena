@@ -125,6 +125,18 @@ const PlayerManagement = ({
   const [userId, setUserId] = useState<string | null>(null);
   const [checkingInPlayers, setCheckingInPlayers] = useState<{ [key: string]: boolean }>({});
 
+  // Initialize playerStatuses based on match.players when the component mounts or match changes
+  useEffect(() => {
+    if (match?.players) {
+      const initialStatuses = match.players.map(player => ({
+        id: player.id,
+        status: (player.player_status || 'Registered') as 'Registered' | 'Checked In' | 'Absent',
+        checkinCode: checkinCodes[player.id] || ''
+      }));
+      setPlayerStatuses(initialStatuses);
+    }
+  }, [match, setPlayerStatuses, checkinCodes]);
+
   useEffect(() => {
     const fetchUserIdAndData = async () => {
       const { data: session } = await supabase.auth.getSession();
@@ -224,12 +236,12 @@ const PlayerManagement = ({
   }, [match, userId, fetchMatch, setPlayerStatuses, toast]);
 
   const hasCheckedInPlayers = () => {
-    return match?.players?.some(p => p.player_status === 'Checked In') || false;
+    return playerStatuses.some(p => p.status === 'Checked In') || false;
   };
 
   const isCashoutEligible = () => {
     if (!match || match.cancellation_status || !match.is_paid) return false;
-    const checkedInPlayers = match.players?.filter(p => p.player_status === 'Checked In').length || 0;
+    const checkedInPlayers = playerStatuses.filter(p => p.status === 'Checked In').length;
     return checkedInPlayers > 0 && walletBalance > 0;
   };
 
@@ -439,8 +451,22 @@ const PlayerManagement = ({
 
       if (updateError) throw updateError;
 
+      // Fetch the updated player data directly from Supabase
+      const { data: updatedPlayerData, error: fetchError } = await supabase
+        .from('players')
+        .select('id, player_status')
+        .eq('id', playerId)
+        .single();
+
+      if (fetchError || !updatedPlayerData) throw new Error(fetchError?.message || "Failed to fetch updated player data");
+
+      // Update playerStatuses with the fresh data
       setPlayerStatuses(prev =>
-        prev.map(p => p.id === playerId ? { ...p, status: 'Checked In' } : p)
+        prev.map(p =>
+          p.id === playerId
+            ? { ...p, status: updatedPlayerData.player_status as 'Registered' | 'Checked In' | 'Absent' }
+            : p
+        )
       );
 
       setCheckinPlayer({ name: player.player_name, slots: player.number_of_slots || 1 });
@@ -454,9 +480,8 @@ const PlayerManagement = ({
       setCheckinCodes(prev => ({ ...prev, [playerId]: "" }));
       setCheckinCodeErrors(prev => ({ ...prev, [playerId]: null }));
       
-      // Refresh match data and log the updated players
+      // Still call fetchMatch to update the parent component, but we no longer rely solely on it
       await fetchMatch();
-      console.log("Updated match players after fetchMatch:", match?.players);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -569,61 +594,67 @@ const PlayerManagement = ({
             {(match.players || []).length === 0 ? (
               <p className="text-gray-600 dark:text-gray-400">No players registered for this match.</p>
             ) : (
-              match.players?.map((player) => (
-                <div
-                  key={player.id}
-                  className="relative flex flex-col sm:flex-row gap-4 items-start sm:items-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg"
-                >
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-900 dark:text-gray-100">{player.player_name}</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Phone: {player.details?.phone || "Not provided"}
-                    </p>
-                    {player.player_status === 'Checked In' && (
+              match.players?.map((player) => {
+                // Get the player's status from playerStatuses as a fallback
+                const playerStatusEntry = playerStatuses.find(p => p.id === player.id);
+                const displayStatus = playerStatusEntry?.status || player.player_status || 'Registered';
+
+                return (
+                  <div
+                    key={player.id}
+                    className="relative flex flex-col sm:flex-row gap-4 items-start sm:items-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg"
+                  >
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-900 dark:text-gray-100">{player.player_name}</p>
                       <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Code: {player.confirmation_code}
+                        Phone: {player.details?.phone || "Not provided"}
                       </p>
+                      {displayStatus === 'Checked In' && (
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          Code: {player.confirmation_code}
+                        </p>
+                      )}
+                    </div>
+                    <span
+                      className={`absolute top-2 right-2 px-2 py-1 text-xs font-medium rounded border ${getStatusStyles(displayStatus)}`}
+                    >
+                      {displayStatus}
+                    </span>
+                    {mode === "checkin" && displayStatus !== 'Checked In' && (
+                      <div className="flex gap-2 w-full sm:w-auto">
+                        <Input
+                          placeholder="Enter check-in code"
+                          value={checkinCodes[player.id] || ""}
+                          onChange={(e) => handleCheckinCodeChange(player.id, e.target.value)}
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          maxLength={6}
+                          className="w-full sm:w-[150px]"
+                          disabled={checkingInPlayers[player.id]}
+                        />
+                        <Button
+                          onClick={() => validateCheckinCode(player.id)}
+                          className="bg-blue-500 hover:bg-blue-600 text-white"
+                          disabled={
+                            !checkinCodes[player.id] ||
+                            checkinCodes[player.id].length !== 6 ||
+                            checkingInPlayers[player.id]
+                          }
+                        >
+                          {checkingInPlayers[player.id] ? (
+                            <Loader2 size={16} className="mr-2 animate-spin" />
+                          ) : (
+                            "Verify"
+                          )}
+                        </Button>
+                      </div>
+                    )}
+                    {checkinCodeErrors[player.id] && (
+                      <p className="text-sm text-red-600 mt-1">{checkinCodeErrors[player.id]}</p>
                     )}
                   </div>
-                  <span
-                    className={`absolute top-2 right-2 px-2 py-1 text-xs font-medium rounded border ${getStatusStyles(player.player_status)}`}
-                  >
-                    {player.player_status || 'Unknown'}
-                  </span>
-                  {mode === "checkin" && player.player_status !== 'Checked In' && (
-                    <div className="flex gap-2 w-full sm:w-auto">
-                      <Input
-                        placeholder="Enter check-in code"
-                        value={checkinCodes[player.id] || ""}
-                        onChange={(e) => handleCheckinCodeChange(player.id, e.target.value)}
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        maxLength={6}
-                        className="w-full sm:w-[150px]"
-                        disabled={checkingInPlayers[player.id]}
-                      />
-                      <Button
-                        onClick={() => validateCheckinCode(player.id)}
-                        className="bg-blue-500 hover:bg-blue-600 text-white"
-                        disabled={
-                          !checkinCodes[player.id] ||
-                          checkinCodes[player.id].length !== 6 ||
-                          checkingInPlayers[player.id]
-                        }
-                      >
-                        {checkingInPlayers[player.id] ? (
-                          <Loader2 size={16} className="mr-2 animate-spin" />
-                        ) : (
-                          "Verify"
-                        )}
-                      </Button>
-                    </div>
-                  )}
-                  {checkinCodeErrors[player.id] && (
-                    <p className="text-sm text-red-600 mt-1">{checkinCodeErrors[player.id]}</p>
-                  )}
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         )}
