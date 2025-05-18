@@ -7,7 +7,8 @@ import { Calendar, MapPin, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { format, isToday, isPast, differenceInHours, addHours } from "date-fns";
+import { format } from "date-fns";
+import { DateTime } from "luxon";
 
 type Match = {
   id: string;
@@ -82,7 +83,8 @@ const SearchPage = () => {
           players(player_name, number_of_slots, cancellation_status)
         `)
         .or(`title.ilike.%${query}%,venue_id.in.(${venueIds.join(",")})`)
-        .order("match_date", { ascending: true });
+        .order("match_date", { ascending: true })
+        .order("match_time", { ascending: true });
 
       if (matchError) throw matchError;
 
@@ -122,9 +124,11 @@ const SearchPage = () => {
   };
 
   const getMatchStatus = (match: Match) => {
-    const matchDateTime = new Date(`${match.match_date}T${match.match_time}:00Z`);
-    const now = new Date();
-    const fortyEightHoursAfter = addHours(matchDateTime, 48);
+    const matchDate = DateTime.fromISO(match.match_date, { zone: "utc" }).setZone("Africa/Lagos");
+    const now = DateTime.now().setZone("Africa/Lagos");
+    const tomorrow = now.plus({ days: 1 }).startOf("day");
+    const startDateTime = DateTime.fromISO(`${matchDate.toISODate()}T${match.match_time}`, { zone: "utc" }).setZone("Africa/Lagos");
+    const endDateTime = startDateTime.plus({ hours: 2 });
 
     let statusLabel = "";
     let statusClass = "";
@@ -134,29 +138,21 @@ const SearchPage = () => {
       statusLabel = "Cancelled";
       statusClass = "bg-red-100 text-red-800";
     } else {
-      switch (match.status) {
-        case "cancelled":
-          statusLabel = "Cancelled";
-          statusClass = "bg-red-100 text-red-800";
-          break;
-        case "completed":
-          statusLabel = "Completed";
-          statusClass = "bg-gray-100 text-gray-800";
-          isFeedbackWindow = now >= matchDateTime && now < fortyEightHoursAfter;
-          break;
-        case "live":
-          statusLabel = "Live";
-          statusClass = "bg-green-100 text-green-800 animate-pulse";
-          break;
-        case "upcoming":
-          statusLabel = isToday(matchDateTime) ? "Today" : "Upcoming";
-          statusClass = isToday(matchDateTime)
-            ? "bg-green-100 text-green-700"
-            : "bg-blue-100 text-blue-800";
-          break;
-        default:
-          statusLabel = "Upcoming";
-          statusClass = "bg-blue-100 text-blue-800";
+      if (now > endDateTime) {
+        statusLabel = "Passed";
+        statusClass = "bg-gray-200 text-gray-600";
+      } else if (now >= startDateTime && now <= endDateTime) {
+        statusLabel = "Live";
+        statusClass = "bg-red-100 text-red-700 animate-pulse";
+      } else if (now.hasSame(matchDate, "day") && now < startDateTime) {
+        statusLabel = "Today";
+        statusClass = "bg-green-100 text-green-700";
+      } else if (matchDate > tomorrow) {
+        statusLabel = "Upcoming";
+        statusClass = "bg-blue-100 text-blue-800";
+      } else {
+        statusLabel = "Upcoming";
+        statusClass = "bg-blue-100 text-blue-800";
       }
     }
 
@@ -304,17 +300,17 @@ const SearchPage = () => {
                         </div>
 
                         <div className="mt-4 flex gap-2">
-                          {isFeedbackWindow ? (
+                          {statusLabel === "Passed" ? (
                             <Button
                               className="flex-1 bg-green-500 hover:bg-green-600 text-white rounded-lg"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                navigate(`/feedback?matchId=${match.id}`);
+                                navigate(`/match/${match.slug}`);
                               }}
                             >
                               Give Feedback
                             </Button>
-                          ) : (match.cancellation_status || match.status === "cancelled" || match.status === "completed" || isFull) ? (
+                          ) : match.cancellation_status || isFull ? (
                             <Button
                               className="flex-1 bg-gray-500 text-white rounded-lg"
                               disabled
