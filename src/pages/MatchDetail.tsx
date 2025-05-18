@@ -65,8 +65,8 @@ type Match = {
   } | null;
   players: {
     player_name: string;
-    status: string;
-    number_of_tickets: number;
+    player_status: 'Registered' | 'Checked In' | 'Absent';
+    number_of_slots: number;
   }[];
 };
 
@@ -99,7 +99,7 @@ const MatchDetail = () => {
         .select(`
           *,
           venue:venues(id, slug, name, city, map_link),
-          players(player_name, status, number_of_slots)
+          players(player_name, player_status, number_of_slots)
         `)
         .eq("slug", matchSlug)
         .single();
@@ -193,7 +193,7 @@ const MatchDetail = () => {
         .select(`
           *,
           venue:venues(id, slug, name, city, map_link),
-          players(player_name, status, number_of_slots)
+          players(player_name, player_status, number_of_slots)
         `)
         .eq("slug", matchSlug)
         .single();
@@ -230,19 +230,18 @@ const MatchDetail = () => {
   };
 
   const getMatchStatus = () => {
-    if (!match) return { isStarted: false, isPassed: false, isFull: false };
+    if (!match) return { isStarted: false, isEnded: false, isFull: false };
     
     const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
-    const now = new Date("2025-05-15T00:01:00+01:00"); // 12:01 AM WAT, May 15, 2025
-    const fortyEightHoursAfter = addHours(matchDateTime, 48);
+    const matchEndTime = addHours(matchDateTime, 2); // Match duration is 2 hours
+    const now = new Date("2025-05-18T18:18:00+01:00"); // 06:18 PM WAT, May 18, 2025
     
     const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
     const isFull = totalPlayerSlots >= match.total_slots;
-    const isStarted = now >= matchDateTime;
-    const isPassed = now >= fortyEightHoursAfter;
-    const isFeedbackWindow = now >= matchDateTime && now < fortyEightHoursAfter;
+    const isStarted = now >= matchDateTime && now < matchEndTime;
+    const isEnded = now >= matchEndTime;
     
-    return { isStarted, isPassed, isFull, isFeedbackWindow };
+    return { isStarted, isEnded, isFull };
   };
 
   const shareMatch = async () => {
@@ -437,7 +436,7 @@ const MatchDetail = () => {
     );
   }
 
-  const { isStarted, isPassed, isFull, isFeedbackWindow } = getMatchStatus();
+  const { isStarted, isEnded, isFull } = getMatchStatus();
   const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
 
   return (
@@ -488,13 +487,13 @@ const MatchDetail = () => {
           </Button>
         </div>
         
-        {isPassed ? (
+        {isEnded ? (
           <div className="bg-gray-100 border border-gray-200 text-gray-700 px-4 py-3 rounded mb-4">
             This match has passed
           </div>
         ) : isStarted ? (
           <div className="bg-playarena-100 border border-playarena-200 text-playarena-700 px-4 py-3 rounded mb-4">
-            This match has already started!
+            This match has started!
           </div>
         ) : isFull ? (
           <div className="bg-red-100 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
@@ -585,14 +584,13 @@ const MatchDetail = () => {
                     </div>
                     <Badge
                       variant={
-                        player.status === "confirmed" ? "default" :
-                        player.status === "pending" ? "destructive" :
-                        player.status === "checked_in" ? "secondary" :
-                        player.status === "absent" ? "outline" :
+                        player.player_status === "Checked In" ? "secondary" :
+                        player.player_status === "Registered" ? "default" :
+                        player.player_status === "Absent" ? "outline" :
                         "default"
                       }
                     >
-                      {formatStatus(player.status)}
+                      {formatStatus(player.player_status)}
                     </Badge>
                   </div>
                 ))}
@@ -602,29 +600,14 @@ const MatchDetail = () => {
             )}
             
             <div className="mt-6">
-              {isFeedbackWindow ? (
+              {isEnded ? (
                 <Button 
                   className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
                   onClick={() => navigate(`/feedback?matchSlug=${match.slug}`)}
                 >
                   Give Feedback
                 </Button>
-              ) : (isPassed || isStarted) ? (
-                <Button 
-                  className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
-                  variant="outline"
-                  disabled
-                >
-                  {isPassed ? "Match Has Passed" : "Match Has Started"}
-                </Button>
-              ) : !isFull ? (
-                <Button 
-                  className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
-                  onClick={() => navigate(`/join/${match.slug}`)}
-                >
-                  Join This Match
-                </Button>
-              ) : (
+              ) : isFull ? (
                 <Button 
                   className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
                   variant="outline"
@@ -632,9 +615,16 @@ const MatchDetail = () => {
                 >
                   Match Is Full
                 </Button>
+              ) : (
+                <Button 
+                  className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
+                  onClick={() => navigate(`/join/${match.slug}`)}
+                >
+                  Join This Match
+                </Button>
               )}
             </div>
-            {match.sell_tickets && !isPassed && !isStarted && (
+            {match.sell_tickets && !isEnded && (
               <div className="mt-4">
                 <Button
                   className="w-full bg-yellow-500 hover:bg-yellow-600 text-white"
