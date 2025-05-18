@@ -36,7 +36,7 @@ import {
 import { format, isToday, isPast, differenceInHours, addHours } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltips";
 import html2canvas from "html2canvas";
 
 type Match = {
@@ -234,7 +234,7 @@ const MatchDetail = () => {
     
     const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
     const matchEndTime = addHours(matchDateTime, 2); // Match duration is 2 hours
-    const now = new Date("2025-05-18T18:18:00+01:00"); // 06:18 PM WAT, May 18, 2025
+    const now = new Date("2025-05-18T19:45:00+01:00"); // 07:45 PM WAT, May 18, 2025
     
     const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
     const isFull = totalPlayerSlots >= match.total_slots;
@@ -242,6 +242,19 @@ const MatchDetail = () => {
     const isEnded = now >= matchEndTime;
     
     return { isStarted, isEnded, isFull };
+  };
+
+  const getStatusStyles = (status: string) => {
+    switch (status.toLowerCase()) {
+      case "registered":
+        return "bg-yellow-500 text-white border-yellow-600";
+      case "checked in":
+        return "bg-green-500 text-white border-green-600";
+      case "absent":
+        return "bg-red-500 text-white border-red-600";
+      default:
+        return "bg-gray-500 text-white border-gray-600";
+    }
   };
 
   const shareMatch = async () => {
@@ -304,7 +317,7 @@ const MatchDetail = () => {
     const url = `${window.location.origin}/match/${match.slug}`;
     const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
     const shareText = `Join my Football Match: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. ${totalPlayerSlots}/${match.total_slots} slots. Powered by PlayArena. ${match.is_private ? ` (Access Password: ${match.access_password})` : ''}`;
-    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}"e=${encodeURIComponent(shareText)}`;
+    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(shareText)}`;
     window.open(facebookUrl, '_blank');
   };
 
@@ -366,7 +379,7 @@ const MatchDetail = () => {
         `Football Match organized by ${match.organizer_name}.\n\n` +
         `Match Link: ${window.location.origin}/match/${match.slug}\n\n` +
         `Venue: ${match.venue?.name || 'Unknown'}, ${match.venue?.city || ''}\n\n` +
-        `Additional Info: ${match.description || 'No additional information provided'}\n\n` +
+        `Additional Info: ${match.notes || 'No additional information provided'}\n\n` +
         `${match.is_private ? `Access Password: ${match.access_password}\n\n` : ''}` +
         `Powered by PlayArena`
       )}` +
@@ -475,16 +488,12 @@ const MatchDetail = () => {
           )}
         </h1>
         <div className="flex justify-between items-center mb-4">
-          <p className="text-muted-foreground">Organized by {match.organizer_name}</p>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={addToCalendar}
-            className="flex items-center gap-1"
-          >
-            <CalendarPlus size={16} />
-            Add to Calendar
-          </Button>
+          <div className="flex items-center gap-2">
+            <p className="text-muted-foreground">Organized by {match.organizer_name}</p>
+            <span className="inline-block px-2 py-1 text-xs font-medium rounded bg-green-100 text-green-700 border-green-300">
+              Verified
+            </span>
+          </div>
         </div>
         
         {isEnded ? (
@@ -583,12 +592,7 @@ const MatchDetail = () => {
                       </span>
                     </div>
                     <Badge
-                      variant={
-                        player.player_status === "Checked In" ? "secondary" :
-                        player.player_status === "Registered" ? "default" :
-                        player.player_status === "Absent" ? "outline" :
-                        "default"
-                      }
+                      className={getStatusStyles(player.player_status)}
                     >
                       {formatStatus(player.player_status)}
                     </Badge>
@@ -763,7 +767,18 @@ const MatchDetail = () => {
                   />
                   <Trophy className={`h-6 w-6 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
                 </div>
-                <h2 className={`text-xl font-bold mb-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`}>{match.title}</h2>
+                <div className="flex items-center justify-between mb-2">
+                  <h2 className={`text-xl font-bold ${backgroundOption === "white" ? "text-black" : "text-white"}`}>{match.title}</h2>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={addToCalendar}
+                    className={`text-sm ${backgroundOption === "white" ? "text-black border-black" : "text-white border-white"}`}
+                  >
+                    <CalendarPlus size={16} className="mr-1" />
+                    Add to Calendar
+                  </Button>
+                </div>
                 <div className="space-y-2 mb-4">
                   <div className="flex items-center">
                     <MapPin className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
