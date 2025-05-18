@@ -310,9 +310,9 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
     return { text: "Passed", className: "bg-gray-100 text-gray-800" };
   };
 
-  const getStatusLabel = (status: string, isCancelled: boolean) => {
+  const getStatusLabel = (status: string, isCancelled: boolean, matchDate: string, startTime: string, endTime: string) => {
     if (isCancelled) return { text: "Cancelled", className: "bg-red-100 text-red-800" };
-    const matchStatus = getMatchStatus(status === "registered" ? status : matchDate, startTime, endTime);
+    const matchStatus = getMatchStatus(matchDate, startTime, endTime);
     return matchStatus;
   };
 
@@ -346,7 +346,7 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
                 const organizer = organizers.find(org => org.id === match.id);
                 const isVerified = organizer?.is_verified || false;
                 const { dateStr, timeStr } = formatMatchDateTime(match.match_date, match.match_time);
-                const statusLabel = getStatusLabel(match.status, match.cancellation_status);
+                const statusLabel = getStatusLabel(match.status, match.cancellation_status, match.match_date, match.start_time, match.end_time);
                 return (
                   <div
                     key={match.id}
@@ -375,7 +375,7 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
                           Slots: <span className="text-green-600 dark:text-green-400">{match.booked_slots}</span>/{match.total_slots}
                         </p>
                         <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
-                          Organized by: {match.organizer_name}
+                          Organized by: {organizer?.name || "Unknown"}
                           {isVerified && <img src="/green-verified.png" alt="Verified" className="w-4 h-4 ml-1" />}
                         </p>
                       </div>
@@ -429,7 +429,7 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
                 const organizer = organizers.find(org => org.id === match.id);
                 const isVerified = organizer?.is_verified || false;
                 const { dateStr, timeStr } = formatMatchDateTime(match.match_date, match.match_time);
-                const statusLabel = getStatusLabel(match.player_status || "registered", match.player_cancellation_status || match.cancellation_status);
+                const statusLabel = getStatusLabel(match.player_status || "registered", match.player_cancellation_status || match.cancellation_status, match.match_date, match.start_time, match.end_time);
                 return (
                   <div
                     key={match.id}
@@ -460,7 +460,7 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
                           </p>
                         )}
                         <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
-                          Organized by: {match.organizer_name}
+                          Organized by: {organizer?.name || "Unknown"}
                           {isVerified && <img src="/green-verified.png" alt="Verified" className="w-4 h-4 ml-1" />}
                         </p>
                       </div>
