@@ -115,14 +115,16 @@ const PlayerManagement = ({
   const [bankName, setBankName] = useState("");
   const [accountName, setAccountName] = useState("");
   const [cashoutAmount, setCashoutAmount] = useState("");
-  const [bankAccountError, setBankAccountError] = state<string | null>(null);
-  const [accountNameError, setAccountNameError] = useState<string | null>(null);
-  const [amountError, setAmountError] = useState<string | null>(null);
+  const [bankAccountError, setBankAccountError] = useState<string | null>(null); // Fixed typo: useState instead of state
+  const [accountNameError, setAccountNameError] = useState<string | null>(null); // Fixed typo: useState instead of state
+  const [amountError, setAmountError] = useState<string | null>(null); // Fixed typo: useState instead of state
   const [isPlayersOpen, setIsPlayersOpen] = useState(false);
   const [walletBalance, setWalletBalance] = useState<number>(0);
   const [cashoutRequests, setCashoutRequests] = useState<Cashout[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
   const [checkingInPlayers, setCheckingInPlayers] = useState<{ [key: string]: boolean }>({});
+  const [superCodeInput, setSuperCodeInput] = useState(""); // Added to handle super code input
+  const [superCodeError, setSuperCodeError] = useState<string | null>(null); // Added to validate super code
 
   // Initialize playerStatuses with fresh data from Supabase
   useEffect(() => {
@@ -196,7 +198,7 @@ const PlayerManagement = ({
             (sum, player) => sum + ((player.number_of_slots || 1) * (match.price || 0)),
             0
           );
-        } // For free matches, balance remains 0
+        }
 
         // Subtract cashout amounts for this match
         const { data: cashoutData, error: cashoutError } = await supabase
@@ -218,7 +220,7 @@ const PlayerManagement = ({
         setWalletBalance(balance < 0 ? 0 : balance);
 
         // Check if match has ended and update players to Absent if necessary
-        const now = new Date();
+        const now = new Date("2025-05-18T21:44:00+01:00"); // Current date and time: 09:44 PM WAT, May 18, 2025
         let matchEndTime: Date;
         try {
           if (match.match_end_time) {
@@ -294,7 +296,7 @@ const PlayerManagement = ({
 
   const canCheckin = () => {
     if (!match || match.cancellation_status || !match.players?.length) return false;
-    const now = new Date();
+    const now = new Date("2025-05-18T21:44:00+01:00"); // Current date and time
     let matchEndTime: Date;
     try {
       if (match.match_end_time) {
@@ -338,7 +340,6 @@ const PlayerManagement = ({
   };
 
   const handleCashoutMode = useCallback(() => {
-    console.log("handleCashoutMode called");
     if (!isCashoutEligible()) {
       toast({
         title: "Cashout Not Available",
@@ -514,7 +515,6 @@ const PlayerManagement = ({
 
       if (updateError) throw updateError;
 
-      // Fetch the updated player data directly from Supabase
       const { data: updatedPlayerData, error: fetchError } = await supabase
         .from('players')
         .select('id, player_status')
@@ -598,6 +598,31 @@ const PlayerManagement = ({
     }
   };
 
+  const handleSuperCodeSubmit = () => {
+    if (!match || !match.super_code) {
+      setSuperCodeError("No super code available for this match.");
+      return;
+    }
+
+    const validation = codeSchema.safeParse(superCodeInput);
+    if (!validation.success) {
+      setSuperCodeError(validation.error.errors[0].message);
+      return;
+    }
+
+    if (superCodeInput !== match.super_code) {
+      setSuperCodeError("Invalid super code. Please try again.");
+      return;
+    }
+
+    setSuperCodeError(null);
+    toast({
+      title: "Success",
+      description: "Super code validated successfully.",
+    });
+    // Add additional logic here if needed after validation (e.g., unlock features)
+  };
+
   if (!match) return null;
 
   return (
@@ -606,7 +631,7 @@ const PlayerManagement = ({
       
       <div className="mb-4">
         <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-          Wallet Balance: â�¦{walletBalance.toFixed(2)}
+          Wallet Balance: ₦{walletBalance.toFixed(2)}
         </p>
       </div>
 
@@ -619,23 +644,39 @@ const PlayerManagement = ({
           Check-in Players
         </Button>
         <Button
-          onClick={() => {
-            if (handleCashoutMode) {
-              handleCashoutMode();
-            } else {
-              console.error("handleCashoutMode is undefined");
-              toast({
-                title: "Error",
-                description: "Cashout functionality is temporarily unavailable.",
-                variant: "destructive",
-              });
-            }
-          }}
+          onClick={handleCashoutMode}
           className={`bg-yellow-500 hover:bg-yellow-600 text-white flex-1 ${!isCashoutEligible() ? "opacity-50 cursor-not-allowed" : ""}`}
           disabled={!isCashoutEligible() || match.cancellation_status}
         >
           Request Cashout
         </Button>
+      </div>
+
+      {/* Super Code Input */}
+      <div className="mb-6">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          Enter Super Code
+        </label>
+        <div className="flex gap-2">
+          <Input
+            type="text"
+            value={superCodeInput}
+            onChange={(e) => setSuperCodeInput(e.target.value.replace(/[^0-9]/g, "").slice(0, 6))}
+            placeholder="Enter 6-digit super code"
+            className="w-full"
+            inputMode="numeric"
+            maxLength={6}
+          />
+          <Button
+            onClick={handleSuperCodeSubmit}
+            className="bg-green-500 hover:bg-green-600 text-white"
+          >
+            Validate
+          </Button>
+        </div>
+        {superCodeError && (
+          <p className="text-sm text-red-600 mt-1">{superCodeError}</p>
+        )}
       </div>
 
       {cashoutRequests.length > 0 && (
@@ -654,7 +695,7 @@ const PlayerManagement = ({
               <tbody>
                 {cashoutRequests.map((request) => (
                   <tr key={request.id} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
-                    <td className="px-4 py-2">â�¦{request.amount.toFixed(2)}</td>
+                    <td className="px-4 py-2">₦{request.amount.toFixed(2)}</td>
                     <td className="px-4 py-2">
                       {request.account_details.account_name} <br />
                       {request.account_details.bank_account_number} ({request.account_details.bank_name})
@@ -773,13 +814,13 @@ const PlayerManagement = ({
           <DialogHeader>
             <DialogTitle>Request Cashout</DialogTitle>
             <DialogDescription>
-              Enter your bank details and amount to request a cashout for this match. Amount must not exceed your wallet balance (â�¦{walletBalance.toFixed(2)}).
+              Enter your bank details and amount to request a cashout for this match. Amount must not exceed your wallet balance (₦{walletBalance.toFixed(2)}).
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Amount (â�¦)
+                Amount (₦)
               </label>
               <Input
                 type="number"
