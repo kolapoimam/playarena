@@ -115,7 +115,7 @@ const PlayerManagement = ({
   const [bankName, setBankName] = useState("");
   const [accountName, setAccountName] = useState("");
   const [cashoutAmount, setCashoutAmount] = useState("");
-  const [bankAccountError, setBankAccountError] = useState<string | null>(null);
+  const [bankAccountError, setBankAccountError] = state<string | null>(null);
   const [accountNameError, setAccountNameError] = useState<string | null>(null);
   const [amountError, setAmountError] = useState<string | null>(null);
   const [isPlayersOpen, setIsPlayersOpen] = useState(false);
@@ -386,6 +386,22 @@ const PlayerManagement = ({
 
     setLoading(true);
     try {
+      // Check if organizer exists, create if not
+      const { data: organizerData, error: organizerError } = await supabase
+        .from("organizers")
+        .select("id")
+        .eq("id", userId)
+        .single();
+
+      if (organizerError && organizerError.code === "PGRST116") {
+        const { error: insertError } = await supabase
+          .from("organizers")
+          .insert({ id: userId, name: match.organizer_name || "Unknown Organizer" });
+        if (insertError) throw insertError;
+      } else if (organizerError) {
+        throw organizerError;
+      }
+
       const { error: cashoutError } = await supabase
         .from("cashout_requests")
         .insert({
@@ -397,7 +413,7 @@ const PlayerManagement = ({
             bank_name: bankName,
             account_name: accountName,
           },
-          status: "review",
+          status: "under_review",
           temp_identifier: tempIdentifier,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
@@ -590,7 +606,7 @@ const PlayerManagement = ({
       
       <div className="mb-4">
         <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-          Wallet Balance: ₦{walletBalance.toFixed(2)}
+          Wallet Balance: â�¦{walletBalance.toFixed(2)}
         </p>
       </div>
 
@@ -638,7 +654,7 @@ const PlayerManagement = ({
               <tbody>
                 {cashoutRequests.map((request) => (
                   <tr key={request.id} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
-                    <td className="px-4 py-2">₦{request.amount.toFixed(2)}</td>
+                    <td className="px-4 py-2">â�¦{request.amount.toFixed(2)}</td>
                     <td className="px-4 py-2">
                       {request.account_details.account_name} <br />
                       {request.account_details.bank_account_number} ({request.account_details.bank_name})
@@ -757,13 +773,13 @@ const PlayerManagement = ({
           <DialogHeader>
             <DialogTitle>Request Cashout</DialogTitle>
             <DialogDescription>
-              Enter your bank details and amount to request a cashout for this match. Amount must not exceed your wallet balance (₦{walletBalance.toFixed(2)}).
+              Enter your bank details and amount to request a cashout for this match. Amount must not exceed your wallet balance (â�¦{walletBalance.toFixed(2)}).
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Amount (₦)
+                Amount (â�¦)
               </label>
               <Input
                 type="number"
