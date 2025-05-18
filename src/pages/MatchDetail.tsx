@@ -39,6 +39,13 @@ import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import html2canvas from "html2canvas";
 
+type Organizer = {
+  id: string;
+  name: string;
+  phone: string;
+  is_verified: boolean;
+};
+
 type Match = {
   id: string;
   slug: string;
@@ -49,7 +56,7 @@ type Match = {
   is_paid: boolean;
   price: number | null;
   notes: string | null;
-  organizer_name: string;
+  organizer: Organizer;
   player_number_required: boolean;
   is_private: boolean;
   access_password: string | null;
@@ -99,7 +106,8 @@ const MatchDetail = () => {
         .select(`
           *,
           venue:venues(id, slug, name, city, map_link),
-          players(player_name, player_status, number_of_slots)
+          players(player_name, player_status, number_of_slots),
+          organizer:organizers(id, name, phone, is_verified)
         `)
         .eq("slug", matchSlug)
         .single();
@@ -193,7 +201,8 @@ const MatchDetail = () => {
         .select(`
           *,
           venue:venues(id, slug, name, city, map_link),
-          players(player_name, player_status, number_of_slots)
+          players(player_name, player_status, number_of_slots),
+          organizer:organizers(id, name, phone, is_verified)
         `)
         .eq("slug", matchSlug)
         .single();
@@ -234,7 +243,7 @@ const MatchDetail = () => {
     
     const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
     const matchEndTime = addHours(matchDateTime, 2); // Match duration is 2 hours
-    const now = new Date("2025-05-18T20:03:00+01:00"); // 08:03 PM WAT, May 18, 2025
+    const now = new Date("2025-05-18T20:36:00+01:00"); // 08:36 PM WAT, May 18, 2025
     
     const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
     const isFull = totalPlayerSlots >= match.total_slots;
@@ -376,7 +385,7 @@ const MatchDetail = () => {
       `&dates=${formatGoogleDate(matchDateTime)}/${formatGoogleDate(endDateTime)}` +
       `&location=${encodeURIComponent(match.venue ? `${match.venue.name}, ${match.venue.city}` : 'Unknown Venue')}` +
       `&details=${encodeURIComponent(
-        `Football Match organized by ${match.organizer_name}.\n\n` +
+        `Football Match organized by ${match.organizer.name}.\n\n` +
         `Match Link: ${window.location.origin}/match/${match.slug}\n\n` +
         `Venue: ${match.venue?.name || 'Unknown'}, ${match.venue?.city || ''}\n\n` +
         `Additional Info: ${match.notes || 'No additional information provided'}\n\n` +
@@ -489,10 +498,10 @@ const MatchDetail = () => {
         </h1>
         <div className="flex justify-between items-center mb-4">
           <div className="flex items-center gap-2">
-            <p className="text-muted-foreground">Organized by {match.organizer_name}</p>
-            <span className="inline-block px-2 py-1 text-xs font-medium rounded bg-green-100 text-green-700 border-green-300">
-              Verified
-            </span>
+            <p className="text-muted-foreground">Organized by {match.organizer.name}</p>
+            {match.organizer.is_verified && (
+              <img src="/green-verified.png" alt="Verified" className="h-5 w-5" />
+            )}
           </div>
         </div>
         
@@ -660,7 +669,7 @@ const MatchDetail = () => {
                 >
                   <Share2 size={18} className="mr-2" />
                   Share
-                  <ChevronDown size={16} className aboard="ml-2" />
+                  <ChevronDown size={16} className="ml-2" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-[200px]">
