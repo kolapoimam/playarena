@@ -466,15 +466,6 @@ const MatchDetail = () => {
           </Button>
           <div className="text-center">
             <h1 className="text-2xl font-bold">Match Details</h1>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={addToCalendar}
-              className="text-white border-white mt-2"
-            >
-              <CalendarPlus size={16} className="mr-1" />
-              Add to Calendar
-            </Button>
           </div>
           <div className="w-10"></div>
         </div>
@@ -520,7 +511,19 @@ const MatchDetail = () => {
         ) : null}
         
         <div className="space-y-4">
-          <div className="border rounded-lg p-4 bg-card shadow-md">
+          <div className="border rounded-lg p-4 bg-card shadow-md relative">
+            <div className="absolute top-4 right-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={addToCalendar}
+                className="text-playarena-600 border-playarena-300 hover:bg-playarena-50"
+              >
+                <CalendarPlus size={16} className="mr-1" />
+                Add to Calendar
+              </Button>
+            </div>
+            
             <h2 className="font-semibold mb-3">Match Details</h2>
             
             <div className="space-y-3">
