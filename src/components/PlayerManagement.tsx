@@ -32,7 +32,6 @@ type Match = {
   players: {
     id: string;
     player_name: string;
-    status: string;
     player_status: 'Registered' | 'Checked In' | 'Absent';
     confirmation_code: string;
     details: { phone: string } | null;
@@ -483,11 +482,43 @@ const PlayerManagement = ({
       // Still call fetchMatch to update the parent component, but we no longer rely solely on it
       await fetchMatch();
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to verify code",
-        variant: "destructive",
-      });
+      // If the player is already checked in, fetch the latest status to update the UI
+      if (error.message === "Player is already checked in or absent") {
+        const { data: updatedPlayerData, error: fetchError } = await supabase
+          .from('players')
+          .select('id, player_status')
+          .eq('id', playerId)
+          .single();
+
+        if (fetchError || !updatedPlayerData) {
+          toast({
+            title: "Error",
+            description: "Failed to fetch updated player status.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        setPlayerStatuses(prev =>
+          prev.map(p =>
+            p.id === playerId
+              ? { ...p, status: updatedPlayerData.player_status as 'Registered' | 'Checked In' | 'Absent' }
+              : p
+          )
+        );
+
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to verify code",
+          variant: "destructive",
+        });
+      }
     } finally {
       setCheckingInPlayers(prev => ({ ...prev, [playerId]: false }));
     }
@@ -595,7 +626,7 @@ const PlayerManagement = ({
               <p className="text-gray-600 dark:text-gray-400">No players registered for this match.</p>
             ) : (
               match.players?.map((player) => {
-                // Get the player's status from playerStatuses as a fallback
+                // Use playerStatuses for the displayed status
                 const playerStatusEntry = playerStatuses.find(p => p.id === player.id);
                 const displayStatus = playerStatusEntry?.status || player.player_status || 'Registered';
 
