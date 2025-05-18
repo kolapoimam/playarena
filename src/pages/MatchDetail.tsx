@@ -36,7 +36,7 @@ import {
 import { format, isToday, isPast, differenceInHours, addHours } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltips";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import html2canvas from "html2canvas";
 
 type Match = {
