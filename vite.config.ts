@@ -16,8 +16,8 @@ export default defineConfig(({ mode }) => ({
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
-        name: 'Play Arena',
-        short_name: 'Play Arena',
+        name: 'Sport Cliq',
+        short_name: 'Sport Cliq',
         description: 'Discover and organise football matches in Nigeria',
         theme_color: '#1fc55c',
         background_color: '#ffffff',
