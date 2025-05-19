@@ -57,12 +57,12 @@ const MatchCodeInput = ({
             variant: "destructive",
           });
         } else {
-          setRecentSuperCodes(data.map((match) => match.super_code));
+          setRecentSuperCodes(data.map((match) => match.super_code).filter(code => code));
         }
       };
       fetchRecentCodes();
     }
-  }, [userId, toast]);
+  }, [userId, toast, setRecentSuperCodes]);
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6 border border-gray-200 dark:border-gray-700">
