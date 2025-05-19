@@ -201,7 +201,7 @@ return (
         <>
           <section className="mb-8">
             <div className="flex justify-between items-center px-4 mb-3">
-              <h2 className="text-2xl font-bold">Upcoming Matches</h2>
+              <h2 className="text-2xl font-bold">Activities</h2>
               <Button
                 variant="outline"
                 className="text-green-600 hover:bg-green-600 hover:text-white transition-colors"
