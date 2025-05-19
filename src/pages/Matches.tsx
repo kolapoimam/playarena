@@ -13,7 +13,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { DateTime } from "luxon";
 
 // Match type definition based on the existing Supabase schema
-type Match = {
+interface Match {
   id: string;
   slug: string;
   title: string;
@@ -39,6 +39,7 @@ type Match = {
     player_name: string;
   }[];
   created_at: string;
+  status: string; // live, today, upcoming, or past
 };
 
 type Organizer = {
@@ -57,6 +58,7 @@ type Venue = {
 
 const Matches = () => {
   const [matches, setMatches] = useState<Match[]>([]);
+  const [filteredMatches, setFilteredMatches] = useState<Match[]>([]);
   const [venues, setVenues] = useState<Venue[]>([]);
   const [organizers, setOrganizers] = useState<Organizer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -202,9 +204,56 @@ const Matches = () => {
 
       if (error) throw error;
 
-      const fetchedMatches = data as Match[];
-      setMatches(fetchedMatches);
-      setTotalMatches(count || 0);
+      // Convert and sort matches
+      const now = DateTime.now().setZone(LAGOS_TIMEZONE);
+      const today = now.startOf('day');
+      const tomorrow = today.plus({ days: 1 });
+
+      const sortedMatches = (data as Match[]).map(match => {
+        const matchDateTime = DateTime.fromISO(`${match.match_date}T${match.match_time}`).setZone(LAGOS_TIMEZONE);
+        const endDateTime = DateTime.fromISO(`${match.match_date}T${match.end_time}`).setZone(LAGOS_TIMEZONE);
+        
+        // Determine status
+        let status: string;
+        if (matchDateTime < now) {
+          status = "past";
+        } else if (matchDateTime >= today && matchDateTime < tomorrow) {
+          status = "today";
+          if (matchDateTime <= now && now <= endDateTime) {
+            status = "live";
+          }
+        } else {
+          status = "upcoming";
+        }
+
+        return {
+          ...match,
+          status
+        };
+      })
+      .sort((a, b) => {
+        // Priority: Live > Today > Upcoming > Past
+        const statusOrder = {
+          live: 0,
+          today: 1,
+          upcoming: 2,
+          past: 3
+        };
+
+        // First sort by status priority
+        if (statusOrder[a.status] !== statusOrder[b.status]) {
+          return statusOrder[a.status] - statusOrder[b.status];
+        }
+
+        // Then sort by date/time within each group
+        const aDateTime = DateTime.fromISO(`${a.match_date}T${a.match_time}`).setZone(LAGOS_TIMEZONE);
+        const bDateTime = DateTime.fromISO(`${b.match_date}T${b.match_time}`).setZone(LAGOS_TIMEZONE);
+        return aDateTime.toMillis() - bDateTime.toMillis();
+      });
+
+      setMatches(sortedMatches);
+      setFilteredMatches(sortedMatches);
+      setTotalMatches(count!);
     } catch (error: any) {
       console.error("Error fetching matches:", error.message);
       setMatches([]);
@@ -219,14 +268,14 @@ const Matches = () => {
     }
   };
 
-  const getMatchStatus = (matchDate: string, startTime: string, endTime: string) => {
+  const getMatchStatus = (match: Match) => {
     const now = DateTime.now().setZone(LAGOS_TIMEZONE);
-    const matchDateTime = DateTime.fromISO(`${matchDate}T${startTime}`, { zone: "utc" }).setZone(LAGOS_TIMEZONE);
-    const endDateTime = DateTime.fromISO(`${matchDate}T${endTime}`, { zone: "utc" }).setZone(LAGOS_TIMEZONE);
+    const matchDateTime = DateTime.fromISO(`${match.match_date}T${match.match_time}`).setZone(LAGOS_TIMEZONE);
+    const endDateTime = DateTime.fromISO(`${match.match_date}T${match.end_time}`).setZone(LAGOS_TIMEZONE);
 
-    if (now < matchDateTime) return { statusLabel: "Upcoming Match", statusClass: "bg-blue-100 text-blue-800" };
-    if (now.hasSame(matchDateTime, "day") && now < matchDateTime) return { statusLabel: "Today", statusClass: "bg-green-100 text-green-700" };
-    if (now >= matchDateTime && now <= endDateTime) return { statusLabel: "Live Match", statusClass: "bg-red-100 text-red-700 animate-pulse" };
+    if (match.status === "live") return { statusLabel: "Live Match", statusClass: "bg-red-100 text-red-700 animate-pulse" };
+    if (match.status === "today") return { statusLabel: "Today", statusClass: "bg-green-100 text-green-700" };
+    if (match.status === "upcoming") return { statusLabel: "Upcoming Match", statusClass: "bg-blue-100 text-blue-800" };
     return { statusLabel: "Passed", statusClass: "bg-gray-200 text-gray-600" };
   };
 
@@ -335,6 +384,28 @@ const Matches = () => {
               </div>
 
               <div>
+                <Label htmlFor="status-filter" className="text-gray-700 dark:text-gray-300">Status</Label>
+                <Select
+                  value={statusFilter || "all"}
+                  onValueChange={(value) => {
+                    setStatusFilter(value === "all" ? null : value);
+                    setCurrentPage(1);
+                  }}
+                >
+                  <SelectTrigger id="status-filter" className="border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="live">Live</SelectItem>
+                    <SelectItem value="today">Today</SelectItem>
+                    <SelectItem value="upcoming">Upcoming</SelectItem>
+                    <SelectItem value="past">Past</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
                 <Label htmlFor="venue-filter" className="text-gray-700 dark:text-gray-300">Venue</Label>
                 <Select
                   value={venueFilter || "all"}
@@ -437,7 +508,7 @@ const Matches = () => {
       ) : matches.length > 0 ? (
         <div className="px-4 space-y-4">
           {matches.map((match) => {
-            const { statusLabel, statusClass } = getMatchStatus(match.match_date, match.start_time, match.end_time);
+            const { statusLabel, statusClass } = getMatchStatus(match);
             const organizer = organizers.find(org => org.id === match.organizer_id);
             const isVerified = organizer?.is_verified || false;
             const isAccessible = !match.is_private || hasAccess(match.slug);
@@ -480,8 +551,10 @@ const Matches = () => {
                   
                   <div className="mt-2 space-y-2 text-sm text-gray-600 dark:text-gray-400">
                     <div className="flex items-center gap-2">
-                      <Calendar size={16} />
-                      <span>{formatDate(match.match_date)}</span>
+                      <Calendar className="h-4 w-4" />
+                      <span className="text-sm font-medium text-gray-900">
+                        {match.status === "today" ? "Today" : formatDate(match.match_date)}
+                      </span>
                     </div>
                     
                     <div className="flex items-center gap-2">
