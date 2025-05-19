@@ -394,9 +394,7 @@ const PlayerManagement = ({
   };
 
   if (!match) return null;
-
-const navigate = useNavigate();
-
+  
 return (
   <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700">
     <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Manage Players</h2>
