@@ -16,7 +16,7 @@ type CashoutRequest = {
     bank_account_number: string;
     bank_name: string;
     account_name: string;
-  };
+  } | null | undefined;
   status: "review" | "processed" | "successful" | "failed";
   temp_identifier?: string;
   created_at: string;
@@ -98,6 +98,13 @@ const OrganizerCashout = ({ match }: OrganizerCashoutProps) => {
                     dateStyle: "medium",
                     timeStyle: "short",
                   })}
+                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Account: {request.account_details?.account_name || "Not provided"}
+                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Bank: {request.account_details?.bank_name || "Not provided"} (
+                  {request.account_details?.bank_account_number || "Not provided"})
                 </p>
               </div>
               <span
