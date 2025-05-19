@@ -11,6 +11,7 @@ import InstallPrompt from "./components/InstallPrompt";
 
 import Index from "./pages/Index";
 import Search from "./pages/Search";
+import Activities from "./pages/Activities";
 import Matches from "./pages/Matches";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
@@ -28,7 +29,7 @@ import Guides from "./pages/Guides";
 import Auth from "./pages/Auth";
 import TeamManagement from "./pages/TeamManagement";
 import Ticketing from "./pages/Ticketing";
-import TermsAndPrivacy from "./pages/TermsAndPrivacy"; // ⬅️ NEW
+import TermsAndPrivacy from "./pages/TermsAndPrivacy";
 
 import * as gtag from "./lib/gtag";
 
@@ -45,6 +46,7 @@ const AppRoutes = () => {
     <Routes>
       <Route path="/" element={<Index />} />
       <Route path="/search" element={<Search />} />
+      <Route path="/activities" element={<Activities />} />
       <Route path="/matches" element={<Matches />} />
       <Route path="/guides" element={<Guides />} />
       <Route path="/profile" element={<Profile />} />
@@ -55,7 +57,7 @@ const AppRoutes = () => {
       <Route path="/confirm-checkin" element={<ConfirmCheckin />} />
       <Route path="/feedback" element={<Feedback />} />
       <Route path="/ticketing/:slug/*" element={<Ticketing />} />
-      <Route path="/terms-privacy" element={<TermsAndPrivacy />} /> {/* ⬅️ NEW */}
+      <Route path="/terms-privacy" element={<TermsAndPrivacy />} />
 
       <Route path="/match/:slug" element={<MatchDetail />} />
       <Route path="/join/:slug" element={<JoinMatch />} />
