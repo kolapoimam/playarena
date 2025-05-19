@@ -36,9 +36,18 @@ type Match = {
     details: { phone: string } | null;
     number_of_slots?: number;
   }[] | null;
+  sell_tickets: boolean;
+  ticket_price?: number;
 };
 
 const codeSchema = z.string().regex(/^\d{6}$/, { message: "Code must be exactly 6 digits" });
+
+type ConfirmedTicket = {
+  id: string;
+  buyer_name: string;
+  number_of_tickets: number;
+  ticket_code: string;
+};
 
 type PlayerManagementProps = {
   match: Match | null;
@@ -76,11 +85,18 @@ const PlayerManagement = ({
   navigate,
 }: PlayerManagementProps) => {
   const { toast } = useToast();
-  const [mode, setMode] = useState<"checkin" | null>(null);
+  const [mode, setMode] = useState<"checkin" | "ticket" | null>(null);
   const [checkinDialogOpen, setCheckinDialogOpen] = useState(false);
   const [checkinPlayer, setCheckinPlayer] = useState<{ name: string; slots: number } | null>(null);
   const [isPlayersOpen, setIsPlayersOpen] = useState(false);
   const [checkingInPlayers, setCheckingInPlayers] = useState<{ [key: string]: boolean }>({});
+  const [ticketDialogOpen, setTicketDialogOpen] = useState(false);
+  const [ticketInput, setTicketInput] = useState("");
+  const [ticketError, setTicketError] = useState<string | null>(null);
+  const [confirmedTickets, setConfirmedTickets] = useState<ConfirmedTicket[]>([]);
+  const [isTicketsOpen, setIsTicketsOpen] = useState(false);
+  const [verifyingTicket, setVerifyingTicket] = useState(false);
+  const [verifiedTicket, setVerifiedTicket] = useState<{ buyer_name: string; number_of_tickets: number } | null>(null);
 
   // Initialize playerStatuses with fresh data from Supabase
   useEffect(() => {
@@ -121,6 +137,34 @@ const PlayerManagement = ({
 
     fetchPlayerStatuses();
   }, [match, setPlayerStatuses, checkinCodes, toast]);
+
+  // Fetch confirmed tickets
+  useEffect(() => {
+    if (!match?.id || !match.sell_tickets) return;
+
+    const fetchConfirmedTickets = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('tickets')
+          .select('id, buyer_name, number_of_tickets, ticket_code')
+          .eq('match_id', match.id)
+          .eq('checked_in', true);
+
+        if (error) throw error;
+
+        setConfirmedTickets(data || []);
+      } catch (error) {
+        console.error("Error fetching confirmed tickets:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load confirmed tickets.",
+          variant: "destructive",
+        });
+      }
+    };
+
+    fetchConfirmedTickets();
+  }, [match, toast]);
 
   const fetchWalletData = useCallback(async () => {
     if (!match || !match.id) return;
@@ -229,6 +273,26 @@ const PlayerManagement = ({
     return match.players.length > 0 && isEndTimeFuture;
   };
 
+  const canManageTickets = () => {
+    if (!match || !match.sell_tickets || match.cancellation_status) return false;
+    const now = new Date();
+    let matchEndTime: Date;
+    try {
+      if (match.match_end_time) {
+        matchEndTime = new Date(match.match_end_time);
+      } else {
+        matchEndTime = addHours(new Date(`${match.match_date}T${match.match_time}`), 2);
+      }
+      if (isNaN(matchEndTime.getTime())) {
+        matchEndTime = new Date("2025-05-17T15:00:00+01:00");
+      }
+    } catch (error) {
+      matchEndTime = new Date("2025-05-17T15:00:00+01:00");
+    }
+    const isEndTimeFuture = !isPast(matchEndTime);
+    return isEndTimeFuture;
+  };
+
   const handleCheckinMode = () => {
     if (!match || match.cancellation_status) {
       toast({
@@ -254,6 +318,28 @@ const PlayerManagement = ({
     setMode("checkin");
   };
 
+  const handleTicketMode = () => {
+    if (!match || match.cancellation_status || !match.sell_tickets) {
+      toast({
+        title: "Ticket Management Not Available",
+        description: "Match data is unavailable, the match is canceled, or tickets are not being sold.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!canManageTickets()) {
+      toast({
+        title: "Ticket Management Not Available",
+        description: "The match has ended or ticket management is no longer available.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setMode("ticket");
+  };
+
   const handleCheckinCodeChange = (playerId: string, code: string) => {
     const numericCode = code.replace(/[^0-9]/g, "").slice(0, 6);
     setCheckinCodes((prev) => ({ ...prev, [playerId]: numericCode }));
@@ -262,6 +348,13 @@ const PlayerManagement = ({
       ...prev,
       [playerId]: validation.success ? null : validation.error?.errors[0].message,
     }));
+  };
+
+  const handleTicketCodeChange = (code: string) => {
+    const numericCode = code.replace(/[^0-9]/g, "").slice(0, 6);
+    setTicketInput(numericCode);
+    const validation = codeSchema.safeParse(numericCode);
+    setTicketError(validation.success ? null : validation.error?.errors[0].message);
   };
 
   const validateCheckinCode = async (playerId: string) => {
@@ -380,6 +473,78 @@ const PlayerManagement = ({
     }
   };
 
+  const validateTicketCode = async () => {
+    if (!ticketInput || ticketInput.length !== 6) {
+      toast({
+        title: "Invalid Code",
+        description: "Please enter a 6-digit ticket code",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!match) {
+      toast({
+        title: "Error",
+        description: "Match data not available",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setVerifyingTicket(true);
+
+    try {
+      const { data, error } = await supabase
+        .from('tickets')
+        .select('id, buyer_name, number_of_tickets, ticket_code, checked_in')
+        .eq('match_id', match.id)
+        .eq('ticket_code', ticketInput)
+        .single();
+
+      if (error || !data) throw new Error(error?.message || "Ticket not found");
+
+      if (data.checked_in) throw new Error("Ticket has already been checked in");
+
+      const { error: updateError } = await supabase
+        .from('tickets')
+        .update({ 
+          checked_in: true,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', data.id);
+
+      if (updateError) throw updateError;
+
+      const newTicket: ConfirmedTicket = {
+        id: data.id,
+        buyer_name: data.buyer_name,
+        number_of_tickets: data.number_of_tickets,
+        ticket_code: data.ticket_code,
+      };
+
+      setConfirmedTickets(prev => [...prev, newTicket]);
+      setVerifiedTicket({ buyer_name: data.buyer_name, number_of_tickets: data.number_of_tickets });
+      setTicketDialogOpen(true);
+
+      toast({
+        title: "Success",
+        description: `Ticket for ${data.buyer_name} with ${data.number_of_tickets} ticket${data.number_of_tickets !== 1 ? 's' : ''} checked in successfully`,
+      });
+
+      setTicketInput("");
+      setTicketError(null);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to verify ticket code",
+        variant: "destructive",
+      });
+    } finally {
+      setVerifyingTicket(false);
+    }
+  };
+
   const getStatusStyles = (status: string) => {
     switch (status) {
       case 'Registered': return "bg-yellow-500 text-white border-yellow-600";
@@ -393,29 +558,43 @@ const PlayerManagement = ({
     }
   };
 
+  const calculateTotalAmount = () => {
+    if (!match?.ticket_price) return 0;
+    return confirmedTickets.reduce((sum, ticket) => sum + ticket.number_of_tickets * match.ticket_price, 0);
+  };
+
   if (!match) return null;
   
-return (
-  <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700">
-    <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Manage Players</h2>
-    
-    <div className="flex gap-3 mb-4">
-      <Button
-        onClick={handleCheckinMode}
-        className="bg-blue-500 hover:bg-blue-600 text-white flex-1"
-        disabled={!canCheckin() || match.cancellation_status}
-      >
-        Check-in Players
-      </Button>
-      <Button
-        onClick={() => navigate(`/team-management/${match.slug}`)}
-        className="bg-green-500 hover:bg-green-600 text-white flex-1"
-        disabled={match.cancellation_status}
-      >
-        Manage Teams
-      </Button>
-    </div>
-    
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700">
+      <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Manage Players</h2>
+      
+      <div className="flex gap-3 mb-4">
+        <Button
+          onClick={handleCheckinMode}
+          className="bg-blue-500 hover:bg-blue-600 text-white flex-1"
+          disabled={!canCheckin() || match.cancellation_status}
+        >
+          Check-in Players
+        </Button>
+        <Button
+          onClick={() => navigate(`/team-management/${match.slug}`)}
+          className="bg-green-500 hover:bg-green-600 text-white flex-1"
+          disabled={match.cancellation_status}
+        >
+          Manage Teams
+        </Button>
+        {match.sell_tickets && (
+          <Button
+            onClick={handleTicketMode}
+            className="bg-purple-500 hover:bg-purple-600 text-white flex-1"
+            disabled={!canManageTickets() || match.cancellation_status}
+          >
+            Manage Tickets
+          </Button>
+        )}
+      </div>
+      
       <div className="max-h-[400px] overflow-y-auto">
         <button
           onClick={() => setIsPlayersOpen(!isPlayersOpen)}
@@ -494,6 +673,72 @@ return (
         )}
       </div>
 
+      {match.sell_tickets && (
+        <div className="max-h-[400px] overflow-y-auto mt-6">
+          <button
+            onClick={() => setIsTicketsOpen(!isTicketsOpen)}
+            className="flex items-center gap-2 w-full text-left text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4"
+          >
+            Tickets - Total: ₦{calculateTotalAmount().toLocaleString()}
+            {isTicketsOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+          </button>
+          {isTicketsOpen && (
+            <div className="space-y-4">
+              {mode === "ticket" && (
+                <div className="flex gap-2 w-full">
+                  <Input
+                    placeholder="Enter ticket code"
+                    value={ticketInput}
+                    onChange={(e) => handleTicketCodeChange(e.target.value)}
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={6}
+                    className="w-full sm:w-[150px]"
+                    disabled={verifyingTicket}
+                  />
+                  <Button
+                    onClick={validateTicketCode}
+                    className="bg-purple-500 hover:bg-purple-600 text-white"
+                    disabled={!ticketInput || ticketInput.length !== 6 || verifyingTicket}
+                  >
+                    {verifyingTicket ? (
+                      <Loader2 size={16} className="mr-2 animate-spin" />
+                    ) : (
+                      "Verify"
+                    )}
+                  </Button>
+                </div>
+              )}
+              {ticketError && (
+                <p className="text-sm text-red-600 mt-1">{ticketError}</p>
+              )}
+              {confirmedTickets.length === 0 ? (
+                <p className="text-gray-600 dark:text-gray-400">No tickets confirmed for this match.</p>
+              ) : (
+                confirmedTickets.map((ticket) => (
+                  <div
+                    key={ticket.id}
+                    className="relative flex flex-col sm:flex-row gap-4 items-start sm:items-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg"
+                  >
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-900 dark:text-gray-100">{ticket.buyer_name}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        Tickets: {ticket.number_of_tickets}
+                      </p>
+                    </div>
+                    <span
+                      className={`absolute top-2 right-2 px-2 py-1 text-xs font-medium rounded border bg-green-500 text-white border-green-600`}
+                    >
+                      Checked In
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       {mode === "checkin" && (
         <Button
           onClick={() => setMode(null)}
@@ -504,6 +749,23 @@ return (
             <>
               <Loader2 size={16} className="mr-2 animate-spin" />
               Saving...
+            </>
+          ) : (
+            "Done"
+          )}
+        </Button>
+      )}
+
+      {mode === "ticket" && (
+        <Button
+          onClick={() => setMode(null)}
+          className="mt-4 bg-purple-500 hover:bg-purple-600 text-white"
+          disabled={verifyingTicket}
+        >
+          {verifyingTicket ? (
+            <>
+              <Loader2 size={16} className="mr-2 animate-spin" />
+              Verifying...
             </>
           ) : (
             "Done"
@@ -527,6 +789,29 @@ return (
             <Button
               onClick={() => setCheckinDialogOpen(false)}
               className="bg-green-500 hover:bg-green-600 text-white"
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={ticketDialogOpen} onOpenChange={setTicketDialogOpen}>
+        <DialogContent className="max-w-md rounded-lg">
+          <DialogHeader>
+            <DialogTitle>Ticket Check-in Successful</DialogTitle>
+            <DialogDescription>
+              {verifiedTicket && (
+                <>
+                  Successfully checked in ticket for {verifiedTicket.buyer_name} with {verifiedTicket.number_of_tickets} ticket{verifiedTicket.number_of_tickets !== 1 ? 's' : ''}.
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              onClick={() => setTicketDialogOpen(false)}
+              className="bg-purple-500 hover:bg-purple-600 text-white"
             >
               Close
             </Button>
