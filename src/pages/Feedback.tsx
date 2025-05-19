@@ -348,7 +348,7 @@ const Feedback = () => {
           if (loadedImg) doc.addImage(loadedImg, "PNG", 10, 10, 40, 40);
           doc.setTextColor(255, 255, 255);
           doc.setFontSize(20);
-          doc.text("PlayArena Feedback Report (Cont.)", 105, 30, { align: "center" });
+          doc.text("Sport Cliq Feedback Report (Cont.)", 105, 30, { align: "center" });
           doc.setFontSize(10);
           doc.text(`Generated: ${now.toLocaleString("en-NG", { timeZone: "Africa/Lagos" })}`, 105, 40, { align: "center" });
           doc.setFillColor(240, 240, 240);
@@ -365,7 +365,7 @@ const Feedback = () => {
       doc.rect(10, 280, 190, 10, "F");
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(8);
-      doc.text("© 2025 PlayArena. All rights reserved.", 105, 286, { align: "center" });
+      doc.text("© 2025 Sport Cliq. All rights reserved.", 105, 286, { align: "center" });
 
       doc.save(`feedback_${match.title.replace(/\s+/g, "_")}.pdf`);
     }).catch((error) => {
@@ -877,7 +877,7 @@ ${summary.action_items.map((item, i) => `${i + 1}. ${item}`).join("\n")}
                       doc.rect(10, 10, 190, 40, "F");
                       doc.setTextColor(255, 255, 255);
                       doc.setFontSize(24);
-                      doc.text("PlayArena Feedback Summary", 105, 30, { align: "center" });
+                      doc.text("Sport Cliq Feedback Summary", 105, 30, { align: "center" });
                       const now = new Date("2025-05-13T22:02:00+01:00"); // 10:02 PM WAT, May 13, 2025
                       doc.setFontSize(12);
                       doc.text(`Date: ${now.toLocaleString("en-NG", { timeZone: "Africa/Lagos" })}`, 105, 40, { align: "center" });
@@ -905,7 +905,7 @@ ${summary.action_items.map((item, i) => `${i + 1}. ${item}`).join("\n")}
                       doc.rect(10, 270, 190, 20, "F");
                       doc.setTextColor(255, 255, 255);
                       doc.setFontSize(10);
-                      doc.text("© 2025 PlayArena | Enhancing Your Sports Experience", 105, 280, { align: "center" });
+                      doc.text("© 2025 Sport Cliq| Enhancing Your Sports Experience", 105, 280, { align: "center" });
 
                       doc.save(`summary_${match!.title.replace(/\s+/g, "_")}.pdf`);
                     }).catch((error) => {
