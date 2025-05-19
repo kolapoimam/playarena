@@ -3,14 +3,14 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
 import SearchBar from "@/components/SearchBar";
-import { Calendar, MapPin, Users } from "lucide-react";
+import { Calendar, MapPin, Users, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import { DateTime } from "luxon";
 
-type Match = {
+interface Match {
   id: string;
   slug: string;
   title: string;
@@ -20,7 +20,6 @@ type Match = {
   price: number | null;
   total_slots: number;
   status: string;
-  cancellation_status: boolean;
   venue: {
     slug: string;
     name: string;
@@ -32,15 +31,19 @@ type Match = {
     number_of_slots: number;
     cancellation_status: boolean;
   }[];
-};
+}
 
-type Venue = {
+interface Venue {
   id: string;
   slug: string;
   name: string;
   city: string;
   state: string | null;
-};
+  image_urls: string[] | null;
+  aggregated_rating: number | null;
+  match_count: number;
+  match_dates: string[];
+}
 
 const ITEMS_PER_PAGE = 4;
 
@@ -78,22 +81,87 @@ const SearchPage = () => {
       const { data: matchData, error: matchError } = await supabase
         .from("matches")
         .select(`
-          id, slug, title, match_date, match_time, is_paid, price, total_slots, status, cancellation_status,
+          id,
+          slug,
+          title,
+          match_date,
+          match_time,
+          is_paid,
+          price,
+          total_slots,
+          status,
           venue:venues(slug, name, city, state),
           players(player_name, number_of_slots, cancellation_status)
         `)
-        .or(`title.ilike.%${query}%,venue_id.in.(${venueIds.join(",")})`)
-        .order("match_date", { ascending: true })
-        .order("match_time", { ascending: true });
+        .or(`title.ilike.%${query}%,venue_id.in.(${venueIds.join(",")})`);
+
+      if (matchError) throw matchError;
+
+      // Convert match data to proper Match type and sort by status (upcoming first)
+      const matchesWithDetails = matchData?.map((match: any) => ({
+        id: match.id,
+        slug: match.slug,
+        title: match.title,
+        match_date: match.match_date,
+        match_time: match.match_time,
+        is_paid: match.is_paid,
+        price: match.price,
+        total_slots: match.total_slots,
+        status: match.cancellation_status ? "cancelled" : "upcoming",
+        venue: match.venue,
+        players: match.players
+      })) as Match[] || [];
+
+      // Filter and sort matches: upcoming first, then past
+      const now = DateTime.now();
+      const sortedMatches = matchesWithDetails.sort((a, b) => {
+        const aDateTime = DateTime.fromISO(`${a.match_date}T${a.match_time}`);
+        const bDateTime = DateTime.fromISO(`${b.match_date}T${b.match_time}`);
+        
+        // Upcoming matches first
+        if (aDateTime > now && bDateTime <= now) return -1;
+        if (aDateTime <= now && bDateTime > now) return 1;
+        
+        // Then sort by date/time within each group
+        return aDateTime.toMillis() - bDateTime.toMillis();
+      });
+
+      setMatches(sortedMatches);
 
       if (matchError) throw matchError;
 
       const { data: venueData, error: venueSearchError } = await supabase
         .from("venues")
-        .select("id, slug, name, city, state")
+        .select(`
+          id,
+          slug,
+          name,
+          city,
+          state,
+          is_verified,
+          image_urls,
+          aggregated_rating,
+          matches:matches!venue_id (match_date)
+        `)
         .or(`name.ilike.%${query}%,city.ilike.%${query}%,state.ilike.%${query}%`);
 
       if (venueSearchError) throw venueSearchError;
+
+      // Convert venue data to proper Venue type
+      const venuesWithDetails = venueData?.map((venue: any) => ({
+        id: venue.id,
+        slug: venue.slug,
+        name: venue.name,
+        city: venue.city,
+        state: venue.state,
+        is_verified: venue.is_verified,
+        image_urls: venue.image_urls,
+        aggregated_rating: venue.aggregated_rating,
+        match_count: venue.matches ? venue.matches.length : 0,
+        match_dates: venue.matches ? venue.matches.map((m: any) => m.match_date).filter((date: string) => date) : [],
+      })) as Venue[] || [];
+
+      setVenues(venuesWithDetails);
 
       setMatches(matchData as Match[]);
       setVenues(venueData as Venue[]);
@@ -141,6 +209,7 @@ const SearchPage = () => {
       if (now > endDateTime) {
         statusLabel = "Passed";
         statusClass = "bg-gray-200 text-gray-600";
+        isFeedbackWindow = true;
       } else if (now >= startDateTime && now <= endDateTime) {
         statusLabel = "Live";
         statusClass = "bg-red-100 text-red-700 animate-pulse";
@@ -308,7 +377,7 @@ const SearchPage = () => {
                                 navigate(`/match/${match.slug}`);
                               }}
                             >
-                              Give Feedback
+                              Watch Highlight
                             </Button>
                           ) : match.cancellation_status || isFull ? (
                             <Button
@@ -356,9 +425,18 @@ const SearchPage = () => {
                       className="border rounded-lg p-4 bg-white dark:bg-gray-800 hover:border-green-500 transition-colors cursor-pointer shadow-sm"
                       onClick={() => navigate(`/venue/${venue.slug}`)}
                     >
-                      <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100">
-                        {venue.name}
-                      </h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100">
+                          {venue.name}
+                        </h3>
+                        {venue.is_verified && (
+                          <img 
+                            src="/green-verified.png" 
+                            alt="Verified" 
+                            className="w-4 h-4 object-contain"
+                          />
+                        )}
+                      </div>
                       <div className="mt-2 space-y-2">
                         <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                           <MapPin size={16} />
@@ -368,6 +446,19 @@ const SearchPage = () => {
                           </span>
                         </div>
                       </div>
+                      {venue.is_verified && (
+                        <div className="mt-4">
+                          <Button
+                            className="w-full bg-green-500 hover:bg-green-600 text-white rounded-lg"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/venue/${venue.slug}/book`);
+                            }}
+                          >
+                            Book Now
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
