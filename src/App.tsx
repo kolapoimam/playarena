@@ -62,7 +62,7 @@ const AppRoutes = () => {
       <Route path="/match/:slug" element={<MatchDetail />} />
       <Route path="/join/:slug" element={<JoinMatch />} />
       <Route path="/venue/:slug" element={<VenueDetail />} />
-      <Route path="/team-management/:slug" element={<TeamManagement />} />
+      <Route path="/match/:slug/team-management" element={<TeamManagement />} />
 
       <Route path="/match-id/:id" element={<MatchRedirect />} />
       <Route path="/venue-id/:id" element={<VenueRedirect />} />
