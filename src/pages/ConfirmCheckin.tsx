@@ -13,6 +13,7 @@ import MatchCodeInput from "@/components/MatchCodeInput";
 import MatchDetails from "@/components/MatchDetails";
 import PlayerManagement from "@/components/PlayerManagement";
 import OrganizerCashout from "@/components/OrganizerCashout";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 type Match = {
   id: string;
@@ -381,34 +382,70 @@ const ConfirmCheckin = () => {
         )}
 
         {match && !error && (
-          <div className="animate-fade-in space-y-6">
-            <MatchDetails
-              match={match}
-              cashout={cashout}
-              handleCancelMatch={() => setIsCancelDialogOpen(true)}
-              loading={loading}
-              isMatchPast={isMatchPast}
-              walletBalance={walletBalance || 0}
-            />
-            <PlayerManagement
-              match={match}
-              tempIdentifier={tempIdentifier}
-              playerStatuses={playerStatuses}
-              setPlayerStatuses={setPlayerStatuses}
-              checkinCodes={checkinCodes}
-              setCheckinCodes={setCheckinCodes}
-              checkinCodeErrors={checkinCodeErrors}
-              setCheckinCodeErrors={setCheckinCodeErrors}
-              fetchMatch={fetchMatch}
-              loading={loading}
-              setLoading={setLoading}
-              isMatchPast={isMatchPast}
-              canConfirmPlayers={canConfirmPlayers()}
-              handleCancelMatch={() => setIsCancelDialogOpen(true)}
-              navigate={navigate}
-            />
-            <OrganizerCashout match={match} />
-          </div>
+          <Tabs defaultValue="details" className="w-full">
+            <div className="sticky top-[64px] z-10">
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6">
+                <TabsList className="w-full grid grid-cols-3 bg-gray-100 dark:bg-gray-700 rounded-lg h-12">
+                  <TabsTrigger
+                    value="details"
+                    className="data-[state=active]:bg-green-500 data-[state=active]:text-white py-2 text-sm font-medium rounded-md"
+                  >
+                    Details
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="manage"
+                    className="data-[state=active]:bg-green-500 data-[state=active]:text-white py-2 text-sm font-medium rounded-md"
+                  >
+                    Manage
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="cashout"
+                    className="data-[state=active]:bg-green-500 data-[state=active]:text-white py-2 text-sm font-medium rounded-md"
+                  >
+                    Cashout
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+            </div>
+            <TabsContent value="details" className="mt-0">
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6">
+                <MatchDetails
+                  match={match}
+                  cashout={cashout}
+                  handleCancelMatch={() => setIsCancelDialogOpen(true)}
+                  loading={loading}
+                  isMatchPast={isMatchPast}
+                  walletBalance={walletBalance || 0}
+                />
+              </div>
+            </TabsContent>
+            <TabsContent value="manage" className="mt-0">
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6">
+                <PlayerManagement
+                  match={match}
+                  tempIdentifier={tempIdentifier}
+                  playerStatuses={playerStatuses}
+                  setPlayerStatuses={setPlayerStatuses}
+                  checkinCodes={checkinCodes}
+                  setCheckinCodes={setCheckinCodes}
+                  checkinCodeErrors={checkinCodeErrors}
+                  setCheckinCodeErrors={setCheckinCodeErrors}
+                  fetchMatch={fetchMatch}
+                  loading={loading}
+                  setLoading={setLoading}
+                  isMatchPast={isMatchPast}
+                  canConfirmPlayers={canConfirmPlayers()}
+                  handleCancelMatch={() => setIsCancelDialogOpen(true)}
+                  navigate={navigate}
+                />
+              </div>
+            </TabsContent>
+            <TabsContent value="cashout" className="mt-0">
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6">
+                <OrganizerCashout match={match} />
+              </div>
+            </TabsContent>
+          </Tabs>
         )}
       </div>
 
