@@ -71,7 +71,7 @@ type Match = {
 };
 
 const formatStatus = (status: string) => {
-  return status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, " ");
+  return status.toLowerCase() === 'absent' ? 'No Show' : status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, " ");
 };
 
 const MatchDetail = () => {
@@ -604,7 +604,7 @@ const MatchDetail = () => {
                       </span>
                     </div>
                     <Badge
-                      className={getStatusStyles(player.player_status)}
+                      className={`${getStatusStyles(player.player_status)} !hover:bg-transparent !hover:cursor-default`}
                     >
                       {formatStatus(player.player_status)}
                     </Badge>
