@@ -27,58 +27,60 @@ const Auth = () => {
     return emailRegex.test(email);
   };
 
-  const handleEmailAuth = async () => {
-    if (!validateEmail(email)) {
-      toast({
-        title: "Invalid Email",
-        description: "Please enter a valid email address.",
-        variant: "destructive",
-      });
-      return;
-    }
+const handleEmailAuth = async () => {
+  if (!validateEmail(email)) {
+    toast({
+      title: "Invalid Email",
+      description: "Please enter a valid email address.",
+      variant: "destructive",
+    });
+    return;
+  }
 
-    setLoading(true);
-    try {
-      if (isSignUp) {
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/profile`,
-            data: {
-              firstName,
-              lastName,
-            },
+  setLoading(true);
+  try {
+    if (isSignUp) {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/profile`,
+          data: {
+            first_name: firstName,  // Changed to match schema
+            last_name: lastName,    // Changed to match schema
           },
-        });
-        if (error) throw error;
+        },
+      });
+      if (error) throw error;
 
-        // Save name to profiles table
-        if (data.user) {
-          const { error: profileError } = await supabase
-            .from("profiles")
-            .upsert({
-              id: data.user.id,
-              first_name: firstName,
-              last_name: lastName,
-            });
+      // Save name to profiles table - corrected column names
+      if (data.user) {
+        const { error: profileError } = await supabase
+          .from("profiles")
+          .upsert({
+            id: data.user.id,
+            first_name: firstName,  // Changed to match schema
+            last_name: lastName,    // Changed to match schema
+            email: email,            // Added email for consistency
+            created_at: new Date().toISOString(),
+          });
 
-          if (profileError) throw profileError;
-        }
-
-        toast({
-          title: "You're In the Game! ⚽",
-          description: "Check your email to confirm your PlayArena account!",
-        });
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        navigate("/profile");
+        if (profileError) throw profileError;
       }
-    } catch (error) {
-      toast({ title: "Oops, Out of Bounds!", description: error.message, variant: "destructive" });
-    } finally {
-      setLoading(false);
+
+      toast({
+        title: "You're In the Game! ⚽",
+        description: "Check your email to confirm your PlayArena account!",
+      });
+    } else {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      navigate("/profile");
+    }
+  } catch (error) {
+    toast({ title: "Oops, Out of Bounds!", description: error.message, variant: "destructive" });
+  } finally {
+    setLoading(false);
     }
   };
 
