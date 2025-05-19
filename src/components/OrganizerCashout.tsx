@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Loader2 } from "lucide-react";
 import { z } from "zod";
+import { v4 as uuidv4 } from "uuid";
 
 type Match = {
   id: string;
@@ -21,6 +22,8 @@ type Match = {
     details: { phone: string } | null;
     number_of_slots?: number;
   }[] | null;
+  sell_tickets: boolean;
+  ticket_price?: number;
 };
 
 type CashoutRequest = {
@@ -76,6 +79,19 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
   const [amountError, setAmountError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [localTempIdentifier, setLocalTempIdentifier] = useState<string>(tempIdentifier);
+
+  // Ensure tempIdentifier is set
+  useEffect(() => {
+    const stored = localStorage.getItem('tempIdentifier');
+    if (!stored && !localTempIdentifier) {
+      const newId = uuidv4();
+      localStorage.setItem('tempIdentifier', newId);
+      setLocalTempIdentifier(newId);
+    } else if (stored && !localTempIdentifier) {
+      setLocalTempIdentifier(stored);
+    }
+  }, [localTempIdentifier]);
 
   const fetchWalletData = useCallback(async () => {
     if (!match || !match.id) {
@@ -100,6 +116,23 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
           (sum, player) => sum + ((player.number_of_slots || 1) * (match.price || 0)),
           0
         );
+      }
+
+      // Add ticket revenue if selling tickets
+      if (match.sell_tickets && match.ticket_price) {
+        const { data: ticketsData, error: ticketsError } = await supabase
+          .from("tickets")
+          .select("number_of_tickets")
+          .eq("match_id", match.id)
+          .eq("checked_in", true);
+
+        if (ticketsError) throw ticketsError;
+
+        const ticketRevenue = ticketsData.reduce(
+          (sum, ticket) => sum + (ticket.number_of_tickets * (match.ticket_price || 0)),
+          0
+        );
+        balance += ticketRevenue;
       }
 
       // Subtract cashout amounts for Review, Processed, and Successful statuses
@@ -129,6 +162,9 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
   }, [match, toast]);
 
   useEffect(() => {
+    console.log('OrganizerCashout - tempIdentifier:', localTempIdentifier);
+    console.log('OrganizerCashout - match.id:', match?.id);
+
     const fetchUserIdAndData = async () => {
       const { data: session } = await supabase.auth.getSession();
       if (session.session) {
@@ -137,7 +173,7 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
         setUserId(null);
       }
 
-      if (!match || !userId) {
+      if (!match || !userId || !localTempIdentifier) {
         setWalletBalance(0);
         setCashoutRequests([]);
         return;
@@ -149,7 +185,7 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
           .from("cashout_requests")
           .select("*")
           .eq("match_id", match.id)
-          .order("created_at", { ascending: false });
+          .eq("temp_identifier", localTempIdentifier);
 
         if (error) throw error;
 
@@ -166,8 +202,8 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
 
       await fetchWalletData();
 
-      // Set up real-time subscription for cashout_requests
-      const channel = supabase
+      // Set up real-time subscriptions
+      const cashoutChannel = supabase
         .channel(`cashout_requests_match_${match.id}`)
         .on(
           'postgres_changes',
@@ -178,12 +214,12 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
             filter: `match_id=eq.${match.id}`,
           },
           () => {
-            fetchWalletData(); // Re-fetch balance on cashout status change
-            // Re-fetch cashout requests
+            fetchWalletData();
             supabase
               .from("cashout_requests")
               .select("*")
               .eq("match_id", match.id)
+              .eq("temp_identifier", localTempIdentifier)
               .order("created_at", { ascending: false })
               .then(({ data, error }) => {
                 if (!error && data) {
@@ -194,20 +230,52 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
         )
         .subscribe();
 
+      const ticketsChannel = supabase
+        .channel(`tickets_match_${match.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'tickets',
+            filter: `match_id=eq.${match.id}`,
+          },
+          () => {
+            fetchWalletData();
+          }
+        )
+        .subscribe();
+
       return () => {
-        supabase.removeChannel(channel);
+        supabase.removeChannel(cashoutChannel);
+        supabase.removeChannel(ticketsChannel);
       };
     };
 
     fetchUserIdAndData();
-  }, [match, userId, fetchWalletData]);
+  }, [match, userId, localTempIdentifier, fetchWalletData]);
 
   const handleCashoutMode = () => {
+    if (!localTempIdentifier) {
+      toast({
+        title: "Error",
+        description: "Session identifier is missing. Please refresh the page.",
+        variant: "destructive",
+      });
+      return;
+    }
     setCashoutDialogOpen(true);
   };
 
   const handleCashoutSubmit = async () => {
-    if (!match || !userId) return;
+    if (!match || !userId || !localTempIdentifier) {
+      toast({
+        title: "Error",
+        description: "Match or user data is missing.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     const bankAccountValidation = bankAccountSchema.safeParse(bankAccountNumber);
     const accountNameValidation = accountNameSchema.safeParse(accountName);
@@ -241,10 +309,10 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
       setAmountError("No funds available for cashout");
       return;
     }
-    if (!match.is_paid) {
+    if (!match.is_paid && !match.sell_tickets) {
       toast({
         title: "Error",
-        description: "Cashout is not available for free matches.",
+        description: "Cashout is not available for free matches with no ticket sales.",
         variant: "destructive",
       });
       return;
@@ -272,7 +340,7 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
             account_name: accountName,
           },
           status: "Review",
-          temp_identifier: tempIdentifier,
+          temp_identifier: localTempIdentifier,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         });
@@ -298,13 +366,13 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
         .from("cashout_requests")
         .select("*")
         .eq("match_id", match.id)
+        .eq("temp_identifier", localTempIdentifier)
         .order("created_at", { ascending: false });
 
       if (!cashoutFetchError && cashoutData) {
         setCashoutRequests(cashoutData);
       }
 
-      // Update wallet balance after cashout
       setWalletBalance(prev => prev - Number(cashoutAmount) < 0 ? 0 : prev - Number(cashoutAmount));
 
       setCashoutDialogOpen(false);
@@ -355,6 +423,7 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
         <Button
           onClick={handleCashoutMode}
           className="bg-yellow-500 hover:bg-yellow-600 text-white"
+          disabled={!localTempIdentifier}
         >
           Request Cashout
         </Button>
@@ -488,7 +557,7 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
             <Button
               onClick={handleCashoutSubmit}
               className="bg-green-500 hover:bg-green-600 text-white"
-              disabled={loading}
+              disabled={loading || !localTempIdentifier}
             >
               {loading ? (
                 <>
