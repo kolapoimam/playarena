@@ -81,7 +81,7 @@ const Auth = () => {
 
           toast({
             title: "You're In the Game! ⚽",
-            description: "Check your email to confirm your PlayArena account!",
+            description: "Check your email to confirm your Sport Cliq account!",
           });
         }
       } else {
@@ -265,7 +265,7 @@ const Auth = () => {
                 {loading ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : isSignUp ? (
-                  "Join Play Arena"
+                  "Join Sport Cliq"
                 ) : (
                   "Sign In"
                 )}
