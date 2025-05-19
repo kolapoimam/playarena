@@ -41,7 +41,7 @@ type Cashout = {
   bank_account_number: string;
   bank_name: string;
   account_name: string;
-  status: "under_review" | "processed" | "failed" | "successful";
+  status: "Review" | "Processed" | "Failed" | "Successful";
   temp_identifier?: string;
 };
 
@@ -83,12 +83,12 @@ const MatchDetails = ({ match, cashout, handleCancelMatch, loading, isMatchPast 
           );
         }
 
-        // Subtract cashout amounts for review, processed, and successful statuses
+        // Subtract cashout amounts for Review, Processed, and Successful statuses
         const { data: cashoutData, error: cashoutError } = await supabase
           .from("cashout_requests")
           .select("amount, status")
           .eq("match_id", match.id)
-          .in("status", ["review", "processed", "successful"]);
+          .in("status", ["Review", "Processed", "Successful"]);
 
         if (cashoutError) throw cashoutError;
 
@@ -161,14 +161,13 @@ const MatchDetails = ({ match, cashout, handleCancelMatch, loading, isMatchPast 
 
   const getStatusStyles = (status: string) => {
     switch (status) {
-      case "successful":
+      case "Successful":
         return "bg-green-100 text-green-700 border-green-300";
-      case "failed":
+      case "Failed":
         return "bg-red-100 text-red-700 border-red-300";
-      case "processed":
+      case "Processed":
         return "bg-blue-100 text-blue-700 border-blue-300";
-      case "under_review":
-      case "review":
+      case "Review":
         return "bg-yellow-100 text-yellow-700 border-yellow-300";
       default:
         return "bg-yellow-100 text-yellow-700 border-yellow-300";
@@ -238,8 +237,7 @@ const MatchDetails = ({ match, cashout, handleCancelMatch, loading, isMatchPast 
                 cashout.status
               )}`}
             >
-              Cashout: {cashout.status.replace("_", " ").charAt(0).toUpperCase() +
-                cashout.status.replace("_", " ").slice(1)}
+              Cashout: {cashout.status}
             </span>
           )}
         </div>
@@ -301,7 +299,7 @@ const MatchDetails = ({ match, cashout, handleCancelMatch, loading, isMatchPast 
       {cashout && (
         <div className="mt-4 p-4 rounded-lg bg-yellow-100 dark:bg-yellow-900">
           <p className="text-yellow-700 dark:text-yellow-300">
-            Your cashout request is {cashout.status.replace("_", " ")}. Expected amount: {calculateExpectedAmount()}
+            Your cashout request is {cashout.status}. Expected amount: {calculateExpectedAmount()}
           </p>
         </div>
       )}
