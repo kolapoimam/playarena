@@ -179,104 +179,129 @@ const PlayerManagement = ({
         return;
       }
 
-      try {
-        // Fetch fresh player data from Supabase for wallet balance calculation
-        const { data: playersData, error: playersError } = await supabase
-          .from('players')
-          .select('player_status, number_of_slots')
-          .eq('match_id', match.id);
-
-        if (playersError) throw playersError;
-
-        // Calculate wallet balance
-        let balance = 0;
-        if (match.is_paid && match.price) {
-          const checkedInPlayers = playersData.filter(p => p.player_status === 'Checked In');
-          balance = checkedInPlayers.reduce(
-            (sum, player) => sum + ((player.number_of_slots || 1) * (match.price || 0)),
-            0
-          );
-        } // For free matches, balance remains 0
-
-        // Subtract cashout amounts for this match
-        const { data: cashoutData, error: cashoutError } = await supabase
-          .from("cashout_requests")
-          .select("amount, status")
-          .eq("match_id", match.id)
-          .in("status", ["processed", "successful"]);
-
-        if (cashoutError) throw cashoutError;
-
-        if (cashoutData) {
-          const cashoutTotal = cashoutData.reduce((sum, request) => sum + (request.amount || 0), 0);
-          balance -= cashoutTotal;
-          setCashoutRequests(cashoutData);
-        } else {
-          setCashoutRequests([]);
-        }
-
-        setWalletBalance(balance < 0 ? 0 : balance);
-
-        // Check if match has ended and update players to Absent if necessary
-        const now = new Date();
-        let matchEndTime: Date;
+      const fetchWalletData = async () => {
         try {
-          if (match.match_end_time) {
-            matchEndTime = new Date(match.match_end_time);
-          } else {
-            matchEndTime = addHours(new Date(`${match.match_date}T${match.match_time}`), 2);
+          // Fetch fresh player data from Supabase for wallet balance calculation
+          const { data: playersData, error: playersError } = await supabase
+            .from('players')
+            .select('player_status, number_of_slots')
+            .eq('match_id', match.id);
+
+          if (playersError) throw playersError;
+
+          // Calculate wallet balance
+          let balance = 0;
+          if (match.is_paid && match.price) {
+            const checkedInPlayers = playersData.filter(p => p.player_status === 'Checked In');
+            balance = checkedInPlayers.reduce(
+              (sum, player) => sum + ((player.number_of_slots || 1) * (match.price || 0)),
+              0
+            );
           }
-          if (isNaN(matchEndTime.getTime())) {
+
+          // Subtract cashout amounts for review, processed, and successful statuses
+          const { data: cashoutData, error: cashoutError } = await supabase
+            .from("cashout_requests")
+            .select("amount, status")
+            .eq("match_id", match.id)
+            .in("status", ["review", "processed", "successful"]);
+
+          if (cashoutError) throw cashoutError;
+
+          if (cashoutData) {
+            const cashoutTotal = cashoutData.reduce((sum, request) => sum + (request.amount || 0), 0);
+            balance -= cashoutTotal;
+            setCashoutRequests(cashoutData);
+          } else {
+            setCashoutRequests([]);
+          }
+
+          setWalletBalance(balance < 0 ? 0 : balance);
+
+          // Check if match has ended and update players to Absent if necessary
+          const now = new Date();
+          let matchEndTime: Date;
+          try {
+            if (match.match_end_time) {
+              matchEndTime = new Date(match.match_end_time);
+            } else {
+              matchEndTime = addHours(new Date(`${match.match_date}T${match.match_time}`), 2);
+            }
+            if (isNaN(matchEndTime.getTime())) {
+              matchEndTime = new Date("2025-05-17T15:00:00+01:00");
+            }
+          } catch (error) {
             matchEndTime = new Date("2025-05-17T15:00:00+01:00");
           }
-        } catch (error) {
-          matchEndTime = new Date("2025-05-17T15:00:00+01:00");
-        }
 
-        if (isPast(matchEndTime) && playersData.length > 0) {
-          const registeredPlayers = playersData.filter(p => p.player_status === 'Registered');
-          if (registeredPlayers.length > 0) {
-            try {
-              const { error: updateError } = await supabase
-                .from('players')
-                .update({ 
-                  player_status: 'Absent',
-                  updated_at: new Date().toISOString()
-                })
-                .eq('match_id', match.id)
-                .eq('player_status', 'Registered');
+          if (isPast(matchEndTime) && playersData.length > 0) {
+            const registeredPlayers = playersData.filter(p => p.player_status === 'Registered');
+            if (registeredPlayers.length > 0) {
+              try {
+                const { error: updateError } = await supabase
+                  .from('players')
+                  .update({ 
+                    player_status: 'Absent',
+                    updated_at: new Date().toISOString()
+                  })
+                  .eq('match_id', match.id)
+                  .eq('player_status', 'Registered');
 
-              if (updateError) throw updateError;
+                if (updateError) throw updateError;
 
-              setPlayerStatuses(prev =>
-                prev.map(p => 
-                  registeredPlayers.some(rp => rp.id === p.id) 
-                    ? { ...p, status: 'Absent' } 
-                    : p
-                )
-              );
+                setPlayerStatuses(prev =>
+                  prev.map(p => 
+                    registeredPlayers.some(rp => rp.id === p.id) 
+                      ? { ...p, status: 'Absent' } 
+                      : p
+                  )
+                );
 
-              await fetchMatch();
-            } catch (error) {
-              console.error("Error updating players to Absent:", error);
-              toast({
-                title: "Error",
-                description: "Failed to update player statuses to Absent.",
-                variant: "destructive",
-              });
+                await fetchMatch();
+              } catch (error) {
+                console.error("Error updating players to Absent:", error);
+                toast({
+                  title: "Error",
+                  description: "Failed to update player statuses to Absent.",
+                  variant: "destructive",
+                });
+              }
             }
           }
+        } catch (error) {
+          console.error("Error fetching data for wallet balance:", error);
+          toast({
+            title: "Error",
+            description: "Failed to calculate wallet balance.",
+            variant: "destructive",
+          });
+          setWalletBalance(0);
+          setCashoutRequests([]);
         }
-      } catch (error) {
-        console.error("Error fetching data for wallet balance:", error);
-        toast({
-          title: "Error",
-          description: "Failed to calculate wallet balance.",
-          variant: "destructive",
-        });
-        setWalletBalance(0);
-        setCashoutRequests([]);
-      }
+      };
+
+      fetchWalletData();
+
+      // Set up real-time subscription for cashout_requests
+      const channel = supabase
+        .channel(`cashout_requests_match_${match.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'cashout_requests',
+            filter: `match_id=eq.${match.id}`,
+          },
+          () => {
+            fetchWalletData(); // Re-fetch balance on cashout status change
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     };
 
     fetchUserIdAndData();
@@ -352,7 +377,7 @@ const PlayerManagement = ({
     setCashoutDialogOpen(true);
   }, [match, isCashoutEligible, toast]);
 
-const handleCashoutSubmit = async () => {
+  const handleCashoutSubmit = async () => {
     if (!match || !userId) return;
 
     const bankAccountValidation = bankAccountSchema.safeParse(bankAccountNumber);
@@ -411,6 +436,7 @@ const handleCashoutSubmit = async () => {
             description: "Invalid match or super code. Please contact support.",
             variant: "destructive",
           });
+irl: true // Foreign key violation (e.g., super_code or match_id invalid)
         } else {
           toast({
             title: "Error",
@@ -652,8 +678,8 @@ const handleCashoutSubmit = async () => {
                   <tr key={request.id} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
                     <td className="px-4 py-2">₦{request.amount.toFixed(2)}</td>
                     <td className="px-4 py-2">
-                      {request.account_details.account_name} <br />
-                      {request.account_details.bank_account_number} ({request.account_details.bank_name})
+                      {request.account_details?.account_name || "Not provided"} <br />
+                      {request.account_details?.bank_account_number || "Not provided"} ({request.account_details?.bank_name || "Not provided"})
                     </td>
                     <td className="px-4 py-2">
                       <span className={`inline-block px-2 py-1 rounded ${getStatusStyles(request.status)}`}>
