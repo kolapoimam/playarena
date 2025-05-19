@@ -365,15 +365,15 @@ return (
             </div>
             <div className={`space-y-4 ${activeFaqTab === 'general' ? 'block' : 'hidden'}`}>
               <details className="bg-white dark:bg-gray-700 rounded-md p-4">
-                <summary className="font-semibold cursor-pointer">What is PlayArena?</summary>
-                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">PlayArena is a platform for organizing and joining football matches and venues across Nigeria.</p>
+                <summary className="font-semibold cursor-pointer">What is Sport Cliq?</summary>
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Sport Cliq is a platform for organizing and joining football matches and venues across Nigeria.</p>
               </details>
               <details className="bg-white dark:bg-gray-700 rounded-md p-4">
                 <summary className="font-semibold cursor-pointer">How do I get started?</summary>
                 <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">No account needed! You can browse matches immediately. To organize a match or add a venue, simply use the 'Organize' or 'Add Venue' buttons.</p>
               </details>
               <details className="bg-white dark:bg-gray-700 rounded-md p-4">
-                <summary className="font-semibold cursor-pointer">Is there a cost to use PlayArena?</summary>
+                <summary className="font-semibold cursor-pointer">Is there a cost to use Sport Cliq?</summary>
                 <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Basic features are free, but some matches may have a fee set by organizers.</p>
               </details>
               <details className="bg-white dark:bg-gray-700 rounded-md p-4">
@@ -381,8 +381,8 @@ return (
                 <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">You can reach us directly on social media @PIousGeek</p>
               </details>
               <details className="bg-white dark:bg-gray-700 rounded-md p-4">
-                <summary className="font-semibold cursor-pointer">What devices support PlayArena?</summary>
-                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">PlayArena works on web browsers on desktops, tablets, and mobile devices.</p>
+                <summary className="font-semibold cursor-pointer">What devices support Sport Cliq?</summary>
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Sport Cliq works on web browsers on desktops, tablets, and mobile devices.</p>
               </details>
             </div>
             <div className={`space-y-4 ${activeFaqTab === 'venues' ? 'block' : 'hidden'}`}>
