@@ -425,7 +425,7 @@ const onSubmit = async (data: FormValues) => {
     try {
       const canvas = await html2canvas(cardRef.current, { scale: 2 });
       const link = document.createElement('a');
-      link.download = `PlayArena-Supercode-${matchTitle.replace(/\s+/g, '-')}.png`;
+      link.download = `SportCliq-Supercode-${matchTitle.replace(/\s+/g, '-')}.png`;
       link.href = canvas.toDataURL('image/png');
       link.click();
     } catch (error) {
