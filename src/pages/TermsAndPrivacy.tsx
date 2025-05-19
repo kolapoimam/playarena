@@ -58,21 +58,21 @@ const TermsAndPrivacy = () => {
                   <section>
                     <h2 className="text-xl font-semibold mb-2">1. Acceptance of Terms</h2>
                     <p>
-                      By accessing or using PlayArena ("the Platform"), you agree to be bound by these Terms of Service ("Terms"). These Terms govern your use of the Platform, including all features, services, and content provided by PlayArena, a platform operating in Nigeria. If you do not agree with these Terms, you must not use the Platform.
+                      By accessing or using Sport Cliq ("the Platform"), you agree to be bound by these Terms of Service ("Terms"). These Terms govern your use of the Platform, including all features, services, and content provided by Sport Cliq, a platform operating in Nigeria. If you do not agree with these Terms, you must not use the Platform.
                     </p>
                   </section>
 
                   <section>
                     <h2 className="text-xl font-semibold mb-2">2. Eligibility</h2>
                     <p>
-                      You must be at least 18 years old or have parental consent to use the Platform. By using PlayArena, you represent and warrant that you meet these eligibility requirements and that all information you provide is accurate and truthful.
+                      You must be at least 18 years old or have parental consent to use the Platform. By using Sport Cliq, you represent and warrant that you meet these eligibility requirements and that all information you provide is accurate and truthful.
                     </p>
                   </section>
 
                   <section>
                     <h2 className="text-xl font-semibold mb-2">3. Platform Services</h2>
                     <p>
-                      PlayArena provides a platform for organizing, joining, and managing football matches and venues in Nigeria. Services include:
+                      Sport Cliq provides a platform for organizing, joining, and managing football matches and venues in Nigeria. Services include:
                     </p>
                     <ul className="list-disc ml-5 mt-2 space-y-1">
                       <li>Creating and managing football matches (public or private).</li>
@@ -81,7 +81,7 @@ const TermsAndPrivacy = () => {
                       <li>Providing tools for player check-in and match management.</li>
                     </ul>
                     <p>
-                      PlayArena reserves the right to modify or discontinue any service at any time without prior notice.
+                      Sport Cliq reserves the right to modify or discontinue any service at any time without prior notice.
                     </p>
                   </section>
 
@@ -101,7 +101,7 @@ const TermsAndPrivacy = () => {
                   <section>
                     <h2 className="text-xl font-semibold mb-2">5. Payments and Fees</h2>
                     <p>
-                      For paid matches, PlayArena facilitates payments through secure third-party providers. A 2% platform fee is charged to organizers after their first 5 free matches. Venue owners are subject to a 10% referral fee for bookings made through the Platform. All fees are non-refundable unless otherwise stated in our Refund Policy.
+                      For paid matches, Sport Cliq facilitates payments through secure third-party providers. A 2% platform fee is charged to organizers after their first 5 free matches. Venue owners are subject to a 10% referral fee for bookings made through the Platform. All fees are non-refundable unless otherwise stated in our Refund Policy.
                     </p>
                     <p>
                       Refunds for players are subject to the following:
@@ -116,21 +116,21 @@ const TermsAndPrivacy = () => {
                   <section>
                     <h2 className="text-xl font-semibold mb-2">6. Intellectual Property</h2>
                     <p>
-                      All content on the Platform, including logos, designs, and software, is the property of PlayArena or its licensors. You may not copy, modify, or distribute any content without prior written consent from PlayArena.
+                      All content on the Platform, including logos, designs, and software, is the property of Sport Cliq or its licensors. You may not copy, modify, or distribute any content without prior written consent from Sport Cliq.
                     </p>
                   </section>
 
                   <section>
                     <h2 className="text-xl font-semibold mb-2">7. Limitation of Liability</h2>
                     <p>
-                      PlayArena is not liable for any injuries, damages, or losses incurred during matches or at venues booked through the Platform. Users participate at their own risk. PlayArena is not responsible for disputes between users, including organizers, players, or venue owners.
+                      Sport Cliq is not liable for any injuries, damages, or losses incurred during matches or at venues booked through the Platform. Users participate at their own risk. Sport Cliq is not responsible for disputes between users, including organizers, players, or venue owners.
                     </p>
                   </section>
 
                   <section>
                     <h2 className="text-xl font-semibold mb-2">8. Termination</h2>
                     <p>
-                      PlayArena may suspend or terminate your access to the Platform if you violate these Terms or engage in conduct that harms the Platform or other users. You may terminate your use of the Platform at any time by ceasing to access it.
+                      Sport Cliq may suspend or terminate your access to the Platform if you violate these Terms or engage in conduct that harms the Platform or other users. You may terminate your use of the Platform at any time by ceasing to access it.
                     </p>
                   </section>
 
@@ -144,7 +144,7 @@ const TermsAndPrivacy = () => {
                   <section>
                     <h2 className="text-xl font-semibold mb-2">10. Contact Information</h2>
                     <p>
-                      For questions or concerns about these Terms, contact us via Twitter at <a href="https://twitter.com/PiousGeek" className="text-green-500 hover:underline" target="_blank" rel="noopener noreferrer">@PiousGeek</a> or email us at support@playarena.ng.
+                      For questions or concerns about these Terms, contact us via Twitter at <a href="https://twitter.com/PiousGeek" className="text-green-500 hover:underline" target="_blank" rel="noopener noreferrer">@PiousGeek</a> or email us at support@sportcliq.com.
                     </p>
                   </section>
                 </div>
@@ -155,7 +155,7 @@ const TermsAndPrivacy = () => {
                   <section>
                     <h2 className="text-xl font-semibold mb-2">1. Introduction</h2>
                     <p>
-                      PlayArena ("we", "us", or "our") is committed to protecting your privacy in accordance with the Nigeria Data Protection Regulation (NDPR) 2019. This Privacy Policy explains how we collect, use, store, and protect your personal data when you use our Platform.
+                      Sport Cliq ("we", "us", or "our") is committed to protecting your privacy in accordance with the Nigeria Data Protection Regulation (NDPR) 2019. This Privacy Policy explains how we collect, use, store, and protect your personal data when you use our Platform.
                     </p>
                   </section>
 
@@ -222,7 +222,7 @@ const TermsAndPrivacy = () => {
                       <li><strong>Data Portability:</strong> Receive your data in a structured, machine-readable format.</li>
                     </ul>
                     <p>
-                      To exercise these rights, contact us at support@playarena.ng.
+                      To exercise these rights, contact us at support@sportcliq.com.
                     </p>
                   </section>
 
@@ -257,7 +257,7 @@ const TermsAndPrivacy = () => {
                   <section>
                     <h2 className="text-xl font-semibold mb-2">11. Contact Information</h2>
                     <p>
-                      For questions or concerns about this Privacy Policy, contact our Data Protection Officer at support@playarena.ng or via Twitter at <a href="https://twitter.com/PiousGeek" className="text-green-500 hover:underline" target="_blank" rel="noopener noreferrer">@PiousGeek</a>.
+                      For questions or concerns about this Privacy Policy, contact our Data Protection Officer at support@sportcliq.com or via Twitter at <a href="https://twitter.com/PiousGeek" className="text-green-500 hover:underline" target="_blank" rel="noopener noreferrer">@PiousGeek</a>.
                     </p>
                   </section>
                 </div>
