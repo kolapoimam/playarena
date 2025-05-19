@@ -4,7 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Loader2, RefreshCw } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
 
@@ -78,7 +78,6 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
   const [accountNameError, setAccountNameError] = useState<string | null>(null);
   const [amountError, setAmountError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [refreshLoading, setRefreshLoading] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [localTempIdentifier, setLocalTempIdentifier] = useState<string>(tempIdentifier);
 
@@ -94,7 +93,7 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
     }
   }, [localTempIdentifier]);
 
-  const fetchWalletAndCashoutData = useCallback(async () => {
+  const fetchWalletData = useCallback(async () => {
     if (!match || !match.id) {
       setWalletBalance(0);
       setCashoutRequests([]);
@@ -102,7 +101,7 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
     }
 
     try {
-      // Fetch player data for wallet balance
+      // Fetch player data
       const { data: playersData, error: playersError } = await supabase
         .from("players")
         .select("player_status, number_of_slots")
@@ -139,9 +138,8 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
       // Subtract cashout amounts for Review, Processed, and Successful statuses
       const { data: cashoutData, error: cashoutError } = await supabase
         .from("cashout_requests")
-        .select("*")
+        .select("amount, status")
         .eq("match_id", match.id)
-        .eq("temp_identifier", localTempIdentifier)
         .in("status", ["Review", "Processed", "Successful"]);
 
       if (cashoutError) throw cashoutError;
@@ -152,38 +150,16 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
       }
 
       setWalletBalance(balance < 0 ? 0 : balance);
-      setCashoutRequests(cashoutData || []);
     } catch (error) {
-      console.error("Error fetching data:", error);
+      console.error("Error fetching data for wallet balance:", error);
       toast({
         title: "Error",
-        description: "Failed to fetch wallet balance or cashout requests.",
+        description: "Failed to calculate wallet balance.",
         variant: "destructive",
       });
       setWalletBalance(0);
-      setCashoutRequests([]);
     }
-  }, [match, localTempIdentifier, toast]);
-
-  const handleRefreshWallet = async () => {
-    setRefreshLoading(true);
-    try {
-      await fetchWalletAndCashoutData();
-      toast({
-        title: "Success",
-        description: "Wallet balance and cashout requests refreshed.",
-      });
-    } catch (error) {
-      console.error("Error refreshing data:", error);
-      toast({
-        title: "Error",
-        description: "Failed to refresh wallet balance or cashout requests.",
-        variant: "destructive",
-      });
-    } finally {
-      setRefreshLoading(false);
-    }
-  };
+  }, [match, toast]);
 
   useEffect(() => {
     console.log('OrganizerCashout - tempIdentifier:', localTempIdentifier);
@@ -203,7 +179,28 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
         return;
       }
 
-      await fetchWalletAndCashoutData();
+      // Fetch cashout requests
+      try {
+        const { data, error } = await supabase
+          .from("cashout_requests")
+          .select("*")
+          .eq("match_id", match.id)
+          .eq("temp_identifier", localTempIdentifier);
+
+        if (error) throw error;
+
+        setCashoutRequests(data || []);
+      } catch (error) {
+        console.error("Error fetching cashout requests:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load cashout requests.",
+          variant: "destructive",
+        });
+        setCashoutRequests([]);
+      }
+
+      await fetchWalletData();
 
       // Set up real-time subscriptions
       const cashoutChannel = supabase
@@ -217,7 +214,18 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
             filter: `match_id=eq.${match.id}`,
           },
           () => {
-            fetchWalletAndCashoutData();
+            fetchWalletData();
+            supabase
+              .from("cashout_requests")
+              .select("*")
+              .eq("match_id", match.id)
+              .eq("temp_identifier", localTempIdentifier)
+              .order("created_at", { ascending: false })
+              .then(({ data, error }) => {
+                if (!error && data) {
+                  setCashoutRequests(data);
+                }
+              });
           }
         )
         .subscribe();
@@ -233,7 +241,7 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
             filter: `match_id=eq.${match.id}`,
           },
           () => {
-            fetchWalletAndCashoutData();
+            fetchWalletData();
           }
         )
         .subscribe();
@@ -245,7 +253,7 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
     };
 
     fetchUserIdAndData();
-  }, [match, userId, localTempIdentifier, fetchWalletAndCashoutData]);
+  }, [match, userId, localTempIdentifier, fetchWalletData]);
 
   const handleCashoutMode = () => {
     if (!localTempIdentifier) {
@@ -354,7 +362,18 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
         throw cashoutError;
       }
 
-      await fetchWalletAndCashoutData();
+      const { data: cashoutData, error: cashoutFetchError } = await supabase
+        .from("cashout_requests")
+        .select("*")
+        .eq("match_id", match.id)
+        .eq("temp_identifier", localTempIdentifier)
+        .order("created_at", { ascending: false });
+
+      if (!cashoutFetchError && cashoutData) {
+        setCashoutRequests(cashoutData);
+      }
+
+      setWalletBalance(prev => prev - Number(cashoutAmount) < 0 ? 0 : prev - Number(cashoutAmount));
 
       setCashoutDialogOpen(false);
       setBankAccountNumber("");
@@ -395,27 +414,16 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700">
       <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Cashout Requests</h2>
-      <div className="mb-4 flex items-center">
+      <div className="mb-4">
         <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
           Wallet Balance: ₦{walletBalance.toLocaleString()}
         </p>
-        <button
-          onClick={handleRefreshWallet}
-          className="ml-2 p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-          disabled={refreshLoading}
-        >
-          {refreshLoading ? (
-            <Loader2 size={16} className="animate-spin" />
-          ) : (
-            <RefreshCw size={16} />
-          )}
-        </button>
       </div>
       <div className="mb-4">
         <Button
           onClick={handleCashoutMode}
           className="bg-yellow-500 hover:bg-yellow-600 text-white"
-          disabled={!localTempIdentifier || walletBalance === 0}
+          disabled={!localTempIdentifier}
         >
           Request Cashout
         </Button>
