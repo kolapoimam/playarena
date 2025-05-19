@@ -4,7 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Loader2 } from "lucide-react";
+import { Loader2, RefreshCw } from "lucide-react";
 import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
 
@@ -78,6 +78,7 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
   const [accountNameError, setAccountNameError] = useState<string | null>(null);
   const [amountError, setAmountError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [refreshLoading, setRefreshLoading] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [localTempIdentifier, setLocalTempIdentifier] = useState<string>(tempIdentifier);
 
@@ -160,6 +161,26 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
       setWalletBalance(0);
     }
   }, [match, toast]);
+
+  const handleRefreshWallet = async () => {
+    setRefreshLoading(true);
+    try {
+      await fetchWalletData();
+      toast({
+        title: "Success",
+        description: "Wallet balance refreshed.",
+      });
+    } catch (error) {
+      console.error("Error refreshing wallet balance:", error);
+      toast({
+        title: "Error",
+        description: "Failed to refresh wallet balance.",
+        variant: "destructive",
+      });
+    } finally {
+      setRefreshLoading(false);
+    }
+  };
 
   useEffect(() => {
     console.log('OrganizerCashout - tempIdentifier:', localTempIdentifier);
@@ -414,10 +435,21 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700">
       <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Cashout Requests</h2>
-      <div className="mb-4">
+      <div className="mb-4 flex items-center">
         <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
           Wallet Balance: ₦{walletBalance.toLocaleString()}
         </p>
+        <button
+          onClick={handleRefreshWallet}
+          className="ml-2 p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+          disabled={refreshLoading}
+        >
+          {refreshLoading ? (
+            <Loader2 size={16} className="animate-spin" />
+          ) : (
+            <RefreshCw size={16} />
+          )}
+        </button>
       </div>
       <div className="mb-4">
         <Button
