@@ -50,7 +50,7 @@ type Cashout = {
   bank_account_number: string;
   bank_name: string;
   account_name: string;
-  status: "under_review" | "processed" | "failed" | "successful";
+  status: "Review" | "Processed" | "Failed" | "Successful";
   temp_identifier?: string;
 };
 
