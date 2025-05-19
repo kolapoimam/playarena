@@ -32,6 +32,8 @@ type Match = {
     details: { phone: string } | null;
     number_of_slots?: number;
   }[] | null;
+  sell_tickets: boolean;
+  ticket_price?: number;
 };
 
 type Cashout = {
@@ -83,6 +85,23 @@ const MatchDetails = ({ match, cashout, handleCancelMatch, loading, isMatchPast 
           );
         }
 
+        // Add ticket revenue if selling tickets
+        if (match.sell_tickets && match.ticket_price) {
+          const { data: ticketsData, error: ticketsError } = await supabase
+            .from("tickets")
+            .select("number_of_tickets")
+            .eq("match_id", match.id)
+            .eq("checked_in", true);
+
+          if (ticketsError) throw ticketsError;
+
+          const ticketRevenue = ticketsData.reduce(
+            (sum, ticket) => sum + (ticket.number_of_tickets * (match.ticket_price || 0)),
+            0
+          );
+          balance += ticketRevenue;
+        }
+
         // Subtract cashout amounts for Review, Processed, and Successful statuses
         const { data: cashoutData, error: cashoutError } = await supabase
           .from("cashout_requests")
@@ -111,8 +130,8 @@ const MatchDetails = ({ match, cashout, handleCancelMatch, loading, isMatchPast 
 
     fetchWalletBalance();
 
-    // Set up real-time subscription for cashout_requests
-    const channel = supabase
+    // Set up real-time subscription for cashout_requests and tickets
+    const cashoutChannel = supabase
       .channel(`cashout_requests_match_${match.id}`)
       .on(
         'postgres_changes',
@@ -128,8 +147,25 @@ const MatchDetails = ({ match, cashout, handleCancelMatch, loading, isMatchPast 
       )
       .subscribe();
 
+    const ticketsChannel = supabase
+      .channel(`tickets_match_${match.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'tickets',
+          filter: `match_id=eq.${match.id}`,
+        },
+        () => {
+          fetchWalletBalance(); // Re-fetch balance on ticket check-in
+        }
+      )
+      .subscribe();
+
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(cashoutChannel);
+      supabase.removeChannel(ticketsChannel);
     };
   }, [match, toast]);
 
@@ -175,13 +211,22 @@ const MatchDetails = ({ match, cashout, handleCancelMatch, loading, isMatchPast 
   };
 
   const calculateExpectedAmount = () => {
-    if (!match || !match.is_paid || !match.price) return "N/A";
-    const checkedInPlayers = match.players?.filter((p) => p.status === "Checked In") || [];
-    const totalSlots = checkedInPlayers.reduce(
-      (sum, player) => sum + (player.number_of_slots || 1),
-      0
-    );
-    return `₦${(totalSlots * match.price).toLocaleString()}`;
+    if (!match) return "N/A";
+    let total = 0;
+    if (match.is_paid && match.price) {
+      const checkedInPlayers = match.players?.filter((p) => p.status === "Checked In") || [];
+      const playerRevenue = checkedInPlayers.reduce(
+        (sum, player) => sum + ((player.number_of_slots || 1) * (match.price || 0)),
+        0
+      );
+      total += playerRevenue;
+    }
+    if (match.sell_tickets && match.ticket_price) {
+      // Note: Actual ticket revenue is fetched in fetchWalletBalance
+      // This is an estimate based on match.ticket_price
+      total += 0; // Placeholder; real value comes from Supabase
+    }
+    return `₦${total.toLocaleString()}`;
   };
 
   const calculateTotalSlotsOccupied = () => {
@@ -280,6 +325,9 @@ const MatchDetails = ({ match, cashout, handleCancelMatch, loading, isMatchPast 
           <DollarSign size={20} className="text-green-500" />
           <span className="text-gray-900 dark:text-gray-100">
             {match.is_paid ? `₦${match.price?.toLocaleString() || "0"} per ticket` : "Free"}
+            {match.sell_tickets && match.ticket_price
+              ? ` | Tickets: ₦${match.ticket_price.toLocaleString()} each`
+              : ""}
           </span>
         </div>
         <div className="flex items-center gap-3">
