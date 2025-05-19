@@ -59,8 +59,8 @@ const Auth = () => {
             .from("profiles")
             .upsert({
               id: data.user.id,
-              firstName,
-              lastName,
+              first_name: firstName,
+              last_name: lastName,
             });
 
           if (profileError) throw profileError;
