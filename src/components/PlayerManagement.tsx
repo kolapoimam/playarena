@@ -395,6 +395,8 @@ const PlayerManagement = ({
 
   if (!match) return null;
 
+const navigate = useNavigate();
+
 return (
   <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700">
     <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Manage Players</h2>
@@ -408,7 +410,7 @@ return (
         Check-in Players
       </Button>
       <Button
-        onClick={() => navigate(`/match/${match.slug}/team-management`)}
+        onClick={() => navigate(`/team-management/${match.slug}`)}
         className="bg-green-500 hover:bg-green-600 text-white flex-1"
         disabled={match.cancellation_status}
       >
