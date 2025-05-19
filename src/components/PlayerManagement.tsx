@@ -395,19 +395,27 @@ const PlayerManagement = ({
 
   if (!match) return null;
 
-  return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700">
-      <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Manage Players</h2>
-      
-      <div className="flex gap-3 mb-4">
-        <Button
-          onClick={handleCheckinMode}
-          className="bg-blue-500 hover:bg-blue-600 text-white flex-1"
-          disabled={!canCheckin() || match.cancellation_status}
-        >
-          Check-in Players
-        </Button>
-      </div>
+return (
+  <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700">
+    <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Manage Players</h2>
+    
+    <div className="flex gap-3 mb-4">
+      <Button
+        onClick={handleCheckinMode}
+        className="bg-blue-500 hover:bg-blue-600 text-white flex-1"
+        disabled={!canCheckin() || match.cancellation_status}
+      >
+        Check-in Players
+      </Button>
+      <Button
+        onClick={() => navigate(`/match/${match.slug}/team-management`)}
+        className="bg-green-500 hover:bg-green-600 text-white flex-1"
+        disabled={match.cancellation_status}
+      >
+        Manage Teams
+      </Button>
+    </div>
+  </div>
 
       <div className="max-h-[400px] overflow-y-auto">
         <button
