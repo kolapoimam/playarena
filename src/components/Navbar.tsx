@@ -55,15 +55,15 @@ export default function Navbar() {
       </Link>
 
       <Link
-        to="/matches"
-        onClick={() => handleTabClick("/matches")}
+        to="/activities"
+        onClick={() => handleTabClick("/activities")}
         className={`flex items-center p-2 rounded-full transition-all duration-300 ${
-          isActive("/matches") ? "bg-[#17a34a] text-white px-4" : "text-gray-400 hover:text-white"
+          isActive("/activities") ? "bg-[#17a34a] text-white px-4" : "text-gray-400 hover:text-white"
         }`}
       >
         <Map size={24} />
-        {isActive("/matches") && (
-          <span className="ml-2 text-sm font-medium animate-slide-in">Matches</span>
+        {isActive("/activities") && (
+          <span className="ml-2 text-sm font-medium animate-slide-in">Activities</span>
         )}
       </Link>
 
