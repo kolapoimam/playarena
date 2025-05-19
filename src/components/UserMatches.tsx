@@ -30,6 +30,7 @@ type Match = {
   player_cancellation_status?: boolean;
   booked_slots?: number;
   total_slots?: number;
+  organizer_name?: string;
 };
 
 type Profile = {
@@ -94,7 +95,7 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
       .from("user_organized_matches")
       .select(`
         match_id,
-        matches(id, title, slug, match_date, match_time, start_time, end_time, super_code, status, cancellation_status, is_paid, venue_id, total_slots, venues(name))
+        matches(id, title, slug, match_date, match_time, start_time, end_time, super_code, status, cancellation_status, is_paid, venue_id, total_slots, organizer_name, venues(name))
       `)
       .eq("user_id", session.session.user.id)
       .order("created_at", { ascending: false })
@@ -127,6 +128,7 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
           is_paid: item.matches.is_paid,
           booked_slots: bookedSlots,
           total_slots: item.matches.total_slots,
+          organizer_name: item.matches.organizer_name,
         };
       })
     );
@@ -139,7 +141,7 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
       .select(`
         match_id,
         player_id,
-        matches(id, title, slug, match_date, match_time, start_time, end_time, status, cancellation_status, is_paid, venue_id, total_slots, venues(name)),
+        matches(id, title, slug, match_date, match_time, start_time, end_time, status, cancellation_status, is_paid, venue_id, total_slots, organizer_name, venues(name)),
         players(confirmation_code, number_of_slots, status, cancellation_status)
       `)
       .eq("user_id", session.session.user.id)
@@ -181,6 +183,7 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
           player_cancellation_status: playerCancellationStatus,
           booked_slots: bookedSlots,
           total_slots: item.matches.total_slots,
+          organizer_name: item.matches.organizer_name,
         };
       })
     );
@@ -375,10 +378,16 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => navigator.clipboard.writeText(match.super_code || '')}
+                              onClick={() => {
+                                navigator.clipboard.writeText(match.super_code || '');
+                                toast({
+                                  title: "Success",
+                                  description: "Super code copied!",
+                                });
+                              }}
                               className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
                             >
-                              <Copy size={16} />
+                              <Copy size={12} />
                             </Button>
                           </span>
                         </div>
@@ -386,7 +395,7 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
                           Slots: <span className="text-green-600 dark:text-green-400">{match.booked_slots}</span>/{match.total_slots}
                         </p>
                         <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
-                          Organized by: {organizer?.name || "Unknown"}
+                          Organized by: {match.organizer_name || "Unknown"}
                           {isVerified && <img src="/green-verified.png" alt="Verified" className="w-4 h-4 ml-1" />}
                         </p>
                       </div>
@@ -437,7 +446,7 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
           <TabsContent value="playing">
             {joinedMatches.length > 0 ? (
               joinedMatches.map((match) => {
-                const organizer = organizers.find(org => org.id === match.id);
+                const organizer = organizers.find(org => org.id === match.organizer_id);
                 const isVerified = organizer?.is_verified || false;
                 const { dateStr, timeStr } = formatMatchDateTime(match.match_date, match.match_time);
                 const statusLabel = getStatusLabel(match.player_status || "registered", match.player_cancellation_status || match.cancellation_status, match.match_date, match.start_time, match.end_time);
@@ -471,7 +480,7 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
                           </p>
                         )}
                         <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
-                          Organized by: {organizer?.name || "Unknown"}
+                          Organized by: {match.organizer_name || "Unknown"}
                           {isVerified && <img src="/green-verified.png" alt="Verified" className="w-4 h-4 ml-1" />}
                         </p>
                       </div>
