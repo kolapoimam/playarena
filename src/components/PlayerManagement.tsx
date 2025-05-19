@@ -415,8 +415,7 @@ return (
         Manage Teams
       </Button>
     </div>
-  </div>
-
+    
       <div className="max-h-[400px] overflow-y-auto">
         <button
           onClick={() => setIsPlayersOpen(!isPlayersOpen)}
