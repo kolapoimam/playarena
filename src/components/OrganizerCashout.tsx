@@ -1,10 +1,35 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useWalletBalance } from "@/hooks/useWalletBalance";
 
 type Match = {
   id: string;
+  slug: string;
+  title: string;
+  match_date: string;
+  match_time: string;
+  match_start_time?: string | null;
+  match_end_time?: string | null;
+  total_slots: number;
+  organizer_name: string;
   super_code: string;
+  is_paid: boolean;
+  price?: number;
+  cancellation_status: boolean;
+  status: string;
+  venue: {
+    name?: string;
+    city?: string;
+  } | null;
+  players: {
+    id: string;
+    player_name: string;
+    player_status: 'Registered' | 'Checked In' | 'Absent';
+    confirmation_code: string;
+    details: { phone: string } | null;
+    number_of_slots?: number;
+  }[] | null;
 };
 
 type CashoutRequest = {
@@ -29,6 +54,12 @@ type OrganizerCashoutProps = {
 const OrganizerCashout = ({ match }: OrganizerCashoutProps) => {
   const { toast } = useToast();
   const [cashoutRequests, setCashoutRequests] = useState<CashoutRequest[]>([]);
+  const walletBalance = useWalletBalance(
+    match?.id,
+    match?.is_paid || false,
+    match?.price,
+    match?.status
+  );
 
   useEffect(() => {
     if (!match?.id) {
@@ -38,7 +69,7 @@ const OrganizerCashout = ({ match }: OrganizerCashoutProps) => {
 
     const fetchCashoutRequests = async () => {
       try {
-        const { data, error } = await supabase
+        const { data, error }  = await supabase
           .from("cashout_requests")
           .select("*")
           .eq("match_id", match.id)
@@ -59,6 +90,27 @@ const OrganizerCashout = ({ match }: OrganizerCashoutProps) => {
     };
 
     fetchCashoutRequests();
+
+    // Set up real-time subscription for cashout_requests
+    const channel = supabase
+      .channel(`cashout_requests_match_${match.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'cashout_requests',
+          filter: `match_id=eq.${match.id}`,
+        },
+        () => {
+          fetchCashoutRequests();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [match?.id, toast]);
 
   const getStatusStyles = (status: string) => {
@@ -81,6 +133,16 @@ const OrganizerCashout = ({ match }: OrganizerCashoutProps) => {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700">
       <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Cashout Requests</h2>
+      <div className="mb-4">
+        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          Wallet Balance: ₦{walletBalance.toFixed(2)}
+        </p>
+        {walletBalance === 0 && (
+          <p className="text-sm text-red-600 dark:text-red-500 mt-1">
+            Wallet balance is zero. Ensure players are checked in or try refreshing.
+          </p>
+        )}
+      </div>
       <div className="space-y-4">
         {cashoutRequests.map((request) => (
           <div
