@@ -27,60 +27,76 @@ const Auth = () => {
     return emailRegex.test(email);
   };
 
-const handleEmailAuth = async () => {
-  if (!validateEmail(email)) {
-    toast({
-      title: "Invalid Email",
-      description: "Please enter a valid email address.",
-      variant: "destructive",
-    });
-    return;
-  }
-
-  setLoading(true);
-  try {
-    if (isSignUp) {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/profile`,
-          data: {
-            first_name: firstName,  // Changed to match schema
-            last_name: lastName,    // Changed to match schema
-          },
-        },
-      });
-      if (error) throw error;
-
-      // Save name to profiles table - corrected column names
-      if (data.user) {
-        const { error: profileError } = await supabase
-          .from("profiles")
-          .upsert({
-            id: data.user.id,
-            first_name: firstName,  // Changed to match schema
-            last_name: lastName,    // Changed to match schema
-            email: email,            // Added email for consistency
-            created_at: new Date().toISOString(),
-          });
-
-        if (profileError) throw profileError;
-      }
-
+  const handleEmailAuth = async () => {
+    if (!validateEmail(email)) {
       toast({
-        title: "You're In the Game! ⚽",
-        description: "Check your email to confirm your PlayArena account!",
+        title: "Invalid Email",
+        description: "Please enter a valid email address.",
+        variant: "destructive",
       });
-    } else {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
-      navigate("/profile");
+      return;
     }
-  } catch (error) {
-    toast({ title: "Oops, Out of Bounds!", description: error.message, variant: "destructive" });
-  } finally {
-    setLoading(false);
+
+    if (isSignUp) {
+      if (!firstName.trim() || !lastName.trim()) {
+        toast({
+          title: "Missing Information",
+          description: "Please provide both first name and last name.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
+    setLoading(true);
+    try {
+      if (isSignUp) {
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/profile`,
+            data: {
+              first_name: firstName,
+              last_name: lastName,
+            },
+          },
+        });
+        if (error) throw error;
+
+        // Save name to profiles table
+        if (data.user) {
+          // Debug log to verify IDs (can be removed after testing)
+          console.log('User ID:', data.user.id, 'Auth UID:', await supabase.auth.getUser().then(u => u.data.user?.id));
+
+          const { error: profileError } = await supabase
+            .from("profiles")
+            .upsert({
+              id: data.user.id,
+              first_name: firstName.trim(),
+              last_name: lastName.trim(),
+            });
+
+          if (profileError) throw profileError;
+
+          toast({
+            title: "You're In the Game! ⚽",
+            description: "Check your email to confirm your PlayArena account!",
+          });
+        }
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        navigate("/profile");
+      }
+    } catch (error) {
+      toast({ 
+        title: "Oops, Out of Bounds!", 
+        description: error.message, 
+        variant: "destructive" 
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -93,7 +109,11 @@ const handleEmailAuth = async () => {
       });
       if (error) throw error;
     } catch (error) {
-      toast({ title: "Oops, Out of Bounds!", description: error.message, variant: "destructive" });
+      toast({ 
+        title: "Oops, Out of Bounds!", 
+        description: error.message, 
+        variant: "destructive" 
+      });
     } finally {
       setLoading(false);
     }
@@ -123,7 +143,11 @@ const handleEmailAuth = async () => {
       setShowForgotPassword(false);
       setResetEmail("");
     } catch (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ 
+        title: "Error", 
+        description: error.message, 
+        variant: "destructive" 
+      });
     } finally {
       setLoading(false);
     }
@@ -161,36 +185,36 @@ const handleEmailAuth = async () => {
             </button>
           </div>
 
-<div className="space-y-4">
-  {isSignUp && (
-    <div className="grid grid-cols-2 gap-4">
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          First Name
-        </label>
-        <Input
-          type="text"
-          placeholder="Your First Name"
-          value={firstName}
-          onChange={(e) => setFirstName(e.target.value)}
-          required
-          className="w-full"
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          Last Name
-        </label>
-        <Input
-          type="text"
-          placeholder="Your Last Name"
-          value={lastName}
-          onChange={(e) => setLastName(e.target.value)}
-          required
-          className="w-full"
-        />
-      </div>
-    </div>
+          <div className="space-y-4">
+            {isSignUp && (
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    First Name
+                  </label>
+                  <Input
+                    type="text"
+                    placeholder="Your First Name"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    required
+                    className="w-full"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Last Name
+                  </label>
+                  <Input
+                    type="text"
+                    placeholder="Your Last Name"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    required
+                    className="w-full"
+                  />
+                </div>
+              </div>
             )}
 
             <div>
@@ -236,7 +260,7 @@ const handleEmailAuth = async () => {
               <Button
                 className="flex-1 bg-[#17a34a] hover:bg-[#138d3a] text-white font-medium py-2"
                 onClick={handleEmailAuth}
-                disabled={loading || (isSignUp && (!firstName || !lastName))}
+                disabled={loading || (isSignUp && (!firstName.trim() || !lastName.trim()))}
               >
                 {loading ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -282,7 +306,7 @@ const handleEmailAuth = async () => {
             </div>
 
             {isSignUp && (
-             <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+              <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
                 By signing up, you agree to our{' '}
                 <NavLink
                   to="/terms-privacy"
@@ -296,46 +320,46 @@ const handleEmailAuth = async () => {
         </div>
       </div>
 
-{/* Forgot Password Dialog */}
-{showForgotPassword && (
-  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 w-full max-w-xs">
-      <div className="text-center mb-5">
-        <h2 className="text-xl font-bold text-gray-800 dark:text-white">
-          Reset Password
-        </h2>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-          Enter your email to receive a password reset link.
-        </p>
-      </div>
-      
-      <Input
-        type="email"
-        placeholder="Your Email"
-        value={resetEmail}
-        onChange={(e) => setResetEmail(e.target.value)}
-        className="w-full mb-5"
-      />
-      
-      <div className="flex justify-end gap-3">
-        <Button
-          variant="outline"
-          className="px-4 rounded-lg"
-          onClick={() => setShowForgotPassword(false)}
-          disabled={loading}
-        >
-          Cancel
-        </Button>
-        <Button
-          className="bg-[#17a34a] hover:bg-[#138d3a] text-white px-4 rounded-lg"
-          onClick={handleForgotPassword}
-          disabled={loading}
-        >
-          {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Send Link"}
-        </Button>
-      </div>
-    </div>
-  </div>
+      {/* Forgot Password Dialog */}
+      {showForgotPassword && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 w-full max-w-xs">
+            <div className="text-center mb-5">
+              <h2 className="text-xl font-bold text-gray-800 dark:text-white">
+                Reset Password
+              </h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                Enter your email to receive a password reset link.
+              </p>
+            </div>
+            
+            <Input
+              type="email"
+              placeholder="Your Email"
+              value={resetEmail}
+              onChange={(e) => setResetEmail(e.target.value)}
+              className="w-full mb-5"
+            />
+            
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="outline"
+                className="px-4 rounded-lg"
+                onClick={() => setShowForgotPassword(false)}
+                disabled={loading}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="bg-[#17a34a] hover:bg-[#138d3a] text-white px-4 rounded-lg"
+                onClick={handleForgotPassword}
+                disabled={loading}
+              >
+                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Send Link"}
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Footer Image with Gradient Background */}
