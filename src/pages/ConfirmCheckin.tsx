@@ -36,7 +36,7 @@ type Match = {
   players: {
     id: string;
     player_name: string;
-    player_status: 'Registered' | 'Checked In' | 'Absent';
+    status: string;
     confirmation_code: string;
     details: { phone: string } | null;
     number_of_slots?: number;
@@ -68,7 +68,7 @@ const ConfirmCheckin = () => {
   const [matchNotFound, setMatchNotFound] = useState(false);
   const [loading, setLoading] = useState(false);
   const [playerStatuses, setPlayerStatuses] = useState<
-    { id: string; status: 'Registered' | 'Checked In' | 'Absent'; checkinCode: string }[]
+    { id: string; status: string; checkinCode: string }[]
   >([]);
   const [checkinCodes, setCheckinCodes] = useState<{ [key: string]: string }>({});
   const [checkinCodeErrors, setCheckinCodeErrors] = useState<{ [key: string]: string | null }>({});
@@ -76,6 +76,7 @@ const ConfirmCheckin = () => {
   const [error, setError] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [recentSuperCodes, setRecentSuperCodes] = useState<string[]>([]);
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
 
   useEffect(() => {
@@ -117,7 +118,7 @@ const ConfirmCheckin = () => {
         .select(`
           id, slug, title, match_date, match_time, match_start_time, match_end_time, total_slots, organizer_name, super_code, is_paid, price, cancellation_status, status,
           venue:venues(name, city),
-          players(id, player_name, player_status, confirmation_code, details, number_of_slots)
+          players(id, player_name, status, confirmation_code, details, number_of_slots)
         `)
         .eq("super_code", superCode)
         .single();
@@ -135,6 +136,18 @@ const ConfirmCheckin = () => {
         return;
       }
 
+      if (userId) {
+        const { data: walletData, error: walletError } = await supabase
+          .from("wallets")
+          .select("balance")
+          .eq("organizer_id", userId)
+          .single();
+
+        if (!walletError && walletData) {
+          setWalletBalance(walletData.balance);
+        }
+      }
+
       const matchData: Match = {
         ...data,
         venue: data.venue ? { name: data.venue.name ?? "Unknown Venue", city: data.venue.city ?? "Unknown City" } : null,
@@ -147,7 +160,7 @@ const ConfirmCheckin = () => {
       setPlayerStatuses(
         (matchData.players || []).map((player) => ({
           id: player.id,
-          status: player.player_status,
+          status: player.status,
           checkinCode: "",
         }))
       );
@@ -189,13 +202,14 @@ const ConfirmCheckin = () => {
         });
       }
 
+      // Update absent status for players who haven't checked in after match end time
       if (matchData.match_end_time && isPast(new Date(matchData.match_end_time))) {
         const updates = matchData.players
-          ?.filter(p => p.player_status === "Registered" && p.player_status !== "Checked In")
+          ?.filter(p => p.status === "registered" && p.status !== "checked_in")
           .map(p => 
             supabase
               .from("players")
-              .update({ player_status: "Absent", updated_at: new Date().toISOString() })
+              .update({ status: "absent", player_status: 'Absent', updated_at: new Date().toISOString() })
               .eq("id", p.id)
           ) || [];
         
@@ -254,7 +268,7 @@ const ConfirmCheckin = () => {
 
       const { error: playersError } = await supabase
         .from("players")
-        .update({ player_status: 'Absent', cancellation_status: true, updated_at: new Date().toISOString() })
+        .update({ status: "cancelled", cancellation_status: true, player_status: 'Absent', updated_at: new Date().toISOString() })
         .eq("match_id", match.id);
 
       if (playersError) throw playersError;
@@ -284,6 +298,7 @@ const ConfirmCheckin = () => {
     }
   }, [superCode]);
 
+  // Set up Supabase real-time subscription for players table
   useEffect(() => {
     if (!match?.id) return;
 
@@ -299,7 +314,7 @@ const ConfirmCheckin = () => {
         },
         (payload) => {
           console.log('Player update received:', payload);
-          fetchMatch();
+          fetchMatch(); // Refresh match data on player status change
         }
       )
       .subscribe();
@@ -373,6 +388,7 @@ const ConfirmCheckin = () => {
               handleCancelMatch={() => setIsCancelDialogOpen(true)}
               loading={loading}
               isMatchPast={isMatchPast}
+              walletBalance={walletBalance || 0}
             />
             <PlayerManagement
               match={match}
