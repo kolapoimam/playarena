@@ -46,7 +46,7 @@ type Cashout = {
   bank_account_number: string;
   bank_name: string;
   account_name: string;
-  status: "under_review" | "processed" | "failed" | "successful";
+  status: "Review" | "Processed" | "Failed" | "Successful";
   amount: number;
   temp_identifier?: string;
 };
@@ -191,7 +191,7 @@ const PlayerManagement = ({
         .from("cashout_requests")
         .select("amount, status")
         .eq("match_id", match.id)
-        .in("status", ["under_review", "processed", "successful"]);
+        .in("status", ["Review", "Processed", "Successful"]);
 
       if (cashoutError) throw cashoutError;
 
@@ -423,7 +423,7 @@ const PlayerManagement = ({
             bank_name: bankName,
             account_name: accountName,
           },
-          status: "under_review",
+          status: "Review",
           temp_identifier: tempIdentifier,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
@@ -610,10 +610,10 @@ const PlayerManagement = ({
       case 'Registered': return "bg-yellow-500 text-white border-yellow-600";
       case 'Checked In': return "bg-green-500 text-white border-green-600";
       case 'Absent': return "bg-red-500 text-white border-red-600";
-      case "successful": return "bg-green-100 text-green-700 border-green-300";
-      case "failed": return "bg-red-100 text-red-700 border-red-300";
-      case "processed": return "bg-blue-100 text-blue-700 border-blue-300";
-      case "under_review": case "review": return "bg-yellow-100 text-yellow-700 border-yellow-300";
+      case "Successful": return "bg-green-100 text-green-700 border-green-300";
+      case "Failed": return "bg-red-100 text-red-700 border-red-300";
+      case "Processed": return "bg-blue-100 text-blue-700 border-blue-300";
+      case "Review": return "bg-yellow-100 text-yellow-700 border-yellow-300";
       default: return "bg-gray-500 text-white border-gray-600";
     }
   };
