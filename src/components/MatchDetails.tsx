@@ -83,12 +83,12 @@ const MatchDetails = ({ match, cashout, handleCancelMatch, loading, isMatchPast 
           );
         }
 
-        // Subtract cashout amounts
+        // Subtract cashout amounts for review, processed, and successful statuses
         const { data: cashoutData, error: cashoutError } = await supabase
           .from("cashout_requests")
           .select("amount, status")
           .eq("match_id", match.id)
-          .in("status", ["processed", "successful"]);
+          .in("status", ["review", "processed", "successful"]);
 
         if (cashoutError) throw cashoutError;
 
@@ -110,6 +110,27 @@ const MatchDetails = ({ match, cashout, handleCancelMatch, loading, isMatchPast 
     };
 
     fetchWalletBalance();
+
+    // Set up real-time subscription for cashout_requests
+    const channel = supabase
+      .channel(`cashout_requests_match_${match.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'cashout_requests',
+          filter: `match_id=eq.${match.id}`,
+        },
+        () => {
+          fetchWalletBalance(); // Re-fetch balance on cashout status change
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [match, toast]);
 
   const canCancelMatch = () => {
@@ -147,6 +168,7 @@ const MatchDetails = ({ match, cashout, handleCancelMatch, loading, isMatchPast 
       case "processed":
         return "bg-blue-100 text-blue-700 border-blue-300";
       case "under_review":
+      case "review":
         return "bg-yellow-100 text-yellow-700 border-yellow-300";
       default:
         return "bg-yellow-100 text-yellow-700 border-yellow-300";
