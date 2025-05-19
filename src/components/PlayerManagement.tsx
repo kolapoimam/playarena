@@ -660,40 +660,7 @@ irl: true // Foreign key violation (e.g., super_code or match_id invalid)
         </Button>
       </div>
 
-      {cashoutRequests.length > 0 && (
-        <div className="mb-6">
-          <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">Cashout Requests</h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-              <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
-                <tr>
-                  <th className="px-4 py-2">Amount</th>
-                  <th className="px-4 py-2">Bank Details</th>
-                  <th className="px-4 py-2">Status</th>
-                  <th className="px-4 py-2">Created At</th>
-                </tr>
-              </thead>
-              <tbody>
-                {cashoutRequests.map((request) => (
-                  <tr key={request.id} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
-                    <td className="px-4 py-2">₦{request.amount.toFixed(2)}</td>
-                    <td className="px-4 py-2">
-                      {request.account_details?.account_name || "Not provided"} <br />
-                      {request.account_details?.bank_account_number || "Not provided"} ({request.account_details?.bank_name || "Not provided"})
-                    </td>
-                    <td className="px-4 py-2">
-                      <span className={`inline-block px-2 py-1 rounded ${getStatusStyles(request.status)}`}>
-                        {request.status.replace("_", " ").charAt(0).toUpperCase() + request.status.replace("_", " ").slice(1)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2">{new Date(request.created_at).toLocaleString()}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+
 
       <div className="max-h-[400px] overflow-y-auto">
         <button
