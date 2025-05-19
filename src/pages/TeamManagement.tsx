@@ -12,13 +12,13 @@ import {
   DialogDescription,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { ArrowLeft, Users, Trophy, Clock, Target, Shield, Share2, Download } from "lucide-react";
+import { ArrowLeft, Users, Trophy, Clock, Shield, Share2, Download } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import html2canvas from "html2canvas";
 import { DndProvider, useDrag, useDrop } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { TouchBackend } from "react-dnd-touch-backend";
-import { isPast, differenceInMinutes } from "date-fns";
+import { isPast } from "date-fns";
 
 // Types
 type Player = {
@@ -29,29 +29,27 @@ type Player = {
   position: string;
 };
 
-type Team = Player[];
+type Team = {
+  name: string;
+  players: string[]; // Array of player IDs
+  score: number;
+  analytics: {
+    possession: number;
+    shots: number;
+    fouls: number;
+    yellow_cards: number;
+    red_cards: number;
+  };
+};
 
 type MatchEvent = {
   id: string;
   match_id: string;
-  type: "goal" | "card" | "substitution";
-  team: "teamA" | "teamB";
+  type: "goal" | "yellow_card" | "red_card" | "foul" | "shot" | "substitution";
+  team_name: string;
   player_id?: string;
   minute: number;
   description: string;
-};
-
-type MatchAnalytics = {
-  teamA: {
-    possession: number;
-    shots: number;
-    fouls: number;
-  };
-  teamB: {
-    possession: number;
-    shots: number;
-    fouls: number;
-  };
 };
 
 type Match = {
@@ -59,22 +57,32 @@ type Match = {
   slug: string;
   super_code: string;
   title: string;
-  teama: Team;
-  teamb: Team;
-  scorea: number;
-  scoreb: number;
-  events: MatchEvent[];
-  analytics: MatchAnalytics;
-  is_public: boolean;
   match_date: string;
   match_time: string;
 };
 
+type TeamRanking = {
+  name: string;
+  goals: number;
+  points: number; // Based on goals, cards, etc.
+  yellow_cards: number;
+  red_cards: number;
+  fouls: number;
+  shots: number;
+};
+
 // Player Card Component
-const PlayerCard = ({ player, team }: { player: Player; team: string }) => {
+const PlayerCard = ({ playerId, teamName, players }: { playerId: string; teamName: string; players: Player[] }) => {
+  const player = players.find((p) => p.id === playerId) || {
+    id: playerId,
+    name: "Unknown Player",
+    position: "Unknown",
+    skill: 0,
+  };
+
   const [{ isDragging }, drag] = useDrag(() => ({
     type: "PLAYER",
-    item: { player, team },
+    item: { playerId, teamName },
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),
@@ -104,35 +112,46 @@ const PlayerCard = ({ player, team }: { player: Player; team: string }) => {
 };
 
 // Team Column Component
-const TeamColumn = ({ team, players, setTeams, label }: { team: string; players: Team; setTeams: any; label: string }) => {
+const TeamColumn = ({
+  team,
+  setTeams,
+  players,
+}: {
+  team: Team;
+  setTeams: (teams: Team[]) => void;
+  players: Player[];
+}) => {
   const [, drop] = useDrop(() => ({
     accept: "PLAYER",
-    drop: (item: { player: Player; team: string }) => {
-      setTeams((prev: { teamA: Team; teamB: Team }) => {
-        const sourceTeam = item.team;
-        const targetTeam = team;
-        if (sourceTeam === targetTeam) return prev;
-
-        const newSource = prev[sourceTeam].filter((p) => p.id !== item.player.id);
-        const newTarget = [...prev[targetTeam], item.player];
-
-        return {
-          ...prev,
-          [sourceTeam]: newSource,
-          [targetTeam]: newTarget,
-        };
+    drop: (item: { playerId: string; teamName: string }) => {
+      setTeams((prev) => {
+        if (item.teamName === team.name) return prev;
+        // Prevent duplicate player assignments
+        const allPlayers = prev.flatMap((t) => t.players);
+        if (allPlayers.includes(item.playerId)) {
+          return prev; // Player already assigned
+        }
+        return prev.map((t) => {
+          if (t.name === team.name) {
+            return { ...t, players: [...t.players, item.playerId] };
+          }
+          if (t.name === item.teamName) {
+            return { ...t, players: t.players.filter((id) => id !== item.playerId) };
+          }
+          return t;
+        });
       });
     },
   }));
 
   return (
     <div ref={drop} className="flex-1 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md">
-      <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">{label}</h3>
-      {players.length === 0 ? (
+      <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">{team.name}</h3>
+      {team.players.length === 0 ? (
         <p className="text-sm text-gray-500 dark:text-gray-400">No players assigned</p>
       ) : (
-        players.map((player) => (
-          <PlayerCard key={player.id} player={player} team={team} />
+        team.players.map((playerId) => (
+          <PlayerCard key={playerId} playerId={playerId} teamName={team.name} players={players} />
         ))
       )}
     </div>
@@ -140,14 +159,31 @@ const TeamColumn = ({ team, players, setTeams, label }: { team: string; players:
 };
 
 // Team Selection Dialog Component
-const TeamSelectionDialog = ({ players, teams, setTeams, isOpen, onClose, matchDate, matchTime }: { players: Player[]; teams: { teamA: Team; teamB: Team }; setTeams: any; isOpen: boolean; onClose: () => void; matchDate: string; matchTime: string }) => {
+const TeamSelectionDialog = ({
+  players,
+  teams,
+  setTeams,
+  isOpen,
+  onClose,
+  matchDate,
+  matchTime,
+}: {
+  players: Player[];
+  teams: Team[];
+  setTeams: (teams: Team[]) => void;
+  isOpen: boolean;
+  onClose: () => void;
+  matchDate: string;
+  matchTime: string;
+}) => {
   const { toast } = useToast();
-  const [playersPerTeam, setPlayersPerTeam] = useState(5);
+  const [numTeams, setNumTeams] = useState(teams.length || 2);
+  const [playersPerTeam, setPlayersPerTeam] = useState(Math.floor(players.length / (teams.length || 2)) || 5);
   const now = new Date();
   const matchDateTime = new Date(`${matchDate}T${matchTime}`);
   const isMatchPast = isPast(matchDateTime);
 
-  const balanceTeams = () => {
+  const generateTeams = () => {
     if (isMatchPast) {
       toast({
         title: "Action Not Available",
@@ -156,18 +192,32 @@ const TeamSelectionDialog = ({ players, teams, setTeams, isOpen, onClose, matchD
       });
       return;
     }
-    const sorted = [...players].sort((a, b) => b.skill - a.skill);
-    const totalPlayers = Math.min(playersPerTeam * 2, sorted.length);
-    const newTeams = { teamA: [], teamB: [] };
-    for (let i = 0; i < totalPlayers; i++) {
-      if (i < playersPerTeam) newTeams.teamA.push(sorted[i]);
-      else newTeams.teamB.push(sorted[i]);
+    if (numTeams < 2 || numTeams > 10) {
+      toast({
+        title: "Invalid Input",
+        description: "Number of teams must be between 2 and 10.",
+        variant: "destructive",
+      });
+      return;
     }
+    const shuffled = [...players].sort(() => Math.random() - 0.5); // Randomize players
+    const totalPlayers = Math.min(playersPerTeam * numTeams, shuffled.length);
+    const newTeams: Team[] = Array.from({ length: numTeams }, (_, i) => ({
+      name: `Team ${i + 1}`,
+      players: [],
+      score: 0,
+      analytics: { possession: 50, shots: 0, fouls: 0, yellow_cards: 0, red_cards: 0 },
+    }));
+
+    for (let i = 0; i < totalPlayers; i++) {
+      newTeams[i % numTeams].players.push(shuffled[i].id);
+    }
+
     setTeams(newTeams);
     onClose();
     toast({
       title: "Teams Generated",
-      description: "Teams have been automatically assigned.",
+      description: `${numTeams} teams have been randomly assigned.`,
     });
   };
 
@@ -176,16 +226,30 @@ const TeamSelectionDialog = ({ players, teams, setTeams, isOpen, onClose, matchD
       <DialogContent>
         <DialogTitle>Generate Teams</DialogTitle>
         <DialogDescription>
-          <p className="mb-4">Set the number of players per team and generate balanced teams.</p>
-          <Input
-            type="number"
-            value={playersPerTeam}
-            onChange={(e) => setPlayersPerTeam(Math.max(1, Math.min(10, parseInt(e.target.value) || 5)))}
-            min="1"
-            max="10"
-            className="mb-4"
-          />
-          <Button onClick={balanceTeams} className="w-full bg-green-500 hover:bg-green-600 text-white" disabled={isMatchPast}>
+          <p className="mb-4">Set the number of teams and players per team.</p>
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Number of Teams (2-10)</label>
+            <Input
+              type="number"
+              value={numTeams}
+              onChange={(e) => setNumTeams(Math.max(2, Math.min(10, parseInt(e.target.value) || 2)))}
+              min="2"
+              max="10"
+              className="mt-1"
+            />
+          </div>
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Players per Team</label>
+            <Input
+              type="number"
+              value={playersPerTeam}
+              onChange={(e) => setPlayersPerTeam(Math.max(1, Math.min(20, parseInt(e.target.value) || 5)))}
+              min="1"
+              max="20"
+              className="mt-1"
+            />
+          </div>
+          <Button onClick={generateTeams} className="w-full bg-green-500 hover:bg-green-600 text-white" disabled={isMatchPast}>
             Generate Teams
           </Button>
         </DialogDescription>
@@ -202,6 +266,7 @@ const RulesTemplateDialog = ({ isOpen, onClose, matchId }: { isOpen: boolean; on
     "Standard 11v11": "11 players per side, 90-minute match, standard fouls and offsides apply.",
     "5v5 Casual": "5 players per side, 30-minute match, no offsides.",
     "7v7 Youth": "7 players per side, 60-minute match, modified fouls.",
+    "10v10 Tournament": "10 players per side, 60-minute match, standard rules.",
   };
 
   const applyRule = async () => {
@@ -264,62 +329,175 @@ const TeamManagement = () => {
   const { toast } = useToast();
   const [match, setMatch] = useState<Match | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
-  const [teams, setTeams] = useState<{ teamA: Team; teamB: Team }>({ teamA: [], teamB: [] });
+  const [teams, setTeams] = useState<Team[]>([]);
   const [mode, setMode] = useState<"automatic" | "manual">("automatic");
   const [supercodeInput, setSupercodeInput] = useState("");
   const [isVerified, setIsVerified] = useState(false);
   const [verificationOpen, setVerificationOpen] = useState(true);
-  const [scorea, setScorea] = useState(0);
-  const [scoreb, setScoreb] = useState(0);
   const [events, setEvents] = useState<MatchEvent[]>([]);
-  const [analytics, setAnalytics] = useState<MatchAnalytics>({
-    teamA: { possession: 50, shots: 0, fouls: 0 },
-    teamB: { possession: 50, shots: 0, fouls: 0 },
-  });
   const [isPublic, setIsPublic] = useState(false);
-  const [history, setHistory] = useState<{ teamA: Team; teamB: Team }[]>([]);
+  const [history, setHistory] = useState<Team[][]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [isExporting, setIsExporting] = useState(false);
   const [teamSelectionOpen, setTeamSelectionOpen] = useState(false);
   const [rulesTemplateOpen, setRulesTemplateOpen] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
 
-  // Fetch match and players
+  // Auto-generate analytics and rankings
+  const generateAnalyticsAndRankings = (events: MatchEvent[], teams: Team[]): { updatedTeams: Team[]; rankings: TeamRanking[] } => {
+    const updatedTeams = teams.map((team) => ({
+      ...team,
+      score: 0,
+      analytics: { possession: 50, shots: 0, fouls: 0, yellow_cards: 0, red_cards: 0 },
+    }));
+
+    const teamStats: { [key: string]: TeamRanking } = {};
+    teams.forEach((team) => {
+      teamStats[team.name] = { name: team.name, goals: 0, points: 0, yellow_cards: 0, red_cards: 0, fouls: 0, shots: 0 };
+    });
+
+    let totalActions = 0;
+    events.forEach((event) => {
+      const team = updatedTeams.find((t) => t.name === event.team_name);
+      if (!team || !teamStats[event.team_name]) return;
+
+      if (event.type === "goal") {
+        team.score += 1;
+        teamStats[event.team_name].goals += 1;
+        teamStats[event.team_name].points += 3; // 3 points for a goal
+        totalActions += 1;
+      } else if (event.type === "yellow_card") {
+        team.analytics.yellow_cards += 1;
+        teamStats[event.team_name].yellow_cards += 1;
+        teamStats[event.team_name].points -= 1; // -1 point for yellow card
+        totalActions += 1;
+      } else if (event.type === "red_card") {
+        team.analytics.red_cards += 1;
+        teamStats[event.team_name].red_cards += 1;
+        teamStats[event.team_name].points -= 3; // -3 points for red card
+        totalActions += 1;
+      } else if (event.type === "foul") {
+        team.analytics.fouls += 1;
+        teamStats[event.team_name].fouls += 1;
+        teamStats[event.team_name].points -= 0.5; // -0.5 points for foul
+        totalActions += 1;
+      } else if (event.type === "shot") {
+        team.analytics.shots += 1;
+        teamStats[event.team_name].shots += 1;
+        totalActions += 1;
+      }
+    });
+
+    // Calculate possession
+    const actionsPerTeam: { [key: string]: number } = {};
+    teams.forEach((team) => (actionsPerTeam[team.name] = 0));
+    events.forEach((event) => {
+      if (["goal", "shot", "foul"].includes(event.type) && actionsPerTeam[event.team_name] !== undefined) {
+        actionsPerTeam[event.team_name] += 1;
+      }
+    });
+
+    const totalTeamActions = Object.values(actionsPerTeam).reduce((sum, val) => sum + val, 0);
+    updatedTeams.forEach((team) => {
+      if (totalTeamActions > 0) {
+        team.analytics.possession = Math.round((actionsPerTeam[team.name] / totalTeamActions) * 100);
+      }
+    });
+
+    // Generate rankings
+    const rankings = Object.values(teamStats).sort((a, b) => {
+      if (b.points !== a.points) return b.points - a.points;
+      if (b.goals !== a.goals) return b.goals - a.goals;
+      return a.red_cards - b.red_cards; // Fewer red cards win
+    });
+
+    return { updatedTeams, rankings };
+  };
+
+  // Fetch match, teams, events, and players
   useEffect(() => {
     const fetchMatch = async () => {
       if (!slug) return;
 
       try {
-        const { data, error } = await supabase
+        const { data: matchData, error: matchError } = await supabase
           .from("matches")
-          .select("id, slug, super_code, title, teama, teamb, scorea, scoreb, events, analytics, is_public, match_date, match_time")
+          .select(`
+            id,
+            slug,
+            super_code,
+            title,
+            match_date,
+            match_time,
+            team_assignments (
+              id,
+              teams,
+              is_public
+            )
+          `)
           .eq("slug", slug)
           .single();
 
-        if (error) throw error;
+        if (matchError) throw matchError;
 
-        setMatch(data);
-        setTeams({
-          teamA: data.teama || [],
-          teamB: data.teamb || [],
+        const teamAssignment = matchData.team_assignments[0] || {};
+        setMatch({
+          id: matchData.id,
+          slug: matchData.slug,
+          super_code: matchData.super_code,
+          title: matchData.title,
+          match_date: matchData.match_date,
+          match_time: matchData.match_time,
         });
-        setScorea(data.scorea || 0);
-        setScoreb(data.scoreb || 0);
-        setEvents(data.events || []);
-        setAnalytics(data.analytics || {
-          teamA: { possession: 50, shots: 0, fouls: 0 },
-          teamB: { possession: 50, shots: 0, fouls: 0 },
-        });
-        setIsPublic(data.is_public || false);
 
-        // Fetch players
+        const defaultTeams: Team[] = [
+          { name: "Team 1", players: [], score: 0, analytics: { possession: 50, shots: 0, fouls: 0, yellow_cards: 0, red_cards: 0 } },
+          { name: "Team 2", players: [], score: 0, analytics: { possession: 50, shots: 0, fouls: 0, yellow_cards: 0, red_cards: 0 } },
+        ];
+        const initialTeams = teamAssignment.teams?.length ? teamAssignment.teams : defaultTeams;
+        setTeams(initialTeams);
+        setIsPublic(teamAssignment.is_public || false);
+
+        const { data: eventsData, error: eventsError } = await supabase
+          .from("match_events")
+          .select("*")
+          .eq("match_id", matchData.id)
+          .order("created_at", { ascending: true });
+
+        if (eventsError) throw eventsError;
+        setEvents(eventsData || []);
+
         const { data: playersData, error: playersError } = await supabase
           .from("players")
           .select("id, name, avatar, skill, position")
-          .eq("match_id", data.id);
+          .eq("match_id", matchData.id);
 
         if (playersError) throw playersError;
         setPlayers(playersData || []);
+
+        // Auto-generate teams if none exist
+        if (!teamAssignment.teams?.length && playersData?.length) {
+          const numTeams = 2;
+          const playersPerTeam = Math.floor(playersData.length / numTeams);
+          const shuffled = [...playersData].sort(() => Math.random() - 0.5);
+          const newTeams: Team[] = Array.from({ length: numTeams }, (_, i) => ({
+            name: `Team ${i + 1}`,
+            players: [],
+            score: 0,
+            analytics: { possession: 50, shots: 0, fouls: 0, yellow_cards: 0, red_cards: 0 },
+          }));
+
+          for (let i = 0; i < Math.min(playersPerTeam * numTeams, shuffled.length); i++) {
+            newTeams[i % numTeams].players.push(shuffled[i].id);
+          }
+
+          setTeams(newTeams);
+          addToHistory(newTeams);
+          toast({
+            title: "Teams Auto-Assigned",
+            description: "Teams have been randomly assigned. Click 'Regenerate Teams' to reassign.",
+          });
+        }
       } catch (error) {
         console.error("Error fetching match:", error);
         toast({
@@ -351,23 +529,8 @@ const TeamManagement = () => {
     }
   };
 
-  // Automatic team balancing
-  const balanceTeams = () => {
-    const sorted = [...players].sort((a, b) => b.skill - a.skill);
-    const newTeams = sorted.reduce(
-      (teams, player, i) => {
-        teams[i % 2 === 0 ? "teamA" : "teamB"].push(player);
-        return teams;
-      },
-      { teamA: [], teamB: [] } as { teamA: Team; teamB: Team }
-    );
-
-    setTeams(newTeams);
-    addToHistory(newTeams);
-  };
-
   // Undo/Redo functionality
-  const addToHistory = (newTeams: { teamA: Team; teamB: Team }) => {
+  const addToHistory = (newTeams: Team[]) => {
     const newHistory = history.slice(0, historyIndex + 1);
     newHistory.push(newTeams);
     setHistory(newHistory);
@@ -392,20 +555,45 @@ const TeamManagement = () => {
   const saveTeams = async () => {
     if (!match) return;
 
+    // Validate no duplicate players
+    const allPlayers = teams.flatMap((t) => t.players);
+    if (new Set(allPlayers).size !== allPlayers.length) {
+      toast({
+        title: "Error",
+        description: "A player cannot be assigned to multiple teams.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
-      const { error } = await supabase
-        .from("matches")
-        .update({
-          teama: teams.teamA,
-          teamb: teams.teamB,
-        })
-        .eq("id", match.id);
+      const { data: existingAssignment, error: fetchError } = await supabase
+        .from("team_assignments")
+        .select("id")
+        .eq("match_id", match.id)
+        .single();
+
+      if (fetchError && fetchError.code !== "PGRST116") throw fetchError;
+
+      const teamAssignmentData = {
+        match_id: match.id,
+        super_code: match.super_code,
+        teams,
+        is_public,
+      };
+
+      const { error } = existingAssignment
+        ? await supabase
+            .from("team_assignments")
+            .update(teamAssignmentData)
+            .eq("id", existingAssignment.id)
+        : await supabase.from("team_assignments").insert(teamAssignmentData);
 
       if (error) throw error;
 
       toast({
         title: "Teams Saved",
-        description: "Team assignments have been updated.",
+        description: "Team assignments and analytics have been updated.",
       });
     } catch (error) {
       console.error("Error saving teams:", error);
@@ -417,11 +605,9 @@ const TeamManagement = () => {
     }
   };
 
-  // Score validation and update
-  const validateScore = (value: string) => /^\d+$/.test(value) && parseInt(value) < 30;
-
-  const handleScoreChange = async (team: "teamA" | "teamB", value: string) => {
-    if (!validateScore(value)) {
+  // Handle score change
+  const handleScoreChange = async (teamName: string, value: string) => {
+    if (!/^\d+$/.test(value) || parseInt(value) >= 30) {
       toast({
         title: "Invalid Score",
         description: "Score must be a number less than 30.",
@@ -431,64 +617,52 @@ const TeamManagement = () => {
     }
 
     const score = parseInt(value);
-    if (team === "teamA") {
-      setScorea(score);
-    } else {
-      setScoreb(score);
-    }
-
-    if (match) {
-      try {
-        const { error } = await supabase
-          .from("matches")
-          .update({ [team === "teamA" ? "scorea" : "scoreb"]: score })
-          .eq("id", match.id);
-        if (error) throw error;
-      } catch (error) {
-        console.error("Error updating score:", error);
-        toast({
-          title: "Error",
-          description: "Failed to update score.",
-          variant: "destructive",
-        });
-      }
-    }
+    const updatedTeams = teams.map((t) => (t.name === teamName ? { ...t, score } : t));
+    setTeams(updatedTeams);
+    addToHistory(updatedTeams);
+    await saveTeams();
   };
 
   // Add match event
-  const addEvent = (type: MatchEvent["type"], team: "teamA" | "teamB", description: string) => {
+  const addEvent = async (type: MatchEvent["type"], teamName: string, description: string) => {
+    if (!match) return;
+
     const newEvent: MatchEvent = {
-      id: Math.random().toString(36).substring(2),
-      match_id: match?.id || "",
+      id: crypto.randomUUID(),
+      match_id: match.id,
       type,
-      team,
+      team_name: teamName,
       minute: Math.floor(Date.now() / 60000) % 90,
       description,
     };
 
-    setEvents((prev) => [...prev, newEvent]);
+    try {
+      const { error } = await supabase.from("match_events").insert(newEvent);
+      if (error) throw error;
 
-    if (match) {
-      supabase.from("match_events").insert(newEvent);
+      const updatedEvents = [...events, newEvent];
+      setEvents(updatedEvents);
+      const { updatedTeams } = generateAnalyticsAndRankings(updatedEvents, teams);
+      setTeams(updatedTeams);
+      await saveTeams();
+    } catch (error) {
+      console.error("Error adding event:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add event.",
+        variant: "destructive",
+      });
     }
   };
 
-  // Update analytics
-  const updateAnalytics = (team: "teamA" | "teamB", field: keyof MatchAnalytics["teamA"], value: number) => {
-    setAnalytics((prev) => ({
-      ...prev,
-      [team]: {
-        ...prev[team],
-        [field]: value,
-      },
-    }));
-
-    if (match) {
-      supabase
-        .from("matches")
-        .update({ analytics })
-        .eq("id", match.id);
-    }
+  // Update analytics manually
+  const updateAnalytics = async (teamName: string, field: keyof Team["analytics"], value: number) => {
+    const updatedTeams = teams.map((t) =>
+      t.name === teamName ? { ...t, analytics: { ...t.analytics, [field]: value } } : t
+    );
+    setTeams(updatedTeams);
+    addToHistory(updatedTeams);
+    await saveTeams();
   };
 
   // Toggle privacy
@@ -496,10 +670,24 @@ const TeamManagement = () => {
     setIsPublic((prev) => !prev);
     if (match) {
       try {
-        await supabase
-          .from("matches")
-          .update({ is_public: !isPublic })
-          .eq("id", match.id);
+        const { data: existingAssignment, error: fetchError } = await supabase
+          .from("team_assignments")
+          .select("id")
+          .eq("match_id", match.id)
+          .single();
+
+        if (fetchError && fetchError.code !== "PGRST116") throw fetchError;
+
+        const { error } = existingAssignment
+          ? await supabase
+              .from("team_assignments")
+              .update({ is_public: !isPublic })
+              .eq("id", existingAssignment.id)
+          : await supabase
+              .from("team_assignments")
+              .insert({ is_public: !isPublic, match_id: match.id, super_code: match.super_code, teams });
+
+        if (error) throw error;
         toast({
           title: "Success",
           description: `Match is now ${!isPublic ? "public" : "private"}.`,
@@ -549,6 +737,8 @@ const TeamManagement = () => {
     );
   }
 
+  const { rankings } = generateAnalyticsAndRankings(events, teams);
+
   return (
     <DndProvider backend={typeof window !== "undefined" && "ontouchstart" in window ? TouchBackend : HTML5Backend}>
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-24">
@@ -593,7 +783,7 @@ const TeamManagement = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="flex items-center gap-3">
                     <Trophy size={20} className="text-green-500" />
-                    <span className="text-gray-900 dark:text-gray-100">Score: {scorea} - {scoreb}</span>
+                    <span className="text-gray-900 dark:text-gray-100">Teams: {teams.length}</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <Clock size={20} className="text-green-500" />
@@ -615,13 +805,16 @@ const TeamManagement = () => {
                       onClick={() => setTeamSelectionOpen(true)}
                       className="bg-green-500 hover:bg-green-600 text-white"
                     >
-                      Generate Teams
+                      Regenerate Teams
                     </Button>
                   </DialogTrigger>
                   <TeamSelectionDialog
                     players={players}
                     teams={teams}
-                    setTeams={setTeams}
+                    setTeams={(newTeams) => {
+                      setTeams(newTeams);
+                      addToHistory(newTeams);
+                    }}
                     isOpen={teamSelectionOpen}
                     onClose={() => setTeamSelectionOpen(false)}
                     matchDate={match.match_date}
@@ -652,85 +845,130 @@ const TeamManagement = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <TeamColumn
-                  team="teamA"
-                  players={teams.teamA}
-                  setTeams={setTeams}
-                  label="Team A"
-                />
-                <TeamColumn
-                  team="teamB"
-                  players={teams.teamB}
-                  setTeams={setTeams}
-                  label="Team B"
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {teams.map((team) => (
+                  <TeamColumn
+                    key={team.name}
+                    team={team}
+                    setTeams={(newTeams) => {
+                      setTeams(newTeams);
+                      addToHistory(newTeams);
+                    }}
+                    players={players}
+                  />
+                ))}
               </div>
 
               <div ref={reportRef} className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700">
                 <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Match Report</h2>
                 <div className="space-y-4">
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Score</h3>
-                    <div className="flex gap-4">
-                      <Input
-                        type="number"
-                        value={scorea}
-                        onChange={(e) => handleScoreChange("teamA", e.target.value)}
-                        className="w-20"
-                        min="0"
-                        max="29"
-                      />
-                      <span className="text-gray-900 dark:text-gray-100">-</span>
-                      <Input
-                        type="number"
-                        value={scoreb}
-                        onChange={(e) => handleScoreChange("teamB", e.target.value)}
-                        className="w-20"
-                        min="0"
-                        max="29"
-                      />
-                    </div>
+                    <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Score Table</h3>
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-gray-100 dark:bg-gray-700">
+                          <th className="p-2 text-gray-900 dark:text-gray-100">Team</th>
+                          <th className="p-2 text-gray-900 dark:text-gray-100">Score</th>
+                          <th className="p-2 text-gray-900 dark:text-gray-100">Possession</th>
+                          <th className="p-2 text-gray-900 dark:text-gray-100">Shots</th>
+                          <th className="p-2 text-gray-900 dark:text-gray-100">Fouls</th>
+                          <th className="p-2 text-gray-900 dark:text-gray-100">Yellow Cards</th>
+                          <th className="p-2 text-gray-900 dark:text-gray-100">Red Cards</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {teams.map((team) => (
+                          <tr key={team.name} className="border-b dark:border-gray-600">
+                            <td className="p-2 text-gray-900 dark:text-gray-100">{team.name}</td>
+                            <td className="p-2">
+                              <Input
+                                type="number"
+                                value={team.score}
+                                onChange={(e) => handleScoreChange(team.name, e.target.value)}
+                                className="w-20"
+                                min="0"
+                                max="29"
+                              />
+                            </td>
+                            <td className="p-2 text-gray-900 dark:text-gray-100">{team.analytics.possession}%</td>
+                            <td className="p-2 text-gray-900 dark:text-gray-100">{team.analytics.shots}</td>
+                            <td className="p-2 text-gray-900 dark:text-gray-100">{team.analytics.fouls}</td>
+                            <td className="p-2 text-gray-900 dark:text-gray-100">{team.analytics.yellow_cards}</td>
+                            <td className="p-2 text-gray-900 dark:text-gray-100">{team.analytics.red_cards}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Rankings</h3>
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-gray-100 dark:bg-gray-700">
+                          <th className="p-2 text-gray-900 dark:text-gray-100">Rank</th>
+                          <th className="p-2 text-gray-900 dark:text-gray-100">Team</th>
+                          <th className="p-2 text-gray-900 dark:text-gray-100">Points</th>
+                          <th className="p-2 text-gray-900 dark:text-gray-100">Goals</th>
+                          <th className="p-2 text-gray-900 dark:text-gray-100">Yellow Cards</th>
+                          <th className="p-2 text-gray-900 dark:text-gray-100">Red Cards</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {rankings.map((team, index) => (
+                          <tr key={team.name} className="border-b dark:border-gray-600">
+                            <td className="p-2 text-gray-900 dark:text-gray-100">{index + 1}</td>
+                            <td className="p-2 text-gray-900 dark:text-gray-100">{team.name}</td>
+                            <td className="p-2 text-gray-900 dark:text-gray-100">{team.points}</td>
+                            <td className="p-2 text-gray-900 dark:text-gray-100">{team.goals}</td>
+                            <td className="p-2 text-gray-900 dark:text-gray-100">{team.yellow_cards}</td>
+                            <td className="p-2 text-gray-900 dark:text-gray-100">{team.red_cards}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Events</h3>
                     {events.map((event) => (
                       <p key={event.id} className="text-gray-600 dark:text-gray-400">
-                        {event.minute}' - {event.type} ({event.team}): {event.description}
+                        {event.minute}' - {event.type.replace("_", " ")} ({event.team_name}): {event.description}
                       </p>
                     ))}
-                    <Button
-                      onClick={() => addEvent("goal", "teamA", "Goal scored")}
-                      className="mt-2 bg-green-500 hover:bg-green-600 text-white"
-                    >
-                      Add Goal (Team A)
-                    </Button>
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Analytics</h3>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-gray-600 dark:text-gray-400">Team A Possession: {analytics.teamA.possession}%</p>
-                        <Input
-                          type="number"
-                          value={analytics.teamA.possession}
-                          onChange={(e) => updateAnalytics("teamA", "possession", parseInt(e.target.value))}
-                          className="w-20"
-                          min="0"
-                          max="100"
-                        />
-                      </div>
-                      <div>
-                        <p className="text-gray-600 dark:text-gray-400">Team B Possession: {analytics.teamB.possession}%</p>
-                        <Input
-                          type="number"
-                          value={analytics.teamB.possession}
-                          onChange={(e) => updateAnalytics("teamB", "possession", parseInt(e.target.value))}
-                          className="w-20"
-                          min="0"
-                          max="100"
-                        />
-                      </div>
+                    <div className="flex gap-2 mt-2">
+                      {teams.map((team) => (
+                        <div key={team.name}>
+                          <Button
+                            onClick={() => addEvent("goal", team.name, `Goal scored by ${team.name}`)}
+                            className="bg-green-500 hover:bg-green-600 text-white mr-2"
+                          >
+                            Goal ({team.name})
+                          </Button>
+                          <Button
+                            onClick={() => addEvent("yellow_card", team.name, `Yellow card for ${team.name}`)}
+                            className="bg-yellow-500 hover:bg-yellow-600 text-white mr-2"
+                          >
+                            Yellow Card
+                          </Button>
+                          <Button
+                            onClick={() => addEvent("red_card", team.name, `Red card for ${team.name}`)}
+                            className="bg-red-500 hover:bg-red-600 text-white mr-2"
+                          >
+                            Red Card
+                          </Button>
+                          <Button
+                            onClick={() => addEvent("foul", team.name, `Foul by ${team.name}`)}
+                            className="bg-gray-500 hover:bg-gray-600 text-white mr-2"
+                          >
+                            Foul
+                          </Button>
+                          <Button
+                            onClick={() => addEvent("shot", team.name, `Shot by ${team.name}`)}
+                            className="bg-blue-500 hover:bg-blue-600 text-white"
+                          >
+                            Shot
+                          </Button>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
