@@ -9,6 +9,7 @@ import { ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
 import { differenceInMinutes, isPast, addHours } from "date-fns";
+import { useWalletBalance } from "@/hooks/useWalletBalance";
 
 type Match = {
   id: string;
@@ -119,12 +120,17 @@ const PlayerManagement = ({
   const [accountNameError, setAccountNameError] = useState<string | null>(null);
   const [amountError, setAmountError] = useState<string | null>(null);
   const [isPlayersOpen, setIsPlayersOpen] = useState(false);
-  const [walletBalance, setWalletBalance] = useState<number>(0);
   const [cashoutRequests, setCashoutRequests] = useState<Cashout[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
   const [checkingInPlayers, setCheckingInPlayers] = useState<{ [key: string]: boolean }>({});
 
-  // Initialize playerStatuses with fresh data from Supabase
+  const walletBalance = useWalletBalance(
+    match?.id,
+    match?.is_paid || false,
+    match?.price,
+    match?.status
+  );
+
   useEffect(() => {
     if (!match?.id) return;
 
@@ -164,111 +170,8 @@ const PlayerManagement = ({
     fetchPlayerStatuses();
   }, [match, setPlayerStatuses, checkinCodes, toast]);
 
-  const fetchWalletData = useCallback(async () => {
-    if (!match || !match.id) return;
-
-    try {
-      // Fetch fresh player data from Supabase for wallet balance calculation
-      const { data: playersData, error: playersError } = await supabase
-        .from('players')
-        .select('player_status, number_of_slots')
-        .eq('match_id', match.id);
-
-      if (playersError) throw playersError;
-
-      // Calculate wallet balance
-      let balance = 0;
-      if (match.is_paid && match.price) {
-        const checkedInPlayers = playersData.filter(p => p.player_status === 'Checked In');
-        balance = checkedInPlayers.reduce(
-          (sum, player) => sum + ((player.number_of_slots || 1) * (match.price || 0)),
-          0
-        );
-      }
-
-      // Subtract cashout amounts for review, processed, and successful statuses
-      const { data: cashoutData, error: cashoutError } = await supabase
-        .from("cashout_requests")
-        .select("amount, status")
-        .eq("match_id", match.id)
-        .in("status", ["Review", "Processed", "Successful"]);
-
-      if (cashoutError) throw cashoutError;
-
-      if (cashoutData) {
-        const cashoutTotal = cashoutData.reduce((sum, request) => sum + (request.amount || 0), 0);
-        balance -= cashoutTotal;
-        setCashoutRequests(cashoutData);
-      } else {
-        setCashoutRequests([]);
-      }
-
-      setWalletBalance(balance < 0 ? 0 : balance);
-
-      // Check if match has ended and update players to Absent if necessary
-      const now = new Date();
-      let matchEndTime: Date;
-      try {
-        if (match.match_end_time) {
-          matchEndTime = new Date(match.match_end_time);
-        } else {
-          matchEndTime = addHours(new Date(`${match.match_date}T${match.match_time}`), 2);
-        }
-        if (isNaN(matchEndTime.getTime())) {
-          matchEndTime = new Date("2025-05-17T15:00:00+01:00");
-        }
-      } catch (error) {
-        matchEndTime = new Date("2025-05-17T15:00:00+01:00");
-      }
-
-      if (isPast(matchEndTime) && playersData.length > 0) {
-        const registeredPlayers = playersData.filter(p => p.player_status === 'Registered');
-        if (registeredPlayers.length > 0) {
-          try {
-            const { error: updateError } = await supabase
-              .from('players')
-              .update({ 
-                player_status: 'Absent',
-                updated_at: new Date().toISOString()
-              })
-              .eq('match_id', match.id)
-              .eq('player_status', 'Registered');
-
-            if (updateError) throw updateError;
-
-            setPlayerStatuses(prev =>
-              prev.map(p => 
-                registeredPlayers.some(rp => rp.id === p.id) 
-                  ? { ...p, status: 'Absent' } 
-                  : p
-              )
-            );
-
-            await fetchMatch();
-          } catch (error) {
-            console.error("Error updating players to Absent:", error);
-            toast({
-              title: "Error",
-              description: "Failed to update player statuses to Absent.",
-              variant: "destructive",
-            });
-          }
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching data for wallet balance:", error);
-      toast({
-        title: "Error",
-        description: "Failed to calculate wallet balance.",
-        variant: "destructive",
-      });
-      setWalletBalance(0);
-      setCashoutRequests([]);
-    }
-  }, [match, fetchMatch, setPlayerStatuses, toast]);
-
   useEffect(() => {
-    const fetchUserIdAndData = async () => {
+    const fetchUserIdAndCashouts = async () => {
       const { data: session } = await supabase.auth.getSession();
       if (session.session) {
         setUserId(session.session.user.id);
@@ -277,37 +180,33 @@ const PlayerManagement = ({
       }
 
       if (!match || !userId) {
-        setWalletBalance(0);
         setCashoutRequests([]);
         return;
       }
 
-      await fetchWalletData();
+      try {
+        const { data: cashoutData, error: cashoutError } = await supabase
+          .from("cashout_requests")
+          .select("*")
+          .eq("match_id", match.id)
+          .order("created_at", { ascending: false });
 
-      // Set up real-time subscription for cashout_requests
-      const channel = supabase
-        .channel(`cashout_requests_match_${match.id}`)
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'cashout_requests',
-            filter: `match_id=eq.${match.id}`,
-          },
-          () => {
-            fetchWalletData(); // Re-fetch balance on cashout status change
-          }
-        )
-        .subscribe();
+        if (cashoutError) throw cashoutError;
 
-      return () => {
-        supabase.removeChannel(channel);
-      };
+        setCashoutRequests(cashoutData || []);
+      } catch (error) {
+        console.error("Error fetching cashout requests:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load cashout requests.",
+          variant: "destructive",
+        });
+        setCashoutRequests([]);
+      }
     };
 
-    fetchUserIdAndData();
-  }, [match, userId, fetchWalletData]);
+    fetchUserIdAndCashouts();
+  }, [match, userId, toast]);
 
   const hasCheckedInPlayers = () => {
     return playerStatuses.some(p => p.status === 'Checked In') || false;
@@ -456,9 +355,6 @@ const PlayerManagement = ({
         setCashoutRequests(cashoutData);
       }
 
-      // Update wallet balance after cashout
-      setWalletBalance(prev => prev - Number(cashoutAmount) < 0 ? 0 : prev - Number(cashoutAmount));
-
       setCashoutDialogOpen(false);
       setBankAccountNumber("");
       setBankName("");
@@ -534,7 +430,6 @@ const PlayerManagement = ({
 
       if (updateError) throw updateError;
 
-      // Fetch the updated player data directly from Supabase
       const { data: updatedPlayerData, error: fetchError } = await supabase
         .from('players')
         .select('id, player_status')
@@ -628,6 +523,11 @@ const PlayerManagement = ({
         <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
           Wallet Balance: ₦{walletBalance.toFixed(2)}
         </p>
+        {walletBalance === 0 && (
+          <p className="text-sm text-red-600 dark:text-red-500 mt-1">
+            Wallet balance is zero. Ensure players are checked in or try refreshing.
+          </p>
+        )}
       </div>
 
       <div className="flex gap-3 mb-4">
