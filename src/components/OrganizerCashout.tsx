@@ -85,25 +85,24 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
     }
 
     try {
-      // Fetch fresh player data from Supabase for wallet balance calculation
+      // Fetch player data
       const { data: playersData, error: playersError } = await supabase
-        .from('players')
-        .select('player_status, number_of_slots')
-        .eq('match_id', match.id);
+        .from("players")
+        .select("player_status, number_of_slots")
+        .eq("match_id", match.id);
 
       if (playersError) throw playersError;
 
-      // Calculate wallet balance
       let balance = 0;
       if (match.is_paid && match.price) {
-        const checkedInPlayers = playersData.filter(p => p.player_status === 'Checked In');
+        const checkedInPlayers = playersData.filter((p) => p.player_status === "Checked In");
         balance = checkedInPlayers.reduce(
           (sum, player) => sum + ((player.number_of_slots || 1) * (match.price || 0)),
           0
         );
       }
 
-      // Subtract cashout amounts for review, processed, and successful statuses
+      // Subtract cashout amounts for Review, Processed, and Successful statuses
       const { data: cashoutData, error: cashoutError } = await supabase
         .from("cashout_requests")
         .select("amount, status")
@@ -115,9 +114,6 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
       if (cashoutData) {
         const cashoutTotal = cashoutData.reduce((sum, request) => sum + (request.amount || 0), 0);
         balance -= cashoutTotal;
-        setCashoutRequests(cashoutData);
-      } else {
-        setCashoutRequests([]);
       }
 
       setWalletBalance(balance < 0 ? 0 : balance);
@@ -129,7 +125,6 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
         variant: "destructive",
       });
       setWalletBalance(0);
-      setCashoutRequests([]);
     }
   }, [match, toast]);
 
@@ -148,6 +143,27 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
         return;
       }
 
+      // Fetch cashout requests
+      try {
+        const { data, error } = await supabase
+          .from("cashout_requests")
+          .select("*")
+          .eq("match_id", match.id)
+          .order("created_at", { ascending: false });
+
+        if (error) throw error;
+
+        setCashoutRequests(data || []);
+      } catch (error) {
+        console.error("Error fetching cashout requests:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load cashout requests.",
+          variant: "destructive",
+        });
+        setCashoutRequests([]);
+      }
+
       await fetchWalletData();
 
       // Set up real-time subscription for cashout_requests
@@ -163,6 +179,17 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
           },
           () => {
             fetchWalletData(); // Re-fetch balance on cashout status change
+            // Re-fetch cashout requests
+            supabase
+              .from("cashout_requests")
+              .select("*")
+              .eq("match_id", match.id)
+              .order("created_at", { ascending: false })
+              .then(({ data, error }) => {
+                if (!error && data) {
+                  setCashoutRequests(data);
+                }
+              });
           }
         )
         .subscribe();
@@ -192,7 +219,7 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
     }
     if (!accountNameValidation.success) {
       setAccountNameError(accountNameValidation.error.errors[0].message);
-      return Kd;
+      return;
     }
     if (!amountValidation.success) {
       setAmountError(amountValidation.error.errors[0].message);
@@ -321,7 +348,7 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
       <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Cashout Requests</h2>
       <div className="mb-4">
         <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-          Wallet Balance: ₦{walletBalance.toFixed(2)}
+          Wallet Balance: ₦{walletBalance.toLocaleString()}
         </p>
       </div>
       <div className="mb-4">
@@ -344,7 +371,7 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
               <div className="flex justify-between items-center">
                 <div>
                   <p className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                    ₦{request.amount.toFixed(2)}
+                    ₦{request.amount.toLocaleString()}
                   </p>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
                     {new Date(request.created_at).toLocaleString("en-NG", {
@@ -378,7 +405,7 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
           <DialogHeader>
             <DialogTitle>Request Cashout</DialogTitle>
             <DialogDescription>
-              Enter your bank details and amount to request a cashout for this match. Amount must not exceed your wallet balance (₦{walletBalance.toFixed(2)}).
+              Enter your bank details and amount to request a cashout for this match. Amount must not exceed your wallet balance (₦{walletBalance.toLocaleString()}).
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
