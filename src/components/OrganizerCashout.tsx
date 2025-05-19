@@ -17,7 +17,7 @@ type CashoutRequest = {
     bank_name: string;
     account_name: string;
   } | null | undefined;
-  status: "review" | "processed" | "successful" | "failed";
+  status: "Review" | "Processed" | "Successful" | "Failed";
   temp_identifier?: string;
   created_at: string;
 };
@@ -63,14 +63,13 @@ const OrganizerCashout = ({ match }: OrganizerCashoutProps) => {
 
   const getStatusStyles = (status: string) => {
     switch (status) {
-      case "successful":
+      case "Successful":
         return "bg-green-100 text-green-700 border-green-300";
-      case "failed":
+      case "Failed":
         return "bg-red-100 text-red-700 border-red-300";
-      case "processed":
+      case "Processed":
         return "bg-blue-100 text-blue-700 border-blue-300";
-      case "review":
-      case "under_review":
+      case "Review":
         return "bg-yellow-100 text-yellow-700 border-yellow-300";
       default:
         return "bg-gray-500 text-white border-gray-600";
@@ -112,7 +111,7 @@ const OrganizerCashout = ({ match }: OrganizerCashoutProps) => {
                   request.status
                 )}`}
               >
-                {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                {request.status}
               </span>
             </div>
           </div>
