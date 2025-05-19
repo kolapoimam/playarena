@@ -686,7 +686,7 @@ const PlayerManagement = ({
                       </p>
                       {displayStatus === 'Checked In' && (
                         <p className="text-sm text-gray-600 dark:text-gray-400">
-                          Code: {player.confirmation_code}
+                          Slots: {player.number_of_slots || 1}
                         </p>
                       )}
                     </div>
