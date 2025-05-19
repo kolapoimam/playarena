@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Calendar, Users, MapPin } from "lucide-react";
+import { Calendar, Users, MapPin, Copy } from "lucide-react";
 import { format } from "date-fns";
 import { utcToZonedTime } from "date-fns-tz";
 import { DateTime } from "luxon";
@@ -343,7 +343,7 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
           <TabsContent value="organizing">
             {organizedMatches.length > 0 ? (
               organizedMatches.map((match) => {
-                const organizer = organizers.find(org => org.id === match.id);
+                const organizer = organizers.find(org => org.id === match.organizer_id);
                 const isVerified = organizer?.is_verified || false;
                 const { dateStr, timeStr } = formatMatchDateTime(match.match_date, match.match_time);
                 const statusLabel = getStatusLabel(match.status, match.cancellation_status, match.match_date, match.start_time, match.end_time);
@@ -368,9 +368,20 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
                           <MapPin size={16} className="mr-2" />
                           {match.venue_name || "Venue TBD"}
                         </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          Super Code: {match.super_code || "N/A"}
-                        </p>
+                        <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                          <span>Super Code:</span>
+                          <span className="flex items-center gap-1">
+                            <span>{match.super_code || "N/A"}</span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => navigator.clipboard.writeText(match.super_code || '')}
+                              className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+                            >
+                              <Copy size={16} />
+                            </Button>
+                          </span>
+                        </div>
                         <p className="text-base font-medium text-gray-900 dark:text-gray-100">
                           Slots: <span className="text-green-600 dark:text-green-400">{match.booked_slots}</span>/{match.total_slots}
                         </p>
