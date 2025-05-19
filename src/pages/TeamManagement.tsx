@@ -71,6 +71,18 @@ type TeamRanking = {
   shots: number;
 };
 
+// Utility function for retrying Supabase queries
+const fetchWithRetry = async (query: any, retries = 3, delay = 1000) => {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await query;
+    } catch (error) {
+      if (i < retries - 1) await new Promise((res) => setTimeout(res, delay));
+      else throw error;
+    }
+  }
+};
+
 // Player Card Component
 const PlayerCard = ({ playerId, teamName, players }: { playerId: string; teamName: string; players: Player[] }) => {
   const player = players.find((p) => p.id === playerId) || {
@@ -279,10 +291,11 @@ const RulesTemplateDialog = ({ isOpen, onClose, matchId }: { isOpen: boolean; on
       return;
     }
     try {
-      await supabase
+      const { error } = await supabase
         .from("matches")
         .update({ rules: ruleTemplates[selectedRule as keyof typeof ruleTemplates] })
         .eq("id", matchId);
+      if (error) throw error;
       toast({
         title: "Success",
         description: "Rule template applied.",
@@ -417,39 +430,62 @@ const TeamManagement = () => {
   // Fetch match, teams, events, and players
   useEffect(() => {
     const fetchMatch = async () => {
-      if (!slug) return;
+      if (!slug) {
+        toast({
+          title: "Error",
+          description: "No match slug provided.",
+          variant: "destructive",
+        });
+        navigate("/matches");
+        return;
+      }
 
       try {
-        const { data: matchData, error: matchError } = await supabase
-          .from("matches")
-          .select(`
-            id,
-            slug,
-            super_code,
-            title,
-            match_date,
-            match_time,
-            team_assignments (
+        const { data: matchData, error: matchError } = await fetchWithRetry(
+          supabase
+            .from("matches")
+            .select(`
               id,
-              teams,
-              is_public
-            )
-          `)
-          .eq("slug", slug)
-          .single();
+              slug,
+              super_code,
+              title,
+              match_date,
+              match_time,
+              team_assignments (
+                id,
+                teams,
+                is_public
+              )
+            `)
+            .eq("slug", slug)
+        );
 
         if (matchError) throw matchError;
+        if (!matchData.length) {
+          toast({
+            title: "Error",
+            description: "No match found for this slug.",
+            variant: "destructive",
+          });
+          navigate("/matches");
+          return;
+        }
+        if (matchData.length > 1) {
+          console.warn("Multiple matches found for slug:", slug);
+          // Select the first match; consider adding logic to handle duplicates
+        }
 
-        const teamAssignment = matchData.team_assignments[0] || {};
+        const match = matchData[0];
         setMatch({
-          id: matchData.id,
-          slug: matchData.slug,
-          super_code: matchData.super_code,
-          title: matchData.title,
-          match_date: matchData.match_date,
-          match_time: matchData.match_time,
+          id: match.id,
+          slug: match.slug,
+          super_code: match.super_code,
+          title: match.title,
+          match_date: match.match_date,
+          match_time: match.match_time,
         });
 
+        const teamAssignment = match.team_assignments[0] || {};
         const defaultTeams: Team[] = [
           { name: "Team 1", players: [], score: 0, analytics: { possession: 50, shots: 0, fouls: 0, yellow_cards: 0, red_cards: 0 } },
           { name: "Team 2", players: [], score: 0, analytics: { possession: 50, shots: 0, fouls: 0, yellow_cards: 0, red_cards: 0 } },
@@ -458,19 +494,23 @@ const TeamManagement = () => {
         setTeams(initialTeams);
         setIsPublic(teamAssignment.is_public || false);
 
-        const { data: eventsData, error: eventsError } = await supabase
-          .from("match_events")
-          .select("*")
-          .eq("match_id", matchData.id)
-          .order("created_at", { ascending: true });
+        const { data: eventsData, error: eventsError } = await fetchWithRetry(
+          supabase
+            .from("match_events")
+            .select("*")
+            .eq("match_id", match.id)
+            .order("created_at", { ascending: true })
+        );
 
         if (eventsError) throw eventsError;
         setEvents(eventsData || []);
 
-        const { data: playersData, error: playersError } = await supabase
-          .from("players")
-          .select("id, name, avatar, skill, position")
-          .eq("match_id", matchData.id);
+        const { data: playersData, error: playersError } = await fetchWithRetry(
+          supabase
+            .from("players")
+            .select("id, name, avatar, skill, position")
+            .eq("match_id", match.id)
+        );
 
         if (playersError) throw playersError;
         setPlayers(playersData || []);
@@ -502,28 +542,47 @@ const TeamManagement = () => {
         console.error("Error fetching match:", error);
         toast({
           title: "Error",
-          description: "Failed to load match details.",
+          description: "Failed to load match details. Please try again.",
           variant: "destructive",
         });
+        navigate("/matches");
       }
     };
 
     fetchMatch();
-  }, [slug, toast]);
+  }, [slug, toast, navigate]);
 
   // Supercode verification
-  const handleVerifySupercode = () => {
-    if (supercodeInput === match?.super_code) {
+  const handleVerifySupercode = async () => {
+    if (!match) return;
+    try {
+      const { data, error } = await fetchWithRetry(
+        supabase
+          .from("matches")
+          .select("super_code")
+          .eq("super_code", supercodeInput)
+          .maybeSingle()
+      );
+      if (error) throw error;
+      if (!data) {
+        toast({
+          title: "Invalid Supercode",
+          description: "No match found with this supercode.",
+          variant: "destructive",
+        });
+        return;
+      }
       setIsVerified(true);
       setVerificationOpen(false);
       toast({
         title: "Access Granted",
         description: "You can now manage teams and record the match.",
       });
-    } else {
+    } catch (error) {
+      console.error("Error verifying supercode:", error);
       toast({
-        title: "Invalid Supercode",
-        description: "Please enter the correct supercode.",
+        title: "Error",
+        description: "Failed to verify supercode.",
         variant: "destructive",
       });
     }
@@ -567,11 +626,13 @@ const TeamManagement = () => {
     }
 
     try {
-      const { data: existingAssignment, error: fetchError } = await supabase
-        .from("team_assignments")
-        .select("id")
-        .eq("match_id", match.id)
-        .single();
+      const { data: existingAssignment, error: fetchError } = await fetchWithRetry(
+        supabase
+          .from("team_assignments")
+          .select("id")
+          .eq("match_id", match.id)
+          .maybeSingle()
+      );
 
       if (fetchError && fetchError.code !== "PGRST116") throw fetchError;
 
@@ -670,11 +731,13 @@ const TeamManagement = () => {
     setIsPublic((prev) => !prev);
     if (match) {
       try {
-        const { data: existingAssignment, error: fetchError } = await supabase
-          .from("team_assignments")
-          .select("id")
-          .eq("match_id", match.id)
-          .single();
+        const { data: existingAssignment, error: fetchError } = await fetchWithRetry(
+          supabase
+            .from("team_assignments")
+            .select("id")
+            .eq("match_id", match.id)
+            .maybeSingle()
+        );
 
         if (fetchError && fetchError.code !== "PGRST116") throw fetchError;
 
