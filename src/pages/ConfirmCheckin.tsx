@@ -408,7 +408,7 @@ const ConfirmCheckin = () => {
               </div>
             </div>
             <TabsContent value="details" className="mt-0">
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6">
+              <div className="max-w-4xl mx-auto">
                 <MatchDetails
                   match={match}
                   cashout={cashout}
@@ -420,7 +420,7 @@ const ConfirmCheckin = () => {
               </div>
             </TabsContent>
             <TabsContent value="manage" className="mt-0">
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6">
+              <div className="max-w-4xl mx-auto">
                 <PlayerManagement
                   match={match}
                   tempIdentifier={tempIdentifier}
@@ -441,7 +441,7 @@ const ConfirmCheckin = () => {
               </div>
             </TabsContent>
             <TabsContent value="cashout" className="mt-0">
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6">
+              <div className="max-w-4xl mx-auto">
                 <OrganizerCashout match={match} />
               </div>
             </TabsContent>
