@@ -45,7 +45,7 @@ const profileSchema = z.object({
   nickname: z
     .string()
     .min(3, "Nickname must be at least 3 characters")
-    .regex(/^[a-zA-Z0-9]+$/, "Nickname must be alphanumeric")
+    .regex(/^[a-zA-Z0-9\s]+$/, "Nickname must contain letters, numbers, and spaces")
     .optional(),
   phone_number: z
     .string()
@@ -227,14 +227,14 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Card className="bg-white dark:bg-gray-800 border-none shadow-lg rounded-xl overflow-hidden">
         <details className="group">
           <summary className="flex items-center justify-between p-4 text-xl font-semibold text-green-700 dark:text-green-400 cursor-pointer bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900 dark:to-green-800 hover:bg-green-200 dark:hover:bg-green-700 transition-colors">
             Account Details
             <ChevronDown className="w-6 h-6 transition-transform group-open:rotate-180 text-green-600 dark:text-green-400" />
           </summary>
-          <CardContent className="p-4 pt-0">
+          <CardContent className="p-4 pt-6">
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -371,7 +371,7 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
             Match Preferences
             <ChevronDown className="w-6 h-6 transition-transform group-open:rotate-180 text-green-600 dark:text-green-400" />
           </summary>
-          <CardContent className="p-4 pt-0">
+          <CardContent className="p-4 pt-6">
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField
@@ -532,7 +532,7 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
             Wallet <span className="text-sm text-gray-500 dark:text-gray-400">Coming Soon</span>
             <ChevronDown className="w-6 h-6 transition-transform group-open:rotate-180 text-green-600 dark:text-green-400" />
           </summary>
-          <CardContent className="p-4 pt-0">
+          <CardContent className="p-4 pt-6">
             <div className="relative bg-gradient-to-br from-green-600 to-green-800 text-white rounded-xl p-6 shadow-2xl max-w-md mx-auto">
               <img
                 src="/playarenadark.png"
