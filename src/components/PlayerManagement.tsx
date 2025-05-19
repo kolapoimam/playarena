@@ -352,7 +352,7 @@ const PlayerManagement = ({
     setCashoutDialogOpen(true);
   }, [match, isCashoutEligible, toast]);
 
-  const handleCashoutSubmit = async () => {
+const handleCashoutSubmit = async () => {
     if (!match || !userId) return;
 
     const bankAccountValidation = bankAccountSchema.safeParse(bankAccountNumber);
@@ -389,8 +389,8 @@ const PlayerManagement = ({
       const { error: cashoutError } = await supabase
         .from("cashout_requests")
         .insert({
-          organizer_id: userId,
           match_id: match.id,
+          super_code: match.super_code,
           amount: Number(cashoutAmount),
           account_details: {
             bank_account_number: bankAccountNumber,
@@ -403,7 +403,23 @@ const PlayerManagement = ({
           updated_at: new Date().toISOString(),
         });
 
-      if (cashoutError) throw cashoutError;
+      if (cashoutError) {
+        if (cashoutError.code === '23503') {
+          // Foreign key violation (e.g., super_code or match_id invalid)
+          toast({
+            title: "Error",
+            description: "Invalid match or super code. Please contact support.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Error",
+            description: cashoutError.message || "Failed to submit cashout request.",
+            variant: "destructive",
+          });
+        }
+        throw cashoutError;
+      }
 
       const { data: cashoutData, error: cashoutFetchError } = await supabase
         .from("cashout_requests")
@@ -433,11 +449,7 @@ const PlayerManagement = ({
       fetchMatch();
     } catch (error) {
       console.error("Error submitting cashout:", error);
-      toast({
-        title: "Error",
-        description: "Failed to submit cashout request. Please try again.",
-        variant: "destructive",
-      });
+      // Error already handled above
     } finally {
       setLoading(false);
     }
