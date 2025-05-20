@@ -4,7 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Loader2 } from "lucide-react";
+import { Loader2, RefreshCw } from "lucide-react";
 import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
 
@@ -78,7 +78,6 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
   const [accountNameError, setAccountNameError] = useState<string | null>(null);
   const [amountError, setAmountError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
   const [localTempIdentifier, setLocalTempIdentifier] = useState<string>(tempIdentifier);
 
   // Ensure tempIdentifier is set
@@ -161,46 +160,46 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
     }
   }, [match, toast]);
 
+  const fetchCashoutRequests = useCallback(async () => {
+    if (!match || !match.id || !localTempIdentifier) {
+      setCashoutRequests([]);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from("cashout_requests")
+        .select("*")
+        .eq("match_id", match.id)
+        .eq("temp_identifier", localTempIdentifier);
+
+      if (error) throw error;
+
+      setCashoutRequests(data || []);
+    } catch (error) {
+      console.error("Error fetching cashout requests:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load cashout requests.",
+        variant: "destructive",
+      });
+      setCashoutRequests([]);
+    }
+  }, [match, localTempIdentifier, toast]);
+
   useEffect(() => {
     console.log('OrganizerCashout - tempIdentifier:', localTempIdentifier);
     console.log('OrganizerCashout - match.id:', match?.id);
 
-    const fetchUserIdAndData = async () => {
-      const { data: session } = await supabase.auth.getSession();
-      if (session.session) {
-        setUserId(session.session.user.id);
-      } else {
-        setUserId(null);
-      }
-
-      if (!match || !userId || !localTempIdentifier) {
+    const fetchData = async () => {
+      if (!match || !localTempIdentifier) {
         setWalletBalance(0);
         setCashoutRequests([]);
         return;
       }
 
-      // Fetch cashout requests
-      try {
-        const { data, error } = await supabase
-          .from("cashout_requests")
-          .select("*")
-          .eq("match_id", match.id)
-          .eq("temp_identifier", localTempIdentifier);
-
-        if (error) throw error;
-
-        setCashoutRequests(data || []);
-      } catch (error) {
-        console.error("Error fetching cashout requests:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load cashout requests.",
-          variant: "destructive",
-        });
-        setCashoutRequests([]);
-      }
-
       await fetchWalletData();
+      await fetchCashoutRequests();
 
       // Set up real-time subscriptions
       const cashoutChannel = supabase
@@ -215,17 +214,7 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
           },
           () => {
             fetchWalletData();
-            supabase
-              .from("cashout_requests")
-              .select("*")
-              .eq("match_id", match.id)
-              .eq("temp_identifier", localTempIdentifier)
-              .order("created_at", { ascending: false })
-              .then(({ data, error }) => {
-                if (!error && data) {
-                  setCashoutRequests(data);
-                }
-              });
+            fetchCashoutRequests();
           }
         )
         .subscribe();
@@ -252,8 +241,13 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
       };
     };
 
-    fetchUserIdAndData();
-  }, [match, userId, localTempIdentifier, fetchWalletData]);
+    fetchData();
+  }, [match, localTempIdentifier, fetchWalletData, fetchCashoutRequests]);
+
+  const handleRefresh = () => {
+    fetchWalletData();
+    fetchCashoutRequests();
+  };
 
   const handleCashoutMode = () => {
     if (!localTempIdentifier) {
@@ -268,10 +262,10 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
   };
 
   const handleCashoutSubmit = async () => {
-    if (!match || !userId || !localTempIdentifier) {
+    if (!match || !localTempIdentifier) {
       toast({
         title: "Error",
-        description: "Match or user data is missing.",
+        description: "Match or session data is missing.",
         variant: "destructive",
       });
       return;
@@ -362,17 +356,7 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
         throw cashoutError;
       }
 
-      const { data: cashoutData, error: cashoutFetchError } = await supabase
-        .from("cashout_requests")
-        .select("*")
-        .eq("match_id", match.id)
-        .eq("temp_identifier", localTempIdentifier)
-        .order("created_at", { ascending: false });
-
-      if (!cashoutFetchError && cashoutData) {
-        setCashoutRequests(cashoutData);
-      }
-
+      await fetchCashoutRequests();
       setWalletBalance(prev => prev - Number(cashoutAmount) < 0 ? 0 : prev - Number(cashoutAmount));
 
       setCashoutDialogOpen(false);
@@ -414,10 +398,19 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700">
       <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Cashout Requests</h2>
-      <div className="mb-4">
+      <div className="mb-4 flex items-center gap-2">
         <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
           Wallet Balance: ₦{walletBalance.toLocaleString()}
         </p>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleRefresh}
+          className="p-1"
+          title="Refresh Wallet Balance"
+        >
+          <RefreshCw size={16} />
+        </Button>
       </div>
       <div className="mb-4">
         <Button
