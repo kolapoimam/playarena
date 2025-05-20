@@ -66,7 +66,7 @@ const profileSchema = z.object({
     .string()
     .refine((date) => {
       const birthDate = new Date(date);
-      const today = new Date("2025-05-20T22:40:00+01:00");
+      const today = new Date("2025-05-20T22:58:00+01:00");
       let age = today.getFullYear() - birthDate.getFullYear();
       const monthDiff = today.getMonth() - birthDate.getMonth();
       if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) age--;
@@ -175,7 +175,7 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
             name: item.venues.name,
             slug: item.venues.slug,
             pin: item.pin,
-            verified: item.verified,
+            verified: item.verified === 'true',
           }))
         );
       } catch (err) {
@@ -306,6 +306,7 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
           venue_id,
           pin,
           verified,
+          user_id,
           venues (
             id,
             name,
@@ -316,26 +317,47 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
         .eq("pin", data.access_pin)
         .single();
 
-      if (pinError || !pinData) {
+      if (pinError) {
+        console.error("Pin validation error:", pinError);
+        throw new Error(`Invalid or expired access pin: ${pinError.message}`);
+      }
+
+      if (!pinData) {
+        console.error("No pin data returned for pin:", data.access_pin);
         throw new Error("Invalid or expired access pin.");
       }
 
-      if (pinData.verified || pinData.venues.user_id) {
+      console.log("Pin data:", pinData);
+
+      // Check if pin is already linked (handle verified as string)
+      if (pinData.verified === 'true') {
+        console.error("Pin already verified:", pinData);
         throw new Error("This access pin is already linked to a user.");
       }
 
-      // Update access_pins with user_id and verified = true
+      if (pinData.user_id) {
+        console.error("Pin has user_id:", pinData.user_id);
+        throw new Error("This access pin is already linked to a user.");
+      }
+
+      if (pinData.venues?.user_id) {
+        console.error("Venue has user_id:", pinData.venues.user_id);
+        throw new Error("This venue is already linked to a user.");
+      }
+
+      // Update access_pins with user_id and verified = 'true'
       const { error: updatePinError } = await supabase
         .from("access_pins")
         .update({
           user_id: profile?.id,
-          verified: true,
+          verified: 'true',
           updated_at: new Date().toISOString(),
         })
         .eq("pin", data.access_pin);
 
       if (updatePinError) {
-        throw new Error("Failed to link venue to profile.");
+        console.error("Update access_pins error:", updatePinError);
+        throw new Error(`Failed to link venue to profile: ${updatePinError.message}`);
       }
 
       // Update venues with user_id
@@ -348,7 +370,8 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
         .eq("id", pinData.venue_id);
 
       if (updateVenueError) {
-        throw new Error("Failed to update venue ownership.");
+        console.error("Update venues error:", updateVenueError);
+        throw new Error(`Failed to update venue ownership: ${updateVenueError.message}`);
       }
 
       // Update local venues state
@@ -375,9 +398,11 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
       setShowVenueDialog(false);
       pinForm.reset();
     } catch (error: any) {
-      console.error("Error submitting pin:", error);
+      console.error("Error submitting pin:", error.message, error);
       if (error.code === "42703") {
         toast({ title: "Error", description: "Database schema issue. Please ensure user_id column exists.", variant: "destructive" });
+      } else if (error.code === "42501") {
+        toast({ title: "Error", description: "Permission denied. Please contact support.", variant: "destructive" });
       } else {
         toast({
           title: "Error",
@@ -393,7 +418,7 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
   const canChangeEmail = () => {
     if (!profile?.last_email_change) return true;
     const lastChange = new Date(profile.last_email_change);
-    const now = new Date("2025-05-20T22:40:00+01:00");
+    const now = new Date("2025-05-20T22:58:00+01:00");
     const diffDays = (now.getTime() - lastChange.getTime()) / (1000 * 60 * 60 * 24);
     return diffDays >= 30;
   };
@@ -401,7 +426,7 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
   const calculateAge = (dob?: string) => {
     if (!dob) return null;
     const birthDate = new Date(dob);
-    const today = new Date("2025-05-20T22:40:00+01:00");
+    const today = new Date("2025-05-20T22:58:00+01:00");
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) age--;
