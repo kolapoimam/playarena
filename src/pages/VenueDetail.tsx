@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { MapPin, ArrowLeft, ExternalLink, Calendar, Clock, MessageCircle, CalendarPlus, Star, CheckCircle } from "lucide-react";
+import { MapPin, ArrowLeft, ExternalLink, Calendar, Clock, MessageCircle, CalendarPlus, Star, CalendarCheck } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { RichTextEditor } from "@mantine/tiptap";
 import { useEditor } from "@tiptap/react";
@@ -26,7 +26,7 @@ type Venue = {
   pricing: string | null;
   booking_fee: number | null;
   aggregated_rating: number | null;
-  is_verified: boolean;
+  is_verified: 'verified' | 'pending' | 'unverified';
 };
 
 type Match = {
@@ -207,16 +207,16 @@ const VenueDetail = () => {
           />
         </div>
 
-<div className="flex items-center">
-  <h1 className="text-3xl font-bold mb-2 text-gray-900 dark:text-gray-100">{venue.name}</h1>
-  {venue.is_verified && (
-    <img 
-      src="/green-verified.png" 
-      alt="Verified" 
-      className="ml-2 w-6 h-6" 
-    />
-  )}
-</div>
+        <div className="flex items-center">
+          <h1 className="text-3xl font-bold mb-2 text-gray-900 dark:text-gray-100">{venue.name}</h1>
+          {venue.is_verified === 'verified' && (
+            <img 
+              src="/green-verified.png" 
+              alt="Verified" 
+              className="ml-2 w-6 h-6" 
+            />
+          )}
+        </div>
         <div className="flex items-center text-gray-600 dark:text-gray-400 mb-4">
           <MapPin size={18} className="mr-2" />
           <span>{venue.city}, {venue.state}</span>
@@ -323,6 +323,13 @@ const VenueDetail = () => {
           </div>
 
           <div className="mt-6 flex flex-row gap-4 w-full">
+            <Button
+              className="flex-1 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 w-full sm:w-auto"
+              onClick={() => navigate(`/venues-bookings/${venue.slug}`)}
+            >
+              <CalendarCheck size={16} className="mr-2" />
+              Book Venue
+            </Button>
             <Button
               className="flex-1 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 w-full sm:w-auto"
               onClick={() => navigate(`/organize?venue=${venue.slug}`)}
