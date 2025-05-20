@@ -65,7 +65,7 @@ const profileSchema = z.object({
     .string()
     .refine((date) => {
       const birthDate = new Date(date);
-      const today = new Date("2025-05-20T21:00:00+01:00"); // Current date and time
+      const today = new Date("2025-05-20T21:00:00+01:00");
       let age = today.getFullYear() - birthDate.getFullYear();
       const monthDiff = today.getMonth() - birthDate.getMonth();
       if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) age--;
@@ -93,7 +93,6 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
   const [showVenueDialog, setShowVenueDialog] = useState(false);
   const [operationLoading, setOperationLoading] = useState(false);
   const [venues, setVenues] = useState<Venue[]>([]);
-  const [selectedVenueId, setSelectedVenueId] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof profileSchema>>({
     resolver: zodResolver(profileSchema),
@@ -288,10 +287,6 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
     }
   };
 
-  const generateRandomCode = () => {
-    return Math.random().toString(36).slice(-6).toUpperCase();
-  };
-
   const handleManageVenue = (venueId: string) => {
     navigate(`/venuemanager/dashboard/${venueId}`);
   };
@@ -428,13 +423,6 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
                       Save Account Details
                     </>
                   )}
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full text-green-500 border-green-500 hover:bg-green-500 hover:text-white rounded-lg mt-4"
-                  onClick={() => setShowVenueDialog(true)}
-                >
-                  Manage Venue
                 </Button>
               </form>
             </Form>
@@ -639,6 +627,24 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
         </details>
       </Card>
 
+      <Card className="bg-white dark:bg-gray-800 border-none shadow-lg rounded-xl overflow-hidden">
+        <details className="group">
+          <summary className="flex items-center justify-between p-4 text-xl font-semibold text-green-700 dark:text-green-400 cursor-pointer bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900 dark:to-green-800 hover:bg-green-200 dark:hover:bg-green-700 transition-colors">
+            Manage Venues
+            <ChevronDown className="w-6 h-6 transition-transform group-open:rotate-180 text-green-600 dark:text-green-400" />
+          </summary>
+          <CardContent className="p-4 pt-6">
+            <Button
+              variant="outline"
+              className="w-full text-green-500 border-green-500 hover:bg-green-500 hover:text-white rounded-lg"
+              onClick={() => setShowVenueDialog(true)}
+            >
+              View and Manage Venues
+            </Button>
+          </CardContent>
+        </details>
+      </Card>
+
       <Dialog open={showResetPasswordDialog} onOpenChange={setShowResetPasswordDialog}>
         <DialogContent className="sm:max-w-md rounded-2xl bg-white dark:bg-gray-800 shadow-2xl border-none">
           <DialogHeader>
@@ -664,7 +670,7 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
                         type="email"
                         className="text-base bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg"
                         placeholder="Enter your email address"
-                      />
+ Trevino:                     />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
