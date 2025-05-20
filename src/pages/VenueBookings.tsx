@@ -34,14 +34,15 @@ const VenueBookings = () => {
     const fetchVenueAndBookings = async () => {
       if (!venueSlug) {
         toast({ title: "Error", description: "Invalid venue slug.", variant: "destructive" });
-        navigate("/profile");
+        navigate("/");
         return;
       }
-
-        // Fetch venue details
+      setLoading(true);
+      try {
+        // Fetch venue details (no auth check)
         const { data: venue, error: venueError } = await supabase
           .from("venues")
-          .select("id, name, user_id")
+          .select("id, name")
           .eq("slug", venueSlug)
           .single();
 
@@ -50,14 +51,9 @@ const VenueBookings = () => {
           throw new Error("Venue not found");
         }
 
-        if (venue.user_id !== user.user.id) {
-          console.error("Unauthorized access:", { venueId: venue.id, userId: user.user.id });
-          throw new Error("Unauthorized access to venue bookings");
-        }
-
         setVenueName(venue.name);
 
-        // Fetch bookings
+        // Fetch bookings (no auth check)
         const { data: bookingsData, error: bookingsError } = await supabase
           .from("bookings")
           .select(`
@@ -89,7 +85,7 @@ const VenueBookings = () => {
           description: error.message || "Failed to fetch bookings.",
           variant: "destructive",
         });
-        navigate("/profile");
+        navigate("/");
       } finally {
         setLoading(false);
       }
@@ -105,11 +101,11 @@ const VenueBookings = () => {
           <div className="flex items-center space-x-4">
             <Button
               variant="ghost"
-              onClick={() => navigate("/profile")}
+              onClick={() => navigate("/")}
               className="text-green-700 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-700 rounded-lg"
             >
               <ArrowLeft className="w-5 h-5 mr-2" />
-              Back to Profile
+              Back to Home
             </Button>
             <h1 className="text-2xl font-bold text-green-700 dark:text-green-400">
               Bookings for {venueName || venueSlug}
