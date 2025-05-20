@@ -98,23 +98,23 @@ const Performance = ({ profile }: PerformanceProps) => {
   const getShareText = (badge: Badge) => {
     switch (badge.name) {
       case "First Kickoff":
-        return "⚽ Scored my first match with the First Kickoff badge! Join the action! 🏅 #PlayArena Powered by PlayArena";
+        return `I just earned a badge for First Kickoff: Scored my first match! 🏅 Join the action! #SportCliq Powered by Sport Cliq`;
       case "Match Maestro":
-        return "🎯 Organized my first match and earned the Match Maestro badge! Who's next? 🏅 #PlayArena Powered by PlayArena";
+        return `I just earned a badge for Match Maestro: Organized my first match! 🎯 Who's next? 🏅 #SportCliq Powered by Sport Cliq`;
       case "Venue Visionary":
-        return "📍 Set the stage with my first venue! Earned the Venue Visionary badge! 🏅 #PlayArena Powered by PlayArena";
+        return `I just earned a badge for Venue Visionary: Set the stage with my first venue! 📍 🏅 #SportCliq Powered by Sport Cliq`;
       case "Deca-Paid Star":
-        return "🌟 Conquered 10 paid matches for the Deca-Paid Star badge! Game on! 🏅 #PlayArena Powered by PlayArena";
+        return `I just earned a badge for Deca-Paid Star: Conquered 10 paid matches! 🌟 🏅 #SportCliq Powered by Sport Cliq`;
       case "Deca-Free Star":
-        return "⚽ Played 10 free matches and shone with the Deca-Free Star badge! 🏅 #PlayArena Powered by PlayArena";
+        return `I just earned a badge for Deca-Free Star: Played 10 free matches! ⚽ 🏅 #SportCliq Powered by Sport Cliq`;
       case "Penta-Venue Legend":
-        return "🗺️ Listed 5 venues for the Penta-Venue Legend badge! Building the game! 🏅 #PlayArena Powered by PlayArena";
+        return `I just earned a badge for Penta-Venue Legend: Listed 5 venues! 🗺️ 🏅 #SportCliq Powered by Sport Cliq`;
       case "Deca-Match Maestro":
-        return "🏆 Mastered 10 matches with the Deca-Match Maestro badge! Leading the field! 🏅 #PlayArena Powered by PlayArena";
+        return `I just earned a badge for Deca-Match Maestro: Mastered 10 matches! 🏆 🏅 #SportCliq Powered by Sport Cliq`;
       case "Elite Investor":
-        return "💰 Invested big in matches for the Elite Investor badge! Top player! 🏅 #PlayArena Powered by PlayArena";
+        return `I just earned a badge for Elite Investor: Invested big in matches! 💰 🏅 #SportCliq Powered by Sport Cliq`;
       default:
-        return `🏅 Unlocked the ${badge.name} badge! ${badge.description} #PlayArena Powered by PlayArena`;
+        return `I just earned a badge for ${badge.name}: ${badge.description} 🏅 #SportCliq Powered by Sport Cliq`;
     }
   };
 
@@ -215,12 +215,12 @@ const Performance = ({ profile }: PerformanceProps) => {
           </DialogHeader>
           <div
             ref={badgeRef}
-            className="p-6 bg-gradient-to-br from-yellow-100 to-yellow-200 dark:from-yellow-900 dark:to-yellow-800 rounded-lg flex flex-col items-center gap-3 border-4 border-yellow-500 relative"
+            className="p-6 bg-gradient-to-br from-yellow-100 to-yellow-200 dark:from-yellow-900 dark:to-yellow-800 rounded-2xl flex flex-col items-center gap-3 border-4 border-yellow-500 w-[300px] h-[300px] relative"
           >
             <img
-              src="/playarenalight.png"
-              alt="PlayArena Logo"
-              className="absolute top-2 right-2 w-16 h-16 opacity-50"
+              src="/navlogo.png"
+              alt="Sport Cliq Logo"
+              className="absolute top-2 right-2 w-16 h-16"
             />
             {selectedBadge && getBadgeIcon(selectedBadge.icon, true)}
             <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{selectedBadge?.name}</p>
