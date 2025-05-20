@@ -163,7 +163,16 @@ const Performance = ({ profile }: PerformanceProps) => {
   const handleDownloadBadge = async () => {
     if (badgeRef.current) {
       try {
-        // Ensure the canvas captures the full element
+        // Preload the logo image to ensure it renders in the canvas
+        const logoSrc = document.documentElement.classList.contains("dark") ? "/playarenadark.png" : "/playarenalight.png";
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = reject;
+          img.src = logoSrc;
+        });
+
         const canvas = await html2canvas(badgeRef.current, {
           scale: 2,
           useCORS: true,
@@ -254,17 +263,17 @@ const Performance = ({ profile }: PerformanceProps) => {
             ref={badgeRef}
             className={`p-6 ${selectedBadge ? getBadgeStyles(selectedBadge.name) : ''} rounded-2xl flex flex-col items-center gap-3 border-4 w-[350px] h-[250px] relative shadow-lg`}
           >
-            <img
-              src="/playarenalight.png"
-              alt="PlayArena Logo"
-              className="absolute top-2 right-2 w-16 h-16 object-contain"
-            />
             {selectedBadge && getBadgeIcon(selectedBadge.icon, true)}
-            <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{selectedBadge?.name}</p>
+            <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{	selectedBadge?.name}</p>
             <p className="text-sm text-gray-700 dark:text-gray-300 text-center">{selectedBadge?.description}</p>
             <p className="text-xs text-gray-600 dark:text-gray-400">
               Earned: {selectedBadge?.earned_at ? new Date(selectedBadge.earned_at).toLocaleDateString() : "N/A"}
             </p>
+            <img
+              src={document.documentElement.classList.contains("dark") ? "/playarenadark.png" : "/playarenalight.png"}
+              alt="PlayArena Logo"
+              className="absolute bottom-2 w-20 h-20 object-contain"
+            />
           </div>
           <div className="flex gap-2 justify-center">
             <Button
