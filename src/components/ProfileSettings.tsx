@@ -252,7 +252,7 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
   const canChangeEmail = () => {
     if (!profile?.last_email_change) return true;
     const lastChange = new Date(profile.last_email_change);
-    const now = new Date("2025-05-20T21:00:00+01:00");
+    const now = new Date("2025-05-20T22:08:00+01:00");
     const diffDays = (now.getTime() - lastChange.getTime()) / (1000 * 60 * 60 * 24);
     return diffDays >= 30;
   };
@@ -260,7 +260,7 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
   const calculateAge = (dob?: string) => {
     if (!dob) return null;
     const birthDate = new Date(dob);
-    const today = new Date("2025-05-20T21:00:00+01:00");
+    const today = new Date("2025-05-20T22:08:00+01:00");
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) age--;
@@ -289,6 +289,14 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
 
   const handleManageVenue = (venueId: string) => {
     navigate(`/venuemanager/dashboard/${venueId}`);
+    setShowVenueDialog(false); // Close dialog on navigation
+  };
+
+  // Prevent dialogs from closing on outside click or Escape key
+  const handleDialogOpenChange = (setter: (value: boolean) => void) => (open: boolean) => {
+    if (!open && !operationLoading) {
+      setter(false);
+    }
   };
 
   return (
@@ -645,7 +653,10 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
         </details>
       </Card>
 
-      <Dialog open={showResetPasswordDialog} onOpenChange={setShowResetPasswordDialog}>
+      <Dialog
+        open={showResetPasswordDialog}
+        onOpenChange={handleDialogOpenChange(setShowResetPasswordDialog)}
+      >
         <DialogContent className="sm:max-w-md rounded-2xl bg-white dark:bg-gray-800 shadow-2xl border-none">
           <DialogHeader>
             <DialogTitle className="text-xl font-semibold text-green-700 dark:text-green-400 flex items-center">
@@ -670,7 +681,7 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
                         type="email"
                         className="text-base bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg"
                         placeholder="Enter your email address"
- Trevino:                     />
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -681,6 +692,7 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
                   variant="outline"
                   onClick={() => setShowResetPasswordDialog(false)}
                   className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                  disabled={operationLoading}
                 >
                   Cancel
                 </Button>
@@ -704,7 +716,10 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showChangeEmailDialog} onOpenChange={setShowChangeEmailDialog}>
+      <Dialog
+        open={showChangeEmailDialog}
+        onOpenChange={handleDialogOpenChange(setShowChangeEmailDialog)}
+      >
         <DialogContent className="sm:max-w-md rounded-2xl bg-white dark:bg-gray-800 shadow-2xl border-none">
           <DialogHeader>
             <DialogTitle className="text-xl font-semibold text-green-700 dark:text-green-400 flex items-center">
@@ -740,6 +755,7 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
                   variant="outline"
                   onClick={() => setShowChangeEmailDialog(false)}
                   className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                  disabled={operationLoading}
                 >
                   Cancel
                 </Button>
@@ -763,7 +779,10 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showVenueDialog} onOpenChange={setShowVenueDialog}>
+      <Dialog
+        open={showVenueDialog}
+        onOpenChange={handleDialogOpenChange(setShowVenueDialog)}
+      >
         <DialogContent className="sm:max-w-md rounded-2xl bg-white dark:bg-gray-800 shadow-2xl border-none">
           <DialogHeader>
             <DialogTitle className="text-xl font-semibold text-green-700 dark:text-green-400">Manage Venues</DialogTitle>
@@ -788,6 +807,7 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
                         size="sm"
                         onClick={() => handleManageVenue(venue.id)}
                         className="text-green-500 border-green-500 hover:bg-green-500 hover:text-white"
+                        disabled={operationLoading}
                       >
                         Manage
                       </Button>
@@ -815,6 +835,7 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
               variant="outline"
               onClick={() => setShowVenueDialog(false)}
               className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+              disabled={operationLoading}
             >
               Close
             </Button>
