@@ -1,4 +1,5 @@
-import { useState } from "react";
+<DOCUMENT filename="ProfileSettings.tsx">
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -11,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Loader2, CheckCircle, ChevronDown, Mail, Lock } from "lucide-react";
+import { Loader2, CheckCircle, ChevronDown, Mail, Lock, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 
 type Profile = {
@@ -29,6 +30,13 @@ type Profile = {
   created_at?: string;
   updated_at?: string;
   last_email_change?: string;
+};
+
+type Venue = {
+  id: string;
+  name: string;
+  verified_status: string;
+  pin: string;
 };
 
 const profileSchema = z.object({
@@ -58,7 +66,7 @@ const profileSchema = z.object({
     .string()
     .refine((date) => {
       const birthDate = new Date(date);
-      const today = new Date("2025-05-14T17:37:00+01:00");
+      const today = new Date("2025-05-20T21:00:00+01:00"); // Current date and time
       let age = today.getFullYear() - birthDate.getFullYear();
       const monthDiff = today.getMonth() - birthDate.getMonth();
       if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) age--;
@@ -83,7 +91,10 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
   const [loading, setLoading] = useState(false);
   const [showResetPasswordDialog, setShowResetPasswordDialog] = useState(false);
   const [showChangeEmailDialog, setShowChangeEmailDialog] = useState(false);
+  const [showVenueDialog, setShowVenueDialog] = useState(false);
   const [operationLoading, setOperationLoading] = useState(false);
+  const [venues, setVenues] = useState<Venue[]>([]);
+  const [selectedVenueId, setSelectedVenueId] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof profileSchema>>({
     resolver: zodResolver(profileSchema),
@@ -112,6 +123,37 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
       new_email: profile?.email || "",
     },
   });
+
+  useEffect(() => {
+    const fetchVenues = async () => {
+      if (!profile?.id) return;
+      const { data, error } = await supabase
+        .from("access_pins")
+        .select(`
+          venue_id,
+          venues (
+            id,
+            name,
+            verified_status,
+            access_pins(pin)
+          )
+        `)
+        .eq("venue_id", profile.id)
+        .eq("verified", "True");
+
+      if (error) {
+        toast({ title: "Error", description: "Failed to fetch venues.", variant: "destructive" });
+      } else {
+        setVenues(data.map((item) => ({
+          id: item.venues.id,
+          name: item.venues.name,
+          verified_status: item.venues.verified_status,
+          pin: item.venues.access_pins[0]?.pin || "No pin assigned",
+        })));
+      }
+    };
+    fetchVenues();
+  }, [profile?.id, toast]);
 
   const onSubmit = async (data: z.infer<typeof profileSchema>) => {
     setLoading(true);
@@ -213,7 +255,7 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
   const canChangeEmail = () => {
     if (!profile?.last_email_change) return true;
     const lastChange = new Date(profile.last_email_change);
-    const now = new Date("2025-05-14T17:37:00+01:00");
+    const now = new Date("2025-05-20T21:00:00+01:00");
     const diffDays = (now.getTime() - lastChange.getTime()) / (1000 * 60 * 60 * 24);
     return diffDays >= 30;
   };
@@ -221,11 +263,39 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
   const calculateAge = (dob?: string) => {
     if (!dob) return null;
     const birthDate = new Date(dob);
-    const today = new Date("2025-05-14T17:37:00+01:00");
+    const today = new Date("2025-05-20T21:00:00+01:00");
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) age--;
     return age;
+  };
+
+  const handleRegeneratePin = async (venueId: string) => {
+    setOperationLoading(true);
+    try {
+      const newPin = generateRandomCode();
+      const { error } = await supabase
+        .from("access_pins")
+        .update({ pin: newPin, updated_at: new Date().toISOString() })
+        .eq("venue_id", venueId);
+
+      if (error) throw error;
+
+      setVenues(venues.map(v => v.id === venueId ? { ...v, pin: newPin } : v));
+      toast({ title: "Success", description: "Access pin regenerated successfully!" });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to regenerate pin.", variant: "destructive" });
+    } finally {
+      setOperationLoading(false);
+    }
+  };
+
+  const generateRandomCode = () => {
+    return substring(md5(random()::text) FROM 1 FOR 6);
+  };
+
+  const handleManageVenue = (venueId: string) => {
+    navigate(`/venuemanager/dashboard/${venueId}`);
   };
 
   return (
@@ -360,6 +430,13 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
                       Save Account Details
                     </>
                   )}
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full text-green-500 border-green-500 hover:bg-green-500 hover:text-white rounded-lg mt-4"
+                  onClick={() => setShowVenueDialog(true)}
+                >
+                  Manage Venue
                 </Button>
               </form>
             </Form>
@@ -679,6 +756,65 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
               </DialogFooter>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showVenueDialog} onOpenChange={setShowVenueDialog}>
+        <DialogContent className="sm:max-w-md rounded-2xl bg-white dark:bg-gray-800 shadow-2xl border-none">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold text-green-700 dark:text-green-400">Manage Venues</DialogTitle>
+            <DialogDescription className="text-gray-600 dark:text-gray-300">
+              Select a venue to manage or regenerate its access pin.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="p-4 space-y-4">
+            {venues.length === 0 ? (
+              <p className="text-gray-600 dark:text-gray-400">No verified venues associated with your account.</p>
+            ) : (
+              venues.map((venue) => (
+                <div key={venue.id} className="border-b border-gray-200 dark:border-gray-700 pb-2">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="font-medium text-gray-900 dark:text-gray-100">{venue.name}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Pin: {venue.pin}</p>
+                    </div>
+                    <div className="space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleManageVenue(venue.id)}
+                        className="text-green-500 border-green-500 hover:bg-green-500 hover:text-white"
+                      >
+                        Manage
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleRegeneratePin(venue.id)}
+                        disabled={operationLoading}
+                        className="text-green-500 border-green-500 hover:bg-green-500 hover:text-white"
+                      >
+                        {operationLoading ? (
+                          <Loader2 size={16} className="animate-spin" />
+                        ) : (
+                          <RefreshCw size={16} />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowVenueDialog(false)}
+              className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+            >
+              Close
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
