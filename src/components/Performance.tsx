@@ -95,6 +95,29 @@ const Performance = ({ profile }: PerformanceProps) => {
     }
   };
 
+  const getBadgeStyles = (badgeName: string) => {
+    switch (badgeName) {
+      case "First Kickoff":
+        return "bg-gradient-to-br from-blue-200 to-blue-400 dark:from-blue-700 dark:to-blue-900 border-blue-500";
+      case "Match Maestro":
+        return "bg-gradient-to-br from-green-200 to-green-400 dark:from-green-700 dark:to-green-900 border-green-500";
+      case "Venue Visionary":
+        return "bg-gradient-to-br from-purple-200 to-purple-400 dark:from-purple-700 dark:to-purple-900 border-purple-500";
+      case "Deca-Paid Star":
+        return "bg-gradient-to-br from-yellow-200 to-yellow-400 dark:from-yellow-700 dark:to-yellow-900 border-yellow-500";
+      case "Deca-Free Star":
+        return "bg-gradient-to-br from-orange-200 to-orange-400 dark:from-orange-700 dark:to-orange-900 border-orange-500";
+      case "Penta-Venue Legend":
+        return "bg-gradient-to-br from-red-200 to-red-400 dark:from-red-700 dark:to-red-900 border-red-500";
+      case "Deca-Match Maestro":
+        return "bg-gradient-to-br from-teal-200 to-teal-400 dark:from-teal-700 dark:to-teal-900 border-teal-500";
+      case "Elite Investor":
+        return "bg-gradient-to-br from-pink-200 to-pink-400 dark:from-pink-700 dark:to-pink-900 border-pink-500";
+      default:
+        return "bg-gradient-to-br from-gray-200 to-gray-400 dark:from-gray-700 dark:to-gray-900 border-gray-500";
+    }
+  };
+
   const getShareText = (badge: Badge) => {
     switch (badge.name) {
       case "First Kickoff":
@@ -140,12 +163,26 @@ const Performance = ({ profile }: PerformanceProps) => {
   const handleDownloadBadge = async () => {
     if (badgeRef.current) {
       try {
-        const canvas = await html2canvas(badgeRef.current, { scale: 2 });
+        // Ensure the canvas captures the full element
+        const canvas = await html2canvas(badgeRef.current, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: null,
+          logging: false,
+          scrollX: 0,
+          scrollY: 0,
+          windowWidth: badgeRef.current.scrollWidth,
+          windowHeight: badgeRef.current.scrollHeight,
+        });
+        const imgData = canvas.toDataURL("image/png");
         const link = document.createElement("a");
-        link.href = canvas.toDataURL("image/png");
-        link.download = `${selectedBadge?.name}-badge.png`;
+        link.href = imgData;
+        link.download = `${selectedBadge?.name.replace(/\s+/g, '-')}-badge.png`;
+        document.body.appendChild(link);
         link.click();
+        document.body.removeChild(link);
       } catch (error) {
+        console.error("Download error:", error);
         toast({ title: "Error", description: "Failed to download badge.", variant: "destructive" });
       }
     }
@@ -179,7 +216,7 @@ const Performance = ({ profile }: PerformanceProps) => {
                   return (
                     <div
                       key={badge.id}
-                      className={`p-4 bg-yellow-50 dark:bg-yellow-900/50 rounded-lg flex flex-col items-center gap-3 shadow-md ${
+                      className={`p-4 ${getBadgeStyles(badge.name)} rounded-lg flex flex-col items-center gap-3 shadow-md ${
                         isEarned ? "cursor-pointer" : "opacity-50 cursor-not-allowed"
                       }`}
                       onClick={isEarned ? () => setSelectedBadge(badge) : undefined}
@@ -205,7 +242,7 @@ const Performance = ({ profile }: PerformanceProps) => {
       </CardContent>
 
       <Dialog open={!!selectedBadge} onOpenChange={() => setSelectedBadge(null)}>
-        <DialogContent className="sm:max-w-md rounded-2xl">
+        <DialogContent className="sm:max-w-[400px] rounded-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {selectedBadge && getBadgeIcon(selectedBadge.icon, true)}
@@ -215,12 +252,12 @@ const Performance = ({ profile }: PerformanceProps) => {
           </DialogHeader>
           <div
             ref={badgeRef}
-            className="p-6 bg-gradient-to-br from-yellow-100 to-yellow-200 dark:from-yellow-900 dark:to-yellow-800 rounded-2xl flex flex-col items-center gap-3 border-4 border-yellow-500 w-[300px] h-[300px] relative"
+            className={`p-6 ${selectedBadge ? getBadgeStyles(selectedBadge.name) : ''} rounded-2xl flex flex-col items-center gap-3 border-4 w-[350px] h-[250px] relative shadow-lg`}
           >
             <img
-              src="/navlogo.png"
-              alt="Sport Cliq Logo"
-              className="absolute top-2 right-2 w-16 h-16"
+              src="/playarenalight.png"
+              alt="PlayArena Logo"
+              className="absolute top-2 right-2 w-16 h-16 object-contain"
             />
             {selectedBadge && getBadgeIcon(selectedBadge.icon, true)}
             <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{selectedBadge?.name}</p>
