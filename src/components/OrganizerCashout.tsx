@@ -161,7 +161,7 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
   }, [match, toast]);
 
   const fetchCashoutRequests = useCallback(async () => {
-    if (!match || !match.id || !localTempIdentifier) {
+    if (!match || !match.id) {
       setCashoutRequests([]);
       return;
     }
@@ -171,7 +171,7 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
         .from("cashout_requests")
         .select("*")
         .eq("match_id", match.id)
-        .eq("temp_identifier", localTempIdentifier);
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
 
@@ -185,7 +185,7 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
       });
       setCashoutRequests([]);
     }
-  }, [match, localTempIdentifier, toast]);
+  }, [match, toast]);
 
   useEffect(() => {
     console.log('OrganizerCashout - tempIdentifier:', localTempIdentifier);
