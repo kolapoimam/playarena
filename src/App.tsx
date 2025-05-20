@@ -30,6 +30,7 @@ import Auth from "./pages/Auth";
 import TeamManagement from "./pages/TeamManagement";
 import Ticketing from "./pages/Ticketing";
 import TermsAndPrivacy from "./pages/TermsAndPrivacy";
+import Confirm from "./pages/Confirm";
 
 import * as gtag from "./lib/gtag";
 
@@ -51,6 +52,7 @@ const AppRoutes = () => {
       <Route path="/guides" element={<Guides />} />
       <Route path="/profile" element={<Profile />} />
       <Route path="/auth" element={<Auth />} />
+      <Route path="/confirm" element={<Confirm />} />
       <Route path="/organize" element={<Organize />} />
       <Route path="/venue-create" element={<VenueCreate />} />
       <Route path="/venues" element={<VenueDirectory />} />
