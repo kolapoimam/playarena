@@ -106,6 +106,13 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
     },
   });
 
+  const resetPasswordForm = useForm<z.infer<typeof emailSchema>>({
+    resolver: zodResolver(emailSchema),
+    defaultValues: {
+      new_email: profile?.email || "",
+    },
+  });
+
   const onSubmit = async (data: z.infer<typeof profileSchema>) => {
     setLoading(true);
     const updates = profile?.is_initial_setup
@@ -132,16 +139,10 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
     setLoading(false);
   };
 
-  const handleResetPassword = async () => {
-    if (!profile?.email) {
-      toast({ title: "Error", description: "No email associated with this account.", variant: "destructive" });
-      setShowResetPasswordDialog(false);
-      return;
-    }
-
+  const handleResetPassword = async (data: z.infer<typeof emailSchema>) => {
     setOperationLoading(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(profile.email, {
+      const { error } = await supabase.auth.resetPasswordForEmail(data.new_email, {
         redirectTo: `${window.location.origin}/reset-password`,
       });
 
@@ -155,6 +156,7 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
         variant: "default",
       });
       setShowResetPasswordDialog(false);
+      resetPasswordForm.reset();
     } catch (error: any) {
       toast({
         title: "Error",
@@ -570,32 +572,54 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
               Reset Password
             </DialogTitle>
             <DialogDescription className="text-gray-600 dark:text-gray-300">
-              A password reset link will be sent to <span className="font-medium">{profile?.email}</span>. Please check your inbox and spam folder.
+              Enter your email address to receive a password reset link. Please check your inbox and spam folder after submitting.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="flex justify-end gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setShowResetPasswordDialog(false)}
-              className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-            >
-              Cancel
-            </Button>
-            <Button
-              className="bg-green-500 hover:bg-green-600 text-white rounded-lg"
-              onClick={handleResetPassword}
-              disabled={operationLoading}
-            >
-              {operationLoading ? (
-                <>
-                  <Loader2 size={16} className="mr-2 animate-spin" />
-                  Sending...
-                </>
-              ) : (
-                "Send Reset Link"
-              )}
-            </Button>
-          </DialogFooter>
+          <Form {...resetPasswordForm}>
+            <form onSubmit={resetPasswordForm.handleSubmit(handleResetPassword)} className="space-y-4">
+              <FormField
+                control={resetPasswordForm.control}
+                name="new_email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-gray-700 dark:text-gray-300">Email</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        type="email"
+                        className="text-base bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg"
+                        placeholder="Enter your email address"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowResetPasswordDialog(false)}
+                  className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  className="bg-green-500 hover:bg-green-600 text-white rounded-lg"
+                  disabled={operationLoading}
+                >
+                  {operationLoading ? (
+                    <>
+                      <Loader2 size={16} className="mr-2 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    "Send Reset Link"
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
 
