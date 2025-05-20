@@ -38,15 +38,6 @@ const VenueBookings = () => {
         return;
       }
 
-      setLoading(true);
-      try {
-        // Fetch user
-        const { data: user, error: userError } = await supabase.auth.getUser();
-        if (userError || !user.user) {
-          console.error("User auth error:", userError);
-          throw new Error("User not authenticated");
-        }
-
         // Fetch venue details
         const { data: venue, error: venueError } = await supabase
           .from("venues")
