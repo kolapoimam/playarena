@@ -130,15 +130,14 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
         .from("access_pins")
         .select(`
           venue_id,
+          pin,
           venues (
             id,
             name,
-            verified_status,
-            access_pins(pin)
+            verified_status
           )
         `)
-        .eq("venue_id", profile.id)
-        .eq("verified", "True");
+        .eq("verified", true);
 
       if (error) {
         toast({ title: "Error", description: "Failed to fetch venues.", variant: "destructive" });
@@ -147,7 +146,7 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
           id: item.venues.id,
           name: item.venues.name,
           verified_status: item.venues.verified_status,
-          pin: item.venues.access_pins[0]?.pin || "No pin assigned",
+          pin: item.pin,
         })));
       }
     };
@@ -272,7 +271,7 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
   const handleRegeneratePin = async (venueId: string) => {
     setOperationLoading(true);
     try {
-      const newPin = generateRandomCode();
+      const newPin = Math.random().toString(36).slice(-6).toUpperCase();
       const { error } = await supabase
         .from("access_pins")
         .update({ pin: newPin, updated_at: new Date().toISOString() })
@@ -290,7 +289,7 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
   };
 
   const generateRandomCode = () => {
-    return substring(md5(random()::text) FROM 1 FOR 6);
+    return Math.random().toString(36).slice(-6).toUpperCase();
   };
 
   const handleManageVenue = (venueId: string) => {
