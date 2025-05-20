@@ -57,32 +57,43 @@ const Auth = () => {
           options: {
             emailRedirectTo: `${window.location.origin}/profile`,
             data: {
-              first_name: firstName,
-              last_name: lastName,
+              first_name: firstName.trim(),
+              last_name: lastName.trim(),
             },
           },
         });
+        
         if (error) throw error;
 
         // Save name to profiles table
         if (data.user) {
-          // Debug log to verify IDs (can be removed after testing)
-          console.log('User ID:', data.user.id, 'Auth UID:', await supabase.auth.getUser().then(u => u.data.user?.id));
-
           const { error: profileError } = await supabase
             .from("profiles")
             .upsert({
               id: data.user.id,
+              email: email,
               first_name: firstName.trim(),
               last_name: lastName.trim(),
+              is_initial_setup: true,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            }, {
+              onConflict: 'id'
             });
 
           if (profileError) throw profileError;
 
           toast({
-            title: "You're In the Game! ⚽",
-            description: "Check your email to confirm your Sport Cliq account!",
+            title: "Success! Check Your Email",
+            description: "We've sent a confirmation link to your email. Please verify your email to complete registration.",
           });
+          
+          // Reset form
+          setEmail("");
+          setPassword("");
+          setFirstName("");
+          setLastName("");
+          setIsSignUp(false);
         }
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -91,7 +102,7 @@ const Auth = () => {
       }
     } catch (error) {
       toast({ 
-        title: "Oops, Out of Bounds!", 
+        title: "Oops, Something Went Wrong!", 
         description: error.message, 
         variant: "destructive" 
       });
@@ -105,7 +116,13 @@ const Auth = () => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: { redirectTo: `${window.location.origin}/profile` },
+        options: { 
+          redirectTo: `${window.location.origin}/profile`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent'
+          }
+        },
       });
       if (error) throw error;
     } catch (error) {
