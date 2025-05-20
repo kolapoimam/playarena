@@ -66,7 +66,7 @@ const profileSchema = z.object({
     .string()
     .refine((date) => {
       const birthDate = new Date(date);
-      const today = new Date("2025-05-20T22:19:00+01:00");
+      const today = new Date("2025-05-20T22:40:00+01:00");
       let age = today.getFullYear() - birthDate.getFullYear();
       const monthDiff = today.getMonth() - birthDate.getMonth();
       if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) age--;
@@ -143,24 +143,32 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
   useEffect(() => {
     const fetchVenues = async () => {
       if (!profile?.id) return;
-      const { data, error } = await supabase
-        .from("access_pins")
-        .select(`
-          venue_id,
-          pin,
-          verified,
-          venues (
-            id,
-            name,
-            slug
-          )
-        `)
-        .eq("user_id", profile.id);
+      try {
+        const { data, error } = await supabase
+          .from("access_pins")
+          .select(`
+            venue_id,
+            pin,
+            verified,
+            user_id,
+            venues (
+              id,
+              name,
+              slug
+            )
+          `)
+          .eq("user_id", profile.id);
 
-      if (error) {
-        console.error("Error fetching venues:", error);
-        toast({ title: "Error", description: "Failed to fetch linked venues.", variant: "destructive" });
-      } else {
+        if (error) {
+          console.error("Error fetching venues:", error);
+          if (error.code === "42703") {
+            toast({ title: "Error", description: "Database schema issue. Please contact support.", variant: "destructive" });
+          } else {
+            toast({ title: "Error", description: "Failed to fetch linked venues.", variant: "destructive" });
+          }
+          return;
+        }
+
         setVenues(
           data.map((item) => ({
             id: item.venues.id,
@@ -170,6 +178,9 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
             verified: item.verified,
           }))
         );
+      } catch (err) {
+        console.error("Unexpected error fetching venues:", err);
+        toast({ title: "Error", description: "An unexpected error occurred while fetching venues.", variant: "destructive" });
       }
     };
     fetchVenues();
@@ -186,22 +197,29 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
           date_of_birth: data.date_of_birth,
         };
 
-    const { error } = await supabase
-      .from("profiles")
-      .update({ ...updates, is_initial_setup: false, updated_at: new Date().toISOString() })
-      .eq("id", profile?.id);
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ ...updates, is_initial_setup: false, updated_at: new Date().toISOString() })
+        .eq("id", profile?.id);
 
-    if (error) {
-      toast({ title: "Error", description: "Failed to update profile.", variant: "destructive" });
-    } else {
+      if (error) {
+        throw new Error(error.message);
+      }
+
       toast({ title: "Success", description: "Profile updated successfully!" });
       setProfile({ ...profile!, ...updates, is_initial_setup: false, updated_at: new Date().toISOString() });
       setShowSettings(false);
+    } catch (error: any) {
+      console.error("Error updating profile:", error);
+      toast({ title: "Error", description: error.message || "Failed to update profile.", variant: "destructive" });
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleResetPassword = async (data: z.infer<typeof emailSchema>) => {
+    console.log("Reset Password triggered with:", data);
     setOperationLoading(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(data.new_email, {
@@ -221,6 +239,7 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
       setShowResetPasswordDialog(false);
       resetPasswordForm.reset();
     } catch (error: any) {
+      console.error("Error resetting password:", error);
       toast({
         title: "Error",
         description: error.message || "Failed to send reset password email. Please try again.",
@@ -232,6 +251,7 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
   };
 
   const handleChangeEmail = async (data: z.infer<typeof emailSchema>) => {
+    console.log("Change Email triggered with:", data);
     if (data.new_email === profile?.email) {
       toast({ title: "Error", description: "New email must be different from the current email.", variant: "destructive" });
       return;
@@ -264,6 +284,7 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
       setShowChangeEmailDialog(false);
       emailForm.reset();
     } catch (error: any) {
+      console.error("Error changing email:", error);
       toast({
         title: "Error",
         description: error.message || "Failed to initiate email change. Please try again.",
@@ -275,16 +296,16 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
   };
 
   const handleSubmitPin = async (data: z.infer<typeof pinSchema>) => {
+    console.log("Submit Pin triggered with:", data);
     setOperationLoading(true);
     try {
-      // Validate pin
+      // Validate pin without user_id
       const { data: pinData, error: pinError } = await supabase
         .from("access_pins")
         .select(`
           venue_id,
           pin,
           verified,
-          user_id,
           venues (
             id,
             name,
@@ -299,7 +320,7 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
         throw new Error("Invalid or expired access pin.");
       }
 
-      if (pinData.verified || pinData.user_id || pinData.venues.user_id) {
+      if (pinData.verified || pinData.venues.user_id) {
         throw new Error("This access pin is already linked to a user.");
       }
 
@@ -355,11 +376,15 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
       pinForm.reset();
     } catch (error: any) {
       console.error("Error submitting pin:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to validate access pin. Please try again.",
-        variant: "destructive",
-      });
+      if (error.code === "42703") {
+        toast({ title: "Error", description: "Database schema issue. Please ensure user_id column exists.", variant: "destructive" });
+      } else {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to validate access pin. Please try again.",
+          variant: "destructive",
+        });
+      }
     } finally {
       setOperationLoading(false);
     }
@@ -368,7 +393,7 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
   const canChangeEmail = () => {
     if (!profile?.last_email_change) return true;
     const lastChange = new Date(profile.last_email_change);
-    const now = new Date("2025-05-20T22:19:00+01:00");
+    const now = new Date("2025-05-20T22:40:00+01:00");
     const diffDays = (now.getTime() - lastChange.getTime()) / (1000 * 60 * 60 * 24);
     return diffDays >= 30;
   };
@@ -376,7 +401,7 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
   const calculateAge = (dob?: string) => {
     if (!dob) return null;
     const birthDate = new Date(dob);
-    const today = new Date("2025-05-20T22:19:00+01:00");
+    const today = new Date("2025-05-20T22:40:00+01:00");
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) age--;
@@ -391,6 +416,7 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
 
   // Prevent dialogs from closing unless explicitly allowed
   const handleDialogOpenChange = (setter: (value: boolean) => void, shouldClose: boolean, setShouldClose: (value: boolean) => void) => (open: boolean) => {
+    console.log(`Dialog open change: open=${open}, shouldClose=${shouldClose}, operationLoading=${operationLoading}`);
     if (!open && shouldClose && !operationLoading) {
       setter(false);
       setShouldClose(false);
@@ -488,6 +514,7 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
                       className="text-base bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg flex-1"
                     />
                     <Button
+                      type="button"
                       variant="outline"
                       className="text-green-500 border-green-500 hover:bg-green-500 hover:text-white rounded-lg"
                       onClick={() => setShowChangeEmailDialog(true)}
@@ -505,6 +532,7 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
                 </div>
                 <div>
                   <Button
+                    type="button"
                     variant="outline"
                     className="w-full text-green-500 border-green-500 hover:bg-green-500 hover:text-white rounded-lg"
                     onClick={() => setShowResetPasswordDialog(true)}
@@ -741,6 +769,7 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
           </summary>
           <CardContent className="p-4 pt-6">
             <Button
+              type="button"
               variant="outline"
               className="w-full text-green-500 border-green-500 hover:bg-green-500 hover:text-white rounded-lg"
               onClick={() => setShowVenueDialog(true)}
@@ -787,10 +816,12 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
               />
               <DialogFooter className="flex justify-end gap-2">
                 <Button
+                  type="button"
                   variant="outline"
                   onClick={() => {
                     setResetPasswordShouldClose(true);
                     setShowResetPasswordDialog(false);
+                    resetPasswordForm.reset();
                   }}
                   className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
                   disabled={operationLoading}
@@ -853,10 +884,12 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
               />
               <DialogFooter className="flex justify-end gap-2">
                 <Button
+                  type="button"
                   variant="outline"
                   onClick={() => {
                     setChangeEmailShouldClose(true);
                     setShowChangeEmailDialog(false);
+                    emailForm.reset();
                   }}
                   className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
                   disabled={operationLoading}
@@ -891,7 +924,7 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
           <DialogHeader>
             <DialogTitle className="text-xl font-semibold text-green-700 dark:text-green-400">Manage Venues</DialogTitle>
             <DialogDescription className="text-gray-600 dark:text-gray-300">
-              Enter an access pin to link a venue to your profile, or manage existing linked venues.
+              Enter a 6-character access pin to link a venue to your profile, or manage existing linked venues.
             </DialogDescription>
           </DialogHeader>
           <div className="p-4 space-y-6">
@@ -908,7 +941,7 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
                           {...field}
                           type="text"
                           maxLength={6}
-                          className="text-base bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg uppercase"
+                          className="text-base bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg"
                           placeholder="Enter 6-character pin"
                         />
                       </FormControl>
@@ -943,6 +976,7 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
                         <p className="text-sm text-gray-600 dark:text-gray-400">Pin: {venue.pin}</p>
                       </div>
                       <Button
+                        type="button"
                         variant="outline"
                         size="sm"
                         onClick={() => handleManageVenue(venue.id)}
@@ -959,10 +993,12 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
           </div>
           <DialogFooter>
             <Button
+              type="button"
               variant="outline"
               onClick={() => {
                 setVenueShouldClose(true);
                 setShowVenueDialog(false);
+                pinForm.reset();
               }}
               className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
               disabled={operationLoading}
