@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Loader2, CheckCircle, ChevronDown, Mail, Lock, RefreshCw } from "lucide-react";
+import { Loader2, CheckCircle, ChevronDown, Mail, Lock } from "lucide-react";
 import { format } from "date-fns";
 
 type Profile = {
@@ -34,8 +34,9 @@ type Profile = {
 type Venue = {
   id: string;
   name: string;
-  verified_status: string;
+  slug: string;
   pin: string;
+  verified: boolean;
 };
 
 const profileSchema = z.object({
@@ -65,7 +66,7 @@ const profileSchema = z.object({
     .string()
     .refine((date) => {
       const birthDate = new Date(date);
-      const today = new Date("2025-05-20T21:00:00+01:00");
+      const today = new Date("2025-05-20T22:19:00+01:00");
       let age = today.getFullYear() - birthDate.getFullYear();
       const monthDiff = today.getMonth() - birthDate.getMonth();
       if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) age--;
@@ -76,6 +77,13 @@ const profileSchema = z.object({
 
 const emailSchema = z.object({
   new_email: z.string().email("Invalid email address"),
+});
+
+const pinSchema = z.object({
+  access_pin: z
+    .string()
+    .length(6, "Access pin must be 6 characters")
+    .regex(/^[a-zA-Z0-9]{6}$/, "Access pin must be 6 characters and contain only letters and numbers"),
 });
 
 type ProfileSettingsProps = {
@@ -93,6 +101,9 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
   const [showVenueDialog, setShowVenueDialog] = useState(false);
   const [operationLoading, setOperationLoading] = useState(false);
   const [venues, setVenues] = useState<Venue[]>([]);
+  const [resetPasswordShouldClose, setResetPasswordShouldClose] = useState(false);
+  const [changeEmailShouldClose, setChangeEmailShouldClose] = useState(false);
+  const [venueShouldClose, setVenueShouldClose] = useState(false);
 
   const form = useForm<z.infer<typeof profileSchema>>({
     resolver: zodResolver(profileSchema),
@@ -122,6 +133,13 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
     },
   });
 
+  const pinForm = useForm<z.infer<typeof pinSchema>>({
+    resolver: zodResolver(pinSchema),
+    defaultValues: {
+      access_pin: "",
+    },
+  });
+
   useEffect(() => {
     const fetchVenues = async () => {
       if (!profile?.id) return;
@@ -130,23 +148,28 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
         .select(`
           venue_id,
           pin,
+          verified,
           venues (
             id,
             name,
-            verified_status
+            slug
           )
         `)
-        .eq("verified", true);
+        .eq("user_id", profile.id);
 
       if (error) {
-        toast({ title: "Error", description: "Failed to fetch venues.", variant: "destructive" });
+        console.error("Error fetching venues:", error);
+        toast({ title: "Error", description: "Failed to fetch linked venues.", variant: "destructive" });
       } else {
-        setVenues(data.map((item) => ({
-          id: item.venues.id,
-          name: item.venues.name,
-          verified_status: item.venues.verified_status,
-          pin: item.pin,
-        })));
+        setVenues(
+          data.map((item) => ({
+            id: item.venues.id,
+            name: item.venues.name,
+            slug: item.venues.slug,
+            pin: item.pin,
+            verified: item.verified,
+          }))
+        );
       }
     };
     fetchVenues();
@@ -194,6 +217,7 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
         description: "Password reset email sent! Please check your inbox and spam folder.",
         variant: "default",
       });
+      setResetPasswordShouldClose(true);
       setShowResetPasswordDialog(false);
       resetPasswordForm.reset();
     } catch (error: any) {
@@ -236,6 +260,7 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
         description: "Email change initiated! Check your new and old email inboxes to confirm.",
         variant: "default",
       });
+      setChangeEmailShouldClose(true);
       setShowChangeEmailDialog(false);
       emailForm.reset();
     } catch (error: any) {
@@ -249,10 +274,101 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
     }
   };
 
+  const handleSubmitPin = async (data: z.infer<typeof pinSchema>) => {
+    setOperationLoading(true);
+    try {
+      // Validate pin
+      const { data: pinData, error: pinError } = await supabase
+        .from("access_pins")
+        .select(`
+          venue_id,
+          pin,
+          verified,
+          user_id,
+          venues (
+            id,
+            name,
+            slug,
+            user_id
+          )
+        `)
+        .eq("pin", data.access_pin)
+        .single();
+
+      if (pinError || !pinData) {
+        throw new Error("Invalid or expired access pin.");
+      }
+
+      if (pinData.verified || pinData.user_id || pinData.venues.user_id) {
+        throw new Error("This access pin is already linked to a user.");
+      }
+
+      // Update access_pins with user_id and verified = true
+      const { error: updatePinError } = await supabase
+        .from("access_pins")
+        .update({
+          user_id: profile?.id,
+          verified: true,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("pin", data.access_pin);
+
+      if (updatePinError) {
+        throw new Error("Failed to link venue to profile.");
+      }
+
+      // Update venues with user_id
+      const { error: updateVenueError } = await supabase
+        .from("venues")
+        .update({
+          user_id: profile?.id,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", pinData.venue_id);
+
+      if (updateVenueError) {
+        throw new Error("Failed to update venue ownership.");
+      }
+
+      // Update local venues state
+      setVenues([
+        ...venues,
+        {
+          id: pinData.venues.id,
+          name: pinData.venues.name,
+          slug: pinData.venues.slug,
+          pin: pinData.pin,
+          verified: true,
+        },
+      ]);
+
+      toast({
+        title: "Success",
+        description: "Venue successfully linked to your profile!",
+        variant: "default",
+      });
+
+      // Redirect to venue management dashboard
+      navigate(`/venuemanager/dashboard/${pinData.venue_id}`);
+      setVenueShouldClose(true);
+      setShowVenueDialog(false);
+      pinForm.reset();
+    } catch (error: any) {
+      console.error("Error submitting pin:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to validate access pin. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setOperationLoading(false);
+    }
+  };
+
   const canChangeEmail = () => {
     if (!profile?.last_email_change) return true;
     const lastChange = new Date(profile.last_email_change);
-    const now = new Date("2025-05-20T22:08:00+01:00");
+    const now = new Date("2025-05-20T22:19:00+01:00");
     const diffDays = (now.getTime() - lastChange.getTime()) / (1000 * 60 * 60 * 24);
     return diffDays >= 30;
   };
@@ -260,42 +376,24 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
   const calculateAge = (dob?: string) => {
     if (!dob) return null;
     const birthDate = new Date(dob);
-    const today = new Date("2025-05-20T22:08:00+01:00");
+    const today = new Date("2025-05-20T22:19:00+01:00");
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) age--;
     return age;
   };
 
-  const handleRegeneratePin = async (venueId: string) => {
-    setOperationLoading(true);
-    try {
-      const newPin = Math.random().toString(36).slice(-6).toUpperCase();
-      const { error } = await supabase
-        .from("access_pins")
-        .update({ pin: newPin, updated_at: new Date().toISOString() })
-        .eq("venue_id", venueId);
-
-      if (error) throw error;
-
-      setVenues(venues.map(v => v.id === venueId ? { ...v, pin: newPin } : v));
-      toast({ title: "Success", description: "Access pin regenerated successfully!" });
-    } catch (error) {
-      toast({ title: "Error", description: "Failed to regenerate pin.", variant: "destructive" });
-    } finally {
-      setOperationLoading(false);
-    }
-  };
-
   const handleManageVenue = (venueId: string) => {
     navigate(`/venuemanager/dashboard/${venueId}`);
-    setShowVenueDialog(false); // Close dialog on navigation
+    setVenueShouldClose(true);
+    setShowVenueDialog(false);
   };
 
-  // Prevent dialogs from closing on outside click or Escape key
-  const handleDialogOpenChange = (setter: (value: boolean) => void) => (open: boolean) => {
-    if (!open && !operationLoading) {
+  // Prevent dialogs from closing unless explicitly allowed
+  const handleDialogOpenChange = (setter: (value: boolean) => void, shouldClose: boolean, setShouldClose: (value: boolean) => void) => (open: boolean) => {
+    if (!open && shouldClose && !operationLoading) {
       setter(false);
+      setShouldClose(false);
     }
   };
 
@@ -655,7 +753,7 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
 
       <Dialog
         open={showResetPasswordDialog}
-        onOpenChange={handleDialogOpenChange(setShowResetPasswordDialog)}
+        onOpenChange={handleDialogOpenChange(setShowResetPasswordDialog, resetPasswordShouldClose, setResetPasswordShouldClose)}
       >
         <DialogContent className="sm:max-w-md rounded-2xl bg-white dark:bg-gray-800 shadow-2xl border-none">
           <DialogHeader>
@@ -690,7 +788,10 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
               <DialogFooter className="flex justify-end gap-2">
                 <Button
                   variant="outline"
-                  onClick={() => setShowResetPasswordDialog(false)}
+                  onClick={() => {
+                    setResetPasswordShouldClose(true);
+                    setShowResetPasswordDialog(false);
+                  }}
                   className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
                   disabled={operationLoading}
                 >
@@ -718,7 +819,7 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
 
       <Dialog
         open={showChangeEmailDialog}
-        onOpenChange={handleDialogOpenChange(setShowChangeEmailDialog)}
+        onOpenChange={handleDialogOpenChange(setShowChangeEmailDialog, changeEmailShouldClose, setChangeEmailShouldClose)}
       >
         <DialogContent className="sm:max-w-md rounded-2xl bg-white dark:bg-gray-800 shadow-2xl border-none">
           <DialogHeader>
@@ -753,7 +854,10 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
               <DialogFooter className="flex justify-end gap-2">
                 <Button
                   variant="outline"
-                  onClick={() => setShowChangeEmailDialog(false)}
+                  onClick={() => {
+                    setChangeEmailShouldClose(true);
+                    setShowChangeEmailDialog(false);
+                  }}
                   className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
                   disabled={operationLoading}
                 >
@@ -781,27 +885,63 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
 
       <Dialog
         open={showVenueDialog}
-        onOpenChange={handleDialogOpenChange(setShowVenueDialog)}
+        onOpenChange={handleDialogOpenChange(setShowVenueDialog, venueShouldClose, setVenueShouldClose)}
       >
         <DialogContent className="sm:max-w-md rounded-2xl bg-white dark:bg-gray-800 shadow-2xl border-none">
           <DialogHeader>
             <DialogTitle className="text-xl font-semibold text-green-700 dark:text-green-400">Manage Venues</DialogTitle>
             <DialogDescription className="text-gray-600 dark:text-gray-300">
-              Select a venue to manage or regenerate its access pin.
+              Enter an access pin to link a venue to your profile, or manage existing linked venues.
             </DialogDescription>
           </DialogHeader>
-          <div className="p-4 space-y-4">
-            {venues.length === 0 ? (
-              <p className="text-gray-600 dark:text-gray-400">No verified venues associated with your account.</p>
-            ) : (
-              venues.map((venue) => (
-                <div key={venue.id} className="border-b border-gray-200 dark:border-gray-700 pb-2">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="font-medium text-gray-900 dark:text-gray-100">{venue.name}</p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Pin: {venue.pin}</p>
-                    </div>
-                    <div className="space-x-2">
+          <div className="p-4 space-y-6">
+            <Form {...pinForm}>
+              <form onSubmit={pinForm.handleSubmit(handleSubmitPin)} className="space-y-4">
+                <FormField
+                  control={pinForm.control}
+                  name="access_pin"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-gray-700 dark:text-gray-300">Access Pin</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          type="text"
+                          maxLength={6}
+                          className="text-base bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg uppercase"
+                          placeholder="Enter 6-character pin"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button
+                  type="submit"
+                  className="w-full bg-green-500 hover:bg-green-600 text-white rounded-lg"
+                  disabled={operationLoading}
+                >
+                  {operationLoading ? (
+                    <>
+                      <Loader2 size={16} className="mr-2 animate-spin" />
+                      Validating...
+                    </>
+                  ) : (
+                    "Submit Pin"
+                  )}
+                </Button>
+              </form>
+            </Form>
+            {venues.length > 0 && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Linked Venues</h3>
+                {venues.map((venue) => (
+                  <div key={venue.id} className="border-b border-gray-200 dark:border-gray-700 pb-2">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="font-medium text-gray-900 dark:text-gray-100">{venue.name}</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Pin: {venue.pin}</p>
+                      </div>
                       <Button
                         variant="outline"
                         size="sm"
@@ -811,29 +951,19 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
                       >
                         Manage
                       </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleRegeneratePin(venue.id)}
-                        disabled={operationLoading}
-                        className="text-green-500 border-green-500 hover:bg-green-500 hover:text-white"
-                      >
-                        {operationLoading ? (
-                          <Loader2 size={16} className="animate-spin" />
-                        ) : (
-                          <RefreshCw size={16} />
-                        )}
-                      </Button>
                     </div>
                   </div>
-                </div>
-              ))
+                ))}
+              </div>
             )}
           </div>
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setShowVenueDialog(false)}
+              onClick={() => {
+                setVenueShouldClose(true);
+                setShowVenueDialog(false);
+              }}
               className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
               disabled={operationLoading}
             >
