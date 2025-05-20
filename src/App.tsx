@@ -31,7 +31,8 @@ import TeamManagement from "./pages/TeamManagement";
 import Ticketing from "./pages/Ticketing";
 import TermsAndPrivacy from "./pages/TermsAndPrivacy";
 import Confirm from "./pages/Confirm";
-import VenueManagerDashboard from "./pages/VenueManagerDashboard"; // Added import
+import VenueManagerDashboard from "./pages/VenueManagerDashboard";
+import VenueBookings from "./pages/VenueBookings"; // Added import
 
 import * as gtag from "./lib/gtag";
 
@@ -67,7 +68,8 @@ const AppRoutes = () => {
       <Route path="/match/:slug/team-management" element={<TeamManagement />} />
       <Route path="/match-id/:id" element={<MatchRedirect />} />
       <Route path="/venue-id/:id" element={<VenueRedirect />} />
-      <Route path="/venuemanager/dashboard/:venueId" element={<VenueManagerDashboard />} /> {/* Added route */}
+      <Route path="/venuemanager/dashboard/:venueId" element={<VenueManagerDashboard />} />
+      <Route path="/venues-bookings/:venueSlug" element={<VenueBookings />} /> {/* Added route */}
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
