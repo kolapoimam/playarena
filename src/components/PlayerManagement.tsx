@@ -140,7 +140,10 @@ const PlayerManagement = ({
 
   // Fetch confirmed tickets
   useEffect(() => {
-    if (!match?.id || !match.sell_tickets) return;
+    if (!match?.id || !match.sell_tickets) {
+      setConfirmedTickets([]);
+      return;
+    }
 
     const fetchConfirmedTickets = async () => {
       try {
@@ -160,10 +163,32 @@ const PlayerManagement = ({
           description: "Failed to load confirmed tickets.",
           variant: "destructive",
         });
+        setConfirmedTickets([]);
       }
     };
 
     fetchConfirmedTickets();
+
+    // Set up real-time subscription for tickets
+    const ticketChannel = supabase
+      .channel(`tickets_match_${match.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'tickets',
+          filter: `match_id=eq.${match.id}`,
+        },
+        () => {
+          fetchConfirmedTickets();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(ticketChannel);
+    };
   }, [match, toast]);
 
   const fetchWalletData = useCallback(async () => {
@@ -239,15 +264,9 @@ const PlayerManagement = ({
   }, [match, fetchMatch, setPlayerStatuses, toast]);
 
   useEffect(() => {
-    const fetchUserIdAndData = async () => {
-      const { data: session } = await supabase.auth.getSession();
-      if (session.session) {
-        await fetchWalletData();
-      }
-    };
-
-    fetchUserIdAndData();
-  }, [fetchWalletData]);
+    if (!match) return;
+    fetchWalletData();
+  }, [match, fetchWalletData]);
 
   const hasCheckedInPlayers = () => {
     return playerStatuses.some(p => p.status === 'Checked In') || false;
@@ -483,7 +502,7 @@ const PlayerManagement = ({
       return;
     }
 
-    if (!match) {
+    if (!match || !match.id) {
       toast({
         title: "Error",
         description: "Match data not available",
@@ -523,7 +542,7 @@ const PlayerManagement = ({
         ticket_code: data.ticket_code,
       };
 
-      setConfirmedTickets(prev => [...prev, newTicket]);
+      setConfirmedTickets(prev => [...prev.filter(t => t.id !== data.id), newTicket]);
       setVerifiedTicket({ buyer_name: data.buyer_name, number_of_tickets: data.number_of_tickets });
       setTicketDialogOpen(true);
 
@@ -534,6 +553,9 @@ const PlayerManagement = ({
 
       setTicketInput("");
       setTicketError(null);
+
+      // Trigger wallet balance update
+      await fetchWalletData();
     } catch (error: any) {
       toast({
         title: "Error",
