@@ -62,32 +62,13 @@ const Auth = () => {
             },
           },
         });
-        
         if (error) throw error;
 
-        // Save name to profiles table
         if (data.user) {
-          const { error: profileError } = await supabase
-            .from("profiles")
-            .upsert({
-              id: data.user.id,
-              email: email,
-              first_name: firstName.trim(),
-              last_name: lastName.trim(),
-              is_initial_setup: true,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            }, {
-              onConflict: 'id'
-            });
-
-          if (profileError) throw profileError;
-
           toast({
             title: "Success! Check Your Email",
             description: "We've sent a confirmation link to your email. Please verify your email to complete registration.",
           });
-          
           // Reset form
           setEmail("");
           setPassword("");
@@ -101,10 +82,10 @@ const Auth = () => {
         navigate("/profile");
       }
     } catch (error) {
-      toast({ 
-        title: "Oops, Something Went Wrong!", 
-        description: error.message, 
-        variant: "destructive" 
+      toast({
+        title: "Oops, Something Went Wrong!",
+        description: error.message,
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -114,22 +95,50 @@ const Auth = () => {
   const handleGoogleAuth = async () => {
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: { 
+        options: {
           redirectTo: `${window.location.origin}/profile`,
           queryParams: {
             access_type: 'offline',
-            prompt: 'consent'
-          }
+            prompt: 'consent',
+          },
         },
       });
       if (error) throw error;
+
+      // Get user data after Google login
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
+
+      if (userData.user) {
+        const identity = userData.user.identities?.find(id => id.provider === 'google');
+        const firstName = identity?.identity_data?.first_name || identity?.identity_data?.name || userData.user.email?.split('@')[0] || 'Unknown';
+        const lastName = identity?.identity_data?.last_name || identity?.identity_data?.family_name || 'User';
+
+        // Upsert profile to ensure first_name and last_name are set
+        const { error: profileError } = await supabase
+          .from("profiles")
+          .upsert({
+            id: userData.user.id,
+            email: userData.user.email,
+            first_name: firstName,
+            last_name: lastName,
+            is_initial_setup: true,
+            updated_at: new Date().toISOString(),
+          }, {
+            onConflict: 'id',
+          });
+
+        if (profileError) throw profileError;
+
+        navigate("/profile");
+      }
     } catch (error) {
-      toast({ 
-        title: "Oops, Out of Bounds!", 
-        description: error.message, 
-        variant: "destructive" 
+      toast({
+        title: "Oops, Out of Bounds!",
+        description: error.message,
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -160,10 +169,10 @@ const Auth = () => {
       setShowForgotPassword(false);
       setResetEmail("");
     } catch (error) {
-      toast({ 
-        title: "Error", 
-        description: error.message, 
-        variant: "destructive" 
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -349,7 +358,7 @@ const Auth = () => {
                 Enter your email to receive a password reset link.
               </p>
             </div>
-            
+
             <Input
               type="email"
               placeholder="Your Email"
@@ -357,7 +366,7 @@ const Auth = () => {
               onChange={(e) => setResetEmail(e.target.value)}
               className="w-full mb-5"
             />
-            
+
             <div className="flex justify-end gap-3">
               <Button
                 variant="outline"
