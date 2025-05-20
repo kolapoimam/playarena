@@ -16,12 +16,6 @@ import {
   FormMessage,
   FormDescription,
 } from "@/components/ui/form";
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
 import { Calendar, MapPin, ArrowLeft, Ticket, Download, Copy } from "lucide-react";
 import { format } from "date-fns";
 import Navbar from "@/components/Navbar";
@@ -225,47 +219,64 @@ const TicketReceipt = () => {
               <div className="absolute inset-0 bg-gradient-to-b from-gray-400 to-gray-200 dark:from-gray-700 dark:to-gray-500" />
               <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-32 h-2 bg-gray-800 dark:bg-gray-900" />
             </div>
-            {/* Ticket Card with Animation */}
+            {/* Ticket with Sports Ticket Styling and Printing Animation */}
             <div
               ref={cardRef}
-              className="bg-gradient-to-br from-green-500 to-green-700 rounded-xl p-6 text-white shadow-lg transform transition-transform duration-1000 ease-out animate-slide-up"
+              className="relative bg-gradient-to-r from-green-500 to-green-700 rounded-lg p-6 text-white shadow-lg max-w-md mx-auto overflow-hidden
+                         border-4 border-dashed border-white/30
+                         animate-ticket-print"
+              style={{
+                backgroundImage: 'linear-gradient(45deg, rgba(255,255,255,0.1) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.1) 75%, transparent 75%, transparent)',
+                backgroundSize: '40px 40px',
+              }}
             >
-              <div className="flex items-center justify-between mb-4">
+              {/* Perforated Edge Effect */}
+              <div className="absolute top-0 left-0 w-full h-2 bg-white/20 border-t border-dashed border-white/50" />
+              <div className="absolute bottom-0 left-0 w-full h-2 bg-white/20 border-b border-dashed border-white/50" />
+              <div className="absolute top-0 left-0 w-2 h-full bg-white/20 border-l border-dashed border-white/50" />
+              <div className="absolute top-0 right-0 w-2 h-full bg-white/20 border-r border-dashed border-white/50" />
+
+              {/* Ticket Content */}
+              <div className="flex items-center justify-between mb-4 animate-ticket-content">
                 <img src="/playarenadark.png" alt="PlayArena Logo" className="h-8 w-auto" />
                 <Ticket className="h-6 w-6" />
               </div>
-              <h2 className="text-xl font-bold mb-2">{ticket.match.title}</h2>
-              <div className="space-y-2 mb-4 text-sm">
-                <div className="flex items-center">
-                  <MapPin className="h-4 w-4 mr-2" />
-                  <span>{ticket.match.venue?.name || "Venue"}, {ticket.match.venue?.city || ""}</span>
+              <h2 className="text-2xl font-bold mb-4 tracking-tight animate-ticket-content delay-100">{ticket.match.title}</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 text-sm animate-ticket-content delay-200">
+                <div>
+                  <div className="flex items-center mb-2">
+                    <MapPin className="h-4 w-4 mr-2" />
+                    <span>{ticket.match.venue?.name || "Venue"}, {ticket.match.venue?.city || ""}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <Calendar className="h-4 w-4 mr-2" />
+                    <span>
+                      {format(new Date(ticket.match.match_date), "PPP")} at{" "}
+                      {format(new Date(`1970-01-01T${ticket.match.match_time}`), "p")}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center">
-                  <Calendar className="h-4 w-4 mr-2" />
-                  <span>
-                    {format(new Date(ticket.match.match_date), "PPP")} at{" "}
-                    {format(new Date(`1970-01-01T${ticket.match.match_time}`), "p")}
-                  </span>
-                </div>
-                <div className="flex items-center">
-                  <span className="font-semibold">Tickets: </span>
-                  <span className="ml-2">{ticket.number_of_tickets}</span>
-                </div>
-                <div className="flex items-center">
-                  <span className="font-semibold">Total: </span>
-                  <span className="ml-2">₦{ticket.total_price.toFixed(2)}</span>
+                <div>
+                  <div className="flex items-center mb-2">
+                    <span className="font-semibold">Tickets:</span>
+                    <span className="ml-2">{ticket.number_of_tickets}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <span className="font-semibold">Total:</span>
+                    <span className="ml-2">₦{ticket.total_price.toFixed(2)}</span>
+                  </div>
                 </div>
               </div>
-              <div className="bg-white text-green-600 rounded-md p-4 text-center shadow-inner">
-                <p className="text-sm font-medium">Ticket Code</p>
-                <p className="text-3xl font-bold tracking-wider">{ticket.ticket_code}</p>
+              <div className="bg-white text-green-600 rounded-md p-4 text-center shadow-inner animate-ticket-content delay-300">
+                <p className="text-sm font-medium uppercase tracking-wide">Ticket Code</p>
+                <p className="text-4xl font-bold tracking-wider mt-1">{ticket.ticket_code}</p>
               </div>
             </div>
           </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400 my-4">
+          <p className="text-sm text-gray-500 dark:text-gray-400 my-4 text-center">
             <strong>Note:</strong> Save or download this ticket code. You'll need it for entry on match day.
           </p>
-          <div className="flex flex-col sm:flex-row gap-3 opacity-0 transition-opacity duration-500 delay-1000 animate-fade-in">
+          <div className="flex flex-col sm:flex-row gap-3 animate-ticket-content delay-400">
             <div className="flex-1 relative">
               <select
                 value={downloadFormat}
