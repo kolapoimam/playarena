@@ -55,7 +55,7 @@ const Auth = () => {
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/profile`,
+            emailRedirectTo: `${window.location.origin}/confirm`,
             data: {
               first_name: firstName.trim(),
               last_name: lastName.trim(),
@@ -78,8 +78,19 @@ const Auth = () => {
         }
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        navigate("/profile");
+        if (error) {
+          if (error.code === "email_not_confirmed") {
+            toast({
+              title: "Email Not Confirmed",
+              description: "Please check your email and click the confirmation link to verify your account.",
+              variant: "destructive",
+            });
+          } else {
+            throw error;
+          }
+        } else {
+          navigate("/profile");
+        }
       }
     } catch (error) {
       toast({
@@ -181,7 +192,6 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-b from-[#e6f3f5] to-[#d1e8eb] dark:from-gray-900 dark:to-gray-800 relative pb-20">
-      {/* Logo in center above the form */}
       <div className="absolute top-10 left-1/2 transform -translate-x-1/2">
         <img src="/navlogo.png" alt="PlayArena Logo" className="h-16 w-auto" />
       </div>
@@ -346,7 +356,6 @@ const Auth = () => {
         </div>
       </div>
 
-      {/* Forgot Password Dialog */}
       {showForgotPassword && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 w-full max-w-xs">
@@ -388,7 +397,6 @@ const Auth = () => {
         </div>
       )}
 
-      {/* Footer Image with Gradient Background */}
       <div className="absolute bottom-16 left-0 w-full">
         <div className="w-full h-48 bg-gradient-to-t from-[#e6f3f5] to-[#d1e8eb] dark:from-gray-900 dark:to-gray-800 flex justify-center items-center">
           <img src="/AuthFooter.png" alt="Auth Footer" className="w-full h-full object-contain" />
