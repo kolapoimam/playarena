@@ -32,17 +32,42 @@ const bookingSchema = z.object({
   start_time: z.string().regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, {
     message: "Please enter a valid start time in HH:MM format (24-hour clock)",
   }),
-  duration: z.number().min(1, { message: "Duration must be at least 1 hour" }).max(12, { message: "Duration cannot exceed 12 hours" }),
+  end_time: z.string().regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, {
+    message: "Please enter a valid end time in HH:MM format (24-hour clock)",
+  }),
 }).refine(
   (data) => {
     const now = new Date();
     const selectedDateTime = new Date(data.match_date);
-    const [hours, minutes] = data.start_time.split(":").map(Number);
-    selectedDateTime.setHours(hours, minutes, 0, 0);
+    const [startHours, startMinutes] = data.start_time.split(":").map(Number);
+    selectedDateTime.setHours(startHours, startMinutes, 0, 0);
     const tenMinutesLater = new Date(now.getTime() + 10 * 60 * 1000);
     return selectedDateTime >= tenMinutesLater;
   },
   { message: "Booking must be scheduled at least 10 minutes from now", path: ["start_time"] }
+).refine(
+  (data) => {
+    const [startHours, startMinutes] = data.start_time.split(":").map(Number);
+    const [endHours, endMinutes] = data.end_time.split(":").map(Number);
+    const start = new Date(0);
+    start.setHours(startHours, startMinutes);
+    const end = new Date(0);
+    end.setHours(endHours, endMinutes);
+    return end > start;
+  },
+  { message: "End time must be after start time", path: ["end_time"] }
+).refine(
+  (data) => {
+    const [startHours, startMinutes] = data.start_time.split(":").map(Number);
+    const [endHours, endMinutes] = data.end_time.split(":").map(Number);
+    const start = new Date(0);
+    start.setHours(startHours, startMinutes);
+    const end = new Date(0);
+    end.setHours(endHours, endMinutes);
+    const durationHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+    return durationHours <= 12;
+  },
+  { message: "Booking duration cannot exceed 12 hours", path: ["end_time"] }
 );
 
 type BookingFormValues = z.infer<typeof bookingSchema>;
@@ -69,7 +94,7 @@ const VenueBookingForm = () => {
     defaultValues: {
       match_date: undefined,
       start_time: "",
-      duration: 1,
+      end_time: "",
     },
   });
 
@@ -183,11 +208,22 @@ const VenueBookingForm = () => {
   }, [paymentReference, venue, toast]);
 
   useEffect(() => {
-    const duration = form.watch("duration");
-    if (venue?.booking_fee && duration) {
-      setAmount(venue.booking_fee * duration * 100);
-    }
-  }, [form.watch("duration"), venue]);
+    const subscription = form.watch((value) => {
+      if (venue && value.start_time && value.end_time) {
+        const [startHours, startMinutes] = value.start_time.split(":").map(Number);
+        const [endHours, endMinutes] = value.end_time.split(":").map(Number);
+        const start = new Date(0);
+        start.setHours(startHours, startMinutes);
+        const end = new Date(0);
+        end.setHours(endHours, endMinutes);
+        const durationHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+        setAmount(venue.booking_fee * durationHours);
+      } else {
+        setAmount(0);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [form, venue]);
 
   const generateAccessCode = () => {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -202,7 +238,7 @@ const VenueBookingForm = () => {
     if (!venue || !amount || !paystackLoaded || !window.PaystackPop) {
       toast({
         title: "Error",
-        description: "Payment system is not ready. Please try again later.",
+        description: "Payment system is not ready or amount is invalid. Please try again later.",
         variant: "destructive",
       });
       return;
@@ -229,7 +265,10 @@ const VenueBookingForm = () => {
       const { access_code } = response.data;
 
       const paystack = new window.PaystackPop();
-      paystack.resumeTransaction(access_code, {
+      paystack.newTransaction({
+        key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
+        email: userEmail || defaultEmail,
+        amount: amount * 100, // Paystack expects kobo, but Edge Function handles this
         onSuccess: (transaction) => {
           setPaymentStatus("success");
           toast({
@@ -271,15 +310,10 @@ const VenueBookingForm = () => {
     try {
       setPaying(true);
       const accessCode = generateAccessCode();
-      const [startHours, startMinutes] = values.start_time.split(":").map(Number);
-      const endTime = new Date(
-        new Date(values.match_date).setHours(startHours, startMinutes, 0, 0) + values.duration * 60 * 60 * 1000
-      );
-      const endTimeStr = `${endTime.getHours().toString().padStart(2, "0")}:${endTime.getMinutes().toString().padStart(2, "0")}`;
 
       const { error: bookingError } = await supabase.from("bookings").insert({
         venue_id: venue.id,
-        amount: amount / 100,
+        amount: amount,
         payment_status: "paid",
         payment_reference: paymentReference,
       });
@@ -291,7 +325,7 @@ const VenueBookingForm = () => {
         code: accessCode,
         match_date: format(values.match_date, "yyyy-MM-dd"),
         start_time: values.start_time,
-        end_time: endTimeStr,
+        end_time: values.end_time,
       });
 
       if (accessCodeError) throw accessCodeError;
@@ -359,146 +393,143 @@ const VenueBookingForm = () => {
       </header>
 
       <div className="p-6 max-w-3xl mx-auto">
-        {paymentStatus === "pending" ? (
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md space-y-4">
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Payment Required</h3>
-            <p className="text-gray-600 dark:text-gray-400">
-              Please complete the payment to book this venue.
-            </p>
-            <div className="text-sm font-medium">
-              Total: ₦{(amount / 100).toFixed(2)}
-            </div>
-            <Button
-              type="button"
-              className="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg"
-              onClick={handlePaymentInitiation}
-              disabled={paying || !paystackLoaded || !amount}
-            >
-              {paying ? (
-                <>
-                  <Loader size={16} className="mr-2 animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                `Pay Now (₦${(amount / 100).toFixed(2)})`
+        <Form {...form}>
+          <form className="space-y-6 bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md">
+            <FormField
+              control={form.control}
+              name="match_date"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Booking Date</FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant="outline"
+                          className="w-full pl-3 text-left text-base font-normal border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                        >
+                          {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        disabled={(date) => date < new Date()}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <FormMessage />
+                </FormItem>
               )}
-            </Button>
-          </div>
-        ) : (
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md">
-              {paymentStatus === "success" && (
-                <div className="bg-green-50 p-4 rounded-md border border-green-200 text-green-700">
-                  <p className="font-medium">Payment Successful!</p>
-                  <p className="text-sm">Please complete your booking below.</p>
-                  {paymentReference && (
-                    <p className="text-sm mt-1">Reference: {paymentReference}</p>
-                  )}
-                </div>
-              )}
+            />
 
-              <FormField
-                control={form.control}
-                name="match_date"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Booking Date</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            className="w-full pl-3 text-left text-base font-normal border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                          >
-                            {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date) => date < new Date()}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="start_time"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Start Time</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Input
-                          type="time"
-                          className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                          {...field}
-                        />
-                        <Clock className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="duration"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Duration (hours)</FormLabel>
-                    <FormControl>
+            <FormField
+              control={form.control}
+              name="start_time"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Start Time</FormLabel>
+                  <FormControl>
+                    <div className="relative">
                       <Input
-                        type="number"
-                        min={1}
-                        max={12}
+                        type="time"
                         className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                         {...field}
-                        onChange={(e) => field.onChange(parseInt(e.target.value))}
                       />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                      <Clock className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-              <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Booking Summary</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Price per hour: ₦{venue.booking_fee.toFixed(2)}
+            <FormField
+              control={form.control}
+              name="end_time"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">End Time</FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <Input
+                        type="time"
+                        className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                        {...field}
+                      />
+                      <Clock className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Booking Summary</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Price per hour: ₦{venue.booking_fee.toFixed(2)}
+              </p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Total Amount: ₦{amount.toFixed(2)}
+              </p>
+            </div>
+
+            {amount > 0 && paymentStatus === "pending" && (
+              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md space-y-4">
+                <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Payment Required</h3>
+                <p className="text-gray-600 dark:text-gray-400">
+                  Please complete the payment to book this venue.
                 </p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Total Amount: ₦{(amount / 100).toFixed(2)}
-                </p>
+                <Button
+                  type="button"
+                  className="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg"
+                  onClick={handlePaymentInitiation}
+                  disabled={paying || !paystackLoaded || !amount}
+                >
+                  {paying ? (
+                    <>
+                      <Loader size={16} className="mr-2 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    `Pay Now (₦${amount.toFixed(2)})`
+                  )}
+                </Button>
               </div>
+            )}
 
-              <Button
-                type="submit"
-                className="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg"
-                disabled={paying}
-              >
-                {paying ? (
-                  <>
-                    <Loader size={16} className="mr-2 animate-spin" />
-                    Booking...
-                  </>
-                ) : (
-                  "Complete Booking"
+            {paymentStatus === "success" && (
+              <div className="bg-green-50 p-4 rounded-md border border-green-200 text-green-700">
+                <p className="font-medium">Payment Successful!</p>
+                <p className="text-sm">Please complete your booking below.</p>
+                {paymentReference && (
+                  <p className="text-sm mt-1">Reference: {paymentReference}</p>
                 )}
-              </Button>
-            </form>
-          </Form>
-        )}
+                <Button
+                  type="submit"
+                  className="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg mt-4"
+                  disabled={paying}
+                  onClick={form.handleSubmit(onSubmit)}
+                >
+                  {paying ? (
+                    <>
+                      <Loader size={16} className="mr-2 animate-spin" />
+                      Booking...
+                    </>
+                  ) : (
+                    "Complete Booking"
+                  )}
+                </Button>
+              </div>
+            )}
+          </form>
+        </Form>
       </div>
 
       <Navbar />
