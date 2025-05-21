@@ -602,7 +602,7 @@ const PlayerManagement = ({
           Check-in Players
         </Button>
         <Button
-          onClick={() => navigate(`/match/${match.slug}/team-management`)}
+          onClick={() => navigate(`/match/${match.slug}/team-management`, { state: { isVerified: true } })}
           className="bg-green-500 hover:bg-green-600 text-white flex-1"
           disabled={match.cancellation_status}
         >
