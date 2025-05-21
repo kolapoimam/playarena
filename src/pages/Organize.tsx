@@ -1215,7 +1215,7 @@ const Organize = () => {
           />
           <Trophy className="h-6 w-6" />
         </div>
-        <h2 className="text-xl font-bold mb-2">{matchTitle || "Your Match"}</h2>
+        <h2 className="text-xl font-bold mb-2">{title || "Your Match"}</h2>
         <div className="space-y-2 mb-4 text-sm">
           <div className="flex items-center">
             <MapPin className="h-4 w-4 mr-2" />
@@ -1325,7 +1325,7 @@ const Organize = () => {
           />
           <Trophy className="h-6 w-6" />
         </div>
-        <h2 className="text-xl font-bold mb-2">{matchTitle}</h2>
+        <h2 className="text-xl font-bold mb-2">{title}</h2>
         <div className="space-y-2 mb-4 text-sm">
           <div className="flex items-center">
             <MapPin className="h-4 w-4 mr-2" />
