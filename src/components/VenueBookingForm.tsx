@@ -312,11 +312,30 @@ const VenueBookingForm = () => {
       setPaying(true);
       const accessCode = generateAccessCode();
 
+      // Check if booking already has a match_id
+      const { data: existingBooking } = await supabase
+        .from("bookings")
+        .select("match_id")
+        .eq("payment_reference", paymentReference)
+        .single();
+
+      if (existingBooking?.match_id) {
+        toast({
+          title: "Error",
+          description: "This booking has already been used to create a match.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const { error: bookingError } = await supabase.from("bookings").insert({
         venue_id: venue.id,
         amount: amount,
         payment_status: "paid",
         payment_reference: paymentReference,
+        match_date: format(values.match_date, "yyyy-MM-dd"),
+        start_time: values.start_time,
+        end_time: values.end_time,
       });
 
       if (bookingError) throw bookingError;
@@ -408,6 +427,7 @@ const VenueBookingForm = () => {
                         <Button
                           variant="outline"
                           className="w-full pl-3 text-left text-base font-normal border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                          disabled={paymentStatus === "success"}
                         >
                           {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
                           <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
@@ -419,7 +439,7 @@ const VenueBookingForm = () => {
                         mode="single"
                         selected={field.value}
                         onSelect={field.onChange}
-                        disabled={(date) => date < new Date().setHours(0, 0, 0, 0)}
+                        disabled={(date) => date < new Date().setHours(0, 0, 0, 0) || paymentStatus === "success"}
                         initialFocus
                       />
                     </PopoverContent>
@@ -441,6 +461,7 @@ const VenueBookingForm = () => {
                         type="time"
                         className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                         {...field}
+                        disabled={paymentStatus === "success"}
                       />
                       <Clock className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
                     </div>
@@ -462,6 +483,7 @@ const VenueBookingForm = () => {
                         type="time"
                         className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                         {...field}
+                        disabled={paymentStatus === "success"}
                       />
                       <Clock className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
                     </div>
