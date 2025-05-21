@@ -1,5 +1,6 @@
 import { Input } from "@/components/ui/input";
 import { useState, useCallback } from "react";
+import { Clock } from "lucide-react"; // Add this import
 
 interface TimeInputProps {
   value: string;
