@@ -64,7 +64,6 @@ const VenueBookings = () => {
 
         if (error) throw error;
 
-        // Transform data to match Booking type
         const transformedBookings: Booking[] = data.map((booking: any) => ({
           id: booking.id,
           venue_id: booking.venue_id,
@@ -76,7 +75,7 @@ const VenueBookings = () => {
           payment_status: booking.payment_status,
           payment_reference: booking.payment_reference,
           venue_name: booking.venues.name,
-          match_title: booking.matches?.title || null, // Use 'title', not 'matchTitle'
+          match_title: booking.matches?.title || null,
         }));
 
         setBookings(transformedBookings);
