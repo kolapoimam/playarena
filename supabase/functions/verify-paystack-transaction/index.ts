@@ -94,6 +94,8 @@ serve(async (req: Request) => {
         resource_id: pendingTransaction.resource_id,
         resource_type: pendingTransaction.resource_type,
         slug: pendingTransaction.slug,
+        venue_id: paystackData.data.metadata.venue_id,
+        match_id: paystackData.data.metadata.match_id,
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
