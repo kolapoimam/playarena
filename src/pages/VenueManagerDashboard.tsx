@@ -259,9 +259,9 @@ const VenueManagerDashboard = () => {
                 </CardContent>
               </Card>
               <Card className="bg-white dark:bg-gray-800 border-none shadow-lg rounded-xl">
-                <CardHdr>
-                  <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Funds</CardTitle>
-                </CardHeader>
+<CardHeader>
+  <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Funds</CardTitle>
+</CardHeader>
                 <CardContent>
                   <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">₦{totalFunds.toFixed(2)}</p>
                 </CardContent>
