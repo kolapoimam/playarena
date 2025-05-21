@@ -13,8 +13,17 @@ interface PaystackResponse {
 }
 
 serve(async (req: Request) => {
+  // Log the incoming request method and headers for debugging
+  console.log(`Request Method: ${req.method}`);
+  console.log("Request Headers:", JSON.stringify([...req.headers.entries()], null, 2));
+
+  // Handle CORS preflight request
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    console.log("Handling OPTIONS preflight request");
+    return new Response(null, {
+      status: 204, // Use 204 No Content for preflight responses
+      headers: corsHeaders,
+    });
   }
 
   try {
