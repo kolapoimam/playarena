@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,11 +19,20 @@ type Team = {
 };
 type Match = { id: string; slug: string; super_code: string; title: string; match_date: string; match_time: string };
 
-// Utility function for generating a random avatar
+// Simple debounce hook
+const useDebounce = <T extends (...args: any[]) => void>(callback: T, delay: number) => {
+  let timeoutId: NodeJS.Timeout;
+  return useCallback((...args: Parameters<T>) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => callback(...args), delay);
+  }, [callback, delay]);
+};
+
+// Utility function for generating a random emoji
 const getRandomAvatar = (playerId: string) => {
+  const emojis = ["⚽", "🏀", "🏈", "🎾", "🏐", "🏉", "🥊", "🏓", "🏸", "🤾"];
   const seed = playerId.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
-  const randomImg = (seed % 70) + 1;
-  return `https://i.pravatar.cc/40?img=${randomImg}`;
+  return emojis[seed % emojis.length];
 };
 
 // Player Card Component
@@ -40,7 +49,7 @@ const PlayerCard = ({ playerId, teamName, players }: { playerId: string; teamNam
       ref={drag}
       className={`p-3 mb-2 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center space-x-3 shadow-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-opacity ${isDragging ? "opacity-50" : "opacity-100"}`}
     >
-      <img src={getRandomAvatar(player.id)} alt={player.player_name} className="w-8 sm:w-10 h-8 sm:h-10 rounded-full" />
+      <span className="text-2xl">{getRandomAvatar(player.id)}</span>
       <div className="flex-1">
         <p className="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100">{player.player_name}</p>
       </div>
@@ -142,7 +151,7 @@ const TeamSelectionDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent>
+      <DialogContent className="rounded-xl max-w-md">
         <DialogTitle>Generate Teams</DialogTitle>
         <DialogDescription>
           <p className="mb-4 text-xs sm:text-sm">Set the number of teams and players per team.</p>
@@ -267,6 +276,20 @@ const TeamMatchDetails = ({
   const [rulesTemplateOpen, setRulesTemplateOpen] = useState(false);
   const [teamNames, setTeamNames] = useState(teams.map((t) => t.name));
 
+  const debouncedHandleRenameTeam = useDebounce((index: number, newName: string) => {
+    if (!newName.trim()) {
+      toast({ title: "Error", description: "Team name cannot be empty.", variant: "destructive" });
+      return;
+    }
+    const newTeamNames = [...teamNames];
+    newTeamNames[index] = newName.trim();
+    setTeamNames(newTeamNames);
+
+    const updatedTeams = teams.map((t, i) => (i === index ? { ...t, name: newName.trim() } : t));
+    setTeams(updatedTeams);
+    addToHistory(updatedTeams);
+  }, 300);
+
   const togglePrivacy = async () => {
     setIsPublic((prev) => !prev);
     try {
@@ -304,20 +327,6 @@ const TeamMatchDetails = ({
       setTeams(history[historyIndex + 1]);
       setTeamNames(history[historyIndex + 1].map((t) => t.name));
     }
-  };
-
-  const handleRenameTeam = (index: number, newName: string) => {
-    if (!newName.trim()) {
-      toast({ title: "Error", description: "Team name cannot be empty.", variant: "destructive" });
-      return;
-    }
-    const newTeamNames = [...teamNames];
-    newTeamNames[index] = newName.trim();
-    setTeamNames(newTeamNames);
-
-    const updatedTeams = teams.map((t, i) => (i === index ? { ...t, name: newName.trim() } : t));
-    setTeams(updatedTeams);
-    addToHistory(updatedTeams);
   };
 
   const saveTeams = async () => {
@@ -440,7 +449,7 @@ const TeamMatchDetails = ({
             <div className="mb-2">
               <Input
                 value={teamNames[index]}
-                onChange={(e) => handleRenameTeam(index, e.target.value)}
+                onChange={(e) => debouncedHandleRenameTeam(index, e.target.value)}
                 placeholder="Team Name"
                 className="text-xs sm:text-sm"
               />
