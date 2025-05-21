@@ -209,9 +209,9 @@ const JoinMatch = () => {
           throw new Error(response.error.message);
         }
 
-        const { verified, match_id, slug: matchSlug } = response.data;
+        const { verified, resource_id, slug: matchSlug, resource_type } = response.data;
 
-        if (verified && match_id === match.id && matchSlug === slug) {
+        if (verified && resource_id === match.id && matchSlug === slug && resource_type === "match") {
           setPaymentStatus("success");
           toast({
             title: "Payment Successful",
@@ -242,12 +242,10 @@ const JoinMatch = () => {
   }, [paymentReference, match, slug, toast]);
 
   const handlePaymentInitiation = async () => {
-    if (!match || !match.is_paid || !match.price) return;
-
-    if (!paystackLoaded || !window.PaystackPop) {
+    if (!match || !match.is_paid || !match.price || !paystackLoaded || !window.PaystackPop) {
       toast({
         title: "Error",
-        description: "Paystack is not available. Please try again later.",
+        description: "Paystack is not available or match details are incomplete. Please try again later.",
         variant: "destructive",
       });
       return;
@@ -256,13 +254,16 @@ const JoinMatch = () => {
     try {
       setJoining(true);
 
+      const amount = match.price * selectedSlots;
+
       const response = await supabase.functions.invoke("initialize-paystack-transaction", {
         body: {
           email: defaultEmail,
-          amount: match.price * selectedSlots,
-          match_id: match.id,
+          amount: amount,
+          resource_id: match.id,
           slug: match.slug,
-          title: match.title,
+          name: match.title,
+          resource_type: "match",
         },
       });
 
@@ -273,7 +274,10 @@ const JoinMatch = () => {
       const { access_code } = response.data;
 
       const paystack = new window.PaystackPop();
-      paystack.resumeTransaction(access_code, {
+      paystack.newTransaction({
+        key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
+        email: defaultEmail,
+        amount: amount * 100, // Paystack expects kobo, but Edge Function handles this
         onSuccess: (transaction) => {
           setPaymentStatus("success");
           toast({
