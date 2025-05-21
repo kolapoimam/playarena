@@ -39,7 +39,7 @@ import {
   DialogDescription,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { format } from "date-fns";
+import { format, parse, isValid } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
 import VenueForm from "@/components/VenueForm";
@@ -51,6 +51,8 @@ const skillLevels = ["Beginner", "Amateur", "Intermediate", "Advanced", "Profess
 const matchTypes = ["4-a-side", "5-a-side", "7-a-side", "11-a-side (Regular)", "Double", "Friendly", "All", "None"] as const;
 const genders = ["Male", "Female", "All", "None"] as const;
 
+// Custom 12-hour format validation
+const timePattern = /^(0[1-9]|1[0-2]):[0-5][0-9] (AM|PM)$/i;
 const formSchema = z.object({
   title: z.string()
     .min(3, { message: "Title must be at least 3 characters" })
@@ -62,12 +64,12 @@ const formSchema = z.object({
     invalid_type_error: "Please select a valid date" 
   }),
   start_time: z.string()
-    .regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, { 
-      message: "Please enter a valid start time in HH:MM format (24-hour clock)" 
+    .regex(timePattern, { 
+      message: "Please enter a valid start time in HH:MM AM/PM format (12-hour clock)" 
     }),
   end_time: z.string()
-    .regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, { 
-      message: "Please enter a valid end time in HH:MM format (24-hour clock)" 
+    .regex(timePattern, { 
+      message: "Please enter a valid end time in HH:MM AM/PM format (12-hour clock)" 
     }),
   total_slots: z.number()
     .int({ message: "Must be a whole number" })
@@ -135,14 +137,17 @@ const formSchema = z.object({
 }).refine(data => {
   const now = new Date();
   const selectedDateTime = new Date(data.match_date);
-  const [startHours, startMinutes] = data.start_time.split(':').map(Number);
-  selectedDateTime.setHours(startHours, startMinutes, 0, 0);
+  const [startHours, startMinutes] = data.start_time.replace(" AM|PM", "").split(':').map(Number);
+  const period = data.start_time.slice(-2).toUpperCase();
+  let hours = startHours;
+  if (period === "PM" && startHours !== 12) hours += 12;
+  if (period === "AM" && startHours === 12) hours = 0;
+  selectedDateTime.setHours(hours, startMinutes, 0, 0);
 
   const tenMinutesLater = new Date(now.getTime() + 10 * 60 * 1000);
   if (selectedDateTime < tenMinutesLater) {
     return false;
   }
-
   return true;
 }, {
   message: "Match must be scheduled at least 10 minutes from now",
@@ -156,12 +161,21 @@ const formSchema = z.object({
   message: "Ticket price is required when selling tickets",
   path: ["ticket_price"],
 }).refine(data => {
-  const [startHours, startMinutes] = data.start_time.split(':').map(Number);
-  const [endHours, endMinutes] = data.end_time.split(':').map(Number);
   const startDateTime = new Date(data.match_date);
+  const [startHours, startMinutes] = data.start_time.replace(" AM|PM", "").split(':').map(Number);
+  const startPeriod = data.start_time.slice(-2).toUpperCase();
+  let startH = startHours;
+  if (startPeriod === "PM" && startHours !== 12) startH += 12;
+  if (startPeriod === "AM" && startHours === 12) startH = 0;
+  startDateTime.setHours(startH, startMinutes, 0, 0);
+
   const endDateTime = new Date(data.match_date);
-  startDateTime.setHours(startHours, startMinutes, 0, 0);
-  endDateTime.setHours(endHours, endMinutes, 0, 0);
+  const [endHours, endMinutes] = data.end_time.replace(" AM|PM", "").split(':').map(Number);
+  const endPeriod = data.end_time.slice(-2).toUpperCase();
+  let endH = endHours;
+  if (endPeriod === "PM" && endHours !== 12) endH += 12;
+  if (endPeriod === "AM" && endHours === 12) endH = 0;
+  endDateTime.setHours(endH, endMinutes, 0, 0);
 
   return startDateTime < endDateTime;
 }, {
@@ -169,11 +183,19 @@ const formSchema = z.object({
   path: ["end_time"],
 });
 
-const formatTimeTo12Hour = (time: string): string => {
-  const [hours, minutes] = time.split(':').map(Number);
+const formatTimeTo12Hour = (time24: string): string => {
+  const [hours, minutes] = time24.split(':').map(Number);
   const period = hours >= 12 ? 'PM' : 'AM';
   const adjustedHours = hours % 12 || 12;
-  return `${adjustedHours}:${minutes.toString().padStart(2, '0')} ${period}`;
+  return `${adjustedHours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')} ${period}`;
+};
+
+const convertTo24Hour = (time12: string): string => {
+  const [time, period] = time12.split(' ');
+  let [hours, minutes] = time.split(':').map(Number);
+  if (period.toUpperCase() === 'PM' && hours !== 12) hours += 12;
+  if (period.toUpperCase() === 'AM' && hours === 12) hours = 0;
+  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
 };
 
 type FormValues = z.infer<typeof formSchema>;
@@ -272,11 +294,11 @@ const Organize = () => {
             throw new Error("Invalid or expired access code");
           }
 
-          // Pre-fill form
+          // Pre-fill form with 12-hour format
           form.setValue("venue_id", venue.id);
           form.setValue("match_date", new Date(accessCodeData.match_date));
-          form.setValue("start_time", accessCodeData.start_time);
-          form.setValue("end_time", accessCodeData.end_time);
+          form.setValue("start_time", formatTimeTo12Hour(accessCodeData.start_time));
+          form.setValue("end_time", formatTimeTo12Hour(accessCodeData.end_time));
           setIsPreFilled(true);
 
           toast({
@@ -341,6 +363,12 @@ const Organize = () => {
         if (parsed.match_date) {
           parsed.match_date = new Date(parsed.match_date);
         }
+        if (parsed.start_time) {
+          parsed.start_time = parsed.start_time.replace(/^(0[1-9]|1[0-2]):([0-5][0-9]) (AM|PM)$/, "$1:$2 $3");
+        }
+        if (parsed.end_time) {
+          parsed.end_time = parsed.end_time.replace(/^(0[1-9]|1[0-2]):([0-5][0-9]) (AM|PM)$/, "$1:$2 $3");
+        }
         form.reset(parsed);
       }
     }
@@ -382,9 +410,9 @@ const Organize = () => {
           title: data.title,
           venue_id: data.venue_id,
           match_date: format(data.match_date, "yyyy-MM-dd"),
-          match_time: data.start_time,
-          start_time: data.start_time,
-          end_time: data.end_time,
+          match_time: convertTo24Hour(data.start_time),
+          start_time: convertTo24Hour(data.start_time),
+          end_time: convertTo24Hour(data.end_time),
           total_slots: data.total_slots,
           is_paid: data.is_paid,
           price: data.is_paid ? data.price : null,
@@ -662,17 +690,24 @@ const Organize = () => {
                       <FormControl>
                         <div className="relative">
                           <Input
-                            type="time"
-                            placeholder="HH:MM"
+                            type="text"
+                            placeholder="e.g., 01:00 PM"
                             className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                             {...field}
+                            value={field.value || ""}
+                            onChange={(e) => {
+                              const value = e.target.value.toUpperCase();
+                              if (timePattern.test(value) || value === "") {
+                                field.onChange(value);
+                              }
+                            }}
                             disabled={isPreFilled}
                           />
                           <Clock className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
                         </div>
                       </FormControl>
                       <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
-                        Match start time (Africa/Lagos timezone)
+                        Match start time (12-hour clock, e.g., 01:00 PM)
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -688,17 +723,24 @@ const Organize = () => {
                       <FormControl>
                         <div className="relative">
                           <Input
-                            type="time"
-                            placeholder="HH:MM"
+                            type="text"
+                            placeholder="e.g., 03:00 PM"
                             className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                             {...field}
+                            value={field.value || ""}
+                            onChange={(e) => {
+                              const value = e.target.value.toUpperCase();
+                              if (timePattern.test(value) || value === "") {
+                                field.onChange(value);
+                              }
+                            }}
                             disabled={isPreFilled}
                           />
                           <Clock className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
                         </div>
                       </FormControl>
                       <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
-                        Match end time (Africa/Lagos timezone)
+                        Match end time (12-hour clock, e.g., 03:00 PM)
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -1227,7 +1269,7 @@ const Organize = () => {
                 </div>
                 <div className="flex items-center">
                   <Clock className="h-4 w-4 mr-2" />
-                  <span>From {form.watch("start_time") ? formatTimeTo12Hour(form.watch("start_time")!) : "Start"} to {form.watch("end_time") ? formatTimeTo12Hour(form.watch("end_time")!) : "End"}</span>
+                  <span>From {form.watch("start_time") || "Start"} to {form.watch("end_time") || "End"}</span>
                 </div>
                 <div className="flex items-center">
                   <User className="h-4 w-4 mr-2" />
@@ -1337,7 +1379,7 @@ const Organize = () => {
                 </div>
                 <div className="flex items-center">
                   <Clock className="h-4 w-4 mr-2" />
-                  <span>From {form.watch("start_time") ? formatTimeTo12Hour(form.watch("start_time")!) : "Start"} to {form.watch("end_time") ? formatTimeTo12Hour(form.watch("end_time")!) : "End"}</span>
+                  <span>From {form.watch("start_time") || "Start"} to {form.watch("end_time") || "End"}</span>
                 </div>
                 <div className="flex items-center">
                   <User className="h-4 w-4 mr-2" />
