@@ -78,7 +78,9 @@ const VenueManagerDashboard = () => {
           console.error("Upcoming bookings error:", upcomingError);
           throw new Error(upcomingError.message);
         }
-        setUpcomingBookings(upcoming || []);
+        // Sort ascending by match_date (ensure correct order)
+        const sortedUpcoming = (upcoming || []).sort((a, b) => new Date(a.match_date) - new Date(b.match_date));
+        setUpcomingBookings(sortedUpcoming);
 
         // Fetch past bookings
         const { data: past, error: pastError } = await supabase
@@ -92,7 +94,9 @@ const VenueManagerDashboard = () => {
           console.error("Past bookings error:", pastError);
           throw new Error(pastError.message);
         }
-        setPastBookings(past || []);
+        // Sort descending by match_date (ensure correct order)
+        const sortedPast = (past || []).sort((a, b) => new Date(b.match_date) - new Date(a.match_date));
+        setPastBookings(sortedPast);
 
         // Fetch total events
         const { count: eventCount, error: countError } = await supabase
@@ -259,9 +263,9 @@ const VenueManagerDashboard = () => {
                 </CardContent>
               </Card>
               <Card className="bg-white dark:bg-gray-800 border-none shadow-lg rounded-xl">
-<CardHeader>
-  <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Funds</CardTitle>
-</CardHeader>
+                <CardHeader>
+                  <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Funds</CardTitle>
+                </CardHeader>
                 <CardContent>
                   <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">₦{totalFunds.toFixed(2)}</p>
                 </CardContent>
