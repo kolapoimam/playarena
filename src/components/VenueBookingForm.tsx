@@ -41,10 +41,10 @@ const bookingSchema = z.object({
     const selectedDateTime = new Date(data.match_date);
     const [startHours, startMinutes] = data.start_time.split(":").map(Number);
     selectedDateTime.setHours(startHours, startMinutes, 0, 0);
-    const tenMinutesLater = new Date(now.getTime() + 10 * 60 * 1000);
-    return selectedDateTime >= tenMinutesLater;
+    const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000); // 1 hour from now
+    return selectedDateTime >= oneHourLater;
   },
-  { message: "Booking must be scheduled at least 10 minutes from now", path: ["start_time"] }
+  { message: "Booking must start at least 1 hour from now", path: ["start_time"] }
 ).refine(
   (data) => {
     const [startHours, startMinutes] = data.start_time.split(":").map(Number);
@@ -53,9 +53,10 @@ const bookingSchema = z.object({
     start.setHours(startHours, startMinutes);
     const end = new Date(0);
     end.setHours(endHours, endMinutes);
-    return end > start;
+    const durationMs = end.getTime() - start.getTime();
+    return durationMs >= 60 * 60 * 1000; // Minimum 1 hour
   },
-  { message: "End time must be after start time", path: ["end_time"] }
+  { message: "End time must be at least 1 hour after start time", path: ["end_time"] }
 ).refine(
   (data) => {
     const [startHours, startMinutes] = data.start_time.split(":").map(Number);
@@ -247,22 +248,27 @@ const VenueBookingForm = () => {
     try {
       setPaying(true);
 
+      const payload = {
+        email: userEmail || defaultEmail,
+        amount: amount,
+        resource_id: venue.id,
+        slug: venue.slug,
+        name: venue.name,
+        resource_type: "venue",
+      };
+      console.log("Payment Initiation Payload:", payload);
+
       const response = await supabase.functions.invoke("initialize-paystack-transaction", {
-        body: {
-          email: userEmail,
-          amount: amount,
-          resource_id: venue.id,
-          slug: venue.slug,
-          name: venue.name,
-          resource_type: "venue",
-        },
+        body: payload,
       });
 
       if (response.error) {
+        console.error("Edge Function Error:", response.error);
         throw new Error(response.error.message);
       }
 
       const { access_code } = response.data;
+      console.log("Paystack Access Code:", access_code);
 
       const paystack = new window.PaystackPop();
       paystack.newTransaction({
@@ -270,6 +276,7 @@ const VenueBookingForm = () => {
         email: userEmail || defaultEmail,
         amount: amount * 100, // Paystack expects kobo, but Edge Function handles this
         onSuccess: (transaction) => {
+          console.log("Paystack Transaction Success:", transaction);
           setPaymentStatus("success");
           toast({
             title: "Payment Successful",
@@ -278,6 +285,7 @@ const VenueBookingForm = () => {
           setPaying(false);
         },
         onCancel: () => {
+          console.log("Paystack Transaction Cancelled");
           toast({
             title: "Payment Cancelled",
             description: "You cancelled the payment. Please try again to complete the booking.",
@@ -285,9 +293,18 @@ const VenueBookingForm = () => {
           });
           setPaying(false);
         },
+        onError: (error) => {
+          console.error("Paystack Transaction Error:", error);
+          toast({
+            title: "Payment Error",
+            description: "Failed to process payment. Please try again.",
+            variant: "destructive",
+          });
+          setPaying(false);
+        },
       });
     } catch (error) {
-      console.error("Error initiating payment:", error);
+      console.error("Payment Initiation Error:", error);
       toast({
         title: "Payment Error",
         description: "Failed to initiate payment. Please try again.",
@@ -387,7 +404,7 @@ const VenueBookingForm = () => {
             <ArrowLeft size={18} className="mr-2" />
             Back
           </Button>
-          <h1 className="text-2xl font-bold">Book {venue.name}</h1>
+          <h1 className="text-2xl font-bold">Book Venue</h1>
           <div className="w-10"></div>
         </div>
       </header>
@@ -418,7 +435,7 @@ const VenueBookingForm = () => {
                         mode="single"
                         selected={field.value}
                         onSelect={field.onChange}
-                        disabled={(date) => date < new Date()}
+                        disabled={(date) => date < new Date().setHours(0, 0, 0, 0)} // Allow today
                         initialFocus
                       />
                     </PopoverContent>
@@ -472,6 +489,7 @@ const VenueBookingForm = () => {
 
             <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Booking Summary</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Venue: {venue.name}</p>
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 Price per hour: ₦{venue.booking_fee.toFixed(2)}
               </p>
