@@ -10,7 +10,7 @@ import { Loader2, ArrowLeft } from "lucide-react";
 import { format, differenceInHours } from "date-fns";
 
 type Venue = { id: string; name: string; city: string; price_per_hour: number; is_verified: string };
-type Booking = { id: string; match: { title: string; match_date: string; start_time: string; end_time: string }; organizer: { name: string } };
+type Booking = { id: string; title: string; match_date: string; start_time: string; end_time: string; organizer_name: string | null };
 type AccessCode = { code: string; match_date: string; start_time: string; end_time: string; amount: number };
 
 const VenueManagerDashboard = () => {
@@ -68,16 +68,11 @@ const VenueManagerDashboard = () => {
 
         // Fetch upcoming bookings
         const { data: upcoming, error: upcomingError } = await supabase
-          .from("bookings")
-          .select(`
-            id,
-            match:matches(title, match_date, start_time, end_time),
-            organizer:profiles!matches_organizer_id_fkey(name)
-          `)
-          .eq("venue_id", venueId)
-          .gte("match.match_date", new Date().toISOString().split("T")[0])
-          .order("match.match_date", { ascending: true })
-          .limit(5);
+          .rpc("get_bookings_by_venue", {
+            venue_id: venueId,
+            is_upcoming: true,
+            limit_count: 5,
+          });
 
         if (upcomingError) {
           console.error("Upcoming bookings error:", upcomingError);
@@ -87,16 +82,11 @@ const VenueManagerDashboard = () => {
 
         // Fetch past bookings
         const { data: past, error: pastError } = await supabase
-          .from("bookings")
-          .select(`
-            id,
-            match:matches(title, match_date, start_time, end_time),
-            organizer:profiles!matches_organizer_id_fkey(name)
-          `)
-          .eq("venue_id", venueId)
-          .lt("match.match_date", new Date().toISOString().split("T")[0])
-          .order("match.match_date", { ascending: false })
-          .limit(5);
+          .rpc("get_bookings_by_venue", {
+            venue_id: venueId,
+            is_upcoming: false,
+            limit_count: 5,
+          });
 
         if (pastError) {
           console.error("Past bookings error:", pastError);
@@ -269,7 +259,7 @@ const VenueManagerDashboard = () => {
                 </CardContent>
               </Card>
               <Card className="bg-white dark:bg-gray-800 border-none shadow-lg rounded-xl">
-                <CardHeader>
+                <CardHdr>
                   <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Funds</CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -315,18 +305,18 @@ const VenueManagerDashboard = () => {
                   <div className="space-y-4">
                     {upcomingBookings.map((booking) => (
                       <div key={booking.id} className="border-b border-gray-200 dark:border-gray-700 pb-4">
-                        <h3 className="font-medium text-gray-900 dark:text-gray-100">{booking.match.title}</h3>
+                        <h3 className="font-medium text-gray-900 dark:text-gray-100">{booking.title}</h3>
                         <p className="text-sm text-gray-600 dark:text-gray-400">
-                          Date: {format(new Date(booking.match.match_date), "MMM d, yyyy")}
+                          Date: {format(new Date(booking.match_date), "MMM d, yyyy")}
                         </p>
                         <p className="text-sm text-gray-600 dark:text-gray-400">
                           Duration: {differenceInHours(
-                            new Date(`${booking.match.match_date}T${booking.match.end_time}`),
-                            new Date(`${booking.match.match_date}T${booking.match.start_time}`)
+                            new Date(`${booking.match_date}T${booking.end_time}`),
+                            new Date(`${booking.match_date}T${booking.start_time}`)
                           )} hours
                         </p>
                         <p className="text-sm text-gray-600 dark:text-gray-400">
-                          Organizer: {booking.organizer?.name || "Unknown"}
+                          Organizer: {booking.organizer_name || "Unknown"}
                         </p>
                       </div>
                     ))}
@@ -346,18 +336,18 @@ const VenueManagerDashboard = () => {
                   <div className="space-y-4">
                     {pastBookings.map((booking) => (
                       <div key={booking.id} className="border-b border-gray-200 dark:border-gray-700 pb-4">
-                        <h3 className="font-medium text-gray-900 dark:text-gray-100">{booking.match.title}</h3>
+                        <h3 className="font-medium text-gray-900 dark:text-gray-100">{booking.title}</h3>
                         <p className="text-sm text-gray-600 dark:text-gray-400">
-                          Date: {format(new Date(booking.match.match_date), "MMM d, yyyy")}
+                          Date: {format(new Date(booking.match_date), "MMM d, yyyy")}
                         </p>
                         <p className="text-sm text-gray-600 dark:text-gray-400">
                           Duration: {differenceInHours(
-                            new Date(`${booking.match.match_date}T${booking.match.end_time}`),
-                            new Date(`${booking.match.match_date}T${booking.match.start_time}`)
+                            new Date(`${booking.match_date}T${booking.end_time}`),
+                            new Date(`${booking.match_date}T${booking.start_time}`)
                           )} hours
                         </p>
                         <p className="text-sm text-gray-600 dark:text-gray-400">
-                          Organizer: {booking.organizer?.name || "Unknown"}
+                          Organizer: {booking.organizer_name || "Unknown"}
                         </p>
                       </div>
                     ))}
