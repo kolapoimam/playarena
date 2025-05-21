@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { FormControl, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Plus } from "lucide-react";
 import VenueForm from "@/components/VenueForm";
-import { format, parse } from "date-fns";
+import { parse, isValid } from "date-fns";
 
 type Venue = {
   id: string;
