@@ -289,7 +289,7 @@ const VenueDetail = () => {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-200 dark:border-700">
             <h2 className="font-semibold text-lg mb-4 text-gray-900 dark:text-gray-100">Recent Matches</h2>
 
             {matchesLoading ? (
@@ -325,7 +325,7 @@ const VenueDetail = () => {
           <div className="mt-6 flex flex-row gap-4 w-full">
             <Button
               className="flex-1 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 w-full sm:w-auto"
-              onClick={() => navigate(`/venues-bookings/${venue.slug}`)}
+              onClick={() => navigate(`/venue/${venue.slug}/book`)}
             >
               <CalendarCheck size={16} className="mr-2" />
               Book Venue
