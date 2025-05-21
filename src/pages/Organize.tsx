@@ -177,6 +177,11 @@ const formSchema = z.object({
   if (endPeriod === "AM" && endHours === 12) endH = 0;
   endDateTime.setHours(endH, endMinutes, 0, 0);
 
+  // Handle cases where end time is on the next day (e.g., 11:00 PM to 01:00 AM)
+  if (endH < startH || (endH === startH && endMinutes <= startMinutes)) {
+    endDateTime.setDate(endDateTime.getDate() + 1);
+  }
+
   return startDateTime < endDateTime;
 }, {
   message: "Start time must be before end time",
