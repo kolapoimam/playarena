@@ -36,8 +36,15 @@ serve(async (req) => {
       );
     }
 
-    // Convert amount to kobo (smallest currency unit)
-    const amountInKobo = Math.round(parseFloat(amount) * 100);
+    // Convert amount from naira to kobo (Paystack expects kobo)
+    const amountInNaira = parseFloat(amount);
+    if (isNaN(amountInNaira) || amountInNaira <= 0) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid amount' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    const amountInKobo = Math.round(amountInNaira * 100);
 
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
@@ -81,13 +88,13 @@ serve(async (req) => {
       );
     }
 
-    // Insert into pending_transactions table
+    // Insert into pending_transactions table (store amount in naira)
     const { error: insertError } = await supabase.from("pending_transactions").insert({
       reference: data.data.reference,
       resource_id: venue_id || match_id,
       resource_type: venue_id ? "venue" : "match",
       slug,
-      amount: amountInKobo / 100,
+      amount: amountInNaira,
       status: "pending"
     });
 
@@ -111,7 +118,6 @@ serve(async (req) => {
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-
   } catch (error) {
     console.error('Error initializing payment:', {
       message: error.message,
