@@ -16,10 +16,10 @@ serve(async (req) => {
   }
   
   try {
-    const { email, amount, match_id, slug, title } = await req.json();
+    const { email, amount, venue_id, match_id, slug, title } = await req.json();
     
     // Validate inputs
-    if (!email || !amount || !match_id || !slug || !title) {
+    if (!email || !amount || (!venue_id && !match_id) || !slug || !title) {
       return new Response(
         JSON.stringify({ error: 'Missing required fields' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -50,6 +50,7 @@ serve(async (req) => {
         amount: amountInKobo,
         callback_url: `${FRONTEND_URL}/join/${slug}`,
         metadata: {
+          venue_id,
           match_id,
           slug,
           title
