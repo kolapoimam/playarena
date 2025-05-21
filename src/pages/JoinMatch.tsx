@@ -79,6 +79,7 @@ const JoinMatch = () => {
   const cardRef = useRef<HTMLDivElement>(null);
   const defaultEmail = "kolapoimam1@gmail.com";
 
+  // Check authentication status
   useEffect(() => {
     const checkAuth = async () => {
       const { data: session } = await supabase.auth.getSession();
@@ -132,6 +133,7 @@ const JoinMatch = () => {
     defaultValues: {},
   });
 
+  // Fetch match and auto-populate form for logged-in users
   useEffect(() => {
     if (!slug) return;
 
@@ -163,6 +165,7 @@ const JoinMatch = () => {
           defaultValues[field] = "";
         });
 
+        // Auto-populate form for logged-in users
         if (userId) {
           const { data: profile } = await supabase
             .from("profiles")
@@ -206,13 +209,13 @@ const JoinMatch = () => {
           throw new Error(response.error.message);
         }
 
-        const { verified, resource_id, slug: matchSlug, resource_type } = response.data;
+        const { verified, match_id, slug: matchSlug } = response.data;
 
-        if (verified && resource_id === match.id && matchSlug === slug && resource_type === "match") {
+        if (verified && match_id === match.id && matchSlug === slug) {
           setPaymentStatus("success");
           toast({
             title: "Payment Successful",
-            description: "Your payment was processed successfully. Please complete your registration.",
+            description: "Your payment was processed successfully. Please complete your registration. Do not close this page",
           });
         } else {
           setPaymentStatus("failed");
@@ -239,20 +242,12 @@ const JoinMatch = () => {
   }, [paymentReference, match, slug, toast]);
 
   const handlePaymentInitiation = async () => {
-    if (!match || !match.is_paid || !match.price || !paystackLoaded || !window.PaystackPop) {
-      toast({
-        title: "Error",
-        description: "Paystack is not available or match details are incomplete. Please try again later.",
-        variant: "destructive",
-      });
-      return;
-    }
+    if (!match || !match.is_paid || !match.price) return;
 
-    if (!match.title || !defaultEmail) {
-      console.error("Missing fields:", { title: match.title, email: defaultEmail });
+    if (!paystackLoaded || !window.PaystackPop) {
       toast({
         title: "Error",
-        description: "Missing match title or email. Please try again.",
+        description: "Paystack is not available. Please try again later.",
         variant: "destructive",
       });
       return;
@@ -261,47 +256,33 @@ const JoinMatch = () => {
     try {
       setJoining(true);
 
-      const amount = match.price * selectedSlots;
-      const payload = {
-        email: defaultEmail,
-        amount: amount,
-        match_id: match.id,
-        slug: match.slug,
-        name: match.title,
-        number_of_slots: selectedSlots,
-      };
-      console.log("Payment Initiation Payload:", payload);
-
-      const response = await supabase.functions.invoke("initialize-paystack-match", {
-        body: payload,
+      const response = await supabase.functions.invoke("initialize-paystack-transaction", {
+        body: {
+          email: defaultEmail,
+          amount: match.price * selectedSlots,
+          match_id: match.id,
+          slug: match.slug,
+          title: match.title,
+        },
       });
 
       if (response.error) {
-        console.error("Edge Function Error:", response.error);
         throw new Error(response.error.message);
       }
 
-      const { access_code, reference } = response.data;
-      console.log("Paystack Response:", { access_code, reference });
+      const { access_code } = response.data;
 
       const paystack = new window.PaystackPop();
-      paystack.newTransaction({
-        key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
-        email: defaultEmail,
-        amount: amount, // Amount in NGN, Edge Function handles kobo
-        accessCode: access_code,
+      paystack.resumeTransaction(access_code, {
         onSuccess: (transaction) => {
-          console.log("Paystack Transaction Success:", transaction);
           setPaymentStatus("success");
           toast({
             title: "Payment Successful",
             description: `Your payment for ${selectedSlots} slot(s) was processed successfully. Please complete your registration.`,
           });
-          navigate(`/join/${match.slug}?reference=${transaction.reference}`);
           setJoining(false);
         },
         onCancel: () => {
-          console.log("Paystack Transaction Cancelled");
           toast({
             title: "Payment Cancelled",
             description: "You've cancelled the payment process.",
@@ -309,21 +290,12 @@ const JoinMatch = () => {
           });
           setJoining(false);
         },
-        onError: (error) => {
-          console.error("Paystack Transaction Error:", error);
-          toast({
-            title: "Payment Error",
-            description: `Failed to process payment: ${error.message || "Unknown error"}`,
-            variant: "destructive",
-          });
-          setJoining(false);
-        },
       });
-    } catch (error: any) {
-      console.error("Payment Initiation Error:", error.message, error.issues || []);
+    } catch (error) {
+      console.error("Error initiating payment:", error);
       toast({
         title: "Payment Error",
-        description: error.message || "Failed to initiate payment. Please try again.",
+        description: "Failed to initiate payment. Please try again.",
         variant: "destructive",
       });
       setJoining(false);
@@ -416,6 +388,7 @@ const JoinMatch = () => {
 
       if (playerError) throw playerError;
 
+      // Link player to user account if logged in
       if (userId) {
         const { error: joinError } = await supabase
           .from("user_joined_matches")
