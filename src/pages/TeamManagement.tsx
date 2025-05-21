@@ -93,7 +93,7 @@ const TeamManagement = () => {
           title: match.title, 
           match_date: match.match_date, 
           match_time: match.match_time,
-          venue: match.venue || "Venue TBD"
+          venue: match.venue || "Venue TBD" // Fallback for missing venue
         });
 
         const teamAssignment = match.team_assignments[0] || {};
