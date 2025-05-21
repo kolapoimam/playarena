@@ -287,6 +287,7 @@ const PlayerManagement = ({
       }
     } catch (error) {
       matchEndTime = new Date("2025-05-17T15:00:00+01:00");
+      console.error("Error parsing match end time:", error);
     }
     const isEndTimeFuture = !isPast(matchEndTime);
     return match.players.length > 0 && isEndTimeFuture;
@@ -307,6 +308,7 @@ const PlayerManagement = ({
       }
     } catch (error) {
       matchEndTime = new Date("2025-05-17T15:00:00+01:00");
+      console.error("Error parsing match end time:", error);
     }
     const isEndTimeFuture = !isPast(matchEndTime);
     return isEndTimeFuture;
@@ -600,7 +602,7 @@ const PlayerManagement = ({
           Check-in Players
         </Button>
         <Button
-          onClick={() => navigate(`/team-management/${match.slug}`)}
+          onClick={() => navigate(`/match/${match.slug}/team-management`)}
           className="bg-green-500 hover:bg-green-600 text-white flex-1"
           disabled={match.cancellation_status}
         >
