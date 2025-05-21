@@ -17,6 +17,31 @@ type Venue = {
   verified_status: 'True' | 'False';
 };
 
+type FormValues = {
+  title: string;
+  venue_id: string;
+  match_date: Date | undefined;
+  start_time: string;
+  end_time: string;
+  total_slots: number | undefined;
+  is_paid: boolean;
+  price: number | null | undefined;
+  notes: string | undefined;
+  organizer_name: string;
+  organizer_phone: string | null | undefined;
+  disclose_phone: boolean;
+  player_number_required: boolean;
+  is_private: boolean;
+  access_password: string | null | undefined;
+  allow_bulk_tickets: boolean;
+  skill_level: string | null | undefined;
+  match_type: string | null | undefined;
+  gender: string | null | undefined;
+  sell_tickets: boolean;
+  ticket_price: number | null | undefined;
+  max_tickets: number | null | undefined;
+};
+
 const Organize = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -32,6 +57,10 @@ const Organize = () => {
   const [venues, setVenues] = useState<Venue[]>([]);
   const [selectedVenueId, setSelectedVenueId] = useState<string | undefined>(undefined);
   const [hasValidBookingCode, setHasValidBookingCode] = useState(false);
+  const [formMethods, setFormMethods] = useState<{
+    watch: () => FormValues;
+    setValue: (name: keyof FormValues, value: any) => void;
+  } | null>(null);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -77,6 +106,21 @@ const Organize = () => {
           setSelectedVenueId(venue.id);
           setHasValidBookingCode(true); // Treat venue_access_codes as a valid booking for verified venues
 
+          // Prefill form fields if formMethods is available
+          if (formMethods) {
+            const matchDate = parse(accessCodeData.match_date, "yyyy-MM-dd", new Date());
+            const convertTo12Hour = (time24: string): string => {
+              const [hours, minutes] = time24.split(':').map(Number);
+              const period = hours >= 12 ? 'PM' : 'AM';
+              const hours12 = hours % 12 || 12;
+              return `${hours12.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')} ${period}`;
+            };
+            formMethods.setValue("venue_id", venue.id);
+            formMethods.setValue("match_date", matchDate);
+            formMethods.setValue("start_time", convertTo12Hour(accessCodeData.start_time));
+            formMethods.setValue("end_time", convertTo12Hour(accessCodeData.end_time));
+          }
+
           toast({
             title: "Venue Booking Loaded",
             description: `Form pre-filled with booking details for ${venue.name}.`,
@@ -94,9 +138,11 @@ const Organize = () => {
     };
 
     handlePreFill();
-  }, [preSelectedVenueSlug, accessCode, toast, navigate]);
+  }, [preSelectedVenueSlug, accessCode, toast, navigate, formMethods]);
 
-  const selectedVenue = venues.find(venue => venue.id === selectedVenueId);
+  const selectedVenue = formMethods
+    ? venues.find(venue => venue.id === formMethods.watch().venue_id)
+    : undefined;
 
   return (
     <div className="min-h-screen pb-20 bg-gray-100 dark:bg-gray-900">
@@ -142,28 +188,34 @@ const Organize = () => {
           }}
           onPreview={() => setPreviewDialogOpen(true)}
           onPrefill={(values) => {
-            // This will be called by OrganiserVenue when a valid booking_access_code is entered
-            form.setValue("match_date", values.match_date);
-            form.setValue("start_time", values.start_time);
-            form.setValue("end_time", values.end_time);
-            setHasValidBookingCode(true);
+            if (formMethods) {
+              formMethods.setValue("match_date", values.match_date);
+              formMethods.setValue("start_time", values.start_time);
+              formMethods.setValue("end_time", values.end_time);
+              setHasValidBookingCode(true);
+            }
           }}
+          onFormReady={(methods) => setFormMethods(methods)}
         />
-        <MatchPreviewDialog
-          open={previewDialogOpen}
-          onOpenChange={setPreviewDialogOpen}
-          formValues={form.watch()}
-          selectedVenue={selectedVenue}
-        />
-        <MatchSuccessDialog
-          open={successDialogOpen}
-          onOpenChange={setSuccessDialogOpen}
-          formValues={form.watch()}
-          selectedVenue={selectedVenue}
-          supercode={supercode}
-          matchSlug={matchSlug}
-          onNavigate={(slug) => navigate(`/match/${slug}`)}
-        />
+        {formMethods && (
+          <>
+            <MatchPreviewDialog
+              open={previewDialogOpen}
+              onOpenChange={setPreviewDialogOpen}
+              formValues={formMethods.watch()}
+              selectedVenue={selectedVenue}
+            />
+            <MatchSuccessDialog
+              open={successDialogOpen}
+              onOpenChange={setSuccessDialogOpen}
+              formValues={formMethods.watch()}
+              selectedVenue={selectedVenue}
+              supercode={supercode}
+              matchSlug={matchSlug}
+              onNavigate={(slug) => navigate(`/match/${slug}`)}
+            />
+          </>
+        )}
       </div>
       <Navbar />
     </div>
