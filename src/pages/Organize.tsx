@@ -135,6 +135,32 @@ const formSchema = z.object({
     .optional()
     .nullable(),
 }).refine(data => {
+  const startDateTime = new Date(data.match_date);
+  const [startHours, startMinutes] = data.start_time.replace(" AM|PM", "").split(':').map(Number);
+  const startPeriod = data.start_time.slice(-2).toUpperCase();
+  let startH = startHours;
+  if (startPeriod === "PM" && startHours !== 12) startH += 12;
+  if (startPeriod === "AM" && startHours === 12) startH = 0;
+  startDateTime.setHours(startH, startMinutes, 0, 0);
+
+  const endDateTime = new Date(data.match_date);
+  const [endHours, endMinutes] = data.end_time.replace(" AM|PM", "").split(':').map(Number);
+  const endPeriod = data.end_time.slice(-2).toUpperCase();
+  let endH = endHours;
+  if (endPeriod === "PM" && endHours !== 12) endH += 12;
+  if (endPeriod === "AM" && endHours === 12) endH = 0;
+  endDateTime.setHours(endH, endMinutes, 0, 0);
+
+  // If end time appears earlier on the same day, assume it’s the next day (e.g., 11:00 PM to 01:00 AM)
+  if (endH < startH || (endH === startH && endMinutes <= startMinutes)) {
+    endDateTime.setDate(endDateTime.getDate() + 1);
+  }
+
+  return startDateTime < endDateTime;
+}, {
+  message: "Start time must be before end time",
+  path: ["end_time"],
+}).refine(data => {
   const now = new Date();
   const selectedDateTime = new Date(data.match_date);
   const [startHours, startMinutes] = data.start_time.replace(" AM|PM", "").split(':').map(Number);
@@ -145,10 +171,7 @@ const formSchema = z.object({
   selectedDateTime.setHours(hours, startMinutes, 0, 0);
 
   const tenMinutesLater = new Date(now.getTime() + 10 * 60 * 1000);
-  if (selectedDateTime < tenMinutesLater) {
-    return false;
-  }
-  return true;
+  return selectedDateTime >= tenMinutesLater;
 }, {
   message: "Match must be scheduled at least 10 minutes from now",
   path: ["start_time"],
