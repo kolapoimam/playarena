@@ -1,6 +1,7 @@
 import { Input } from "@/components/ui/input";
-import { useState, useCallback } from "react";
-import { Clock } from "lucide-react"; // Add this import
+import { useState, useEffect } from "react";
+import { Clock } from "lucide-react";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 interface TimeInputProps {
   value: string;
@@ -9,55 +10,89 @@ interface TimeInputProps {
   placeholder?: string;
 }
 
-const TimeInput = ({ value, onChange, disabled = false, placeholder = "e.g., 01:00 PM" }: TimeInputProps) => {
-  const [inputValue, setInputValue] = useState(value);
+const TimeInput = ({
+  value,
+  onChange,
+  disabled = false,
+  placeholder = "01:00",
+}: TimeInputProps) => {
+  const [time, setTime] = useState("12:00");
+  const [period, setPeriod] = useState<"AM" | "PM">("AM");
 
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const rawValue = e.target.value.toUpperCase();
-    let formattedValue = rawValue;
+  useEffect(() => {
+    if (value) {
+      const [timePart, periodPart] = value.split(" ");
+      if (timePart) setTime(timePart);
+      if (periodPart === "AM" || periodPart === "PM") setPeriod(periodPart);
+    }
+  }, [value]);
 
-    // Allow only digits, colon, space, and AM/PM
-    formattedValue = rawValue.replace(/[^0-9:APM]/g, '');
+  const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let val = e.target.value.replace(/[^0-9:]/g, "");
+    if (val.length === 2 && !val.includes(":")) {
+      val += ":";
+    }
 
-    // Split into parts for validation
-    const parts = formattedValue.split(/[:\s]/);
-    let hours = parts[0] ? parseInt(parts[0], 10) : 0;
-    let minutes = parts[1] ? parseInt(parts[1], 10) : 0;
-    const period = parts[2] || '';
+    if (/^\d{1,2}:\d{0,2}$/.test(val)) {
+      setTime(val);
+    }
 
-    // Validate and normalize hours (01-12)
-    if (hours > 12 || hours < 1) hours = 1;
-    if (hours.toString().length > 2) hours = parseInt(hours.toString().slice(0, 2), 10);
+    if (/^\d{1,2}:\d{2}$/.test(val)) {
+      const formatted = formatTime(val);
+      if (formatted) {
+        setTime(formatted);
+        onChange(`${formatted} ${period}`);
+      }
+    }
+  };
 
-    // Validate and normalize minutes (00-59)
-    if (minutes > 59) minutes = 59;
-    if (minutes.toString().length > 2) minutes = parseInt(minutes.toString().slice(0, 2), 10);
+  const handlePeriodChange = (val: string) => {
+    const updated = val === "PM" ? "PM" : "AM";
+    setPeriod(updated);
+    onChange(`${time} ${updated}`);
+  };
 
-    // Ensure period is valid (AM or PM)
-    let validPeriod = period.match(/(AM|PM)/) ? period : '';
+  const formatTime = (input: string): string | null => {
+    const [h, m] = input.split(":");
+    let hh = parseInt(h, 10);
+    let mm = parseInt(m, 10);
 
-    // Reconstruct the time string
-    let newValue = '';
-    if (hours || hours === 0) newValue += hours.toString().padStart(2, '0');
-    if (minutes || minutes === 0) newValue += `:${minutes.toString().padStart(2, '0')}`;
-    if (validPeriod) newValue += ` ${validPeriod}`;
+    if (isNaN(hh) || isNaN(mm)) return null;
+    if (hh < 1 || hh > 12) return null;
+    if (mm < 0 || mm > 59) mm = 0;
 
-    // Update state and trigger onChange
-    setInputValue(newValue);
-    onChange(newValue);
-  }, []);
+    return `${hh.toString().padStart(2, "0")}:${mm
+      .toString()
+      .padStart(2, "0")}`;
+  };
 
   return (
-    <div className="relative">
-      <Input
-        type="text"
-        value={inputValue || ""}
-        onChange={handleChange}
-        disabled={disabled}
-        placeholder={placeholder}
-        className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white pr-10"
-      />
-      <Clock className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
+    <div className="relative flex items-center gap-2">
+      <div className="relative w-full">
+        <Input
+          type="text"
+          value={time}
+          onChange={handleTimeChange}
+          disabled={disabled}
+          placeholder={placeholder}
+          className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white pr-10"
+        />
+        <Clock className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
+      </div>
+
+      <ToggleGroup
+        type="single"
+        value={period}
+        onValueChange={handlePeriodChange}
+        className="shrink-0"
+      >
+        <ToggleGroupItem value="AM" disabled={disabled}>
+          AM
+        </ToggleGroupItem>
+        <ToggleGroupItem value="PM" disabled={disabled}>
+          PM
+        </ToggleGroupItem>
+      </ToggleGroup>
     </div>
   );
 };
