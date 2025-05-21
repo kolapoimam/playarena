@@ -251,27 +251,41 @@ const JoinMatch = () => {
       return;
     }
 
+    if (!match.title || !defaultEmail) {
+      console.error("Missing fields:", { title: match.title, email: defaultEmail });
+      toast({
+        title: "Error",
+        description: "Missing match title or email. Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       setJoining(true);
 
       const amount = match.price * selectedSlots;
+      const payload = {
+        email: defaultEmail,
+        amount: amount,
+        resource_id: match.id,
+        slug: match.slug,
+        name: match.title,
+        resource_type: "match",
+      };
+      console.log("Payment Initiation Payload:", payload);
 
       const response = await supabase.functions.invoke("initialize-paystack-transaction", {
-        body: {
-          email: defaultEmail,
-          amount: amount,
-          resource_id: match.id,
-          slug: match.slug,
-          name: match.title,
-          resource_type: "match",
-        },
+        body: payload,
       });
 
       if (response.error) {
+        console.error("Edge Function Error:", response.error);
         throw new Error(response.error.message);
       }
 
       const { access_code } = response.data;
+      console.log("Paystack Access Code:", access_code);
 
       const paystack = new window.PaystackPop();
       paystack.newTransaction({
@@ -279,6 +293,7 @@ const JoinMatch = () => {
         email: defaultEmail,
         amount: amount * 100, // Paystack expects kobo, but Edge Function handles this
         onSuccess: (transaction) => {
+          console.log("Paystack Transaction Success:", transaction);
           setPaymentStatus("success");
           toast({
             title: "Payment Successful",
@@ -287,6 +302,7 @@ const JoinMatch = () => {
           setJoining(false);
         },
         onCancel: () => {
+          console.log("Paystack Transaction Cancelled");
           toast({
             title: "Payment Cancelled",
             description: "You've cancelled the payment process.",
@@ -294,9 +310,18 @@ const JoinMatch = () => {
           });
           setJoining(false);
         },
+        onError: (error) => {
+          console.error("Paystack Transaction Error:", error);
+          toast({
+            title: "Payment Error",
+            description: "Failed to process payment. Please try again.",
+            variant: "destructive",
+          });
+          setJoining(false);
+        },
       });
     } catch (error) {
-      console.error("Error initiating payment:", error);
+      console.error("Payment Initiation Error:", error);
       toast({
         title: "Payment Error",
         description: "Failed to initiate payment. Please try again.",
