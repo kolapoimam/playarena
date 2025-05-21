@@ -19,7 +19,7 @@ type Venue = {
 };
 
 type OrganiserVenueProps = {
-  venueId: string | undefined;
+  venueId: string | undefined;"
   onVenueChange: (value: string) => void;
   isPreFilled: boolean;
   preSelectedVenueSlug: string | null;
@@ -37,10 +37,12 @@ const convertTo12Hour = (time24: string): string => {
 const OrganiserVenue = ({ venueId, onVenueChange, isPreFilled, preSelectedVenueSlug, onVenueCreated, onPrefill }: OrganiserVenueProps) => {
   const { toast } = useToast();
   const [venues, setVenues] = useState<Venue[]>([]);
+  const [filteredVenues, setFilteredVenues] = useState<Venue[]>([]);
   const [venuesLoading, setVenuesLoading] = useState(true);
   const [venueDialogOpen, setVenueDialogOpen] = useState(false);
   const [bookingCode, setBookingCode] = useState("");
   const [bookingCodeError, setBookingCodeError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const selectedVenue = venues.find((venue) => venue.id === venueId);
 
   useEffect(() => {
@@ -53,6 +55,7 @@ const OrganiserVenue = ({ venueId, onVenueChange, isPreFilled, preSelectedVenueS
 
         if (error) throw error;
         setVenues(data || []);
+        setFilteredVenues(data || []);
 
         if (preSelectedVenueSlug && !isPreFilled) {
           const venue = data?.find((v) => v.slug === preSelectedVenueSlug);
@@ -75,6 +78,13 @@ const OrganiserVenue = ({ venueId, onVenueChange, isPreFilled, preSelectedVenueS
     fetchVenues();
   }, [toast, preSelectedVenueSlug, isPreFilled, onVenueChange]);
 
+  useEffect(() => {
+    const filtered = venues.filter((venue) =>
+      `${venue.name} ${venue.city}`.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    setFilteredVenues(filtered);
+  }, [searchQuery, venues]);
+
   const handleBookingCodeChange = async (code: string) => {
     setBookingCode(code);
     setBookingCodeError(null);
@@ -82,26 +92,30 @@ const OrganiserVenue = ({ venueId, onVenueChange, isPreFilled, preSelectedVenueS
     if (!code || !selectedVenue) return;
 
     try {
+      const normalizedCode = code.toUpperCase();
       const { data: accessCodeData, error: accessCodeError } = await supabase
         .from("booking_access_codes")
         .select("match_date, start_time, end_time, access_code_status")
-        .eq("code", code)
+        .eq("code", normalizedCode)
         .eq("venue_id", selectedVenue.id)
         .single();
 
       if (accessCodeError || !accessCodeData) {
-        setBookingCodeError("Invalid or expired booking code");
+        console.error("Booking code fetch error:", accessCodeError);
+        setBookingCodeError("Booking code not found");
         return;
       }
 
       if (accessCodeData.access_code_status !== "Pending") {
-        setBookingCodeError("This booking code is not valid for creating a match");
+        console.error("Invalid booking code status:", accessCodeData.access_code_status);
+        setBookingCodeError("Booking code is expired or already used");
         return;
       }
 
       // Parse and format date and time
       const matchDate = parse(accessCodeData.match_date, "yyyy-MM-dd", new Date());
       if (!isValid(matchDate)) {
+        console.error("Invalid match_date:", accessCodeData.match_date);
         setBookingCodeError("Invalid date in booking code");
         return;
       }
@@ -146,36 +160,45 @@ const OrganiserVenue = ({ venueId, onVenueChange, isPreFilled, preSelectedVenueS
           </Dialog>
         )}
       </div>
-      <Select onValueChange={(value) => {
-        onVenueChange(value);
-        setBookingCode(""); // Reset booking code when venue changes
-        setBookingCodeError(null);
-      }} value={venueId} disabled={isPreFilled}>
-        <FormControl>
-          <SelectTrigger className="w-full text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white">
-            <SelectValue placeholder="Select a venue" />
-          </SelectTrigger>
-        </FormControl>
-        <SelectContent>
-          {venuesLoading ? (
-            <SelectItem value="loading" disabled>
-              Loading venues...
-            </SelectItem>
-          ) : venues.length > 0 ? (
-            venues.map((venue) => (
-              <SelectItem key={venue.id} value={venue.id} className="text-base">
-                {venue.name}{venue.city ? `, ${venue.city}` : ''}
+      <div className="space-y-2">
+        <Input
+          placeholder="Search venues by name or city"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+          disabled={isPreFilled}
+        />
+        <Select onValueChange={(value) => {
+          onVenueChange(value);
+          setBookingCode(""); // Reset booking code when venue changes
+          setBookingCodeError(null);
+        }} value={venueId} disabled={isPreFilled}>
+          <FormControl>
+            <SelectTrigger className="w-full text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white">
+              <SelectValue placeholder="Select a venue" />
+            </SelectTrigger>
+          </FormControl>
+          <SelectContent className="max-h-[300px] overflow-y-auto">
+            {venuesLoading ? (
+              <SelectItem value="loading" disabled>
+                Loading venues...
               </SelectItem>
-            ))
-          ) : (
-            <SelectItem value="none" disabled>
-              No venues available
-            </SelectItem>
-          )}
-        </SelectContent>
-      </Select>
+            ) : filteredVenues.length > 0 ? (
+              filteredVenues.map((venue) => (
+                <SelectItem key={venue.id} value={venue.id} className="text-base">
+                  {venue.name}{venue.city ? `, ${venue.city}` : ''}
+                </SelectItem>
+              ))
+            ) : (
+              <SelectItem value="none" disabled>
+                No venues found
+              </SelectItem>
+            )}
+          </SelectContent>
+        </Select>
+      </div>
       {selectedVenue?.verified_status === "True" && !isPreFilled && (
-        <div className="mt-4">
+        <div className="mt-4 space-y-2">
           <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Booking Access Code</FormLabel>
           <FormControl>
             <Input
@@ -189,7 +212,7 @@ const OrganiserVenue = ({ venueId, onVenueChange, isPreFilled, preSelectedVenueS
             <p className="text-sm text-red-500 mt-1">{bookingCodeError}</p>
           )}
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Enter a valid booking access code to pre-fill date and time. You can proceed without a code, but ensure you have confirmed your booking.
+            Enter a valid access code to prefill data.
           </p>
         </div>
       )}
