@@ -147,7 +147,7 @@ const VenueBookingForm = () => {
         const email = session.session?.user?.email || defaultEmail;
         setUserEmail(email);
       } catch (error: any) {
-        console.error("Error:", error);
+        console.error("Error fetching venue:", error);
         toast({
           title: "Error",
           description: error.message || "Failed to load booking form.",
@@ -251,14 +251,16 @@ const VenueBookingForm = () => {
       const payload = {
         email: userEmail || defaultEmail,
         amount: amount,
-        resource_id: venue.id,
+        venue_id: venue.id,
         slug: venue.slug,
         name: venue.name,
-        resource_type: "venue",
+        start_time: form.getValues("start_time"),
+        end_time: form.getValues("end_time"),
+        match_date: format(form.getValues("match_date"), "yyyy-MM-dd"),
       };
       console.log("Payment Initiation Payload:", payload);
 
-      const response = await supabase.functions.invoke("initialize-paystack-transaction", {
+      const response = await supabase.functions.invoke("initialize-paystack-venue", {
         body: payload,
       });
 
@@ -267,14 +269,15 @@ const VenueBookingForm = () => {
         throw new Error(response.error.message);
       }
 
-      const { access_code } = response.data;
-      console.log("Paystack Access Code:", access_code);
+      const { access_code, reference } = response.data;
+      console.log("Paystack Response:", { access_code, reference });
 
       const paystack = new window.PaystackPop();
       paystack.newTransaction({
         key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
         email: userEmail || defaultEmail,
-        amount: amount * 100, // Paystack expects kobo, but Edge Function handles this
+        amount: amount, // Amount in NGN, Edge Function handles kobo conversion
+        accessCode: access_code,
         onSuccess: (transaction) => {
           console.log("Paystack Transaction Success:", transaction);
           setPaymentStatus("success");
@@ -282,6 +285,7 @@ const VenueBookingForm = () => {
             title: "Payment Successful",
             description: "Your payment was processed successfully. Please complete your booking.",
           });
+          navigate(`/venue/${venue.slug}/book?reference=${transaction.reference}`);
           setPaying(false);
         },
         onCancel: () => {
@@ -297,17 +301,17 @@ const VenueBookingForm = () => {
           console.error("Paystack Transaction Error:", error);
           toast({
             title: "Payment Error",
-            description: "Failed to process payment. Please try again.",
+            description: `Failed to process payment: ${error.message || "Unknown error"}`,
             variant: "destructive",
           });
           setPaying(false);
         },
       });
-    } catch (error) {
-      console.error("Payment Initiation Error:", error);
+    } catch (error: any) {
+      console.error("Payment Initiation Error:", error.message, error.issues || []);
       toast({
         title: "Payment Error",
-        description: "Failed to initiate payment. Please try again.",
+        description: error.message || "Failed to initiate payment. Please try again.",
         variant: "destructive",
       });
       setPaying(false);
@@ -435,7 +439,7 @@ const VenueBookingForm = () => {
                         mode="single"
                         selected={field.value}
                         onSelect={field.onChange}
-                        disabled={(date) => date < new Date().setHours(0, 0, 0, 0)} // Allow today
+                        disabled={(date) => date < new Date().setHours(0, 0, 0, 0)}
                         initialFocus
                       />
                     </PopoverContent>
