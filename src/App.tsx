@@ -32,7 +32,7 @@ import Ticketing from "@/pages/Ticketing"; // Updated to use @ alias
 import TermsAndPrivacy from "@/pages/TermsAndPrivacy"; // Updated to use @ alias
 import Confirm from "@/pages/Confirm"; // Updated to use @ alias
 import VenueManagerDashboard from "@/pages/VenueManagerDashboard"; // Updated to use @ alias
-import VenueBookings from "@/components/VenueBookings"; // Kept as is
+import VenueBookings from "@/pages/VenueBookings"; // Kept as is
 import VenueBookingForm from "@/components/VenueBookingForm"; // Added import
 
 import * as gtag from "@/lib/gtag"; // Updated to use @ alias
