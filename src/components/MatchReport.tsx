@@ -127,7 +127,8 @@ const MatchReport = ({
   addToHistory: (teams: Team[]) => void;
   isPublic: boolean;
 }) => {
-  const {akartaRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
+  const reportRef = useRef<HTMLDivElement>(null);
   const exportRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
@@ -318,6 +319,9 @@ const MatchReport = ({
             <img src="/playarenalight.png" alt="PlayArena Logo" className="w-32 mx-auto mb-4" />
             <h2 className="text-2xl font-bold text-blue-800">{match.title}</h2>
             <p className="text-sm text-gray-600">{match.match_date} at {match.match_time} | {match.venue}</p>
+            <div className="mt-4 text-4xl font-bold text-gray-800">
+              {teams[0].name} {teams[0].score} - {teams[1].score} {teams[1].name}
+            </div>
           </div>
 
           <div className="grid grid-cols-1 gap-6">
@@ -410,8 +414,8 @@ const MatchReport = ({
           </div>
 
           <div className="text-center mt-6">
-            <p className="text-xs text-gray-500">Generated on May 21, 2025, 09:19 PM WAT</p>
-            <p className="text-xs text-gray-500">Powered by SportCliq</p>
+            <p className="text-xs text-gray-500">Generated on May 21, 2025, 09:31 PM WAT</p>
+            <p className="text-xs text-gray-500">Powered by @SportCliq</p>
           </div>
         </div>
 
