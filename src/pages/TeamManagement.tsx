@@ -861,14 +861,12 @@ const TeamManagement = () => {
                   >
                     {mode === "automatic" ? "Manual Mode" : "Automatic Mode"}
                   </Button>
-                  <DialogTrigger asChild>
-                    <Button
-                      onClick={() => setTeamSelectionOpen(true)}
-                      className="bg-green-500 hover:bg-green-600 text-white"
-                    >
-                      Regenerate Teams
-                    </Button>
-                  </DialogTrigger>
+<Button
+  onClick={() => setTeamSelectionOpen(true)}
+  className="bg-green-500 hover:bg-green-600 text-white"
+>
+  Regenerate Teams
+</Button>
                   <TeamSelectionDialog
                     players={players}
                     teams={teams}
