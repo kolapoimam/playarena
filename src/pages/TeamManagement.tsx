@@ -29,7 +29,7 @@ type MatchEvent = {
   minute: number;
   description: string;
 };
-type Match = { id: string; slug: string; super_code: string; title: string; match_date: string; match_time: string };
+type Match = { id: string; slug: string; super_code: string; title: string; match_date: string; match_time: string; venue: string };
 
 const fetchWithRetry = async (query: any, retries = 3, delay = 1000) => {
   for (let i = 0; i < retries; i++) {
@@ -72,7 +72,7 @@ const TeamManagement = () => {
           supabase
             .from("matches")
             .select(`
-              id, slug, super_code, title, match_date::text, match_time,
+              id, slug, super_code, title, match_date::text, match_time, venue,
               team_assignments!fk_match (id, teams, is_public)
             `)
             .eq("slug", slug)
@@ -86,7 +86,15 @@ const TeamManagement = () => {
         }
 
         const match = matchData[0];
-        setMatch({ id: match.id, slug: match.slug, super_code: match.super_code, title: match.title, match_date: match.match_date, match_time: match.match_time });
+        setMatch({ 
+          id: match.id, 
+          slug: match.slug, 
+          super_code: match.super_code, 
+          title: match.title, 
+          match_date: match.match_date, 
+          match_time: match.match_time,
+          venue: match.venue || "Venue TBD"
+        });
 
         const teamAssignment = match.team_assignments[0] || {};
         const defaultTeams: Team[] = [
@@ -126,6 +134,7 @@ const TeamManagement = () => {
 
           setTeams(newTeams);
           addToHistory(newTeams);
+          await saveTeams(newTeams, match.id, match.super_code, teamAssignment.is_public || false);
           toast({ title: "Teams Auto-Assigned", description: "Teams have been randomly assigned." });
         }
       } catch (error) {
@@ -137,6 +146,60 @@ const TeamManagement = () => {
 
     fetchMatch();
   }, [slug, toast, navigate]);
+
+  useEffect(() => {
+    if (!match) return;
+
+    const teamSubscription = supabase
+      .channel(`team_assignments:${match.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'team_assignments', filter: `match_id=eq.${match.id}` },
+        (payload) => {
+          setTeams(payload.new.teams);
+          setIsPublic(payload.new.is_public);
+        }
+      )
+      .subscribe();
+
+    const eventSubscription = supabase
+      .channel(`match_events:${match.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'match_events', filter: `match_id=eq.${match.id}` },
+        (payload) => {
+          setEvents((prev) => [...prev, payload.new]);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(teamSubscription);
+      supabase.removeChannel(eventSubscription);
+    };
+  }, [match]);
+
+  const saveTeams = async (teamsToSave: Team[], matchId: string, superCode: string, publicStatus: boolean) => {
+    try {
+      const { data: existingAssignment, error: fetchError } = await supabase
+        .from("team_assignments")
+        .select("id")
+        .eq("match_id", matchId)
+        .maybeSingle();
+
+      if (fetchError && fetchError.code !== "PGRST116") throw fetchError;
+
+      const teamAssignmentData = { match_id: matchId, super_code: superCode, teams: teamsToSave, is_public: publicStatus };
+      const { error } = existingAssignment
+        ? await supabase.from("team_assignments").update(teamAssignmentData).eq("id", existingAssignment.id)
+        : await supabase.from("team_assignments").insert(teamAssignmentData);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error("Error saving teams:", error);
+      toast({ title: "Error", description: "Failed to save teams.", variant: "destructive" });
+    }
+  };
 
   const handleVerifySupercode = async () => {
     if (!match) return;
@@ -163,6 +226,9 @@ const TeamManagement = () => {
     newHistory.push(newTeams);
     setHistory(newHistory);
     setHistoryIndex(newHistory.length - 1);
+    if (match) {
+      saveTeams(newTeams, match.id, match.super_code, isPublic);
+    }
   };
 
   if (!match) {
