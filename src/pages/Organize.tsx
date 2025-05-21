@@ -136,7 +136,7 @@ const formSchema = z.object({
     .nullable(),
 }).refine(data => {
   const startDateTime = new Date(data.match_date);
-  const [startHours, startMinutes] = data.start_time.replace(" AM|PM", "").split(':').map(Number);
+  const [startHours, startMinutes] = data.start_time.replace(/ AM|PM/i, "").split(':').map(Number);
   const startPeriod = data.start_time.slice(-2).toUpperCase();
   let startH = startHours;
   if (startPeriod === "PM" && startHours !== 12) startH += 12;
@@ -144,7 +144,7 @@ const formSchema = z.object({
   startDateTime.setHours(startH, startMinutes, 0, 0);
 
   const endDateTime = new Date(data.match_date);
-  const [endHours, endMinutes] = data.end_time.replace(" AM|PM", "").split(':').map(Number);
+  const [endHours, endMinutes] = data.end_time.replace(/ AM|PM/i, "").split(':').map(Number);
   const endPeriod = data.end_time.slice(-2).toUpperCase();
   let endH = endHours;
   if (endPeriod === "PM" && endHours !== 12) endH += 12;
@@ -161,23 +161,23 @@ const formSchema = z.object({
 }, {
   message: "Start time must be before end time",
   path: ["end_time"],
-}).refine(data => {
+})
+.refine(data => {
   const now = new Date();
   const selectedDateTime = new Date(data.match_date);
-  const [startHours, startMinutes] = data.start_time.replace(" AM|PM", "").split(':').map(Number);
+  const [startHours, startMinutes] = data.start_time.replace(/ AM|PM/i, "").split(':').map(Number);
   const period = data.start_time.slice(-2).toUpperCase();
   let hours = startHours;
   if (period === "PM" && startHours !== 12) hours += 12;
   if (period === "AM" && startHours === 12) hours = 0;
   selectedDateTime.setHours(hours, startMinutes, 0, 0);
 
-  // Apply WAT (UTC+1) offset to both dates
-  const offsetWAT = 1 * 60; // WAT is UTC+1 in minutes
-  const nowWAT = new Date(now.getTime() + (offsetWAT - now.getTimezoneOffset()) * 60 * 1000);
-  const tenMinutesLater = new Date(nowWAT.getTime() + 10 * 60 * 1000);
-  selectedDateTime.setTime(selectedDateTime.getTime() + (offsetWAT - selectedDateTime.getTimezoneOffset()) * 60 * 1000);
+  // Compare in UTC to avoid timezone issues
+  const nowUTC = new Date(now.getTime() + (now.getTimezoneOffset() * 60000));
+  const selectedUTC = new Date(selectedDateTime.getTime() + (selectedDateTime.getTimezoneOffset() * 60000));
+  const tenMinutesLater = new Date(nowUTC.getTime() + 10 * 60 * 1000);
 
-  return selectedDateTime.getTime() >= tenMinutesLater.getTime();
+  return selectedUTC.getTime() >= tenMinutesLater.getTime();
 }, {
   message: "Match must be scheduled at least 10 minutes from now",
   path: ["start_time"],
