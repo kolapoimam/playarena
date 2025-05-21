@@ -8,6 +8,8 @@ import { useState, useEffect } from 'react';
 import SplashScreen from "@/components/SplashScreen";
 import ScrollToTop from "./components/ScrollToTop";
 import InstallPrompt from "./components/InstallPrompt";
+import VenueBookingForm from "@/components/VenueBookingForm";
+import ProfileSettings from "@/components/ProfileSettings";
 
 import Index from "./pages/Index";
 import Search from "./pages/Search";
@@ -32,7 +34,7 @@ import Ticketing from "./pages/Ticketing";
 import TermsAndPrivacy from "./pages/TermsAndPrivacy";
 import Confirm from "./pages/Confirm";
 import VenueManagerDashboard from "./pages/VenueManagerDashboard";
-import VenueBookings from "./pages/VenueBookings"; // Added import
+import VenueBookings from "./pages/VenueBookings";
 
 import * as gtag from "./lib/gtag";
 
