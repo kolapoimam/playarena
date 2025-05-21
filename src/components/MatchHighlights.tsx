@@ -67,35 +67,35 @@ const MatchHighlights = () => {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 sm:p-6">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">{highlight.title}</h1>
-        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-4">
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
           {highlight.match_date} at {highlight.match_time}
         </p>
-        <div className="space-y-4 sm:space-y-6">
+        <div className="space-y-6">
           <div>
-            <h2 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-gray-200">Teams</h2>
+            <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Teams</h2>
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs sm:text-sm">
+              <table className="w-full text-left border-collapse text-sm">
                 <thead>
                   <tr className="bg-gray-100 dark:bg-gray-700">
-                    <th className="p-2">Team</th>
-                    <th className="p-2">Score</th>
-                    <th className="p-2">Possession</th>
-                    <th className="p-2">Shots</th>
-                    <th className="p-2">Fouls</th>
-                    <th className="p-2">Yellow Cards</th>
-                    <th className="p-2">Red Cards</th>
+                    <th className="p-3">Team</th>
+                    <th className="p-3">Score</th>
+                    <th className="p-3">Possession</th>
+                    <th className="p-3">Shots</th>
+                    <th className="p-3">Fouls</th>
+                    <th className="p-3">Yellow</th>
+                    <th className="p-3">Red</th>
                   </tr>
                 </thead>
                 <tbody>
                   {highlight.teams.map((team) => (
                     <tr key={team.name} className="border-b dark:border-gray-600">
-                      <td className="p-2">{team.name}</td>
-                      <td className="p-2">{team.score}</td>
-                      <td className="p-2">{team.analytics.possession}%</td>
-                      <td className="p-2">{team.analytics.shots}</td>
-                      <td className="p-2">{team.analytics.fouls}</td>
-                      <td className="p-2">{team.analytics.yellow_cards}</td>
-                      <td className="p-2">{team.analytics.red_cards}</td>
+                      <td className="p-3">{team.name}</td>
+                      <td className="p-3 text-center">{team.score}</td>
+                      <td className="p-3 text-center">{team.analytics.possession}%</td>
+                      <td className="p-3 text-center">{team.analytics.shots}</td>
+                      <td className="p-3 text-center">{team.analytics.fouls}</td>
+                      <td className="p-3 text-center">{team.analytics.yellow_cards}</td>
+                      <td className="p-3 text-center">{team.analytics.red_cards}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -103,12 +103,12 @@ const MatchHighlights = () => {
             </div>
           </div>
           <div>
-            <h2 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-gray-200">Events</h2>
+            <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Events</h2>
             {highlight.events.length === 0 ? (
-              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">No events recorded.</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">No events recorded.</p>
             ) : (
               highlight.events.map((event) => (
-                <p key={event.id} className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                <p key={event.id} className="text-sm text-gray-600 dark:text-gray-400">
                   {event.minute}' - {event.type.replace("_", " ")} ({event.team_name}): {event.description}
                 </p>
               ))
