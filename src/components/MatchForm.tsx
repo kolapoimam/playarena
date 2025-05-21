@@ -7,13 +7,13 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { CalendarIcon, Clock, User, ArrowLeft, Copy } from "lucide-react";
+import { CalendarIcon, Copy } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { format, parse, isValid } from "date-fns";
+import { format, parse } from "date-fns";
 import { cn } from "@/lib/utils";
 import TimeInput from "@/components/TimeInput";
 import OrganiserVenue from "@/components/OrganiserVenue";
@@ -216,7 +216,6 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
   });
 
   useEffect(() => {
-    // Pass watch and setValue to parent component
     onFormReady({
       watch: form.watch,
       setValue: form.setValue,
@@ -514,6 +513,7 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
                     placeholder="E.g., Bring boots, parking available, etc."
                     className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                     {...field}
+                    value={field.value || ""}
                   />
                 </FormControl>
                 <FormMessage />
