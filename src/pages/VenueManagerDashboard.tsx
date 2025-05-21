@@ -77,20 +77,33 @@ const VenueManagerDashboard = () => {
         setUpcomingBookings(sortedUpcoming);
 
         // Fetch past bookings using new function
-        const { data: past, error: pastError } = await supabase
-          .rpc("get_bookings_by_venue_v3", {
-            p_venue_id: venueId,
-            p_is_upcoming: false,
-            p_limit_count: 5,
-          });
+const { data: upcoming, error: upcomingError } = await supabase
+  .rpc("get_bookings_by_venue_v3", {
+    p_venue_id: venueId,
+    p_is_upcoming: true,
+    p_limit_count: 5,
+  });
 
-        if (pastError) {
-          console.error("Past bookings error:", pastError);
-          throw new Error(pastError.message);
-        }
-        // Sort descending by match_date
-        const sortedPast = (past || []).sort((a, b) => new Date(b.match_date).getTime() - new Date(a.match_date).getTime());
-        setPastBookings(sortedPast);
+if (upcomingError) {
+  console.error("Upcoming bookings error:", upcomingError);
+  throw new Error(upcomingError.message);
+}
+const sortedUpcoming = (upcoming || []).sort((a, b) => new Date(a.match_date).getTime() - new Date(b.match_date).getTime());
+setUpcomingBookings(sortedUpcoming);
+
+const { data: past, error: pastError } = await supabase
+  .rpc("get_bookings_by_venue_v3", {
+    p_venue_id: venueId,
+    p_is_upcoming: false,
+    p_limit_count: 5,
+  });
+
+if (pastError) {
+  console.error("Past bookings error:", pastError);
+  throw new Error(pastError.message);
+}
+const sortedPast = (past || []).sort((a, b) => new Date(b.match_date).getTime() - new Date(a.match_date).getTime());
+setPastBookings(sortedPast);
 
         // Fetch total events
         const { count: eventCount, error: countError } = await supabase
