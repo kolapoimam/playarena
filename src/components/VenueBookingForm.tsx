@@ -12,7 +12,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format, isWithinInterval, addHours } from "date-fns";
 import { CalendarIcon, ArrowLeft, Clock, Loader } from "lucide-react";
-import Navbar from "@/components/Navbar";
+
+// Lazy load Navbar to avoid circular dependencies
+import { lazy, Suspense } from "react";
+const Navbar = lazy(() => import("@/components/Navbar"));
 
 type Venue = {
   id: string;
@@ -85,7 +88,7 @@ const VenueBookingForm = () => {
   const [paying, setPaying] = useState(false);
   const [verifyingPayment, setVerifyingPayment] = useState(false);
   const [paystackLoaded, setPaystackLoaded] = useState(false);
-  const [paymentStatus, setPaymentStatus] = setPaymentStatus(false);
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>("pending");
   const [amount, setAmount] = useState(0);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [isSlotAvailable, setIsSlotAvailable] = useState(true);
@@ -587,7 +590,9 @@ const VenueBookingForm = () => {
         </Form>
       </div>
 
-      <Navbar />
+      <Suspense fallback={<div>Loading...</div>}>
+        <Navbar />
+      </Suspense>
     </div>
   );
 };
