@@ -10,7 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { format } from "date-fns";
+import { format, isWithinInterval, addHours } from "date-fns";
 import { CalendarIcon, ArrowLeft, Clock, Loader } from "lucide-react";
 import Navbar from "@/components/Navbar";
 
@@ -85,9 +85,10 @@ const VenueBookingForm = () => {
   const [paying, setPaying] = useState(false);
   const [verifyingPayment, setVerifyingPayment] = useState(false);
   const [paystackLoaded, setPaystackLoaded] = useState(false);
-  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>("pending");
+  const [paymentStatus, setPaymentStatus] = setPaymentStatus(false);
   const [amount, setAmount] = useState(0);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [isSlotAvailable, setIsSlotAvailable] = useState(true);
   const defaultEmail = "kolapoimam1@gmail.com";
 
   const form = useForm<BookingFormValues>({
@@ -210,17 +211,56 @@ const VenueBookingForm = () => {
 
   useEffect(() => {
     const subscription = form.watch((value) => {
-      if (venue && value.start_time && value.end_time) {
+      if (venue && value.match_date && value.start_time && value.end_time) {
         const [startHours, startMinutes] = value.start_time.split(":").map(Number);
         const [endHours, endMinutes] = value.end_time.split(":").map(Number);
-        const start = new Date(0);
-        start.setHours(startHours, startMinutes);
-        const end = new Date(0);
-        end.setHours(endHours, endMinutes);
-        const durationHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+        const startDateTime = new Date(value.match_date);
+        startDateTime.setHours(startHours, startMinutes, 0, 0);
+        const endDateTime = new Date(value.match_date);
+        endDateTime.setHours(endHours, endMinutes, 0, 0);
+
+        // Check availability
+        const checkAvailability = async () => {
+          const { data, error } = await supabase
+            .from("bookings")
+            .select("match_date, start_time, end_time")
+            .eq("venue_id", venue.id);
+
+          if (error) {
+            console.error("Error checking availability:", error);
+            setIsSlotAvailable(false);
+            return;
+          }
+
+          const isConflict = data.some((booking) => {
+            const bookingStart = new Date(booking.match_date);
+            const [bookingStartH, bookingStartM] = booking.start_time.split(":").map(Number);
+            bookingStart.setHours(bookingStartH, bookingStartM, 0, 0);
+
+            const bookingEnd = new Date(booking.match_date);
+            const [bookingEndH, bookingEndM] = booking.end_time.split(":").map(Number);
+            bookingEnd.setHours(bookingEndH, bookingEndM, 0, 0);
+
+            return isWithinInterval(startDateTime, {
+              start: bookingStart,
+              end: addHours(bookingEnd, 12), // Account for max 12-hour bookings
+            }) || isWithinInterval(endDateTime, {
+              start: bookingStart,
+              end: addHours(bookingEnd, 12),
+            }) || (startDateTime <= bookingStart && endDateTime >= bookingEnd);
+          });
+
+          setIsSlotAvailable(!isConflict);
+        };
+
+        checkAvailability();
+
+        // Calculate amount
+        const durationHours = (endDateTime.getTime() - startDateTime.getTime()) / (1000 * 60 * 60);
         setAmount(venue.booking_fee * durationHours);
       } else {
         setAmount(0);
+        setIsSlotAvailable(true); // Reset availability if form is incomplete
       }
     });
     return () => subscription.unsubscribe();
@@ -236,10 +276,10 @@ const VenueBookingForm = () => {
   };
 
   const handlePaymentInitiation = async () => {
-    if (!venue || !amount || !paystackLoaded || !window.PaystackPop) {
+    if (!venue || !amount || !paystackLoaded || !window.PaystackPop || !isSlotAvailable) {
       toast({
         title: "Error",
-        description: "Payment system is not ready or amount is invalid. Please try again later.",
+        description: isSlotAvailable ? "Payment system is not ready or amount is invalid." : "This time slot is already booked. Please choose a different time.",
         variant: "destructive",
       });
       return;
@@ -251,7 +291,7 @@ const VenueBookingForm = () => {
       const response = await supabase.functions.invoke("initialize-paystack-transaction", {
         body: {
           email: userEmail || defaultEmail,
-          amount: amount,
+          amount: amount * 100, // Convert to kobo (Paystack expects amount in kobo)
           venue_id: venue.id,
           slug: venue.slug,
           title: `Venue Booking - ${venue.name}`,
@@ -312,30 +352,14 @@ const VenueBookingForm = () => {
       setPaying(true);
       const accessCode = generateAccessCode();
 
-      // Check if booking already has a match_id
-      const { data: existingBooking } = await supabase
-        .from("bookings")
-        .select("match_id")
-        .eq("payment_reference", paymentReference)
-        .single();
-
-      if (existingBooking?.match_id) {
-        toast({
-          title: "Error",
-          description: "This booking has already been used to create a match.",
-          variant: "destructive",
-        });
-        return;
-      }
-
       const { error: bookingError } = await supabase.from("bookings").insert({
         venue_id: venue.id,
-        amount: amount,
-        payment_status: "paid",
-        payment_reference: paymentReference,
         match_date: format(values.match_date, "yyyy-MM-dd"),
         start_time: values.start_time,
         end_time: values.end_time,
+        amount: amount,
+        payment_status: "paid",
+        payment_reference: paymentReference,
       });
 
       if (bookingError) throw bookingError;
@@ -439,7 +463,7 @@ const VenueBookingForm = () => {
                         mode="single"
                         selected={field.value}
                         onSelect={field.onChange}
-                        disabled={(date) => date < new Date().setHours(0, 0, 0, 0) || paymentStatus === "success"}
+                        disabled={(date) => date < new Date().setHours(0, 0, 0, 0)}
                         initialFocus
                       />
                     </PopoverContent>
@@ -504,6 +528,13 @@ const VenueBookingForm = () => {
               </p>
             </div>
 
+            {!isSlotAvailable && (
+              <div className="bg-red-50 p-4 rounded-md border border-red-200 text-red-700">
+                <p className="font-medium">Unavailable Slot</p>
+                <p className="text-sm">This time slot is already booked. Please choose a different date or time.</p>
+              </div>
+            )}
+
             {amount > 0 && paymentStatus === "pending" && (
               <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md space-y-4">
                 <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Payment Required</h3>
@@ -514,7 +545,7 @@ const VenueBookingForm = () => {
                   type="button"
                   className="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg"
                   onClick={handlePaymentInitiation}
-                  disabled={paying || !paystackLoaded || !amount}
+                  disabled={paying || !paystackLoaded || !amount || !isSlotAvailable}
                 >
                   {paying ? (
                     <>
