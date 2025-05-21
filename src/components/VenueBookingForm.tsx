@@ -248,38 +248,28 @@ const VenueBookingForm = () => {
     try {
       setPaying(true);
 
-      const payload = {
-        email: userEmail || defaultEmail,
-        amount: amount,
-        venue_id: venue.id,
-        slug: venue.slug,
-        name: venue.name,
-        start_time: form.getValues("start_time"),
-        end_time: form.getValues("end_time"),
-        match_date: format(form.getValues("match_date"), "yyyy-MM-dd"),
-      };
-      console.log("Payment Initiation Payload:", payload);
-
-      const response = await supabase.functions.invoke("initialize-paystack-venue", {
-        body: payload,
+      const response = await supabase.functions.invoke("initialize-paystack-transaction", {
+        body: {
+          email: userEmail || defaultEmail,
+          amount: amount,
+          venue_id: venue.id,
+          slug: venue.slug,
+          title: `Venue Booking - ${venue.name}`,
+          start_time: form.getValues("start_time"),
+          end_time: form.getValues("end_time"),
+          match_date: format(form.getValues("match_date"), "yyyy-MM-dd"),
+        },
       });
 
       if (response.error) {
-        console.error("Edge Function Error:", response.error);
         throw new Error(response.error.message);
       }
 
-      const { access_code, reference } = response.data;
-      console.log("Paystack Response:", { access_code, reference });
+      const { access_code } = response.data;
 
       const paystack = new window.PaystackPop();
-      paystack.newTransaction({
-        key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
-        email: userEmail || defaultEmail,
-        amount: amount, // Amount in NGN, Edge Function handles kobo conversion
-        accessCode: access_code,
+      paystack.resumeTransaction(access_code, {
         onSuccess: (transaction) => {
-          console.log("Paystack Transaction Success:", transaction);
           setPaymentStatus("success");
           toast({
             title: "Payment Successful",
@@ -289,7 +279,6 @@ const VenueBookingForm = () => {
           setPaying(false);
         },
         onCancel: () => {
-          console.log("Paystack Transaction Cancelled");
           toast({
             title: "Payment Cancelled",
             description: "You cancelled the payment. Please try again to complete the booking.",
@@ -297,18 +286,9 @@ const VenueBookingForm = () => {
           });
           setPaying(false);
         },
-        onError: (error) => {
-          console.error("Paystack Transaction Error:", error);
-          toast({
-            title: "Payment Error",
-            description: `Failed to process payment: ${error.message || "Unknown error"}`,
-            variant: "destructive",
-          });
-          setPaying(false);
-        },
       });
     } catch (error: any) {
-      console.error("Payment Initiation Error:", error.message, error.issues || []);
+      console.error("Payment Initiation Error:", error);
       toast({
         title: "Payment Error",
         description: error.message || "Failed to initiate payment. Please try again.",
