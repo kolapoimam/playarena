@@ -175,9 +175,10 @@ type MatchFormProps = {
   accessCode: string | null;
   onSubmitSuccess: (supercode: string, matchSlug: string) => void;
   onPreview: () => void;
+  onPrefill: (values: { match_date: Date; start_time: string; end_time: string }) => void;
 };
 
-const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSubmitSuccess, onPreview }: MatchFormProps) => {
+const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSubmitSuccess, onPreview, onPrefill }: MatchFormProps) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [isPreferencesOpen, setIsPreferencesOpen] = useState(false);
@@ -372,6 +373,7 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
                 description: `${venueName} has been added to venues.`,
               });
             }}
+            onPrefill={onPrefill}
           />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
@@ -675,10 +677,9 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
                           onCheckedChange={field.onChange}
                           className="data-[state=checked]:bg-green-500"
                         />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
+                    </FormControl>
+                  </FormItem>
+                )}
               )}
               <FormField
                 control={form.control}
