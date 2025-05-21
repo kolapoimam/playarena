@@ -61,22 +61,6 @@ const VenueManagerDashboard = () => {
         setVenue(venueData);
 
         // Fetch upcoming bookings using new function
-        const { data: upcoming, error: upcomingError } = await supabase
-          .rpc("get_bookings_by_venue_v3", {
-            p_venue_id: venueId,
-            p_is_upcoming: true,
-            p_limit_count: 5,
-          });
-
-        if (upcomingError) {
-          console.error("Upcoming bookings error:", upcomingError);
-          throw new Error(upcomingError.message);
-        }
-        // Sort ascending by match_date
-        const sortedUpcoming = (upcoming || []).sort((a, b) => new Date(a.match_date).getTime() - new Date(b.match_date).getTime());
-        setUpcomingBookings(sortedUpcoming);
-
-        // Fetch past bookings using new function
 const { data: upcoming, error: upcomingError } = await supabase
   .rpc("get_bookings_by_venue_v3", {
     p_venue_id: venueId,
