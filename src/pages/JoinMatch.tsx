@@ -79,7 +79,6 @@ const JoinMatch = () => {
   const cardRef = useRef<HTMLDivElement>(null);
   const defaultEmail = "kolapoimam1@gmail.com";
 
-  // Check authentication status
   useEffect(() => {
     const checkAuth = async () => {
       const { data: session } = await supabase.auth.getSession();
@@ -133,7 +132,6 @@ const JoinMatch = () => {
     defaultValues: {},
   });
 
-  // Fetch match and auto-populate form for logged-in users
   useEffect(() => {
     if (!slug) return;
 
@@ -165,7 +163,6 @@ const JoinMatch = () => {
           defaultValues[field] = "";
         });
 
-        // Auto-populate form for logged-in users
         if (userId) {
           const { data: profile } = await supabase
             .from("profiles")
@@ -215,7 +212,7 @@ const JoinMatch = () => {
           setPaymentStatus("success");
           toast({
             title: "Payment Successful",
-            description: "Your payment was processed successfully. Please complete your registration. Do not close this page",
+            description: "Your payment was processed successfully. Please complete your registration.",
           });
         } else {
           setPaymentStatus("failed");
@@ -268,14 +265,14 @@ const JoinMatch = () => {
       const payload = {
         email: defaultEmail,
         amount: amount,
-        resource_id: match.id,
+        match_id: match.id,
         slug: match.slug,
         name: match.title,
-        resource_type: "match",
+        number_of_slots: selectedSlots,
       };
       console.log("Payment Initiation Payload:", payload);
 
-      const response = await supabase.functions.invoke("initialize-paystack-transaction", {
+      const response = await supabase.functions.invoke("initialize-paystack-match", {
         body: payload,
       });
 
@@ -284,14 +281,15 @@ const JoinMatch = () => {
         throw new Error(response.error.message);
       }
 
-      const { access_code } = response.data;
-      console.log("Paystack Access Code:", access_code);
+      const { access_code, reference } = response.data;
+      console.log("Paystack Response:", { access_code, reference });
 
       const paystack = new window.PaystackPop();
       paystack.newTransaction({
         key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
         email: defaultEmail,
-        amount: amount * 100, // Paystack expects kobo, but Edge Function handles this
+        amount: amount, // Amount in NGN, Edge Function handles kobo
+        accessCode: access_code,
         onSuccess: (transaction) => {
           console.log("Paystack Transaction Success:", transaction);
           setPaymentStatus("success");
@@ -299,6 +297,7 @@ const JoinMatch = () => {
             title: "Payment Successful",
             description: `Your payment for ${selectedSlots} slot(s) was processed successfully. Please complete your registration.`,
           });
+          navigate(`/join/${match.slug}?reference=${transaction.reference}`);
           setJoining(false);
         },
         onCancel: () => {
@@ -314,17 +313,17 @@ const JoinMatch = () => {
           console.error("Paystack Transaction Error:", error);
           toast({
             title: "Payment Error",
-            description: "Failed to process payment. Please try again.",
+            description: `Failed to process payment: ${error.message || "Unknown error"}`,
             variant: "destructive",
           });
           setJoining(false);
         },
       });
-    } catch (error) {
-      console.error("Payment Initiation Error:", error);
+    } catch (error: any) {
+      console.error("Payment Initiation Error:", error.message, error.issues || []);
       toast({
         title: "Payment Error",
-        description: "Failed to initiate payment. Please try again.",
+        description: error.message || "Failed to initiate payment. Please try again.",
         variant: "destructive",
       });
       setJoining(false);
@@ -417,7 +416,6 @@ const JoinMatch = () => {
 
       if (playerError) throw playerError;
 
-      // Link player to user account if logged in
       if (userId) {
         const { error: joinError } = await supabase
           .from("user_joined_matches")
