@@ -69,7 +69,8 @@ const AppRoutes = () => {
       <Route path="/match-id/:id" element={<MatchRedirect />} />
       <Route path="/venue-id/:id" element={<VenueRedirect />} />
       <Route path="/venuemanager/dashboard/:venueId" element={<VenueManagerDashboard />} />
-      <Route path="/venues-bookings/:venueSlug" element={<VenueBookings />} /> {/* Added route */}
+      <Route path="/venues-bookings/:venueSlug" element={<VenueBookings />} />
+      <Route path="/venue/:slug/book" element={<VenueBookingForm />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
