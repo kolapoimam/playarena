@@ -57,6 +57,8 @@ const TeamManagement = () => {
   const [supercodeInput, setSupercodeInput] = useState("");
   const [history, setHistory] = useState<Team[][]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
+  // Add state for mode
+  const [mode, setMode] = useState<"automatic" | "manual">("automatic");
 
   useEffect(() => {
     const fetchMatch = async () => {
