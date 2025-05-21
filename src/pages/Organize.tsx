@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Calendar as CalendarIcon, Clock, MapPin, ArrowLeft, Plus, User, Trophy, Copy } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, MapPin, ArrowLeft, Plus, User, Trophy, Copy, AlertCircle } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Form,
@@ -213,6 +213,7 @@ type Venue = {
   slug: string;
   name: string;
   city: string;
+  verified_status: 'True' | 'False';
 };
 
 const Organize = () => {
@@ -290,16 +291,20 @@ const Organize = () => {
             throw new Error("Venue not found");
           }
 
-          // Validate access code
+          // Validate access code and check if it's already used
           const { data: accessCodeData, error: accessCodeError } = await supabase
             .from("venue_access_codes")
-            .select("match_date, start_time, end_time")
+            .select("match_date, start_time, end_time, used")
             .eq("code", accessCode)
             .eq("venue_id", venue.id)
             .single();
 
           if (accessCodeError || !accessCodeData) {
             throw new Error("Invalid or expired access code");
+          }
+
+          if (accessCodeData.used) {
+            throw new Error("This booking has already been used to create a match.");
           }
 
           // Pre-fill form with 12-hour format
@@ -334,7 +339,7 @@ const Organize = () => {
       try {
         const { data, error } = await supabase
           .from("venues")
-          .select("id, slug, name, city")
+          .select("id, slug, name, city, verified_status")
           .order("name");
 
         if (error) throw error;
@@ -504,7 +509,7 @@ const Organize = () => {
   };
 
   const handleVenueCreated = (venueId: string, venueSlug: string, venueName: string) => {
-    setVenues(prev => [{ id: venueId, slug: venueSlug, name: venueName, city: "" }, ...prev]);
+    setVenues(prev => [{ id: venueId, slug: venueSlug, name: venueName, city: "", verified_status: 'False' }, ...prev]);
     form.setValue("venue_id", venueId);
     setVenueDialogOpen(false);
     toast({
@@ -565,6 +570,15 @@ const Organize = () => {
           <div className="mb-4 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 p-4 rounded-lg">
             <p className="font-medium">Venue Booking Pre-Filled</p>
             <p className="text-sm">The venue, date, and time are set based on your booking. These fields are locked to match your reservation.</p>
+          </div>
+        )}
+        {selectedVenue?.verified_status === "True" && !isPreFilled && (
+          <div className="mb-4 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 p-4 rounded-lg">
+            <p className="flex items-center font-medium">
+              <AlertCircle size={16} className="mr-2" />
+              Verified Venue
+            </p>
+            <p className="text-sm">This is a verified venue. Please confirm your booking before proceeding to create a match.</p>
           </div>
         )}
         <Form {...form}>
@@ -705,9 +719,7 @@ const Organize = () => {
                             value={field.value || ""}
                             onChange={(e) => {
                               const value = e.target.value.toUpperCase();
-                              if (timePattern.test(value) || value === "") {
-                                field.onChange(value);
-                              }
+                              field.onChange(value); // Allow partial inputs during typing
                             }}
                             disabled={isPreFilled}
                           />
@@ -738,9 +750,7 @@ const Organize = () => {
                             value={field.value || ""}
                             onChange={(e) => {
                               const value = e.target.value.toUpperCase();
-                              if (timePattern.test(value) || value === "") {
-                                field.onChange(value);
-                              }
+                              field.onChange(value); // Allow partial inputs during typing
                             }}
                             disabled={isPreFilled}
                           />
