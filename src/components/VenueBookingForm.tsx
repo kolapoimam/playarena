@@ -10,7 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { format, isWithinInterval, addHours } from "date-fns";
+import { format, isWithinInterval } from "date-fns";
 import { CalendarIcon, ArrowLeft, Clock, Loader } from "lucide-react";
 import { lazy, Suspense } from "react";
 
@@ -22,7 +22,7 @@ type Venue = {
   slug: string;
   name: string;
   booking_fee: number;
-  verified_status: 'True' | 'False';
+  verified_vstatus: 'True' | 'False';
 };
 
 type PaymentStatus = "pending" | "success" | "failed";
@@ -227,7 +227,8 @@ const VenueBookingForm = () => {
           const { data, error } = await supabase
             .from("venue_access_codes")
             .select("match_date, start_time, end_time")
-            .eq("venue_id", venue.id);
+            .eq("venue_id", venue.id)
+            .eq("match_date", format(value.match_date, "yyyy-MM-dd"));
 
           if (error) {
             console.error("Error checking availability:", error);
@@ -244,13 +245,10 @@ const VenueBookingForm = () => {
             const [bookingEndH, bookingEndM] = booking.end_time.split(":").map(Number);
             bookingEnd.setHours(bookingEndH, bookingEndM, 0, 0);
 
-            return isWithinInterval(startDateTime, {
-              start: bookingStart,
-              end: addHours(bookingEnd, 12), // Account for max 12-hour bookings
-            }) || isWithinInterval(endDateTime, {
-              start: bookingStart,
-              end: addHours(bookingEnd, 12),
-            }) || (startDateTime <= bookingStart && endDateTime >= bookingEnd);
+            // Check if the new booking overlaps with an existing booking
+            return (
+              (startDateTime < bookingEnd && endDateTime > bookingStart)
+            );
           });
 
           setIsSlotAvailable(!isConflict);
@@ -294,7 +292,7 @@ const VenueBookingForm = () => {
       const response = await supabase.functions.invoke("initialize-paystack-transaction", {
         body: {
           email: userEmail || defaultEmail,
-          amount: amount * 100, // Convert to kobo (Paystack expects amount in kobo)
+          amount: amount, // Amount is already in naira, backend handles conversion to kobo
           venue_id: venue.id,
           slug: venue.slug,
           title: `Venue Booking - ${venue.name}`,
