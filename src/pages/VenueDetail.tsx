@@ -26,7 +26,7 @@ type Venue = {
   pricing: string | null;
   booking_fee: number | null;
   aggregated_rating: number | null;
-  is_verified: 'verified' | 'pending' | 'unverified';
+  verified_status: 'True' | 'False';
 };
 
 type Match = {
@@ -73,7 +73,7 @@ const VenueDetail = () => {
       try {
         const { data, error } = await supabase
           .from("venues")
-          .select("id, slug, name, address, city, state, description, map_link, venue_phone, image_urls, facilities, opening_hours, pricing, booking_fee, aggregated_rating, is_verified")
+          .select("id, slug, name, address, city, state, description, map_link, venue_phone, image_urls, facilities, opening_hours, pricing, booking_fee, aggregated_rating, verified_status")
           .eq("slug", slug)
           .single();
 
@@ -209,7 +209,7 @@ const VenueDetail = () => {
 
         <div className="flex items-center">
           <h1 className="text-3xl font-bold mb-2 text-gray-900 dark:text-gray-100">{venue.name}</h1>
-          {venue.is_verified === 'verified' && (
+          {venue.verified_status === 'True' && (
             <img 
               src="/green-verified.png" 
               alt="Verified" 
@@ -286,10 +286,21 @@ const VenueDetail = () => {
                   </a>
                 </div>
               )}
+
+              <div className="pt-2">
+                <Button
+                  className="bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 w-full sm:w-auto"
+                  onClick={handleBookVenue}
+                  disabled={!venue.venue_phone}
+                >
+                  <MessageCircle size={16} className="mr-2" />
+                  Contact
+                </Button>
+              </div>
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-200 dark:border-700">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-200 dark:border-gray-700">
             <h2 className="font-semibold text-lg mb-4 text-gray-900 dark:text-gray-100">Recent Matches</h2>
 
             {matchesLoading ? (
@@ -336,14 +347,6 @@ const VenueDetail = () => {
             >
               <CalendarPlus size={16} className="mr-2" />
               Organise Match
-            </Button>
-            <Button
-              className="flex-1 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 w-full sm:w-auto"
-              onClick={handleBookVenue}
-              disabled={!venue.venue_phone}
-            >
-              <MessageCircle size={16} className="mr-2" />
-              Contact
             </Button>
           </div>
         </div>
