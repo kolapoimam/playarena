@@ -62,7 +62,7 @@ const VenueBookingForm = () => {
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>("pending");
   const [amount, setAmount] = useState(0);
   const [userEmail, setUserEmail] = useState<string | null>(null);
-  const defaultEmail = "kolapoimam1@gmail.com"; // Fallback email
+  const defaultEmail = "kolapoimam1@gmail.com";
 
   const form = useForm<BookingFormValues>({
     resolver: zodResolver(bookingSchema),
@@ -73,7 +73,6 @@ const VenueBookingForm = () => {
     },
   });
 
-  // Load Paystack script
   useEffect(() => {
     const script = document.createElement("script");
     script.src = "https://js.paystack.co/v2/inline.js";
@@ -92,7 +91,6 @@ const VenueBookingForm = () => {
     };
   }, [toast]);
 
-  // Fetch venue and user email
   useEffect(() => {
     const fetchVenueAndUser = async () => {
       if (!slug) {
@@ -103,7 +101,6 @@ const VenueBookingForm = () => {
 
       setLoading(true);
       try {
-        // Fetch venue details
         const { data: venueData, error: venueError } = await supabase
           .from("venues")
           .select("id, slug, name, booking_fee, verified_status")
@@ -120,7 +117,6 @@ const VenueBookingForm = () => {
 
         setVenue(venueData);
 
-        // Fetch user email
         const { data: session } = await supabase.auth.getSession();
         const email = session.session?.user?.email || defaultEmail;
         setUserEmail(email);
@@ -140,7 +136,6 @@ const VenueBookingForm = () => {
     fetchVenueAndUser();
   }, [slug, navigate, toast]);
 
-  // Verify payment if reference exists
   useEffect(() => {
     if (!paymentReference || !venue) return;
 
@@ -155,9 +150,9 @@ const VenueBookingForm = () => {
           throw new Error(response.error.message);
         }
 
-        const { verified, venue_id } = response.data;
+        const { verified, resource_id, slug: returnedSlug, resource_type } = response.data;
 
-        if (verified && venue_id === venue.id) {
+        if (verified && resource_id === venue.id && returnedSlug === venue.slug && resource_type === "venue") {
           setPaymentStatus("success");
           toast({
             title: "Payment Successful",
@@ -187,11 +182,10 @@ const VenueBookingForm = () => {
     verifyPayment();
   }, [paymentReference, venue, toast]);
 
-  // Calculate amount
   useEffect(() => {
     const duration = form.watch("duration");
     if (venue?.booking_fee && duration) {
-      setAmount(venue.booking_fee * duration * 100); // Convert to kobo
+      setAmount(venue.booking_fee * duration * 100);
     }
   }, [form.watch("duration"), venue]);
 
@@ -221,9 +215,10 @@ const VenueBookingForm = () => {
         body: {
           email: userEmail,
           amount: amount,
-          venue_id: venue.id,
+          resource_id: venue.id,
           slug: venue.slug,
           name: venue.name,
+          resource_type: "venue",
         },
       });
 
@@ -264,7 +259,7 @@ const VenueBookingForm = () => {
   };
 
   const onSubmit = async (values: BookingFormValues) => {
-    if (!venue || (paymentStatus !== "success")) {
+    if (!venue || paymentStatus !== "success") {
       toast({
         title: "Error",
         description: "Please complete the payment before submitting the booking.",
@@ -282,17 +277,15 @@ const VenueBookingForm = () => {
       );
       const endTimeStr = `${endTime.getHours().toString().padStart(2, "0")}:${endTime.getMinutes().toString().padStart(2, "0")}`;
 
-      // Insert booking
       const { error: bookingError } = await supabase.from("bookings").insert({
         venue_id: venue.id,
-        amount: amount / 100, // Convert back to Naira
+        amount: amount / 100,
         payment_status: "paid",
         payment_reference: paymentReference,
       });
 
       if (bookingError) throw bookingError;
 
-      // Insert access code
       const { error: accessCodeError } = await supabase.from("venue_access_codes").insert({
         venue_id: venue.id,
         code: accessCode,
