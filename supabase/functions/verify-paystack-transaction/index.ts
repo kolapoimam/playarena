@@ -68,7 +68,7 @@ serve(async (req: Request) => {
       throw new Error("Payment verification failed");
     }
 
-    // Validate amount
+    // Validate amount (convert stored naira to kobo for comparison)
     const expectedAmountInKobo = Math.round(pendingTransaction.amount * 100);
     if (paystackData.data.amount !== expectedAmountInKobo) {
       console.error("Amount mismatch:", {
