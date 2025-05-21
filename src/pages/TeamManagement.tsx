@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -23,10 +23,7 @@ import { isPast } from "date-fns";
 // Types
 type Player = {
   id: string;
-  name: string;
-  avatar?: string;
-  skill: number;
-  position: string;
+  player_name: string;
 };
 
 type Team = {
@@ -71,6 +68,14 @@ type TeamRanking = {
   shots: number;
 };
 
+// Utility function for generating a random avatar based on player ID
+const getRandomAvatar = (playerId: string) => {
+  // Generate a pseudo-random number (1-70) based on playerId
+  const seed = playerId.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  const randomImg = (seed % 70) + 1; // Pravatar has ~70 images
+  return `https://i.pravatar.cc/40?img=${randomImg}`;
+};
+
 // Utility function for retrying Supabase queries
 const fetchWithRetry = async (query: any, retries = 3, delay = 1000) => {
   for (let i = 0; i < retries; i++) {
@@ -87,9 +92,7 @@ const fetchWithRetry = async (query: any, retries = 3, delay = 1000) => {
 const PlayerCard = ({ playerId, teamName, players }: { playerId: string; teamName: string; players: Player[] }) => {
   const player = players.find((p) => p.id === playerId) || {
     id: playerId,
-    name: "Unknown Player",
-    position: "Unknown",
-    skill: 0,
+    player_name: "Unknown Player",
   };
 
   const [{ isDragging }, drag] = useDrag(() => ({
@@ -106,18 +109,12 @@ const PlayerCard = ({ playerId, teamName, players }: { playerId: string; teamNam
       className={`p-3 mb-2 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center space-x-3 shadow-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-opacity ${isDragging ? "opacity-50" : "opacity-100"}`}
     >
       <img
-        src={player.avatar || "https://via.placeholder.com/40"}
-        alt={player.name}
+        src={getRandomAvatar(player.id)}
+        alt={player.player_name}
         className="w-10 h-10 rounded-full"
       />
       <div className="flex-1">
-        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{player.name}</p>
-        <p className="text-xs text-gray-500 dark:text-gray-400">{player.position}</p>
-      </div>
-      <div className="flex space-x-1">
-        {Array.from({ length: player.skill }).map((_, i) => (
-          <span key={i} className="text-yellow-400">★</span>
-        ))}
+        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{player.player_name}</p>
       </div>
     </div>
   );
@@ -339,14 +336,15 @@ const RulesTemplateDialog = ({ isOpen, onClose, matchId }: { isOpen: boolean; on
 const TeamManagement = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const [match, setMatch] = useState<Match | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [mode, setMode] = useState<"automatic" | "manual">("automatic");
   const [supercodeInput, setSupercodeInput] = useState("");
-  const [isVerified, setIsVerified] = useState(false);
-  const [verificationOpen, setVerificationOpen] = useState(true);
+  const [isVerified, setIsVerified] = useState<boolean>(location.state?.isVerified || false);
+  const [verificationOpen, setVerificationOpen] = useState(!location.state?.isVerified);
   const [events, setEvents] = useState<MatchEvent[]>([]);
   const [isPublic, setIsPublic] = useState(false);
   const [history, setHistory] = useState<Team[][]>([]);
@@ -508,7 +506,7 @@ const TeamManagement = () => {
         const { data: playersData, error: playersError } = await fetchWithRetry(
           supabase
             .from("players")
-            .select("id, name, avatar, skill, position")
+            .select("id, player_name")
             .eq("match_id", match.id)
         );
 
