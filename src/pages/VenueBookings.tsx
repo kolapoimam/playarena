@@ -1,181 +1,198 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, ArrowLeft } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { format } from "date-fns";
+import { Loader2, MapPin, Calendar, Clock, CreditCard } from "lucide-react";
+import Navbar from "@/components/Navbar";
 
 type Booking = {
   id: string;
   venue_id: string;
-  match_id: string;
+  match_id: string | null;
+  match_date: string;
+  start_time: string;
+  end_time: string;
   amount: number;
   payment_status: string;
-  matches: {
-    title: string;
-    match_date: string;
-    start_time: string;
-    end_time: string;
-  };
+  payment_reference: string | null;
+  venue_name: string;
+  match_title: string | null;
 };
 
 const VenueBookings = () => {
-  const { venueSlug } = useParams<{ venueSlug: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
-  const [venueName, setVenueName] = useState<string>("");
 
   useEffect(() => {
-    const fetchVenueAndBookings = async () => {
-      if (!venueSlug) {
-        toast({ title: "Error", description: "Invalid venue slug.", variant: "destructive" });
-        navigate("/");
-        return;
-      }
-      setLoading(true);
+    const fetchBookings = async () => {
       try {
-        // Fetch venue details (no auth check)
-        const { data: venue, error: venueError } = await supabase
-          .from("venues")
-          .select("id, name")
-          .eq("slug", venueSlug)
-          .single();
-
-        if (venueError || !venue) {
-          console.error("Venue fetch error:", venueError);
-          throw new Error("Venue not found");
+        setLoading(true);
+        const { data: userData } = await supabase.auth.getUser();
+        if (!userData.user) {
+          throw new Error("User not authenticated");
         }
 
-        setVenueName(venue.name);
-
-        // Fetch bookings (no auth check)
-        const { data: bookingsData, error: bookingsError } = await supabase
+        const { data, error } = await supabase
           .from("bookings")
           .select(`
             id,
             venue_id,
             match_id,
+            match_date,
+            start_time,
+            end_time,
             amount,
             payment_status,
-            matches (
-              title,
-              match_date,
-              start_time,
-              end_time
-            )
+            payment_reference,
+            venues!inner(name),
+            matches!left(title)
           `)
-          .eq("venue_id", venue.id)
-          .order("created_at", { ascending: false });
+          .eq("venues.owner_id", userData.user.id)
+          .order("match_date", { ascending: false });
 
-        if (bookingsError) {
-          console.error("Bookings fetch error:", bookingsError);
-          throw new Error(bookingsError.message);
-        }
+        if (error) throw error;
 
-        setBookings(bookingsData || []);
+        // Transform data to match Booking type
+        const transformedBookings: Booking[] = data.map((booking: any) => ({
+          id: booking.id,
+          venue_id: booking.venue_id,
+          match_id: booking.match_id,
+          match_date: booking.match_date,
+          start_time: booking.start_time,
+          end_time: booking.end_time,
+          amount: booking.amount,
+          payment_status: booking.payment_status,
+          payment_reference: booking.payment_reference,
+          venue_name: booking.venues.name,
+          match_title: booking.matches?.title || null, // Use 'title', not 'matchTitle'
+        }));
+
+        setBookings(transformedBookings);
       } catch (error: any) {
-        console.error("Fetch error:", error);
+        console.error("Error fetching bookings:", error);
         toast({
           title: "Error",
-          description: error.message || "Failed to fetch bookings.",
+          description: error.message || "Failed to load bookings.",
           variant: "destructive",
         });
-        navigate("/");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchVenueAndBookings();
-  }, [venueSlug, toast, navigate]);
+    fetchBookings();
+  }, [toast]);
+
+  const formatTime = (time: string) => {
+    const [hours, minutes] = time.split(":").map(Number);
+    const period = hours >= 12 ? "PM" : "AM";
+    const adjustedHours = hours % 12 || 12;
+    return `${adjustedHours}:${minutes.toString().padStart(2, "0")} ${period}`;
+  };
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
-      <header className="bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900 dark:to-green-800 p-4 shadow-md">
-        <div className="container mx-auto flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <Button
-              variant="ghost"
-              onClick={() => navigate("/")}
-              className="text-green-700 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-700 rounded-lg"
-            >
-              <ArrowLeft className="w-5 h-5 mr-2" />
-              Back to Home
-            </Button>
-            <h1 className="text-2xl font-bold text-green-700 dark:text-green-400">
-              Bookings for {venueName || venueSlug}
-            </h1>
-          </div>
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 pb-20">
+      <header className="sticky top-0 z-50 bg-gradient-to-r from-green-500 to-green-700 text-white shadow-lg">
+        <div className="p-4 flex items-center justify-between max-w-7xl mx-auto">
+          <Button
+            variant="ghost"
+            className="text-white hover:bg-green-600 transition-colors"
+            onClick={() => navigate(-1)}
+          >
+            <MapPin size={18} className="mr-2" />
+            Back
+          </Button>
+          <h1 className="text-2xl font-bold">Venue Bookings</h1>
+          <div className="w-10"></div>
         </div>
       </header>
 
-      <main className="container mx-auto p-4 pb-24 space-y-8">
-        <Card className="bg-white dark:bg-gray-800 border-none shadow-lg rounded-xl overflow-hidden">
-          <CardContent className="p-4">
-            {loading ? (
-              <div className="flex justify-center items-center h-64">
-                <Loader2 className="w-8 h-8 text-green-500 animate-spin" />
-              </div>
-            ) : bookings.length === 0 ? (
-              <p className="text-gray-600 dark:text-gray-400 text-center py-8">
-                No bookings found for this venue.
-              </p>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-gray-50 dark:bg-gray-700">
-                      <TableHead className="text-gray-700 dark:text-gray-300">Booking ID</TableHead>
-                      <TableHead className="text-gray-700 dark:text-gray-300">Match Title</TableHead>
-                      <TableHead className="text-gray-700 dark:text-gray-300">Date</TableHead>
-                      <TableHead className="text-gray-700 dark:text-gray-300">Time</TableHead>
-                      <TableHead className="text-gray-700 dark:text-gray-300">Amount</TableHead>
-                      <TableHead className="text-gray-700 dark:text-gray-300">Payment Status</TableHead>
+      <div className="p-6 max-w-5xl mx-auto">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+          <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">
+            Booking History
+          </h2>
+          {loading ? (
+            <div className="flex justify-center items-center h-32">
+              <Loader2 className="h-8 w-8 animate-spin text-green-500" />
+            </div>
+          ) : bookings.length === 0 ? (
+            <p className="text-gray-500 dark:text-gray-400 text-center">
+              No bookings found.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-left">Venue</TableHead>
+                    <TableHead className="text-left">Match</TableHead>
+                    <TableHead className="text-left">Date</TableHead>
+                    <TableHead className="text-left">Time</TableHead>
+                    <TableHead className="text-left">Amount</TableHead>
+                    <TableHead className="text-left">Status</TableHead>
+                    <TableHead className="text-left">Payment Ref</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {bookings.map((booking) => (
+                    <TableRow key={booking.id}>
+                      <TableCell className="font-medium">
+                        {booking.venue_name}
+                      </TableCell>
+                      <TableCell>
+                        {booking.match_title || "No match linked"}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center">
+                          <Calendar size={16} className="mr-2 text-muted-foreground" />
+                          {format(new Date(booking.match_date), "PPP")}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center">
+                          <Clock size={16} className="mr-2 text-muted-foreground" />
+                          {formatTime(booking.start_time)} -{" "}
+                          {formatTime(booking.end_time)}
+                        </div>
+                      </TableCell>
+                      <TableCell>₦{booking.amount.toLocaleString()}</TableCell>
+                      <TableCell>
+                        <span
+                          className={cn(
+                            "px-2 py-1 rounded-full text-xs font-medium",
+                            booking.payment_status === "completed"
+                              ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
+                              : "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
+                          )}
+                        >
+                          {booking.payment_status}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        {booking.payment_reference || "N/A"}
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {bookings.map((booking) => (
-                      <TableRow key={booking.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                        <TableCell className="text-gray-900 dark:text-gray-100">
-                          {booking.id.slice(0, 8)}...
-                        </TableCell>
-                        <TableCell className="text-gray-900 dark:text-gray-100">
-                          {booking.matches.title}
-                        </TableCell>
-                        <TableCell className="text-gray-900 dark:text-gray-100">
-                          {format(new Date(booking.matches.match_date), "MMM d, yyyy")}
-                        </TableCell>
-                        <TableCell className="text-gray-900 dark:text-gray-100">
-                          {booking.matches.start_time} - {booking.matches.end_time}
-                        </TableCell>
-                        <TableCell className="text-gray-900 dark:text-gray-100">
-                          ₦{booking.amount.toFixed(2)}
-                        </TableCell>
-                        <TableCell className="text-gray-900 dark:text-gray-100">
-                          <span
-                            className={`px-2 py-1 rounded-full text-xs ${
-                              booking.payment_status === "paid"
-                                ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
-                                : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300"
-                            }`}
-                          >
-                            {booking.payment_status}
-                          </span>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </main>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </div>
+      </div>
+      <Navbar />
     </div>
   );
 };
