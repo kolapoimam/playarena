@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { CalendarIcon, Clock, User, ArrowLeft } from "lucide-react";
+import { CalendarIcon, Clock, User, ArrowLeft, Copy } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -176,9 +176,13 @@ type MatchFormProps = {
   onSubmitSuccess: (supercode: string, matchSlug: string) => void;
   onPreview: () => void;
   onPrefill: (values: { match_date: Date; start_time: string; end_time: string }) => void;
+  onFormReady: (formMethods: {
+    watch: () => FormValues;
+    setValue: (name: keyof FormValues, value: any) => void;
+  }) => void;
 };
 
-const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSubmitSuccess, onPreview, onPrefill }: MatchFormProps) => {
+const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSubmitSuccess, onPreview, onPrefill, onFormReady }: MatchFormProps) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [isPreferencesOpen, setIsPreferencesOpen] = useState(false);
@@ -210,6 +214,14 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
       end_time: "",
     },
   });
+
+  useEffect(() => {
+    // Pass watch and setValue to parent component
+    onFormReady({
+      watch: form.watch,
+      setValue: form.setValue,
+    });
+  }, [form, onFormReady]);
 
   useEffect(() => {
     if (!isPreFilled) {
@@ -250,7 +262,7 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
     } else if (!form.watch("is_private")) {
       form.setValue('access_password', null);
     }
-  }, [form.watch("is_private"), form.watch("access_password"), form]);
+  }, [form]);
 
   const onSubmit = async (data: FormValues) => {
     setLoading(true);
@@ -677,9 +689,10 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
                           onCheckedChange={field.onChange}
                           className="data-[state=checked]:bg-green-500"
                         />
-                    </FormControl>
-                  </FormItem>
-                )}
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
               )}
               <FormField
                 control={form.control}
