@@ -6,37 +6,36 @@ import { MantineProvider } from '@mantine/core';
 import { useState, useEffect } from 'react';
 
 import SplashScreen from "@/components/SplashScreen";
-import ScrollToTop from "./components/ScrollToTop";
-import InstallPrompt from "./components/InstallPrompt";
-import VenueBookingForm from "@/components/VenueBookingForm";
-import ProfileSettings from "@/components/ProfileSettings";
+import ScrollToTop from "@/components/ScrollToTop"; // Updated to use @ alias
+import InstallPrompt from "@/components/InstallPrompt"; // Updated to use @ alias
 
-import Index from "./pages/Index";
-import Search from "./pages/Search";
-import Activities from "./pages/Activities";
-import Matches from "./pages/Matches";
-import Profile from "./pages/Profile";
-import NotFound from "./pages/NotFound";
-import Organize from "./pages/Organize";
-import MatchDetail from "./pages/MatchDetail";
-import JoinMatch from "./pages/JoinMatch";
-import VenueDetail from "./pages/VenueDetail";
-import VenueCreate from "./pages/VenueCreate";
-import MatchRedirect from "./pages/MatchRedirect";
-import VenueRedirect from "./pages/VenueRedirect";
-import VenueDirectory from "./pages/VenueDirectory";
-import ConfirmCheckin from "./pages/ConfirmCheckin";
-import Feedback from "./pages/Feedback";
-import Guides from "./pages/Guides";
-import Auth from "./pages/Auth";
-import TeamManagement from "./pages/TeamManagement";
-import Ticketing from "./pages/Ticketing";
-import TermsAndPrivacy from "./pages/TermsAndPrivacy";
-import Confirm from "./pages/Confirm";
-import VenueManagerDashboard from "./pages/VenueManagerDashboard";
-import VenueBookings from "./pages/VenueBookings";
+import Index from "@/pages/Index"; // Updated to use @ alias
+import Search from "@/pages/Search"; // Updated to use @ alias
+import Activities from "@/pages/Activities"; // Updated to use @ alias
+import Matches from "@/pages/Matches"; // Updated to use @ alias
+import Profile from "@/pages/Profile"; // Updated to use @ alias
+import NotFound from "@/pages/NotFound"; // Updated to use @ alias
+import Organize from "@/pages/Organize"; // Updated to use @ alias
+import MatchDetail from "@/pages/MatchDetail"; // Updated to use @ alias
+import JoinMatch from "@/pages/JoinMatch"; // Updated to use @ alias
+import VenueDetail from "@/pages/VenueDetail"; // Updated to use @ alias
+import VenueCreate from "@/pages/VenueCreate"; // Updated to use @ alias
+import MatchRedirect from "@/pages/MatchRedirect"; // Updated to use @ alias
+import VenueRedirect from "@/pages/VenueRedirect"; // Updated to use @ alias
+import VenueDirectory from "@/pages/VenueDirectory"; // Updated to use @ alias
+import ConfirmCheckin from "@/pages/ConfirmCheckin"; // Updated to use @ alias
+import Feedback from "@/pages/Feedback"; // Updated to use @ alias
+import Guides from "@/pages/Guides"; // Updated to use @ alias
+import Auth from "@/pages/Auth"; // Updated to use @ alias
+import TeamManagement from "@/pages/TeamManagement"; // Updated to use @ alias
+import Ticketing from "@/pages/Ticketing"; // Updated to use @ alias
+import TermsAndPrivacy from "@/pages/TermsAndPrivacy"; // Updated to use @ alias
+import Confirm from "@/pages/Confirm"; // Updated to use @ alias
+import VenueManagerDashboard from "@/pages/VenueManagerDashboard"; // Updated to use @ alias
+import VenueBookings from "@/components/VenueBookings"; // Kept as is
+import VenueBookingForm from "@/components/VenueBookingForm"; // Added import
 
-import * as gtag from "./lib/gtag";
+import * as gtag from "@/lib/gtag"; // Updated to use @ alias
 
 const queryClient = new QueryClient();
 
