@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Trophy, Clock, Shield } from "lucide-react";
-import { isPast } from "date-fns";
+import { Trophy, Clock, MapPin } from "lucide-react";
+import { isPast, format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useDrag, useDrop } from "react-dnd";
 
@@ -17,16 +17,7 @@ type Team = {
   score: number;
   analytics: { possession: number; shots: number; fouls: number; yellow_cards: number; red_cards: number };
 };
-type Match = { id: string; slug: string; super_code: string; title: string; match_date: string; match_time: string };
-
-// Simple debounce hook
-const useDebounce = <T extends (...args: any[]) => void>(callback: T, delay: number) => {
-  let timeoutId: NodeJS.Timeout;
-  return useCallback((...args: Parameters<T>) => {
-    clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => callback(...args), delay);
-  }, [callback, delay]);
-};
+type Match = { id: string; slug: string; super_code: string; title: string; match_date: string; match_time: string; venue: string };
 
 // Utility function for generating a random emoji
 const getRandomAvatar = (playerId: string) => {
@@ -275,8 +266,9 @@ const TeamMatchDetails = ({
   const [teamSelectionOpen, setTeamSelectionOpen] = useState(false);
   const [rulesTemplateOpen, setRulesTemplateOpen] = useState(false);
   const [teamNames, setTeamNames] = useState(teams.map((t) => t.name));
+  const [inputValues, setInputValues] = useState(teams.map((t) => t.name));
 
-  const debouncedHandleRenameTeam = useDebounce((index: number, newName: string) => {
+  const handleRenameTeam = (index: number, newName: string) => {
     if (!newName.trim()) {
       toast({ title: "Error", description: "Team name cannot be empty.", variant: "destructive" });
       return;
@@ -284,11 +276,34 @@ const TeamMatchDetails = ({
     const newTeamNames = [...teamNames];
     newTeamNames[index] = newName.trim();
     setTeamNames(newTeamNames);
+    setInputValues((prev) => {
+      const newValues = [...prev];
+      newValues[index] = newName.trim();
+      return newValues;
+    });
 
     const updatedTeams = teams.map((t, i) => (i === index ? { ...t, name: newName.trim() } : t));
     setTeams(updatedTeams);
     addToHistory(updatedTeams);
-  }, 300);
+  };
+
+  const handleInputChange = (index: number, value: string) => {
+    setInputValues((prev) => {
+      const newValues = [...prev];
+      newValues[index] = value;
+      return newValues;
+    });
+  };
+
+  const handleInputBlur = (index: number) => {
+    handleRenameTeam(index, inputValues[index]);
+  };
+
+  const handleInputKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      handleRenameTeam(index, inputValues[index]);
+    }
+  };
 
   const togglePrivacy = async () => {
     setIsPublic((prev) => !prev);
@@ -318,6 +333,7 @@ const TeamMatchDetails = ({
       setHistoryIndex((prev) => prev - 1);
       setTeams(history[historyIndex - 1]);
       setTeamNames(history[historyIndex - 1].map((t) => t.name));
+      setInputValues(history[historyIndex - 1].map((t) => t.name));
     }
   };
 
@@ -326,6 +342,7 @@ const TeamMatchDetails = ({
       setHistoryIndex((prev) => prev + 1);
       setTeams(history[historyIndex + 1]);
       setTeamNames(history[historyIndex + 1].map((t) => t.name));
+      setInputValues(history[historyIndex + 1].map((t) => t.name));
     }
   };
 
@@ -358,18 +375,24 @@ const TeamMatchDetails = ({
     }
   };
 
+  const formattedTime = format(new Date(`1970-01-01T${match.match_time}`), "h:mm a");
+
   return (
     <div className="space-y-4 sm:space-y-6">
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 sm:p-6 border border-gray-200 dark:border-gray-700">
         <h2 className="text-lg sm:text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">{match.title}</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="flex items-center gap-3">
             <Trophy size={16} className="text-green-500" />
             <span className="text-xs sm:text-sm text-gray-900 dark:text-gray-100">Teams: {teams.length}</span>
           </div>
           <div className="flex items-center gap-3">
             <Clock size={16} className="text-green-500" />
-            <span className="text-xs sm:text-sm text-gray-900 dark:text-gray-100">{match.match_date} {match.match_time}</span>
+            <span className="text-xs sm:text-sm text-gray-900 dark:text-gray-100">{match.match_date} {formattedTime}</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <MapPin size={16} className="text-green-500" />
+            <span className="text-xs sm:text-sm text-gray-900 dark:text-gray-100">{match.venue || "Venue TBD"}</span>
           </div>
         </div>
       </div>
@@ -394,6 +417,7 @@ const TeamMatchDetails = ({
             setTeams={(newTeams) => {
               setTeams(newTeams);
               setTeamNames(newTeams.map((t) => t.name));
+              setInputValues(newTeams.map((t) => t.name));
               addToHistory(newTeams);
             }}
             isOpen={teamSelectionOpen}
@@ -438,9 +462,8 @@ const TeamMatchDetails = ({
       </div>
 
       <div className="flex items-center gap-2 mb-4">
-        <Shield size={16} className="text-green-500" />
-        <span className="text-xs sm:text-sm text-gray-900 dark:text-gray-100">Public Match</span>
         <Switch checked={isPublic} onCheckedChange={togglePrivacy} />
+        <span className="text-xs sm:text-sm text-gray-900 dark:text-gray-100">Public Match</span>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
@@ -448,8 +471,10 @@ const TeamMatchDetails = ({
           <div key={team.name} className="flex-1">
             <div className="mb-2">
               <Input
-                value={teamNames[index]}
-                onChange={(e) => debouncedHandleRenameTeam(index, e.target.value)}
+                value={inputValues[index]}
+                onChange={(e) => handleInputChange(index, e.target.value)}
+                onBlur={() => handleInputBlur(index)}
+                onKeyDown={(e) => handleInputKeyDown(index, e)}
                 placeholder="Team Name"
                 className="text-xs sm:text-sm"
               />
