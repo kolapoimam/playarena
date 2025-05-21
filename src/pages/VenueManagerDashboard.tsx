@@ -3,15 +3,14 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { format, differenceInHours } from "date-fns";
+import VenueWallet from "@/components/VenueWallet";
+import VenueAccessCode from "@/components/VenueAccessCode";
 
 type Venue = { id: string; name: string; city: string; price_per_hour: number; is_verified: string };
 type Booking = { id: string; title: string; match_date: string; start_time: string; end_time: string; organizer_name: string | null };
-type AccessCode = { code: string; match_date: string; start_time: string; end_time: string; amount: number };
 
 const VenueManagerDashboard = () => {
   const { venueId } = useParams<{ venueId: string }>();
@@ -24,11 +23,6 @@ const VenueManagerDashboard = () => {
   const [totalFunds, setTotalFunds] = useState(0);
   const [availableFunds, setAvailableFunds] = useState(0);
   const [verifiedSince, setVerifiedSince] = useState<string | null>(null);
-  const [showCashoutDialog, setShowCashoutDialog] = useState(false);
-  const [showAccessCodeDialog, setShowAccessCodeDialog] = useState(false);
-  const [cashoutDetails, setCashoutDetails] = useState({ bank_name: "", account_number: "", account_holder_name: "" });
-  const [accessCodeForm, setAccessCodeForm] = useState({ match_date: "", start_time: "", end_time: "" });
-  const [generatedCode, setGeneratedCode] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -66,9 +60,9 @@ const VenueManagerDashboard = () => {
 
         setVenue(venueData);
 
-        // Fetch upcoming bookings
+        // Fetch upcoming bookings using new function
         const { data: upcoming, error: upcomingError } = await supabase
-          .rpc("get_bookings_by_venue", {
+          .rpc("get_bookings_by_venue_v2", {
             venue_id: venueId,
             is_upcoming: true,
             limit_count: 5,
@@ -78,13 +72,13 @@ const VenueManagerDashboard = () => {
           console.error("Upcoming bookings error:", upcomingError);
           throw new Error(upcomingError.message);
         }
-        // Sort ascending by match_date (ensure correct order)
+        // Sort ascending by match_date
         const sortedUpcoming = (upcoming || []).sort((a, b) => new Date(a.match_date) - new Date(b.match_date));
         setUpcomingBookings(sortedUpcoming);
 
-        // Fetch past bookings
+        // Fetch past bookings using new function
         const { data: past, error: pastError } = await supabase
-          .rpc("get_bookings_by_venue", {
+          .rpc("get_bookings_by_venue_v2", {
             venue_id: venueId,
             is_upcoming: false,
             limit_count: 5,
@@ -94,7 +88,7 @@ const VenueManagerDashboard = () => {
           console.error("Past bookings error:", pastError);
           throw new Error(pastError.message);
         }
-        // Sort descending by match_date (ensure correct order)
+        // Sort descending by match_date
         const sortedPast = (past || []).sort((a, b) => new Date(b.match_date) - new Date(a.match_date));
         setPastBookings(sortedPast);
 
@@ -123,7 +117,21 @@ const VenueManagerDashboard = () => {
         }
         const total = fundsData?.reduce((sum, booking) => sum + (booking.amount || 0), 0) || 0;
         setTotalFunds(total);
-        setAvailableFunds(total);
+
+        // Fetch cashout requests to calculate available funds
+        const { data: cashoutData, error: cashoutError } = await supabase
+          .from("venue_booking_cashout")
+          .select("amount, status")
+          .eq("venue_id", venueId)
+          .in("status", ["Review", "Processed", "Successful"]);
+
+        if (cashoutError) {
+          console.error("Cashout fetch error:", cashoutError);
+          throw new Error(cashoutError.message);
+        }
+
+        const cashoutTotal = cashoutData?.reduce((sum, request) => sum + (request.amount || 0), 0) || 0;
+        setAvailableFunds(total - cashoutTotal);
 
         // Fetch verification date
         const { data: verifiedData, error: verifiedError } = await supabase
@@ -155,74 +163,6 @@ const VenueManagerDashboard = () => {
     fetchVenueData();
   }, [venueId, toast, navigate]);
 
-  const handleCashout = async () => {
-    if (!cashoutDetails.bank_name || !cashoutDetails.account_number || !cashoutDetails.account_holder_name) {
-      toast({ title: "Error", description: "Please fill in all bank details.", variant: "destructive" });
-      return;
-    }
-    setLoading(true);
-    try {
-      const { error } = await supabase.from("venue_booking_cashout").insert({
-        venue_id: venueId,
-        amount: availableFunds,
-        bank_name: cashoutDetails.bank_name,
-        account_number: cashoutDetails.account_number,
-        account_holder_name: cashoutDetails.account_holder_name,
-        status: "pending",
-      });
-      if (error) {
-        console.error("Cashout error:", error);
-        throw error;
-      }
-      toast({ title: "Success", description: "Cashout request submitted successfully." });
-      setShowCashoutDialog(false);
-      setAvailableFunds(0);
-      setCashoutDetails({ bank_name: "", account_number: "", account_holder_name: "" });
-    } catch (error: any) {
-      console.error("Cashout error:", error);
-      toast({ title: "Error", description: error.message || "Failed to submit cashout request.", variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleGenerateAccessCode = async () => {
-    const { match_date, start_time, end_time } = accessCodeForm;
-    if (!match_date || !start_time || !end_time) {
-      toast({ title: "Error", description: "Please fill in all fields.", variant: "destructive" });
-      return;
-    }
-    setLoading(true);
-    try {
-      const { data: user, error: userError } = await supabase.auth.getUser();
-      if (userError || !user.user) {
-        throw new Error("User not authenticated");
-      }
-
-      const code = Math.random().toString(36).slice(-6).toUpperCase();
-      const { error } = await supabase.from("venue_access_codes").insert({
-        code,
-        venue_id: venueId,
-        match_date,
-        start_time,
-        end_time,
-        amount: 0.00,
-        created_by: user.user.id,
-      });
-      if (error) {
-        console.error("Access code error:", error);
-        throw error;
-      }
-      setGeneratedCode(code);
-      toast({ title: "Success", description: `Access code ${code} generated successfully.` });
-    } catch (error: any) {
-      console.error("Access code error:", error);
-      toast({ title: "Error", description: error.message || "Failed to generate access code.", variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
       <header className="bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900 dark:to-green-800 p-4 shadow-md">
@@ -237,8 +177,7 @@ const VenueManagerDashboard = () => {
               Back to Profile
             </Button>
             <div>
-              <h1 className="text-2xl font-bold text-green-700 dark:text-green-400">Venue Management Dashboard</h1>
-              <p className="text-sm text-gray-600 dark:text-gray-400">{venue?.name}, {venue?.city}</p>
+              <h1 className="text-2xl font-bold text-green-700 dark:text-green-400">Venue Manager</h1>
             </div>
           </div>
         </div>
@@ -282,23 +221,11 @@ const VenueManagerDashboard = () => {
               </Card>
             </div>
 
-            <Card className="bg-white dark:bg-gray-800 border-none shadow-lg rounded-xl">
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex justify-between items-center">
-                  Wallet
-                  <Button
-                    onClick={() => setShowCashoutDialog(true)}
-                    disabled={availableFunds === 0 || loading}
-                    className="bg-green-500 hover:bg-green-600 text-white rounded-lg"
-                  >
-                    Cashout ₦{availableFunds.toFixed(2)}
-                  </Button>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Available Funds: ₦{availableFunds.toFixed(2)}</p>
-              </CardContent>
-            </Card>
+            <VenueWallet
+              venueId={venueId!}
+              availableFunds={availableFunds}
+              setAvailableFunds={setAvailableFunds}
+            />
 
             <Card className="bg-white dark:bg-gray-800 border-none shadow-lg rounded-xl">
               <CardHeader>
@@ -362,135 +289,7 @@ const VenueManagerDashboard = () => {
               </CardContent>
             </Card>
 
-            <Card className="bg-white dark:bg-gray-800 border-none shadow-lg rounded-xl">
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex justify-between items-center">
-                  Generate Access Code
-                  <Button
-                    onClick={() => setShowAccessCodeDialog(true)}
-                    className="bg-green-500 hover:bg-green-600 text-white rounded-lg"
-                    disabled={loading}
-                  >
-                    Generate Code
-                  </Button>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Generate a free access code for organizers to book this venue.
-                </p>
-              </CardContent>
-            </Card>
-
-            <Dialog open={showCashoutDialog} onOpenChange={setShowCashoutDialog}>
-              <DialogContent className="sm:max-w-md rounded-2xl bg-white dark:bg-gray-800 border-none shadow-lg">
-                <DialogHeader>
-                  <DialogTitle className="text-lg font-semibold text-gray-900 dark:text-gray-100">Cashout Funds</DialogTitle>
-                  <DialogDescription className="text-sm text-gray-600 dark:text-gray-400">
-                    Enter your bank details to request a cashout of ₦{availableFunds.toFixed(2)}.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 p-4">
-                  <Input
-                    placeholder="Bank Name"
-                    value={cashoutDetails.bank_name}
-                    onChange={(e) => setCashoutDetails({ ...cashoutDetails, bank_name: e.target.value })}
-                    className="text-base bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg"
-                  />
-                  <Input
-                    placeholder="Account Number"
-                    value={cashoutDetails.account_number}
-                    onChange={(e) => setCashoutDetails({ ...cashoutDetails, account_number: e.target.value })}
-                    className="text-base bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg"
-                  />
-                  <Input
-                    placeholder="Account Holder Name"
-                    value={cashoutDetails.account_holder_name}
-                    onChange={(e) => setCashoutDetails({ ...cashoutDetails, account_holder_name: e.target.value })}
-                    className="text-base bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg"
-                  />
-                </div>
-                <DialogFooter className="flex justify-between">
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowCashoutDialog(false)}
-                    className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={handleCashout}
-                    className="bg-green-500 hover:bg-green-600 text-white rounded-lg"
-                    disabled={loading}
-                  >
-                    {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Submit Cashout"}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-
-            <Dialog open={showAccessCodeDialog} onOpenChange={setShowAccessCodeDialog}>
-              <DialogContent className="sm:max-w-md rounded-2xl bg-white dark:bg-gray-800 border-none shadow-lg">
-                <DialogHeader>
-                  <DialogTitle className="text-lg font-semibold text-gray-900 dark:text-gray-100">Generate Access Code</DialogTitle>
-                  <DialogDescription className="text-sm text-gray-600 dark:text-gray-400">
-                    Enter the date and time range for the free booking.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 p-4">
-                  <Input
-                    type="date"
-                    value={accessCodeForm.match_date}
-                    onChange={(e) => setAccessCodeForm({ ...accessCodeForm, match_date: e.target.value })}
-                    className="text-base bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg"
-                  />
-                  <Input
-                    type="time"
-                    value={accessCodeForm.start_time}
-                    onChange={(e) => setAccessCodeForm({ ...accessCodeForm, start_time: e.target.value })}
-                    className="text-base bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg"
-                  />
-                  <Input
-                    type="time"
-                    value={accessCodeForm.end_time}
-                    onChange={(e) => setAccessCodeForm({ ...accessCodeForm, end_time: e.target.value })}
-                    className="text-base bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg"
-                  />
-                  {generatedCode && (
-                    <div className="text-center">
-                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                        Generated Code: <span className="text-green-500">{generatedCode}</span>
-                      </p>
-                      <p className="text-xs text-gray-600 dark:text-gray-400">
-                        Share this code with an organizer to book the venue for free.
-                      </p>
-                    </div>
-                  )}
-                </div>
-                <DialogFooter className="flex justify-between">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setShowAccessCodeDialog(false);
-                      setGeneratedCode(null);
-                      setAccessCodeForm({ match_date: "", start_time: "", end_time: "" });
-                    }}
-                    className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                  >
-                    Close
-                  </Button>
-                  {!generatedCode && (
-                    <Button
-                      onClick={handleGenerateAccessCode}
-                      className="bg-green-500 hover:bg-green-600 text-white rounded-lg"
-                      disabled={loading}
-                    >
-                      {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Generate"}
-                    </Button>
-                  )}
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+            <VenueAccessCode venueId={venueId!} />
           </>
         )}
       </main>
