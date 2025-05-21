@@ -57,7 +57,6 @@ const TeamManagement = () => {
   const [supercodeInput, setSupercodeInput] = useState("");
   const [history, setHistory] = useState<Team[][]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
-  // Add state for mode
   const [mode, setMode] = useState<"automatic" | "manual">("automatic");
 
   useEffect(() => {
@@ -73,7 +72,7 @@ const TeamManagement = () => {
           supabase
             .from("matches")
             .select(`
-              id, slug, super_code, title, match_date, match_time,
+              id, slug, super_code, title, match_date::text, match_time,
               team_assignments!fk_match (id, teams, is_public)
             `)
             .eq("slug", slug)
