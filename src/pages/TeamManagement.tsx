@@ -451,7 +451,7 @@ const TeamManagement = () => {
               title,
               match_date,
               match_time,
-              team_assignments (
+              team_assignments!fk_match (
                 id,
                 teams,
                 is_public
