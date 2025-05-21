@@ -12,9 +12,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format, isWithinInterval, addHours } from "date-fns";
 import { CalendarIcon, ArrowLeft, Clock, Loader } from "lucide-react";
+import { lazy, Suspense } from "react";
 
 // Lazy load Navbar to avoid circular dependencies
-import { lazy, Suspense } from "react";
 const Navbar = lazy(() => import("@/components/Navbar"));
 
 type Venue = {
@@ -225,7 +225,7 @@ const VenueBookingForm = () => {
         // Check availability
         const checkAvailability = async () => {
           const { data, error } = await supabase
-            .from("bookings")
+            .from("venue_access_codes")
             .select("match_date, start_time, end_time")
             .eq("venue_id", venue.id);
 
@@ -355,20 +355,18 @@ const VenueBookingForm = () => {
       setPaying(true);
       const accessCode = generateAccessCode();
 
-      const { error: bookingError } = await supabase.from("bookings").insert({
+      const { data: bookingData, error: bookingError } = await supabase.from("bookings").insert({
         venue_id: venue.id,
-        match_date: format(values.match_date, "yyyy-MM-dd"),
-        start_time: values.start_time,
-        end_time: values.end_time,
         amount: amount,
         payment_status: "paid",
         payment_reference: paymentReference,
-      });
+      }).select().single();
 
       if (bookingError) throw bookingError;
 
       const { error: accessCodeError } = await supabase.from("venue_access_codes").insert({
         venue_id: venue.id,
+        booking_id: bookingData.id, // Link the access code to the booking
         code: accessCode,
         match_date: format(values.match_date, "yyyy-MM-dd"),
         start_time: values.start_time,
