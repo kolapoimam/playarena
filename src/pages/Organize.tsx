@@ -151,7 +151,7 @@ const formSchema = z.object({
   if (endPeriod === "AM" && endHours === 12) endH = 0;
   endDateTime.setHours(endH, endMinutes, 0, 0);
 
-  // Only adjust for next day if end time is earlier on the same day (e.g., 11:00 PM to 01:00 AM)
+  // Adjust for next day if end time is earlier (e.g., 11:00 PM to 01:00 AM)
   const sameDayEarlier = endH < startH || (endH === startH && endMinutes <= startMinutes);
   if (sameDayEarlier) {
     endDateTime.setDate(endDateTime.getDate() + 1);
@@ -171,10 +171,11 @@ const formSchema = z.object({
   if (period === "AM" && startHours === 12) hours = 0;
   selectedDateTime.setHours(hours, startMinutes, 0, 0);
 
-  // Ensure WAT timezone (UTC+1) for both dates
-  const offsetWAT = 1 * 60; // WAT is UTC+1
+  // Apply WAT (UTC+1) offset to both dates
+  const offsetWAT = 1 * 60; // WAT is UTC+1 in minutes
   const nowWAT = new Date(now.getTime() + (offsetWAT - now.getTimezoneOffset()) * 60 * 1000);
   const tenMinutesLater = new Date(nowWAT.getTime() + 10 * 60 * 1000);
+  selectedDateTime.setTime(selectedDateTime.getTime() + (offsetWAT - selectedDateTime.getTimezoneOffset()) * 60 * 1000);
 
   return selectedDateTime.getTime() >= tenMinutesLater.getTime();
 }, {
@@ -188,32 +189,6 @@ const formSchema = z.object({
 }, {
   message: "Ticket price is required when selling tickets",
   path: ["ticket_price"],
-}).refine(data => {
-  const startDateTime = new Date(data.match_date);
-  const [startHours, startMinutes] = data.start_time.replace(" AM|PM", "").split(':').map(Number);
-  const startPeriod = data.start_time.slice(-2).toUpperCase();
-  let startH = startHours;
-  if (startPeriod === "PM" && startHours !== 12) startH += 12;
-  if (startPeriod === "AM" && startHours === 12) startH = 0;
-  startDateTime.setHours(startH, startMinutes, 0, 0);
-
-  const endDateTime = new Date(data.match_date);
-  const [endHours, endMinutes] = data.end_time.replace(" AM|PM", "").split(':').map(Number);
-  const endPeriod = data.end_time.slice(-2).toUpperCase();
-  let endH = endHours;
-  if (endPeriod === "PM" && endHours !== 12) endH += 12;
-  if (endPeriod === "AM" && endHours === 12) endH = 0;
-  endDateTime.setHours(endH, endMinutes, 0, 0);
-
-  // Handle cases where end time is on the next day (e.g., 11:00 PM to 01:00 AM)
-  if (endH < startH || (endH === startH && endMinutes <= startMinutes)) {
-    endDateTime.setDate(endDateTime.getDate() + 1);
-  }
-
-  return startDateTime < endDateTime;
-}, {
-  message: "Start time must be before end time",
-  path: ["end_time"],
 });
 
 const formatTimeTo12Hour = (time24: string): string => {
