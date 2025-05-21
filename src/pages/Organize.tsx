@@ -151,8 +151,9 @@ const formSchema = z.object({
   if (endPeriod === "AM" && endHours === 12) endH = 0;
   endDateTime.setHours(endH, endMinutes, 0, 0);
 
-  // If end time appears earlier on the same day, assume it’s the next day (e.g., 11:00 PM to 01:00 AM)
-  if (endH < startH || (endH === startH && endMinutes <= startMinutes)) {
+  // Only adjust for next day if end time is earlier on the same day (e.g., 11:00 PM to 01:00 AM)
+  const sameDayEarlier = endH < startH || (endH === startH && endMinutes <= startMinutes);
+  if (sameDayEarlier) {
     endDateTime.setDate(endDateTime.getDate() + 1);
   }
 
@@ -170,8 +171,12 @@ const formSchema = z.object({
   if (period === "AM" && startHours === 12) hours = 0;
   selectedDateTime.setHours(hours, startMinutes, 0, 0);
 
-  const tenMinutesLater = new Date(now.getTime() + 10 * 60 * 1000);
-  return selectedDateTime >= tenMinutesLater;
+  // Ensure WAT timezone (UTC+1) for both dates
+  const offsetWAT = 1 * 60; // WAT is UTC+1
+  const nowWAT = new Date(now.getTime() + (offsetWAT - now.getTimezoneOffset()) * 60 * 1000);
+  const tenMinutesLater = new Date(nowWAT.getTime() + 10 * 60 * 1000);
+
+  return selectedDateTime.getTime() >= tenMinutesLater.getTime();
 }, {
   message: "Match must be scheduled at least 10 minutes from now",
   path: ["start_time"],
