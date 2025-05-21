@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,10 +15,10 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
-  
+
   try {
     const { email, amount, venue_id, match_id, slug, title } = await req.json();
-    
+
     // Validate inputs
     if (!email || !amount || (!venue_id && !match_id) || !slug || !title) {
       return new Response(
@@ -25,7 +26,7 @@ serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-    
+
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
@@ -34,10 +35,22 @@ serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-    
+
     // Convert amount to kobo (smallest currency unit)
     const amountInKobo = Math.round(parseFloat(amount) * 100);
-    
+
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY");
+    if (!supabaseUrl || !supabaseKey) {
+      console.error('Missing Supabase environment variables', { supabaseUrl, supabaseKey });
+      return new Response(
+        JSON.stringify({ error: 'Server configuration error' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
     // Initialize Paystack transaction
     const response = await fetch(`${PAYSTACK_API_URL}/transaction/initialize`, {
       method: 'POST',
@@ -57,9 +70,9 @@ serve(async (req) => {
         }
       }),
     });
-    
+
     const data = await response.json();
-    
+
     if (!data.status) {
       console.error('Paystack error:', data);
       return new Response(
@@ -67,18 +80,43 @@ serve(async (req) => {
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-    
+
+    // Insert into pending_transactions table
+    const { error: insertError } = await supabase.from("pending_transactions").insert({
+      reference: data.data.reference,
+      resource_id: venue_id || match_id,
+      resource_type: venue_id ? "venue" : "match",
+      slug,
+      amount: amountInKobo / 100,
+      status: "pending"
+    });
+
+    if (insertError) {
+      console.error('Failed to insert into pending_transactions:', {
+        message: insertError.message,
+        details: insertError.details,
+        hint: insertError.hint,
+        code: insertError.code
+      });
+      return new Response(
+        JSON.stringify({ error: 'Failed to save transaction' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     return new Response(
       JSON.stringify({
         access_code: data.data.access_code,
-        reference: data.data.reference,
-        authorization_url: data.data.authorization_url,
+        reference: data.data.reference
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-    
+
   } catch (error) {
-    console.error('Error initializing payment:', error);
+    console.error('Error initializing payment:', {
+      message: error.message,
+      stack: error.stack
+    });
     return new Response(
       JSON.stringify({ error: 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
