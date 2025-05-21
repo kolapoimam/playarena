@@ -8,7 +8,6 @@ import Navbar from "@/components/Navbar";
 import MatchForm from "@/components/MatchForm";
 import MatchPreviewDialog from "@/components/MatchPreviewDialog";
 import MatchSuccessDialog from "@/components/MatchSuccessDialog";
-import { formatTimeTo12Hour } from "@/utils/timeUtils";
 
 type Venue = {
   id: string;
@@ -31,6 +30,8 @@ const Organize = () => {
   const [supercode, setSupercode] = useState<string | null>(null);
   const [matchSlug, setMatchSlug] = useState<string | null>(null);
   const [venues, setVenues] = useState<Venue[]>([]);
+  const [selectedVenueId, setSelectedVenueId] = useState<string | undefined>(undefined);
+  const [hasValidBookingCode, setHasValidBookingCode] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -57,8 +58,8 @@ const Organize = () => {
           }
 
           const { data: accessCodeData, error: accessCodeError } = await supabase
-            .from("booking_access_codes") // Updated table name
-            .select("match_date, start_time, end_time, access_code_status")
+            .from("venue_access_codes")
+            .select("match_date, start_time, end_time, used")
             .eq("code", accessCode)
             .eq("venue_id", venue.id)
             .single();
@@ -67,12 +68,14 @@ const Organize = () => {
             throw new Error("Invalid or expired access code");
           }
 
-          if (accessCodeData.access_code_status !== "Pending") {
-            throw new Error("This access code is not valid for creating a match.");
+          if (accessCodeData.used) {
+            throw new Error("This booking has already been used to create a match.");
           }
 
           setVenues([venue]);
           setIsPreFilled(true);
+          setSelectedVenueId(venue.id);
+          setHasValidBookingCode(true); // Treat venue_access_codes as a valid booking for verified venues
 
           toast({
             title: "Venue Booking Loaded",
@@ -93,7 +96,7 @@ const Organize = () => {
     handlePreFill();
   }, [preSelectedVenueSlug, accessCode, toast, navigate]);
 
-  const selectedVenue = venues.find(venue => venue.id === form.watch("venue_id"));
+  const selectedVenue = venues.find(venue => venue.id === selectedVenueId);
 
   return (
     <div className="min-h-screen pb-20 bg-gray-100 dark:bg-gray-900">
@@ -118,7 +121,7 @@ const Organize = () => {
             <p className="text-sm">The venue, date, and time are set based on your booking. These fields are locked to match your reservation.</p>
           </div>
         )}
-        {selectedVenue?.verified_status === "True" && !isPreFilled && (
+        {selectedVenue?.verified_status === "True" && !isPreFilled && !hasValidBookingCode && (
           <div className="mb-4 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 p-4 rounded-lg">
             <p className="flex items-center font-medium">
               <AlertCircle size={16} className="mr-2" />
@@ -138,6 +141,13 @@ const Organize = () => {
             setSuccessDialogOpen(true);
           }}
           onPreview={() => setPreviewDialogOpen(true)}
+          onPrefill={(values) => {
+            // This will be called by OrganiserVenue when a valid booking_access_code is entered
+            form.setValue("match_date", values.match_date);
+            form.setValue("start_time", values.start_time);
+            form.setValue("end_time", values.end_time);
+            setHasValidBookingCode(true);
+          }}
         />
         <MatchPreviewDialog
           open={previewDialogOpen}
