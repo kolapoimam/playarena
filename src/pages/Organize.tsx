@@ -8,6 +8,7 @@ import Navbar from "@/components/Navbar";
 import MatchForm from "@/components/MatchForm";
 import MatchPreviewDialog from "@/components/MatchPreviewDialog";
 import MatchSuccessDialog from "@/components/MatchSuccessDialog";
+import { parse } from "date-fns";
 
 type Venue = {
   id: string;
@@ -42,6 +43,13 @@ type FormValues = {
   max_tickets: number | null | undefined;
 };
 
+type PrefillData = {
+  venue_id: string;
+  match_date: Date;
+  start_time: string;
+  end_time: string;
+};
+
 const Organize = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -61,6 +69,7 @@ const Organize = () => {
     watch: () => FormValues;
     setValue: (name: keyof FormValues, value: any) => void;
   } | null>(null);
+  const [prefillData, setPrefillData] = useState<PrefillData | null>(null);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -83,43 +92,52 @@ const Organize = () => {
             .single();
 
           if (venueError || !venue) {
+            console.error("Venue fetch error:", venueError);
             throw new Error("Venue not found");
           }
 
+          const normalizedCode = accessCode.toUpperCase();
           const { data: accessCodeData, error: accessCodeError } = await supabase
             .from("venue_access_codes")
             .select("match_date, start_time, end_time, used")
-            .eq("code", accessCode)
+            .eq("code", normalizedCode)
             .eq("venue_id", venue.id)
             .single();
 
           if (accessCodeError || !accessCodeData) {
+            console.error("Access code fetch error:", accessCodeError);
             throw new Error("Invalid or expired access code");
           }
 
           if (accessCodeData.used) {
+            console.error("Access code already used:", normalizedCode);
             throw new Error("This booking has already been used to create a match.");
           }
 
-          setVenues([venue]);
-          setIsPreFilled(true);
-          setSelectedVenueId(venue.id);
-          setHasValidBookingCode(true); // Treat venue_access_codes as a valid booking for verified venues
-
-          // Prefill form fields if formMethods is available
-          if (formMethods) {
-            const matchDate = parse(accessCodeData.match_date, "yyyy-MM-dd", new Date());
-            const convertTo12Hour = (time24: string): string => {
-              const [hours, minutes] = time24.split(':').map(Number);
-              const period = hours >= 12 ? 'PM' : 'AM';
-              const hours12 = hours % 12 || 12;
-              return `${hours12.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')} ${period}`;
-            };
-            formMethods.setValue("venue_id", venue.id);
-            formMethods.setValue("match_date", matchDate);
-            formMethods.setValue("start_time", convertTo12Hour(accessCodeData.start_time));
-            formMethods.setValue("end_time", convertTo12Hour(accessCodeData.end_time));
+          const matchDate = parse(accessCodeData.match_date, "yyyy-MM-dd", new Date());
+          if (!matchDate || isNaN(matchDate.getTime())) {
+            console.error("Invalid match_date:", accessCodeData.match_date);
+            throw new Error("Invalid date in access code");
           }
+
+          const convertTo12Hour = (time24: string): string => {
+            const [hours, minutes] = time24.split(':').map(Number);
+            const period = hours >= 12 ? 'PM' : 'AM';
+            const hours12 = hours % 12 || 12;
+            return `${hours12.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')} ${period}`;
+          };
+
+          const prefill = {
+            venue_id: venue.id,
+            match_date: matchDate,
+            start_time: convertTo12Hour(accessCodeData.start_time),
+            end_time: convertTo12Hour(accessCodeData.end_time),
+          };
+
+          setVenues([venue]);
+          setSelectedVenueId(venue.id);
+          setPrefillData(prefill);
+          setHasValidBookingCode(true); // Treat venue_access_codes as a valid booking
 
           toast({
             title: "Venue Booking Loaded",
@@ -132,13 +150,23 @@ const Organize = () => {
             description: error.message || "Failed to load booking details.",
             variant: "destructive",
           });
-          navigate("/organize");
+          navigate("/organize"); // Clear query params on error
         }
       }
     };
 
     handlePreFill();
-  }, [preSelectedVenueSlug, accessCode, toast, navigate, formMethods]);
+  }, [preSelectedVenueSlug, accessCode, toast, navigate]);
+
+  useEffect(() => {
+    if (formMethods && prefillData && !isPreFilled) {
+      formMethods.setValue("venue_id", prefillData.venue_id);
+      formMethods.setValue("match_date", prefillData.match_date);
+      formMethods.setValue("start_time", prefillData.start_time);
+      formMethods.setValue("end_time", prefillData.end_time);
+      setIsPreFilled(true); // Lock fields only after setting values
+    }
+  }, [formMethods, prefillData]);
 
   const selectedVenue = formMethods
     ? venues.find(venue => venue.id === formMethods.watch().venue_id)
