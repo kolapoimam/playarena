@@ -133,7 +133,7 @@ const formSchema = z.object({
     .optional()
     .nullable(),
 }).refine(data => {
-  const now = new Date("2025-05-16T21:44:00+01:00"); // Current time in WAT
+  const now = new Date();
   const selectedDateTime = new Date(data.match_date);
   const [startHours, startMinutes] = data.start_time.split(':').map(Number);
   selectedDateTime.setHours(startHours, startMinutes, 0, 0);
@@ -172,7 +172,7 @@ const formSchema = z.object({
 const formatTimeTo12Hour = (time: string): string => {
   const [hours, minutes] = time.split(':').map(Number);
   const period = hours >= 12 ? 'PM' : 'AM';
-  const adjustedHours = hours % 12 || 12; // Convert 0 or 12 to 12 for 12 AM/PM
+  const adjustedHours = hours % 12 || 12;
   return `${adjustedHours}:${minutes.toString().padStart(2, '0')} ${period}`;
 };
 
@@ -188,11 +188,12 @@ type Venue = {
 const Organize = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
+  const preSelectedVenueSlug = searchParams.get('venue');
+  const accessCode = searchParams.get('code');
   const [venues, setVenues] = useState<Venue[]>([]);
   const [loading, setLoading] = useState(false);
   const [venuesLoading, setVenuesLoading] = useState(true);
-  const [searchParams] = useSearchParams();
-  const preSelectedVenueSlug = searchParams.get('venue');
   const [venueDialogOpen, setVenueDialogOpen] = useState(false);
   const [successDialogOpen, setSuccessDialogOpen] = useState(false);
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
@@ -203,6 +204,7 @@ const Organize = () => {
   const [matchSlug, setMatchSlug] = useState<string | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [isPreFilled, setIsPreFilled] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
   const form = useForm<FormValues>({
@@ -242,48 +244,61 @@ const Organize = () => {
     checkAuth();
   }, []);
 
-  // Persist form state to localStorage
+  // Handle venue and access code from query parameters
   useEffect(() => {
-    const savedForm = localStorage.getItem("organizeFormState");
-    if (savedForm) {
-      const parsed = JSON.parse(savedForm);
-      if (parsed.match_date) {
-        parsed.match_date = new Date(parsed.match_date);
+    const handlePreFill = async () => {
+      if (preSelectedVenueSlug && accessCode) {
+        try {
+          // Fetch venue by slug
+          const { data: venue, error: venueError } = await supabase
+            .from("venues")
+            .select("id, slug, name, city")
+            .eq("slug", preSelectedVenueSlug)
+            .single();
+
+          if (venueError || !venue) {
+            throw new Error("Venue not found");
+          }
+
+          // Validate access code
+          const { data: accessCodeData, error: accessCodeError } = await supabase
+            .from("venue_access_codes")
+            .select("match_date, start_time, end_time")
+            .eq("code", accessCode)
+            .eq("venue_id", venue.id)
+            .single();
+
+          if (accessCodeError || !accessCodeData) {
+            throw new Error("Invalid or expired access code");
+          }
+
+          // Pre-fill form
+          form.setValue("venue_id", venue.id);
+          form.setValue("match_date", new Date(accessCodeData.match_date));
+          form.setValue("start_time", accessCodeData.start_time);
+          form.setValue("end_time", accessCodeData.end_time);
+          setIsPreFilled(true);
+
+          toast({
+            title: "Venue Booking Loaded",
+            description: `Form pre-filled with booking details for ${venue.name}.`,
+          });
+        } catch (error: any) {
+          console.error("Error pre-filling form:", error);
+          toast({
+            title: "Error",
+            description: error.message || "Failed to load booking details.",
+            variant: "destructive",
+          });
+          navigate("/organize"); // Clear invalid query params
+        }
       }
-      form.reset(parsed);
-    }
-  }, [form]);
+    };
 
-  // Save form state to localStorage on change
-  useEffect(() => {
-    const subscription = form.watch((value) => {
-      localStorage.setItem("organizeFormState", JSON.stringify(value));
-    });
-    return () => subscription.unsubscribe();
-  }, [form.watch]);
+    handlePreFill();
+  }, [preSelectedVenueSlug, accessCode, form, toast, navigate]);
 
-  const isPaid = form.watch("is_paid");
-  const isPrivate = form.watch("is_private");
-  const selectedVenueId = form.watch("venue_id");
-  const matchTitle = form.watch("title");
-  const matchDate = form.watch("match_date");
-  const startTime = form.watch("start_time");
-  const endTime = form.watch("end_time");
-  const organizerName = form.watch("organizer_name");
-  const accessPassword = form.watch("access_password");
-  const organizerPhone = form.watch("organizer_phone");
-  const totalSlots = form.watch("total_slots");
-  const notes = form.watch("notes");
-  const skillLevel = form.watch("skill_level");
-  const matchType = form.watch("match_type");
-  const gender = form.watch("gender");
-  const sellTickets = form.watch("sell_tickets");
-  const ticketPrice = form.watch("ticket_price");
-  const maxTickets = form.watch("max_tickets");
-
-  // Determine if preview button should be enabled
-  const isPreviewEnabled = matchTitle && selectedVenueId && matchDate && startTime && endTime && totalSlots && organizerName;
-
+  // Fetch venues
   useEffect(() => {
     const fetchVenues = async () => {
       try {
@@ -294,8 +309,9 @@ const Organize = () => {
 
         if (error) throw error;
         setVenues(data || []);
-        
-        if (preSelectedVenueSlug) {
+
+        // Set venue from query param if not pre-filled
+        if (preSelectedVenueSlug && !accessCode) {
           const venue = data?.find(v => v.slug === preSelectedVenueSlug);
           if (venue) {
             form.setValue("venue_id", venue.id);
@@ -314,93 +330,142 @@ const Organize = () => {
     };
 
     fetchVenues();
-  }, [toast, form, preSelectedVenueSlug]);
+  }, [toast, form, preSelectedVenueSlug, accessCode]);
 
+  // Persist form state to localStorage
   useEffect(() => {
-    if (isPrivate && !accessPassword) {
+    if (!isPreFilled) {
+      const savedForm = localStorage.getItem("organizeFormState");
+      if (savedForm) {
+        const parsed = JSON.parse(savedForm);
+        if (parsed.match_date) {
+          parsed.match_date = new Date(parsed.match_date);
+        }
+        form.reset(parsed);
+      }
+    }
+  }, [form, isPreFilled]);
+
+  // Save form state to localStorage on change
+  useEffect(() => {
+    const subscription = form.watch((value) => {
+      if (!isPreFilled) {
+        localStorage.setItem("organizeFormState", JSON.stringify(value));
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [form.watch, isPreFilled]);
+
+  // Handle private match password
+  useEffect(() => {
+    if (form.watch("is_private") && !form.watch("access_password")) {
       const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
       let password = '';
       for (let i = 0; i < 6; i++) {
         password += chars.charAt(Math.floor(Math.random() * chars.length));
       }
       form.setValue('access_password', password);
-    } else if (!isPrivate) {
+    } else if (!form.watch("is_private")) {
       form.setValue('access_password', null);
     }
-  }, [isPrivate, accessPassword, form]);
+  }, [form.watch("is_private"), form.watch("access_password"), form]);
 
-const onSubmit = async (data: FormValues) => {
-  setLoading(true);
+  const onSubmit = async (data: FormValues) => {
+    setLoading(true);
 
-  try {
-    const superCode = Math.floor(100000 + Math.random() * 900000).toString();
+    try {
+      const superCode = Math.floor(100000 + Math.random() * 900000).toString();
 
-    const { data: match, error } = await supabase
-      .from("matches")
-      .insert({
-        title: data.title,
-        venue_id: data.venue_id,
-        match_date: format(data.match_date, "yyyy-MM-dd"),
-        match_time: data.start_time, // Map start_time to match_time to satisfy NOT NULL constraint
-        start_time: data.start_time,
-        end_time: data.end_time,
-        total_slots: data.total_slots,
-        is_paid: data.is_paid,
-        price: data.is_paid ? data.price : null,
-        notes: data.notes || null,
-        organizer_name: data.organizer_name,
-        organizer_phone: data.organizer_phone || null,
-        disclose_phone: data.disclose_phone,
-        player_number_required: data.player_number_required,
-        is_private: data.is_private,
-        access_password: data.is_private ? data.access_password : null,
-        allow_bulk_tickets: data.allow_bulk_tickets,
-        skill_level: data.skill_level || null,
-        match_type: data.match_type || null,
-        gender: data.gender || null,
-        super_code: superCode,
-        sell_tickets: data.sell_tickets,
-        ticket_price: data.sell_tickets ? data.ticket_price : null,
-        max_tickets: data.sell_tickets ? data.max_tickets : null,
-        total_tickets_available: data.sell_tickets && data.max_tickets ? data.max_tickets : 0,
-      })
-      .select('id, slug, super_code')
-      .single();
-
-    if (error) throw error;
-
-    if (userId) {
-      const { error: linkError } = await supabase
-        .from("user_organized_matches")
+      const { data: match, error } = await supabase
+        .from("matches")
         .insert({
-          user_id: userId,
-          match_id: match.id,
-        });
+          title: data.title,
+          venue_id: data.venue_id,
+          match_date: format(data.match_date, "yyyy-MM-dd"),
+          match_time: data.start_time,
+          start_time: data.start_time,
+          end_time: data.end_time,
+          total_slots: data.total_slots,
+          is_paid: data.is_paid,
+          price: data.is_paid ? data.price : null,
+          notes: data.notes || null,
+          organizer_name: data.organizer_name,
+          organizer_phone: data.organizer_phone || null,
+          disclose_phone: data.disclose_phone,
+          player_number_required: data.player_number_required,
+          is_private: data.is_private,
+          access_password: data.is_private ? data.access_password : null,
+          allow_bulk_tickets: data.allow_bulk_tickets,
+          skill_level: data.skill_level || null,
+          match_type: data.match_type || null,
+          gender: data.gender || null,
+          super_code: superCode,
+          sell_tickets: data.sell_tickets,
+          ticket_price: data.sell_tickets ? data.ticket_price : null,
+          max_tickets: data.sell_tickets ? data.max_tickets : null,
+          total_tickets_available: data.sell_tickets && data.max_tickets ? data.max_tickets : 0,
+        })
+        .select('id, slug, super_code')
+        .single();
 
-      if (linkError) throw linkError;
+      if (error) throw error;
+
+      if (userId) {
+        const { error: linkError } = await supabase
+          .from("user_organized_matches")
+          .insert({
+            user_id: userId,
+            match_id: match.id,
+          });
+
+        if (linkError) throw linkError;
+      }
+
+      // Update booking with match_id if coming from venue booking
+      if (accessCode && preSelectedVenueSlug) {
+        const { data: venue } = await supabase
+          .from("venues")
+          .select("id")
+          .eq("slug", preSelectedVenueSlug)
+          .single();
+
+        const { error: bookingUpdateError } = await supabase
+          .from("bookings")
+          .update({ match_id: match.id })
+          .eq("venue_id", venue.id)
+          .eq("payment_reference", searchParams.get("reference")); // Use payment_reference to match booking
+
+        if (bookingUpdateError) {
+          console.error("Error updating booking with match_id:", bookingUpdateError);
+          toast({
+            title: "Warning",
+            description: "Match created, but failed to link booking. Contact support.",
+            variant: "destructive",
+          });
+        }
+      }
+
+      setSupercode(match.super_code || "N/A");
+      setMatchSlug(match.slug);
+      setSuccessDialogOpen(true);
+
+      localStorage.removeItem("organizeFormState");
+
+      toast({
+        title: "Success!",
+        description: "Your match has been created.",
+      });
+    } catch (error) {
+      console.error("Error creating match:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create match. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
-
-    setSupercode(match.super_code || "N/A");
-    setMatchSlug(match.slug);
-    setSuccessDialogOpen(true);
-
-    localStorage.removeItem("organizeFormState");
-
-    toast({
-      title: "Success!",
-      description: "Your match has been created.",
-    });
-  } catch (error) {
-    console.error("Error creating match:", error);
-    toast({
-      title: "Error",
-      description: "Failed to create match. Please try again.",
-      variant: "destructive",
-    });
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const handleVenueCreated = (venueId: string, venueSlug: string, venueName: string) => {
     setVenues(prev => [{ id: venueId, slug: venueSlug, name: venueName, city: "" }, ...prev]);
@@ -425,7 +490,7 @@ const onSubmit = async (data: FormValues) => {
     try {
       const canvas = await html2canvas(cardRef.current, { scale: 2 });
       const link = document.createElement('a');
-      link.download = `SportCliq-Supercode-${matchTitle.replace(/\s+/g, '-')}.png`;
+      link.download = `SportCliq-Supercode-${form.watch("title").replace(/\s+/g, '-')}.png`;
       link.href = canvas.toDataURL('image/png');
       link.click();
     } catch (error) {
@@ -440,7 +505,7 @@ const onSubmit = async (data: FormValues) => {
     }
   };
 
-  const selectedVenue = venues.find(venue => venue.id === selectedVenueId);
+  const selectedVenue = venues.find(venue => venue.id === form.watch("venue_id"));
 
   return (
     <div className="min-h-screen pb-20 bg-gray-100 dark:bg-gray-900">
@@ -460,9 +525,14 @@ const onSubmit = async (data: FormValues) => {
       </header>
 
       <div className="p-6 max-w-3xl mx-auto">
+        {isPreFilled && (
+          <div className="mb-4 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 p-4 rounded-lg">
+            <p className="font-medium">Venue Booking Pre-Filled</p>
+            <p className="text-sm">The venue, date, and time are set based on your booking. These fields are locked to match your reservation.</p>
+          </div>
+        )}
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            {/* Match Details Section (Expanded by default) */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
               <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Match Details</h2>
               
@@ -491,21 +561,23 @@ const onSubmit = async (data: FormValues) => {
                   <FormItem>
                     <div className="flex justify-between items-center">
                       <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Venue</FormLabel>
-                      <Dialog open={venueDialogOpen} onOpenChange={setVenueDialogOpen}>
-                        <DialogTrigger asChild>
-                          <Button variant="outline" size="sm" type="button" className="text-sm font-medium hover:bg-green-50 dark:hover:bg-gray-700 transition-colors">
-                            <Plus size={16} className="mr-1" /> Add New Venue
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
-                          <VenueForm 
-                            onSuccess={handleVenueCreated} 
-                            onCancel={() => setVenueDialogOpen(false)} 
-                          />
-                        </DialogContent>
-                      </Dialog>
+                      {!isPreFilled && (
+                        <Dialog open={venueDialogOpen} onOpenChange={setVenueDialogOpen}>
+                          <DialogTrigger asChild>
+                            <Button variant="outline" size="sm" type="button" className="text-sm font-medium hover:bg-green-50 dark:hover:bg-gray-700 transition-colors">
+                              <Plus size={16} className="mr-1" /> Add New Venue
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
+                            <VenueForm 
+                              onSuccess={handleVenueCreated} 
+                              onCancel={() => setVenueDialogOpen(false)} 
+                            />
+                          </DialogContent>
+                        </Dialog>
+                      )}
                     </div>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={isPreFilled}>
                       <FormControl>
                         <SelectTrigger className="w-full text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white">
                           <SelectValue placeholder="Select a venue" />
@@ -542,7 +614,7 @@ const onSubmit = async (data: FormValues) => {
                     <FormItem className="flex flex-col">
                       <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Date</FormLabel>
                       <Popover>
-                        <PopoverTrigger asChild>
+                        <PopoverTrigger asChild disabled={isPreFilled}>
                           <FormControl>
                             <Button
                               variant="outline"
@@ -594,6 +666,7 @@ const onSubmit = async (data: FormValues) => {
                             placeholder="HH:MM"
                             className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                             {...field}
+                            disabled={isPreFilled}
                           />
                           <Clock className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
                         </div>
@@ -619,6 +692,7 @@ const onSubmit = async (data: FormValues) => {
                             placeholder="HH:MM"
                             className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                             {...field}
+                            disabled={isPreFilled}
                           />
                           <Clock className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
                         </div>
@@ -1104,13 +1178,13 @@ const onSubmit = async (data: FormValues) => {
               />
             </div>
 
-            <div className="flex gap-4">
+  <div className="flex gap-4">
               <Button
                 type="button"
                 variant="outline"
                 className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium rounded-lg px-4 py-3 text-lg shadow-md transition-colors"
                 onClick={() => setPreviewDialogOpen(true)}
-                disabled={loading || !isPreviewEnabled}
+                disabled={loading || !form.watch("title") || !form.watch("venue_id") || !form.watch("match_date") || !form.watch("start_time") || !form.watch("end_time") || !form.watch("total_slots") || !form.watch("organizer_name")}
               >
                 Preview Match
               </Button>
