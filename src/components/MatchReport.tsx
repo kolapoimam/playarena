@@ -93,7 +93,7 @@ const generateAnalyticsAndRankings = (events: MatchEvent[], teams: Team[]): { up
       possession = Math.round((actionsPerTeam[team.name] / totalTeamActions) * 100);
     }
     if (totalScore > 0) {
-      const scoreWeight = (team.score / totalScore) * 20; // Score influences possession up to 20%
+      const scoreWeight = (team.score / totalScore) * 30; // Score influences possession up to 30%
       possession = Math.min(80, Math.max(20, possession + scoreWeight));
     }
     team.analytics.possession = Math.round(possession);
@@ -313,8 +313,76 @@ const MatchReport = ({
         </DialogContent>
       </Dialog>
 
-      <div ref={reportRef} className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 sm:p-6 border border-gray-200 dark:border-gray-700">
-        <div ref={exportRef} className="space-y-8 w-[800px] bg-gradient-to-br from-blue-50 to-green-50 p-6 rounded-lg">
+      <div ref={reportRef} className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 sm:p-6 border border-gray-200 dark:border-gray-700 md:space-y-6">
+        {/* Mobile-optimized view */}
+        <div className="md:hidden space-y-4">
+          <div className="text-center">
+            <img src="/playarenalight.png" alt="PlayArena Logo" className="w-24 mx-auto mb-2" />
+            <h2 className="text-xl font-bold text-blue-800">{match.title}</h2>
+            <p className="text-xs text-gray-600">{match.match_date} at {match.match_time} | {match.venue}</p>
+            <div className="mt-2 text-2xl font-bold text-gray-800">
+              {teams[0].name} {teams[0].score} - {teams[1].score} {teams[1].name}
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="bg-white rounded-lg shadow-sm p-4 border-l-4 border-blue-500">
+              <h3 className="text-base font-semibold text-gray-800 mb-2">Score</h3>
+              {teams.map((team) => (
+                <div key={team.name} className="flex justify-between items-center py-2 border-b border-gray-200">
+                  <span className="text-gray-800 font-medium">{team.name}</span>
+                  <Input
+                    type="number"
+                    value={team.score}
+                    onChange={(e) => handleScoreChange(team.name, e.target.value)}
+                    className="w-16 text-sm text-center border-gray-300 focus:border-blue-500"
+                    min="0"
+                    max="29"
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div className="bg-white rounded-lg shadow-sm p-4 border-l-4 border-green-500">
+              <h3 className="text-base font-semibold text-gray-800 mb-2">Analytics</h3>
+              {teams.map((team) => (
+                <div key={team.name} className="py-2 border-b border-gray-200">
+                  <div className="flex justify-between">
+                    <span className="text-gray-800 font-medium">{team.name}</span>
+                    <span className="text-gray-800">Possession: {team.analytics.possession}%</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-800">Shots: {team.analytics.shots}</span>
+                    <span className="text-gray-800">Fouls: {team.analytics.fouls}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-800">Yellow: {team.analytics.yellow_cards}</span>
+                    <span className="text-gray-800">Red: {team.analytics.red_cards}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="bg-white rounded-lg shadow-sm p-4 border-l-4 border-yellow-500">
+              <h3 className="text-base font-semibold text-gray-800 mb-2">Events</h3>
+              {events.length === 0 ? (
+                <p className="text-sm text-gray-600">No events recorded.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {events.map((event) => (
+                    <li key={event.id} className="text-sm text-gray-600 flex items-center">
+                      <span className="inline-block w-10 text-center font-semibold text-blue-600">{event.minute}'</span>
+                      <span className="flex-1">{event.type.replace("_", " ")} ({event.team_name})</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Desktop view and PNG export (unchanged) */}
+        <div ref={exportRef} className="hidden md:block space-y-8 w-[800px] bg-gradient-to-br from-blue-50 to-green-50 p-6 rounded-lg">
           <div className="text-center">
             <img src="/playarenalight.png" alt="PlayArena Logo" className="w-32 mx-auto mb-4" />
             <h2 className="text-2xl font-bold text-blue-800">{match.title}</h2>
@@ -414,7 +482,7 @@ const MatchReport = ({
           </div>
 
           <div className="text-center mt-6">
-            <p className="text-xs text-gray-500">Generated on May 21, 2025, 09:31 PM WAT</p>
+            <p className="text-xs text-gray-500">Generated on May 21, 2025, 09:40 PM WAT</p>
             <p className="text-xs text-gray-500">Powered by @SportCliq</p>
           </div>
         </div>
