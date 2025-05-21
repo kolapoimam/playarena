@@ -45,6 +45,7 @@ import { Switch } from "@/components/ui/switch";
 import VenueForm from "@/components/VenueForm";
 import Navbar from "@/components/Navbar";
 import html2canvas from "html2canvas";
+import TimeInput from "@/components/TimeInput";
 
 // Define enums for dropdown options
 const skillLevels = ["Beginner", "Amateur", "Intermediate", "Advanced", "Professional", "All", "None"] as const;
@@ -549,7 +550,7 @@ const Organize = () => {
   const selectedVenue = venues.find(venue => venue.id === form.watch("venue_id"));
 
   return (
-    <div className="min-h-screen pb-20 bg-gray-100 dark:bg-gray-900">
+<div className="min-h-screen pb-20 bg-gray-100 dark:bg-gray-900">
       <header className="sticky top-0 z-50 bg-gradient-to-r from-green-500 to-green-700 text-white shadow-lg">
         <div className="p-4 flex items-center justify-between max-w-7xl mx-auto">
           <Button 
@@ -585,7 +586,7 @@ const Organize = () => {
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
               <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Match Details</h2>
-              
+                            
               <FormField
                 control={form.control}
                 name="title"
@@ -702,7 +703,7 @@ const Organize = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="start_time"
@@ -710,21 +711,12 @@ const Organize = () => {
                     <FormItem>
                       <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Start Time</FormLabel>
                       <FormControl>
-                        <div className="relative">
-                          <Input
-                            type="text"
-                            placeholder="e.g., 01:00 PM"
-                            className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                            {...field}
-                            value={field.value || ""}
-                            onChange={(e) => {
-                              const value = e.target.value.toUpperCase();
-                              field.onChange(value); // Allow partial inputs during typing
-                            }}
-                            disabled={isPreFilled}
-                          />
-                          <Clock className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                        </div>
+                        <TimeInput
+                          value={field.value || ""}
+                          onChange={field.onChange}
+                          disabled={isPreFilled}
+                          placeholder="e.g., 01:00 PM"
+                        />
                       </FormControl>
                       <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
                         Match start time (12-hour clock, e.g., 01:00 PM)
@@ -741,21 +733,12 @@ const Organize = () => {
                     <FormItem>
                       <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">End Time</FormLabel>
                       <FormControl>
-                        <div className="relative">
-                          <Input
-                            type="text"
-                            placeholder="e.g., 03:00 PM"
-                            className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                            {...field}
-                            value={field.value || ""}
-                            onChange={(e) => {
-                              const value = e.target.value.toUpperCase();
-                              field.onChange(value); // Allow partial inputs during typing
-                            }}
-                            disabled={isPreFilled}
-                          />
-                          <Clock className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                        </div>
+                        <TimeInput
+                          value={field.value || ""}
+                          onChange={field.onChange}
+                          disabled={isPreFilled}
+                          placeholder="e.g., 03:00 PM"
+                        />
                       </FormControl>
                       <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
                         Match end time (12-hour clock, e.g., 03:00 PM)
