@@ -12,8 +12,8 @@ type AccessCode = {
   id: string;
   booking_id: string | null;
   code: string;
-  valid_until: string;
-  access_code_status: "Pending" | "Active" | "Inactive";
+  expiry_date: string;
+  status: "pending" | "active" | "inactive";
   created_at: string;
 };
 
@@ -38,13 +38,32 @@ const VenueAccessCode = ({ venueId }: VenueAccessCodeProps) => {
     try {
       const { data, error } = await supabase
         .from("booking_access_codes")
-        .select("id, booking_id, code, valid_until, access_code_status, created_at")
+        .select("id, booking_id, code, expiry_date, status, created_at")
         .eq("venue_id", venueId)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
 
-      setAccessCodes(data || []);
+      // Client-side expiry check: Update status to inactive if expired
+      const now = new Date(); // Current time: 08:27 PM WAT, May 22, 2025
+      const updatedCodes = await Promise.all(
+        (data || []).map(async (code) => {
+          const expiryDate = new Date(code.expiry_date);
+          if (expiryDate < now && code.status !== "inactive") {
+            const { error: updateError } = await supabase
+              .from("booking_access_codes")
+              .update({ status: "inactive" })
+              .eq("id", code.id);
+            if (updateError) {
+              console.error("Error updating expired code:", updateError);
+            }
+            return { ...code, status: "inactive" };
+          }
+          return code;
+        })
+      );
+
+      setAccessCodes(updatedCodes);
     } catch (error) {
       console.error("Error fetching access codes:", error);
       toast({
@@ -62,11 +81,11 @@ const VenueAccessCode = ({ venueId }: VenueAccessCodeProps) => {
     const channel = supabase
       .channel(`access_codes_${venueId}`)
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: '*',
-          schema: 'public',
-          table: 'booking_access_codes',
+          event: "*",
+          schema: "public",
+          table: "booking_access_codes",
           filter: `venue_id=eq.${venueId}`,
         },
         () => {
@@ -99,17 +118,20 @@ const VenueAccessCode = ({ venueId }: VenueAccessCodeProps) => {
       }
 
       const code = Math.random().toString(36).slice(-6).toUpperCase();
-      const validUntil = new Date(`${match_date}T${end_time}`).toISOString();
+      const createdAt = new Date().toISOString();
 
       const { error } = await supabase
         .from("booking_access_codes")
         .insert({
           venue_id: venueId,
           code,
-          valid_until: validUntil,
-          access_code_status: "Pending",
-          created_at: new Date().toISOString(),
-          booking_id: null, // Set to NULL as booking_id is optional
+          expiry_date: new Date(new Date(createdAt).getTime() + 48 * 60 * 60 * 1000).toISOString(),
+          status: "pending",
+          created_at: createdAt,
+          booking_id: null,
+          match_date,
+          start_time,
+          end_time,
         });
 
       if (error) {
@@ -145,11 +167,11 @@ const VenueAccessCode = ({ venueId }: VenueAccessCodeProps) => {
 
   const getStatusStyles = (status: string) => {
     switch (status) {
-      case "Active":
+      case "active":
         return "bg-green-100 text-green-700 border-green-300";
-      case "Inactive":
+      case "inactive":
         return "bg-red-100 text-red-700 border-red-300";
-      case "Pending":
+      case "pending":
         return "bg-yellow-100 text-yellow-700 border-yellow-300";
       default:
         return "bg-gray-500 text-white border-gray-600";
@@ -197,7 +219,7 @@ const VenueAccessCode = ({ venueId }: VenueAccessCodeProps) => {
                         </Button>
                       </p>
                       <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Valid Until: {new Date(code.valid_until).toLocaleString("en-NG", {
+                        Expires: {new Date(code.expiry_date).toLocaleString("en-NG", {
                           dateStyle: "medium",
                           timeStyle: "short",
                         })}
@@ -210,9 +232,9 @@ const VenueAccessCode = ({ venueId }: VenueAccessCodeProps) => {
                       </p>
                     </div>
                     <span
-                      className={`inline-block px-3 py-1 text-sm font-medium rounded border ${getStatusStyles(code.access_code_status)}`}
+                      className={`inline-block px-3 py-1 text-sm font-medium rounded border ${getStatusStyles(code.status)}`}
                     >
-                      {code.access_code_status}
+                      {code.status}
                     </span>
                   </div>
                 </div>
