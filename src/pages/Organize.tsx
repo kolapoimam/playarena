@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react"; // Add useCallback
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -32,6 +32,7 @@ const Organize = () => {
   const [venues, setVenues] = useState<Venue[]>([]);
   const [selectedVenueId, setSelectedVenueId] = useState<string | undefined>(undefined);
   const [hasValidBookingCode, setHasValidBookingCode] = useState(false);
+  const [formMethods, setFormMethods] = useState<{ setValue: (name: string, value: any) => void; watch: () => any } | null>(null);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -75,7 +76,15 @@ const Organize = () => {
           setVenues([venue]);
           setIsPreFilled(true);
           setSelectedVenueId(venue.id);
-          setHasValidBookingCode(true); // Treat venue_access_codes as a valid booking for verified venues
+          setHasValidBookingCode(true);
+
+          // Use formMethods.setValue to prefill form fields
+          if (formMethods) {
+            formMethods.setValue("venue_id", venue.id);
+            formMethods.setValue("match_date", new Date(accessCodeData.match_date));
+            formMethods.setValue("start_time", accessCodeData.start_time);
+            formMethods.setValue("end_time", accessCodeData.end_time);
+          }
 
           toast({
             title: "Venue Booking Loaded",
@@ -93,8 +102,14 @@ const Organize = () => {
       }
     };
 
-    handlePreFill();
-  }, [preSelectedVenueSlug, accessCode, toast, navigate]);
+    if (formMethods) {
+      handlePreFill();
+    }
+  }, [preSelectedVenueSlug, accessCode, toast, navigate, formMethods]);
+
+  const handleFormReady = useCallback(({ watch, setValue }) => {
+    setFormMethods({ watch, setValue });
+  }, []);
 
   const selectedVenue = venues.find(venue => venue.id === selectedVenueId);
 
@@ -142,23 +157,25 @@ const Organize = () => {
           }}
           onPreview={() => setPreviewDialogOpen(true)}
           onPrefill={(values) => {
-            // This will be called by OrganiserVenue when a valid booking_access_code is entered
-            form.setValue("match_date", values.match_date);
-            form.setValue("start_time", values.start_time);
-            form.setValue("end_time", values.end_time);
-            setHasValidBookingCode(true);
+            if (formMethods) {
+              formMethods.setValue("match_date", values.match_date);
+              formMethods.setValue("start_time", values.start_time);
+              formMethods.setValue("end_time", values.end_time);
+              setHasValidBookingCode(true);
+            }
           }}
+          onFormReady={handleFormReady}
         />
         <MatchPreviewDialog
           open={previewDialogOpen}
           onOpenChange={setPreviewDialogOpen}
-          formValues={form.watch()}
+          formValues={formMethods ? formMethods.watch() : {}}
           selectedVenue={selectedVenue}
         />
         <MatchSuccessDialog
           open={successDialogOpen}
           onOpenChange={setSuccessDialogOpen}
-          formValues={form.watch()}
+          formValues={formMethods ? formMethods.watch() : {}}
           selectedVenue={selectedVenue}
           supercode={supercode}
           matchSlug={matchSlug}
