@@ -146,7 +146,7 @@ const Organize = () => {
 
         if (!isValid) {
           console.error("Invalid access code:", normalizedCode, { isBookingCode, accessCodeData });
-          throw new Error("This access code is invalid or has expired.");
+          throw new Error("This access code is invalid or has been used.");
         }
 
         const matchDate = parse(accessCodeData.match_date, "yyyy-MM-dd", new Date());
@@ -197,8 +197,10 @@ const Organize = () => {
       }
     };
 
-    handlePreFill();
-  }, [preSelectedVenueSlug, accessCode, toast, navigate]);
+    if (preSelectedVenueSlug && accessCode) {
+      handlePreFill();
+    }
+  }, [preSelectedVenueSlug, accessCode, toast, navigate, formMethods]);
 
   const applyPrefill = (prefill: PrefillData) => {
     if (!formMethods) return;
@@ -245,7 +247,7 @@ const Organize = () => {
         {isPreFilled && !prefillError && (
           <div className="mb-4 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 p-4 rounded-lg">
             <p className="font-medium">Venue Booking Pre-Filled</p>
-            <p className="text-sm">The venue, date, and time are set based on your booking. These fields are locked to match your reservation.</p>
+            <p className="text-sm">The venue, date, and time are set based on your booking. Contact support to change.</p>
           </div>
         )}
         {selectedVenue?.verified_status === "True" && !isPreFilled && !hasValidBookingCode && (
