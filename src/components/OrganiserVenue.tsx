@@ -45,6 +45,8 @@ const OrganiserVenue = ({ venueId, onVenueChange, isPreFilled, preSelectedVenueS
         const venue = parsed.find((v: Venue) => v.slug === preSelectedVenueSlug);
         if (venue) {
           onVenueChange(venue.id);
+        } else {
+          console.warn("Preselected venue not found in cache:", preSelectedVenueSlug);
         }
       }
       return;
@@ -66,6 +68,13 @@ const OrganiserVenue = ({ venueId, onVenueChange, isPreFilled, preSelectedVenueS
         const venue = data?.find((v) => v.slug === preSelectedVenueSlug);
         if (venue) {
           onVenueChange(venue.id);
+        } else {
+          console.warn("Preselected venue not found in fetched data:", preSelectedVenueSlug);
+          toast({
+            title: "Warning",
+            description: "Preselected venue not found. Please select a venue.",
+            variant: "destructive",
+          });
         }
       }
     } catch (error) {
@@ -106,7 +115,7 @@ const OrganiserVenue = ({ venueId, onVenueChange, isPreFilled, preSelectedVenueS
         )}
       </div>
       <div className="space-y-2">
-        <Select onValueChange={onVenueChange} value={venueId} disabled={isPreFilled}>
+        <Select onValueChange={onVenueChange} value={venueId} disabled={isPreFilled && !!selectedVenue}>
           <FormControl>
             <SelectTrigger className="w-full text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white">
               <SelectValue placeholder="Select a venue" />
@@ -130,6 +139,11 @@ const OrganiserVenue = ({ venueId, onVenueChange, isPreFilled, preSelectedVenueS
             )}
           </SelectContent>
         </Select>
+        {isPreFilled && selectedVenue && (
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Venue is prefilled from your booking. Contact support to change.
+          </p>
+        )}
       </div>
       <FormMessage />
     </FormItem>
