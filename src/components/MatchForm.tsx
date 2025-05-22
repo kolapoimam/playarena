@@ -234,7 +234,7 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
           parsed.start_time = parsed.start_time.replace(/^(0[1-9]|1[0-2]):([0-5][0-9]) (AM|PM)$/, "$1:$2 $3");
         }
         if (parsed.end_time) {
-          parsed.end_time = parsed.end_time.replace(/^(0[1-9]|1[0-2]):([0-5][0-9]) (AM|PM)$/, "$1:$2 $3");
+          parsed.end_time = parsed.start_time.replace(/^(0[1-9]|1[0-2]):([0-5][0-9]) (AM|PM)$/, "$1:$2 $3");
         }
         form.reset(parsed);
       }
@@ -300,7 +300,15 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
         .select('id, slug, super_code')
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Match insert error:", error);
+        throw error;
+      }
+
+      if (!match || !match.id || !match.slug) {
+        console.error("Invalid match data returned:", match);
+        throw new Error("Failed to retrieve match details");
+      }
 
       if (userId) {
         const { error: linkError } = await supabase
@@ -310,27 +318,58 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
             match_id: match.id,
           });
 
-        if (linkError) throw linkError;
+        if (linkError) {
+          console.error("User organized match insert error:", linkError);
+          throw linkError;
+        }
       }
 
       if (accessCode && preSelectedVenueSlug) {
-        const { data: venue } = await supabase
-          .from("venues")
-          .select("id")
-          .eq("slug", preSelectedVenueSlug)
-          .single();
+        try {
+          const { data: venue, error: venueError } = await supabase
+            .from("venues")
+            .select("id")
+            .eq("slug", preSelectedVenueSlug)
+            .single();
 
-        const { error: bookingUpdateError } = await supabase
-          .from("bookings")
-          .update({ match_id: match.id })
-          .eq("venue_id", venue.id)
-          .eq("payment_reference", new URLSearchParams(window.location.search).get("reference"));
+          if (venueError || !venue) {
+            console.error("Venue fetch error:", venueError || "No venue found");
+            toast({
+              title: "Warning",
+              description: "Match created, but failed to link booking due to invalid venue. Contact support.",
+              variant: "destructive",
+            });
+          } else {
+            const paymentReference = new URLSearchParams(window.location.search).get("reference");
+            if (!paymentReference) {
+              console.warn("No payment reference found in query params");
+              toast({
+                title: "Warning",
+                description: "Match created, but no payment reference provided for booking. Contact support.",
+                variant: "destructive",
+              });
+            } else {
+              const { error: bookingUpdateError } = await supabase
+                .from("bookings")
+                .update({ match_id: match.id })
+                .eq("venue_id", venue.id)
+                .eq("payment_reference", paymentReference);
 
-        if (bookingUpdateError) {
-          console.error("Error updating booking with match_id:", bookingUpdateError);
+              if (bookingUpdateError) {
+                console.error("Booking update error:", bookingUpdateError);
+                toast({
+                  title: "Warning",
+                  description: "Match created, but failed to link booking. Contact support.",
+                  variant: "destructive",
+                });
+              }
+            }
+          }
+        } catch (bookingError) {
+          console.error("Error in booking update block:", bookingError);
           toast({
             title: "Warning",
-            description: "Match created, but failed to link booking. Contact support.",
+            description: "Match created, but failed to link booking due to an error. Contact support.",
             variant: "destructive",
           });
         }
