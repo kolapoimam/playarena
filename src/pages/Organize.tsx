@@ -8,7 +8,7 @@ import Navbar from "@/components/Navbar";
 import MatchForm from "@/components/MatchForm";
 import MatchPreviewDialog from "@/components/MatchPreviewDialog";
 import MatchSuccessDialog from "@/components/MatchSuccessDialog";
-import { parse } from "date-fns";
+import { parse, format } from "date-fns";
 
 type Venue = {
   id: string;
@@ -99,10 +99,10 @@ const Organize = () => {
           const normalizedCode = accessCode.toUpperCase();
           let accessCodeData = null;
 
-          // Try booking_access_codes first (manager-generated, no payment)
+          // Try booking_access_codes first (manager-generated)
           const { data: bookingData, error: bookingError } = await supabase
             .from("booking_access_codes")
-            .select("match_date, start_time, end_time, access_code_status, booking_id")
+            .select("match_date, start_time, end_time, access_code_status, booking_id, venue_id")
             .eq("code", normalizedCode)
             .eq("venue_id", venue.id)
             .single();
@@ -111,7 +111,7 @@ const Organize = () => {
             // Fallback to venue_access_codes (payment-based)
             const { data: venueData, error: venueAccessError } = await supabase
               .from("venue_access_codes")
-              .select("match_date, start_time, end_time, used")
+              .select("match_date, start_time, end_time, used, venue_id")
               .eq("code", normalizedCode)
               .eq("venue_id", venue.id)
               .single();
@@ -126,7 +126,8 @@ const Organize = () => {
           }
 
           // Validate based on the table
-          if (accessCodeData.access_code_status === 'Active' || accessCodeData.used) {
+          const isUsed = accessCodeData.access_code_status === 'Active' || accessCodeData.used;
+          if (isUsed) {
             console.error("Access code already used:", normalizedCode);
             throw new Error("This booking has already been used to create a match.");
           }
