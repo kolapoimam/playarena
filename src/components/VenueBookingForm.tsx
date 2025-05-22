@@ -240,41 +240,46 @@ const VenueBookingForm = () => {
     verifyPayment();
   }, [paymentReference, venue, toast]);
 
-  const validateAccessCode = async (code: string) => {
-    try {
-      const { data, error } = await supabase
-        .from("booking_access_codes")
-        .select("code, valid_until, access_code_status, venue_id, match_date, start_time, end_time, booking_id")
-        .eq("code", code)
-        .eq("venue_id", venue?.id)
-        .single();
+const validateAccessCode = async (code: string) => {
+  try {
+    const { data, error } = await supabase
+      .from("booking_access_codes")
+      .select("code, valid_until, access_code_status, venue_id, match_date, start_time, end_time, booking_id")
+      .eq("code", code)
+      .eq("venue_id", venue?.id)
+      .single();
 
-      if (error || !data) {
-        setAccessCodeError("Invalid access code.");
-        return null;
-      }
-
-      if (data.access_code_status !== "Pending") {
-        setAccessCodeError("Access code is not valid or has already been used.");
-        return null;
-      }
-
-      if (data.booking_id) {
-        setAccessCodeError("Access code has already been used.");
-        return null;
-      }
-
-      const validUntil = new Date(data.valid_until);
-      if (validUntil < new Date()) {
-        setAccessCodeError("Access code has expired.");
-        return null;
-      }
-
-      return data;
-    } catch (error) {
-      console.error("Error validating access code:", error);
-      setAccessCodeError("Failed to validate access code.");
+    if (error || !data) {
+      setAccessCodeError("Invalid access code.");
       return null;
+    }
+
+    // Check status
+    if (data.access_code_status !== "Pending") {
+      setAccessCodeError("Access code is not valid or has already been used.");
+      return null;
+    }
+
+    // Defensive double-check
+    if (data.booking_id) {
+      setAccessCodeError("This booking code has already been linked to a match.");
+      return null;
+    }
+
+    // Check expiry
+    const validUntil = new Date(data.valid_until);
+    if (isNaN(validUntil.getTime()) || validUntil < new Date()) {
+      setAccessCodeError("Access code has expired.");
+      return null;
+    }
+
+    // ✅ Only return data if all checks passed
+    return data;
+
+  } catch (err) {
+    console.error("Error validating access code:", err);
+    setAccessCodeError("An unexpected error occurred while validating your access code.");
+    return null;
     }
   };
 
