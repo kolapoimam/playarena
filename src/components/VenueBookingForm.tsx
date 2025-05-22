@@ -11,9 +11,10 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format, isWithinInterval } from "date-fns";
-import { CalendarIcon, ArrowLeft, Clock, Loader } from "lucide-react";
+import { CalendarIcon, ArrowLeft, Loader } from "lucide-react";
 import { lazy, Suspense } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
+import TimeInput from "@/components/TimeInput";
 
 // Lazy load Navbar to avoid circular dependencies
 const Navbar = lazy(() => import("@/components/Navbar"));
@@ -28,43 +29,66 @@ type Venue = {
 
 type PaymentStatus = "pending" | "success" | "failed";
 
+// Utility function to convert 24-hour time (HH:MM:SS) to 12-hour format with AM/PM
+const convertTo12HourFormat = (time: string): string => {
+  const [hours, minutes] = time.split(':').map(Number);
+  const period = hours >= 12 ? 'PM' : 'AM';
+  const adjustedHours = hours % 12 || 12;
+  return `${adjustedHours}:${minutes.toString().padStart(2, '0')} ${period}`;
+};
+
 const bookingSchema = z.object({
   match_date: z.date({
     required_error: "Please select a date",
     invalid_type_error: "Please select a valid date",
   }),
-  start_time: z.string().regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, {
-    message: "Please enter a valid start time in HH:MM format (24-hour clock)",
+  start_time: z.string().regex(/^(1[0-2]|0?[1-9]):[0-5][0-9] (AM|PM)$/, {
+    message: "Please enter a valid start time in HH:MM AM/PM format (12-hour clock)",
   }),
-  end_time: z.string().regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, {
-    message: "Please enter a valid end time in HH:MM format (24-hour clock)",
+  end_time: z.string().regex(/^(1[0-2]|0?[1-9]):[0-5][0-9] (AM|PM)$/, {
+    message: "Please enter a valid end time in HH:MM AM/PM format (12-hour clock)",
   }),
 }).refine(
   (data) => {
     const now = new Date();
     const selectedDateTime = new Date(data.match_date);
-    const [startHours, startMinutes] = data.start_time.split(":").map(Number);
+    const [startTime, period] = data.start_time.split(" ");
+    let [startHours, startMinutes] = startTime.split(":").map(Number);
+    if (period === "PM" && startHours !== 12) startHours += 12;
+    if (period === "AM" && startHours === 12) startHours = 0;
     selectedDateTime.setHours(startHours, startMinutes, 0, 0);
-    const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000); // 1 hour from now
+    const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
     return selectedDateTime >= oneHourLater;
   },
   { message: "Booking must start at least 1 hour from now", path: ["start_time"] }
 ).refine(
   (data) => {
-    const [startHours, startMinutes] = data.start_time.split(":").map(Number);
-    const [endHours, endMinutes] = data.end_time.split(":").map(Number);
+    const [startTime, startPeriod] = data.start_time.split(" ");
+    const [endTime, endPeriod] = data.end_time.split(" ");
+    let [startHours, startMinutes] = startTime.split(":").map(Number);
+    let [endHours, endMinutes] = endTime.split(":").map(Number);
+    if (startPeriod === "PM" && startHours !== 12) startHours += 12;
+    if (startPeriod === "AM" && startHours === 12) startHours = 0;
+    if (endPeriod === "PM" && endHours !== 12) endHours += 12;
+    if (endPeriod === "AM" && endHours === 12) endHours = 0;
     const start = new Date(0);
     start.setHours(startHours, startMinutes);
     const end = new Date(0);
     end.setHours(endHours, endMinutes);
     const durationMs = end.getTime() - start.getTime();
-    return durationMs >= 60 * 60 * 1000; // Minimum 1 hour
+    return durationMs >= 60 * 60 * 1000;
   },
   { message: "End time must be at least 1 hour after start time", path: ["end_time"] }
 ).refine(
   (data) => {
-    const [startHours, startMinutes] = data.start_time.split(":").map(Number);
-    const [endHours, endMinutes] = data.end_time.split(":").map(Number);
+    const [startTime, startPeriod] = data.start_time.split(" ");
+    const [endTime, endPeriod] = data.end_time.split(" ");
+    let [startHours, startMinutes] = startTime.split(":").map(Number);
+    let [endHours, endMinutes] = endTime.split(":").map(Number);
+    if (startPeriod === "PM" && startHours !== 12) startHours += 12;
+    if (startPeriod === "AM" && startHours === 12) startHours = 0;
+    if (endPeriod === "PM" && endHours !== 12) endHours += 12;
+    if (endPeriod === "AM" && endHours === 12) endHours = 0;
     const start = new Date(0);
     start.setHours(startHours, startMinutes);
     const end = new Date(0);
@@ -220,7 +244,7 @@ const VenueBookingForm = () => {
     try {
       const { data, error } = await supabase
         .from("booking_access_codes")
-        .select("code, valid_until, access_code_status, venue_id, match_date, start_time, end_time")
+        .select("code, valid_until, access_code_status, venue_id, match_date, start_time, end_time, booking_id")
         .eq("code", code)
         .eq("venue_id", venue?.id)
         .single();
@@ -230,8 +254,13 @@ const VenueBookingForm = () => {
         return null;
       }
 
-      if (data.access_code_status !== "Pending" && data.access_code_status !== "Active") {
-        setAccessCodeError("Access code is not valid.");
+      if (data.access_code_status !== "Pending") {
+        setAccessCodeError("Access code is not valid or has already been used.");
+        return null;
+      }
+
+      if (data.booking_id) {
+        setAccessCodeError("Access code has already been used.");
         return null;
       }
 
@@ -252,8 +281,14 @@ const VenueBookingForm = () => {
   useEffect(() => {
     const subscription = form.watch((value) => {
       if (venue && value.match_date && value.start_time && value.end_time && !useAccessCode) {
-        const [startHours, startMinutes] = value.start_time.split(":").map(Number);
-        const [endHours, endMinutes] = value.end_time.split(":").map(Number);
+        const [startTime, startPeriod] = value.start_time.split(" ");
+        const [endTime, endPeriod] = value.end_time.split(" ");
+        let [startHours, startMinutes] = startTime.split(":").map(Number);
+        let [endHours, endMinutes] = endTime.split(":").map(Number);
+        if (startPeriod === "PM" && startHours !== 12) startHours += 12;
+        if (startPeriod === "AM" && startHours === 12) startHours = 0;
+        if (endPeriod === "PM" && endHours !== 12) endHours += 12;
+        if (endPeriod === "AM" && endHours === 12) endHours = 0;
         const startDateTime = new Date(value.match_date);
         startDateTime.setHours(startHours, startMinutes, 0, 0);
         const endDateTime = new Date(value.match_date);
@@ -282,7 +317,6 @@ const VenueBookingForm = () => {
             const [bookingEndH, bookingEndM] = booking.end_time.split(":").map(Number);
             bookingEnd.setHours(bookingEndH, bookingEndM, 0, 0);
 
-            // Check if the new booking overlaps with an existing booking
             return (
               (startDateTime < bookingEnd && endDateTime > bookingStart)
             );
@@ -298,7 +332,7 @@ const VenueBookingForm = () => {
         setAmount(venue.booking_fee * durationHours);
       } else if (!useAccessCode) {
         setAmount(0);
-        setIsSlotAvailable(true); // Reset availability if form is incomplete
+        setIsSlotAvailable(true);
       }
     });
     return () => subscription.unsubscribe();
@@ -312,9 +346,11 @@ const VenueBookingForm = () => {
       const accessCodeData = await validateAccessCode(code);
       if (accessCodeData) {
         const matchDate = new Date(accessCodeData.match_date);
+        const startTime12Hour = convertTo12HourFormat(accessCodeData.start_time);
+        const endTime12Hour = convertTo12HourFormat(accessCodeData.end_time);
         form.setValue("match_date", matchDate);
-        form.setValue("start_time", accessCodeData.start_time);
-        form.setValue("end_time", accessCodeData.end_time);
+        form.setValue("start_time", startTime12Hour);
+        form.setValue("end_time", endTime12Hour);
         setPaymentStatus("success");
         setAmount(0);
         setIsSlotAvailable(true);
@@ -360,15 +396,25 @@ const VenueBookingForm = () => {
     try {
       setPaying(true);
 
+      const [startTime, startPeriod] = form.getValues("start_time").split(" ");
+      let startHours = parseInt(startTime.split(":")[0], 10);
+      if (startPeriod === "PM" && startHours !== 12) startHours += 12;
+      if (startPeriod === "AM" && startHours === 12) startHours = 0;
+
+      const [endTime, endPeriod] = form.getValues("end_time").split(" ");
+      let endHours = parseInt(endTime.split(":")[0], 10);
+      if (endPeriod === "PM" && endHours !== 12) endHours += 12;
+      if (endPeriod === "AM" && endHours === 12) endHours = 0;
+
       const response = await supabase.functions.invoke("initialize-paystack-transaction", {
         body: {
           email: userEmail || defaultEmail,
-          amount: amount, // Amount is already in naira, backend handles conversion to kobo
+          amount: amount,
           venue_id: venue.id,
           slug: venue.slug,
           title: `Venue Booking - ${venue.name}`,
-          start_time: form.getValues("start_time"),
-          end_time: form.getValues("end_time"),
+          start_time: `${startHours.toString().padStart(2, "0")}:${startTime.split(":")[1]}`,
+          end_time: `${endHours.toString().padStart(2, "0")}:${endTime.split(":")[1]}`,
           match_date: format(form.getValues("match_date"), "yyyy-MM-dd"),
         },
       });
@@ -427,6 +473,16 @@ const VenueBookingForm = () => {
         bookingAccessCode = generateAccessCode();
       }
 
+      const [startTime, startPeriod] = values.start_time.split(" ");
+      let startHours = parseInt(startTime.split(":")[0], 10);
+      if (startPeriod === "PM" && startHours !== 12) startHours += 12;
+      if (startPeriod === "AM" && startHours === 12) startHours = 0;
+
+      const [endTime, endPeriod] = values.end_time.split(" ");
+      let endHours = parseInt(endTime.split(":")[0], 10);
+      if (endPeriod === "PM" && endHours !== 12) endHours += 12;
+      if (endPeriod === "AM" && endHours === 12) endHours = 0;
+
       const bookingPayload = useAccessCode
         ? {
             venue_id: venue.id,
@@ -434,8 +490,8 @@ const VenueBookingForm = () => {
             payment_status: "paid",
             payment_reference: null,
             match_date: format(values.match_date, "yyyy-MM-dd"),
-            start_time: values.start_time,
-            end_time: values.end_time,
+            start_time: `${startHours.toString().padStart(2, "0")}:${startTime.split(":")[1]}`,
+            end_time: `${endHours.toString().padStart(2, "0")}:${endTime.split(":")[1]}`,
           }
         : {
             venue_id: venue.id,
@@ -443,8 +499,8 @@ const VenueBookingForm = () => {
             payment_status: "paid",
             payment_reference: paymentReference,
             match_date: format(values.match_date, "yyyy-MM-dd"),
-            start_time: values.start_time,
-            end_time: values.end_time,
+            start_time: `${startHours.toString().padStart(2, "0")}:${startTime.split(":")[1]}`,
+            end_time: `${endHours.toString().padStart(2, "0")}:${endTime.split(":")[1]}`,
           };
 
       const { data: bookingData, error: bookingError } = await supabase.from("bookings").insert(bookingPayload).select().single();
@@ -456,8 +512,8 @@ const VenueBookingForm = () => {
         booking_id: bookingData.id,
         code: bookingAccessCode,
         match_date: format(values.match_date, "yyyy-MM-dd"),
-        start_time: values.start_time,
-        end_time: values.end_time,
+        start_time: `${startHours.toString().padStart(2, "0")}:${startTime.split(":")[1]}`,
+        end_time: `${endHours.toString().padStart(2, "0")}:${endTime.split(":")[1]}`,
         access_code_status: "Active",
       };
 
@@ -468,8 +524,8 @@ const VenueBookingForm = () => {
             booking_id: bookingData.id,
             access_code_status: "Active",
             match_date: format(values.match_date, "yyyy-MM-dd"),
-            start_time: values.start_time,
-            end_time: values.end_time,
+            start_time: `${startHours.toString().padStart(2, "0")}:${startTime.split(":")[1]}`,
+            end_time: `${endHours.toString().padStart(2, "0")}:${endTime.split(":")[1]}`,
           })
           .eq("code", bookingAccessCode)
           .eq("venue_id", venue.id);
@@ -545,7 +601,7 @@ const VenueBookingForm = () => {
 
       <div className="p-6 max-w-3xl mx-auto">
         <Form {...form}>
-          <form className="space-y-6 bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md">
+          <form className="space-y-6 bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md" onSubmit={form.handleSubmit(onSubmit)}>
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="useAccessCode"
@@ -629,15 +685,12 @@ const VenueBookingForm = () => {
                 <FormItem>
                   <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Start Time</FormLabel>
                   <FormControl>
-                    <div className="relative">
-                      <Input
-                        type="time"
-                        className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                        {...field}
-                        disabled={paymentStatus === "success" || useAccessCode}
-                      />
-                      <Clock className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                    </div>
+                    <TimeInput
+                      value={field.value}
+                      onChange={field.onChange}
+                      disabled={paymentStatus === "success" || useAccessCode}
+                      placeholder="12:00"
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -651,15 +704,12 @@ const VenueBookingForm = () => {
                 <FormItem>
                   <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">End Time</FormLabel>
                   <FormControl>
-                    <div className="relative">
-                      <Input
-                        type="time"
-                        className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                        {...field}
-                        disabled={paymentStatus === "success" || useAccessCode}
-                      />
-                      <Clock className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                    </div>
+                    <TimeInput
+                      value={field.value}
+                      onChange={field.onChange}
+                      disabled={paymentStatus === "success" || useAccessCode}
+                      placeholder="12:00"
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -670,10 +720,10 @@ const VenueBookingForm = () => {
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Booking Summary</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Venue: {venue.name}</p>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Price per hour: â�¦{venue.booking_fee.toFixed(2)}
+                Price per hour: ₦{venue.booking_fee.toFixed(2)}
               </p>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Total Amount: â�¦{amount.toFixed(2)}
+                Total Amount: ₦{amount.toFixed(2)}
               </p>
             </div>
 
@@ -702,7 +752,7 @@ const VenueBookingForm = () => {
                       Processing...
                     </>
                   ) : (
-                    `Pay Now (â�¦${amount.toFixed(2)})`
+                    `Pay Now (₦${amount.toFixed(2)})`
                   )}
                 </Button>
               </div>
@@ -722,7 +772,6 @@ const VenueBookingForm = () => {
                   type="submit"
                   className="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg mt-4"
                   disabled={paying}
-                  onClick={form.handleSubmit(onSubmit)}
                 >
                   {paying ? (
                     <>
