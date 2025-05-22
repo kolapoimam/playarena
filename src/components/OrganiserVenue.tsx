@@ -24,9 +24,10 @@ type OrganiserVenueProps = {
   preSelectedVenueSlug: string | null;
   onVenueCreated: (venueId: string, venueSlug: string, venueName: string) => void;
   onPrefill: (values: { match_date: Date; start_time: string; end_time: string }) => void;
+  onVenuesFetched: (venues: Venue[]) => void;
 };
 
-const OrganiserVenue = ({ venueId, onVenueChange, isPreFilled, preSelectedVenueSlug, onVenueCreated, onPrefill }: OrganiserVenueProps) => {
+const OrganiserVenue = ({ venueId, onVenueChange, isPreFilled, preSelectedVenueSlug, onVenueCreated, onPrefill, onVenuesFetched }: OrganiserVenueProps) => {
   const { toast } = useToast();
   const [venues, setVenues] = useState<Venue[]>([]);
   const [venuesLoading, setVenuesLoading] = useState(true);
@@ -34,25 +35,33 @@ const OrganiserVenue = ({ venueId, onVenueChange, isPreFilled, preSelectedVenueS
   const selectedVenue = venues.find((venue) => venue.id === venueId);
 
   const fetchVenues = debounce(async () => {
-    const cachedVenues = localStorage.getItem("venues");
-    const cacheTime = localStorage.getItem("venues_cache_time");
-    if (cachedVenues && cacheTime && Date.now() - parseInt(cacheTime) < 3600000) {
-      const parsed = JSON.parse(cachedVenues);
-      setVenues(parsed);
-      setVenuesLoading(false);
-
-      if (preSelectedVenueSlug && !isPreFilled) {
-        const venue = parsed.find((v: Venue) => v.slug === preSelectedVenueSlug);
-        if (venue) {
-          onVenueChange(venue.id);
-        } else {
-          console.warn("Preselected venue not found in cache:", preSelectedVenueSlug);
+    setVenuesLoading(true);
+    try {
+      // Check cache
+      const cachedVenues = localStorage.getItem("venues");
+      const cacheTime = localStorage.getItem("venues_cache_time");
+      if (cachedVenues && cacheTime && Date.now() - parseInt(cacheTime) < 3600000) {
+        try {
+          const parsed = JSON.parse(cachedVenues);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setVenues(parsed);
+            onVenuesFetched(parsed);
+            if (preSelectedVenueSlug && !isPreFilled) {
+              const venue = parsed.find((v: Venue) => v.slug === preSelectedVenueSlug);
+              if (venue) {
+                onVenueChange(venue.id);
+              } else {
+                console.warn("Preselected venue not found in cache:", preSelectedVenueSlug);
+              }
+            }
+            return;
+          }
+        } catch (e) {
+          console.warn("Invalid cache data, fetching fresh venues:", e);
         }
       }
-      return;
-    }
 
-    try {
+      // Fetch from Supabase
       const { data, error } = await supabase
         .from("venues")
         .select("id, slug, name, city, verified_status")
@@ -60,12 +69,15 @@ const OrganiserVenue = ({ venueId, onVenueChange, isPreFilled, preSelectedVenueS
         .limit(50);
 
       if (error) throw error;
-      setVenues(data || []);
-      localStorage.setItem("venues", JSON.stringify(data || []));
+
+      const fetchedVenues = data || [];
+      setVenues(fetchedVenues);
+      onVenuesFetched(fetchedVenues);
+      localStorage.setItem("venues", JSON.stringify(fetchedVenues));
       localStorage.setItem("venues_cache_time", Date.now().toString());
 
       if (preSelectedVenueSlug && !isPreFilled) {
-        const venue = data?.find((v) => v.slug === preSelectedVenueSlug);
+        const venue = fetchedVenues.find((v) => v.slug === preSelectedVenueSlug);
         if (venue) {
           onVenueChange(venue.id);
         } else {
@@ -77,11 +89,21 @@ const OrganiserVenue = ({ venueId, onVenueChange, isPreFilled, preSelectedVenueS
           });
         }
       }
+
+      if (fetchedVenues.length === 0) {
+        toast({
+          title: "No Venues Available",
+          description: "No venues found. Please add a new venue.",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
       console.error("Error fetching venues:", error);
+      setVenues([]);
+      onVenuesFetched([]);
       toast({
         title: "Error",
-        description: "Failed to load venues. Please try again.",
+        description: "Failed to load venues. Please try again or add a new venue.",
         variant: "destructive",
       });
     } finally {
@@ -92,27 +114,25 @@ const OrganiserVenue = ({ venueId, onVenueChange, isPreFilled, preSelectedVenueS
   useEffect(() => {
     fetchVenues();
     return () => fetchVenues.cancel();
-  }, [preSelectedVenueSlug, isPreFilled, onVenueChange]);
+  }, [preSelectedVenueSlug, isPreFilled, onVenueChange, onVenuesFetched]);
 
   return (
     <FormItem>
       <div className="flex justify-between items-center">
         <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Venue</FormLabel>
-        {!isPreFilled && (
-          <Dialog open={venueDialogOpen} onOpenChange={setVenueDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm" type="button" className="text-sm font-medium hover:bg-green-50 dark:hover:bg-gray-700 transition-colors">
-                <Plus size={16} className="mr-1" /> Add New Venue
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
-              <VenueForm 
-                onSuccess={onVenueCreated} 
-                onCancel={() => setVenueDialogOpen(false)} 
-              />
-            </DialogContent>
-          </Dialog>
-        )}
+        <Dialog open={venueDialogOpen} onOpenChange={setVenueDialogOpen}>
+          <DialogTrigger asChild>
+            <Button variant="outline" size="sm" type="button" className="text-sm font-medium hover:bg-green-50 dark:hover:bg-gray-700 transition-colors">
+              <Plus size={16} className="mr-1" /> Add New Venue
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
+            <VenueForm 
+              onSuccess={onVenueCreated} 
+              onCancel={() => setVenueDialogOpen(false)} 
+            />
+          </DialogContent>
+        </Dialog>
       </div>
       <div className="space-y-2">
         <Select onValueChange={onVenueChange} value={venueId} disabled={isPreFilled && !!selectedVenue}>
@@ -134,7 +154,7 @@ const OrganiserVenue = ({ venueId, onVenueChange, isPreFilled, preSelectedVenueS
               ))
             ) : (
               <SelectItem value="none" disabled>
-                No venues found
+                No venues available
               </SelectItem>
             )}
           </SelectContent>
@@ -142,6 +162,11 @@ const OrganiserVenue = ({ venueId, onVenueChange, isPreFilled, preSelectedVenueS
         {isPreFilled && selectedVenue && (
           <p className="text-sm text-gray-500 dark:text-gray-400">
             Venue is prefilled from your booking. Contact support to change.
+          </p>
+        )}
+        {!venuesLoading && venues.length === 0 && (
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            No venues found. Please add a new venue using the button above.
           </p>
         )}
       </div>
