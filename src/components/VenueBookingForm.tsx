@@ -10,11 +10,12 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { format, isWithinInterval } from "date-fns";
+import { format, isWithinInterval, parse } from "date-fns";
 import { CalendarIcon, ArrowLeft, Loader } from "lucide-react";
 import { lazy, Suspense } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import TimeInput from "@/components/TimeInput";
+import { formatISO } from "date-fns";
 
 // Lazy load Navbar to avoid circular dependencies
 const Navbar = lazy(() => import("@/components/Navbar"));
@@ -35,6 +36,14 @@ const convertTo12HourFormat = (time: string): string => {
   const period = hours >= 12 ? 'PM' : 'AM';
   const adjustedHours = hours % 12 || 12;
   return `${adjustedHours}:${minutes.toString().padStart(2, '0')} ${period}`;
+};
+
+const convertTo24Hour = (time12: string): string => {
+  const [time, period] = time12.split(' ');
+  let [hours, minutes] = time.split(':').map(Number);
+  if (period.toUpperCase() === 'PM' && hours !== 12) hours += 12;
+  if (period.toUpperCase() === 'AM' && hours === 12) hours = 0;
+  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
 };
 
 const bookingSchema = z.object({
@@ -214,7 +223,7 @@ const VenueBookingForm = () => {
           setPaymentStatus("success");
           toast({
             title: "Payment Successful",
-            description: "Your payment was processed successfully. Please complete your booking.",
+            description: "Your payment was processed successfully. Redirecting to organize your match...",
           });
         } else {
           setPaymentStatus("failed");
@@ -318,7 +327,9 @@ const VenueBookingForm = () => {
             bookingEnd.setHours(bookingEndH, bookingEndM, 0, 0);
 
             return (
-              (startDateTime < bookingEnd && endDateTime > bookingStart)
+              isWithinInterval(startDateTime, { start: bookingStart, end: bookingEnd }) ||
+              isWithinInterval(endDateTime, { start: bookingStart, end: bookingEnd }) ||
+              isWithinInterval(bookingStart, { start: startDateTime, end: endDateTime })
             );
           });
 
@@ -493,6 +504,7 @@ const VenueBookingForm = () => {
             match_date: format(values.match_date, "yyyy-MM-dd"),
             start_time: `${startHours.toString().padStart(2, "0")}:${startTime.split(":")[1]}`,
             end_time: `${endHours.toString().padStart(2, "0")}:${endTime.split(":")[1]}`,
+            created_at: formatISO(new Date()),
           }
         : {
             venue_id: venue.id,
@@ -502,6 +514,7 @@ const VenueBookingForm = () => {
             match_date: format(values.match_date, "yyyy-MM-dd"),
             start_time: `${startHours.toString().padStart(2, "0")}:${startTime.split(":")[1]}`,
             end_time: `${endHours.toString().padStart(2, "0")}:${endTime.split(":")[1]}`,
+            created_at: formatISO(new Date()),
           };
 
       const { data: bookingData, error: bookingError } = await supabase.from("bookings").insert(bookingPayload).select().single();
@@ -515,7 +528,9 @@ const VenueBookingForm = () => {
         match_date: format(values.match_date, "yyyy-MM-dd"),
         start_time: `${startHours.toString().padStart(2, "0")}:${startTime.split(":")[1]}`,
         end_time: `${endHours.toString().padStart(2, "0")}:${endTime.split(":")[1]}`,
+        valid_until: format(parse(values.end_time, "hh:mm a", new Date()), "yyyy-MM-dd HH:mm:ss"),
         access_code_status: "Pending", // Delay 'Active' until match is created
+        created_at: formatISO(new Date()),
       };
 
       if (useAccessCode) {
@@ -527,6 +542,8 @@ const VenueBookingForm = () => {
             match_date: format(values.match_date, "yyyy-MM-dd"),
             start_time: `${startHours.toString().padStart(2, "0")}:${startTime.split(":")[1]}`,
             end_time: `${endHours.toString().padStart(2, "0")}:${endTime.split(":")[1]}`,
+            valid_until: format(parse(values.end_time, "hh:mm a", new Date()), "yyyy-MM-dd HH:mm:ss"),
+            created_at: formatISO(new Date()),
           })
           .eq("code", bookingAccessCode)
           .eq("venue_id", venue.id);
@@ -669,7 +686,7 @@ const VenueBookingForm = () => {
                         mode="single"
                         selected={field.value}
                         onSelect={field.onChange}
-                        disabled={(date) => date < new Date().setHours(0, 0, 0, 0)}
+                        disabled={(date) => date < new Date("2025-05-22T13:58:00+01:00").setHours(0, 0, 0, 0)}
                         initialFocus
                       />
                     </PopoverContent>
