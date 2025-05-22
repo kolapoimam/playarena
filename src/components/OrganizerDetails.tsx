@@ -33,6 +33,28 @@ const OrganizerDetails = ({ userId }: { userId: string | null }) => {
     return () => subscription.unsubscribe();
   }, [form.watch]);
 
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (userId) {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("nickname, first_name")
+          .eq("id", userId)
+          .single();
+
+        if (error) {
+          toast({ title: "Error", description: "Failed to load profile.", variant: "destructive" });
+          return;
+        }
+
+        const organizerName = data?.nickname || data?.first_name || "";
+        form.setValue("organizer_name", organizerName);
+      }
+    };
+
+    fetchProfile();
+  }, [userId, form, toast]);
+
   const handleCopyPassword = () => {
     const password = form.getValues("access_password");
     if (password) {
@@ -99,9 +121,10 @@ const OrganizerDetails = ({ userId }: { userId: string | null }) => {
               <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Your Name</FormLabel>
               <FormControl>
                 <Input
-                  placeholder="Enter your name"
+                  placeholder={userId ? "" : "Enter your name"}
                   className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                   {...field}
+                  readOnly={!!userId}
                 />
               </FormControl>
               <FormMessage />
