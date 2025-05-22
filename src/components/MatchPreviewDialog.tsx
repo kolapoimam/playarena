@@ -27,6 +27,7 @@ type FormValues = {
 type Venue = {
   id: string;
   name: string;
+  city?: string;
 };
 
 type MatchPreviewDialogProps = {
@@ -55,7 +56,7 @@ const MatchPreviewDialog = ({ open, onOpenChange, formValues, selectedVenue }: M
             <div className="space-y-2 mb-4 text-sm">
               <div className="flex items-center">
                 <MapPin className="h-4 w-4 mr-2" />
-                <span>{selectedVenue?.name || "Venue"}</span>
+                <span>{selectedVenue ? `${selectedVenue.name}${selectedVenue.city ? `, ${selectedVenue.city}` : ''}` : "Venue not loaded"}</span>
               </div>
               <div className="flex items-center">
                 <CalendarIcon className="h-4 w-4 mr-2" />
