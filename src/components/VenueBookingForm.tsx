@@ -13,6 +13,7 @@ import { z } from "zod";
 import { format, isWithinInterval } from "date-fns";
 import { CalendarIcon, ArrowLeft, Clock, Loader } from "lucide-react";
 import { lazy, Suspense } from "react";
+import { Checkbox } from "@/components/ui/checkbox";
 
 // Lazy load Navbar to avoid circular dependencies
 const Navbar = lazy(() => import("@/components/Navbar"));
@@ -92,6 +93,9 @@ const VenueBookingForm = () => {
   const [amount, setAmount] = useState(0);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [isSlotAvailable, setIsSlotAvailable] = useState(true);
+  const [useAccessCode, setUseAccessCode] = useState(false);
+  const [accessCode, setAccessCode] = useState("");
+  const [accessCodeError, setAccessCodeError] = useState<string | null>(null);
   const defaultEmail = "kolapoimam1@gmail.com";
 
   const form = useForm<BookingFormValues>({
@@ -212,9 +216,42 @@ const VenueBookingForm = () => {
     verifyPayment();
   }, [paymentReference, venue, toast]);
 
+  const validateAccessCode = async (code: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("booking_access_codes")
+        .select("code, valid_until, access_code_status, venue_id, match_date, start_time, end_time")
+        .eq("code", code)
+        .eq("venue_id", venue?.id)
+        .single();
+
+      if (error || !data) {
+        setAccessCodeError("Invalid access code.");
+        return null;
+      }
+
+      if (data.access_code_status !== "Pending" && data.access_code_status !== "Active") {
+        setAccessCodeError("Access code is not valid.");
+        return null;
+      }
+
+      const validUntil = new Date(data.valid_until);
+      if (validUntil < new Date()) {
+        setAccessCodeError("Access code has expired.");
+        return null;
+      }
+
+      return data;
+    } catch (error) {
+      console.error("Error validating access code:", error);
+      setAccessCodeError("Failed to validate access code.");
+      return null;
+    }
+  };
+
   useEffect(() => {
     const subscription = form.watch((value) => {
-      if (venue && value.match_date && value.start_time && value.end_time) {
+      if (venue && value.match_date && value.start_time && value.end_time && !useAccessCode) {
         const [startHours, startMinutes] = value.start_time.split(":").map(Number);
         const [endHours, endMinutes] = value.end_time.split(":").map(Number);
         const startDateTime = new Date(value.match_date);
@@ -259,13 +296,47 @@ const VenueBookingForm = () => {
         // Calculate amount
         const durationHours = (endDateTime.getTime() - startDateTime.getTime()) / (1000 * 60 * 60);
         setAmount(venue.booking_fee * durationHours);
-      } else {
+      } else if (!useAccessCode) {
         setAmount(0);
         setIsSlotAvailable(true); // Reset availability if form is incomplete
       }
     });
     return () => subscription.unsubscribe();
-  }, [form, venue]);
+  }, [form, venue, useAccessCode]);
+
+  const handleAccessCodeChange = async (code: string) => {
+    setAccessCode(code);
+    setAccessCodeError(null);
+
+    if (code.length === 6) {
+      const accessCodeData = await validateAccessCode(code);
+      if (accessCodeData) {
+        const matchDate = new Date(accessCodeData.match_date);
+        form.setValue("match_date", matchDate);
+        form.setValue("start_time", accessCodeData.start_time);
+        form.setValue("end_time", accessCodeData.end_time);
+        setPaymentStatus("success");
+        setAmount(0);
+        setIsSlotAvailable(true);
+      } else {
+        form.reset({
+          match_date: undefined,
+          start_time: "",
+          end_time: "",
+        });
+        setPaymentStatus("pending");
+        setAmount(0);
+      }
+    } else {
+      form.reset({
+        match_date: undefined,
+        start_time: "",
+        end_time: "",
+      });
+      setPaymentStatus("pending");
+      setAmount(0);
+    }
+  };
 
   const generateAccessCode = () => {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -340,10 +411,10 @@ const VenueBookingForm = () => {
   };
 
   const onSubmit = async (values: BookingFormValues) => {
-    if (!venue || paymentStatus !== "success") {
+    if (!venue || (paymentStatus !== "success" && !useAccessCode)) {
       toast({
         title: "Error",
-        description: "Please complete the payment before submitting the booking.",
+        description: "Please complete the payment or enter a valid access code before submitting the booking.",
         variant: "destructive",
       });
       return;
@@ -351,34 +422,71 @@ const VenueBookingForm = () => {
 
     try {
       setPaying(true);
-      const accessCode = generateAccessCode();
+      let bookingAccessCode = accessCode;
+      if (!useAccessCode) {
+        bookingAccessCode = generateAccessCode();
+      }
 
-      const { data: bookingData, error: bookingError } = await supabase.from("bookings").insert({
-        venue_id: venue.id,
-        amount: amount,
-        payment_status: "paid",
-        payment_reference: paymentReference,
-      }).select().single();
+      const bookingPayload = useAccessCode
+        ? {
+            venue_id: venue.id,
+            amount: 0,
+            payment_status: "paid",
+            payment_reference: null,
+            match_date: format(values.match_date, "yyyy-MM-dd"),
+            start_time: values.start_time,
+            end_time: values.end_time,
+          }
+        : {
+            venue_id: venue.id,
+            amount: amount,
+            payment_status: "paid",
+            payment_reference: paymentReference,
+            match_date: format(values.match_date, "yyyy-MM-dd"),
+            start_time: values.start_time,
+            end_time: values.end_time,
+          };
+
+      const { data: bookingData, error: bookingError } = await supabase.from("bookings").insert(bookingPayload).select().single();
 
       if (bookingError) throw bookingError;
 
-      const { error: accessCodeError } = await supabase.from("venue_access_codes").insert({
+      const accessCodePayload = {
         venue_id: venue.id,
-        booking_id: bookingData.id, // Link the access code to the booking
-        code: accessCode,
+        booking_id: bookingData.id,
+        code: bookingAccessCode,
         match_date: format(values.match_date, "yyyy-MM-dd"),
         start_time: values.start_time,
         end_time: values.end_time,
-      });
+        access_code_status: "Active",
+      };
 
-      if (accessCodeError) throw accessCodeError;
+      if (useAccessCode) {
+        const { error: updateAccessCodeError } = await supabase
+          .from("booking_access_codes")
+          .update({
+            booking_id: bookingData.id,
+            access_code_status: "Active",
+            match_date: format(values.match_date, "yyyy-MM-dd"),
+            start_time: values.start_time,
+            end_time: values.end_time,
+          })
+          .eq("code", bookingAccessCode)
+          .eq("venue_id", venue.id);
+
+        if (updateAccessCodeError) throw updateAccessCodeError;
+      } else {
+        const { error: accessCodeError } = await supabase.from("booking_access_codes").insert(accessCodePayload);
+
+        if (accessCodeError) throw accessCodeError;
+      }
 
       toast({
         title: "Success",
         description: "Booking successful! Redirecting to organize match...",
       });
 
-      navigate(`/organize?venue=${venue.slug}&code=${accessCode}`);
+      navigate(`/organize?venue=${venue.slug}&code=${bookingAccessCode}`);
     } catch (error: any) {
       console.error("Error saving booking:", error);
       toast({
@@ -438,6 +546,48 @@ const VenueBookingForm = () => {
       <div className="p-6 max-w-3xl mx-auto">
         <Form {...form}>
           <form className="space-y-6 bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="useAccessCode"
+                checked={useAccessCode}
+                onCheckedChange={(checked) => {
+                  setUseAccessCode(!!checked);
+                  setAccessCode("");
+                  setAccessCodeError(null);
+                  form.reset({
+                    match_date: undefined,
+                    start_time: "",
+                    end_time: "",
+                  });
+                  setPaymentStatus("pending");
+                  setAmount(0);
+                }}
+              />
+              <label
+                htmlFor="useAccessCode"
+                className="text-sm font-medium text-gray-700 dark:text-gray-300"
+              >
+                Use Access Code
+              </label>
+            </div>
+
+            {useAccessCode && (
+              <div>
+                <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Access Code</FormLabel>
+                <Input
+                  type="text"
+                  value={accessCode}
+                  onChange={(e) => handleAccessCodeChange(e.target.value.toUpperCase())}
+                  placeholder="Enter 6-character access code"
+                  maxLength={6}
+                  className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                />
+                {accessCodeError && (
+                  <p className="text-sm text-red-600 mt-1">{accessCodeError}</p>
+                )}
+              </div>
+            )}
+
             <FormField
               control={form.control}
               name="match_date"
@@ -450,7 +600,7 @@ const VenueBookingForm = () => {
                         <Button
                           variant="outline"
                           className="w-full pl-3 text-left text-base font-normal border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                          disabled={paymentStatus === "success"}
+                          disabled={paymentStatus === "success" || useAccessCode}
                         >
                           {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
                           <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
@@ -484,7 +634,7 @@ const VenueBookingForm = () => {
                         type="time"
                         className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                         {...field}
-                        disabled={paymentStatus === "success"}
+                        disabled={paymentStatus === "success" || useAccessCode}
                       />
                       <Clock className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
                     </div>
@@ -506,7 +656,7 @@ const VenueBookingForm = () => {
                         type="time"
                         className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                         {...field}
-                        disabled={paymentStatus === "success"}
+                        disabled={paymentStatus === "success" || useAccessCode}
                       />
                       <Clock className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
                     </div>
@@ -520,10 +670,10 @@ const VenueBookingForm = () => {
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Booking Summary</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Venue: {venue.name}</p>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Price per hour: ₦{venue.booking_fee.toFixed(2)}
+                Price per hour: â�¦{venue.booking_fee.toFixed(2)}
               </p>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Total Amount: ₦{amount.toFixed(2)}
+                Total Amount: â�¦{amount.toFixed(2)}
               </p>
             </div>
 
@@ -534,7 +684,7 @@ const VenueBookingForm = () => {
               </div>
             )}
 
-            {amount > 0 && paymentStatus === "pending" && (
+            {amount > 0 && paymentStatus === "pending" && !useAccessCode && (
               <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md space-y-4">
                 <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Payment Required</h3>
                 <p className="text-gray-600 dark:text-gray-400">
@@ -552,7 +702,7 @@ const VenueBookingForm = () => {
                       Processing...
                     </>
                   ) : (
-                    `Pay Now (₦${amount.toFixed(2)})`
+                    `Pay Now (â�¦${amount.toFixed(2)})`
                   )}
                 </Button>
               </div>
@@ -562,8 +712,11 @@ const VenueBookingForm = () => {
               <div className="bg-green-50 p-4 rounded-md border border-green-200 text-green-700">
                 <p className="font-medium">Payment Successful!</p>
                 <p className="text-sm">Please complete your booking below.</p>
-                {paymentReference && (
+                {paymentReference && !useAccessCode && (
                   <p className="text-sm mt-1">Reference: {paymentReference}</p>
+                )}
+                {useAccessCode && (
+                  <p className="text-sm mt-1">Access Code: {accessCode}</p>
                 )}
                 <Button
                   type="submit"
