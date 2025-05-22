@@ -97,19 +97,36 @@ const Organize = () => {
           }
 
           const normalizedCode = accessCode.toUpperCase();
-          const { data: accessCodeData, error: accessCodeError } = await supabase
-            .from("venue_access_codes")
-            .select("match_date, start_time, end_time, used")
+          let accessCodeData = null;
+
+          // Try booking_access_codes first (manager-generated, no payment)
+          const { data: bookingData, error: bookingError } = await supabase
+            .from("booking_access_codes")
+            .select("match_date, start_time, end_time, access_code_status, booking_id")
             .eq("code", normalizedCode)
             .eq("venue_id", venue.id)
             .single();
 
-          if (accessCodeError || !accessCodeData) {
-            console.error("Access code fetch error:", accessCodeError);
-            throw new Error("Invalid or expired access code");
+          if (bookingError || !bookingData) {
+            // Fallback to venue_access_codes (payment-based)
+            const { data: venueData, error: venueAccessError } = await supabase
+              .from("venue_access_codes")
+              .select("match_date, start_time, end_time, used")
+              .eq("code", normalizedCode)
+              .eq("venue_id", venue.id)
+              .single();
+
+            if (venueAccessError || !venueData) {
+              console.error("Access code fetch error:", venueAccessError || bookingError);
+              throw new Error("Invalid or expired access code");
+            }
+            accessCodeData = venueData;
+          } else {
+            accessCodeData = bookingData;
           }
 
-          if (accessCodeData.used) {
+          // Validate based on the table
+          if (accessCodeData.access_code_status === 'Active' || accessCodeData.used) {
             console.error("Access code already used:", normalizedCode);
             throw new Error("This booking has already been used to create a match.");
           }
@@ -137,7 +154,16 @@ const Organize = () => {
           setVenues([venue]);
           setSelectedVenueId(venue.id);
           setPrefillData(prefill);
-          setHasValidBookingCode(true); // Treat venue_access_codes as a valid booking
+          setHasValidBookingCode(true);
+
+          // Apply prefill after formMethods is ready
+          if (formMethods) {
+            formMethods.setValue("venue_id", prefill.venue_id);
+            formMethods.setValue("match_date", prefill.match_date);
+            formMethods.setValue("start_time", prefill.start_time);
+            formMethods.setValue("end_time", prefill.end_time);
+            setIsPreFilled(true);
+          }
 
           toast({
             title: "Venue Booking Loaded",
@@ -156,7 +182,7 @@ const Organize = () => {
     };
 
     handlePreFill();
-  }, [preSelectedVenueSlug, accessCode, toast, navigate]);
+  }, [preSelectedVenueSlug, accessCode, toast, navigate, formMethods]);
 
   useEffect(() => {
     if (formMethods && prefillData && !isPreFilled) {
@@ -164,9 +190,9 @@ const Organize = () => {
       formMethods.setValue("match_date", prefillData.match_date);
       formMethods.setValue("start_time", prefillData.start_time);
       formMethods.setValue("end_time", prefillData.end_time);
-      setIsPreFilled(true); // Lock fields only after setting values
+      setIsPreFilled(true);
     }
-  }, [formMethods, prefillData]);
+  }, [formMethods, prefillData, isPreFilled]);
 
   const selectedVenue = formMethods
     ? venues.find(venue => venue.id === formMethods.watch().venue_id)
@@ -224,6 +250,7 @@ const Organize = () => {
             }
           }}
           onFormReady={(methods) => setFormMethods(methods)}
+          onVenuesFetched={(venues) => setVenues(venues)}
         />
         {formMethods && (
           <>
