@@ -24,7 +24,7 @@ type Venue = {
   slug: string;
   name: string;
   booking_fee: number;
-  verified_vstatus: 'True' | 'False';
+  verified_status: 'True' | 'False';
 };
 
 type PaymentStatus = "pending" | "success" | "failed";
@@ -431,9 +431,10 @@ const VenueBookingForm = () => {
           setPaymentStatus("success");
           toast({
             title: "Payment Successful",
-            description: "Your payment was processed successfully. Please complete your booking.",
+            description: "Your payment was processed successfully. Redirecting to organize your match...",
           });
-          navigate(`/venue/${venue.slug}/book?reference=${transaction.reference}`);
+          const generatedCode = generateAccessCode();
+          navigate(`/organize?venue=${venue.slug}&code=${generatedCode}`);
           setPaying(false);
         },
         onCancel: () => {
@@ -514,7 +515,7 @@ const VenueBookingForm = () => {
         match_date: format(values.match_date, "yyyy-MM-dd"),
         start_time: `${startHours.toString().padStart(2, "0")}:${startTime.split(":")[1]}`,
         end_time: `${endHours.toString().padStart(2, "0")}:${endTime.split(":")[1]}`,
-        access_code_status: "Active",
+        access_code_status: "Pending", // Delay 'Active' until match is created
       };
 
       if (useAccessCode) {
@@ -522,7 +523,7 @@ const VenueBookingForm = () => {
           .from("booking_access_codes")
           .update({
             booking_id: bookingData.id,
-            access_code_status: "Active",
+            access_code_status: "Pending",
             match_date: format(values.match_date, "yyyy-MM-dd"),
             start_time: `${startHours.toString().padStart(2, "0")}:${startTime.split(":")[1]}`,
             end_time: `${endHours.toString().padStart(2, "0")}:${endTime.split(":")[1]}`,
