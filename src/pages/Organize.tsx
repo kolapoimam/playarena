@@ -33,6 +33,7 @@ const Organize = () => {
   const [selectedVenueId, setSelectedVenueId] = useState<string | undefined>(undefined);
   const [hasValidBookingCode, setHasValidBookingCode] = useState(false);
   const [formMethods, setFormMethods] = useState<{ setValue: (name: string, value: any) => void; watch: () => any } | null>(null);
+  const [codeTable, setCodeTable] = useState<"venue_access_codes" | "booking_access_codes" | null>(null);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -61,27 +62,49 @@ const Organize = () => {
 
         let accessCodeData = null;
 
-        // First check venue_access_codes
+        // Check venue_access_codes
         const { data: vacData } = await supabase
           .from("venue_access_codes")
-          .select("match_date, start_time, end_time, used")
+          .select("match_date, start_time, end_time, status, expiry_date")
           .eq("code", accessCode)
           .eq("venue_id", venue.id)
           .single();
 
-        if (vacData && !vacData.used) {
+        if (vacData && vacData.status === "pending") {
+          const expiryDate = new Date(vacData.expiry_date);
+          const now = new Date(); // Current time: 08:32 PM WAT, May 22, 2025
+          if (expiryDate < now) {
+            await supabase
+              .from("venue_access_codes")
+              .update({ status: "inactive" })
+              .eq("code", accessCode)
+              .eq("venue_id", venue.id);
+            throw new Error("Access code has expired.");
+          }
           accessCodeData = vacData;
+          setCodeTable("venue_access_codes");
         } else {
-          // Fallback to booking_access_codes_rows
+          // Check booking_access_codes
           const { data: bacData } = await supabase
-            .from("booking_access_codes_rows")
-            .select("match_date, start_time, end_time, access_code_status")
+            .from("booking_access_codes")
+            .select("match_date, start_time, end_time, status, expiry_date")
             .eq("code", accessCode)
             .eq("venue_id", venue.id)
             .single();
 
-          if (bacData && bacData.access_code_status === "pending") {
+          if (bacData && bacData.status === "pending") {
+            const expiryDate = new Date(bacData.expiry_date);
+            const now = new Date(); // Current time: 08:32 PM WAT, May 22, 2025
+            if (expiryDate < now) {
+              await supabase
+                .from("booking_access_codes")
+                .update({ status: "inactive" })
+                .eq("code", accessCode)
+                .eq("venue_id", venue.id);
+              throw new Error("Access code has expired.");
+            }
             accessCodeData = bacData;
+            setCodeTable("booking_access_codes");
           }
         }
 
@@ -165,11 +188,12 @@ const Organize = () => {
           preSelectedVenueSlug={preSelectedVenueSlug}
           accessCode={accessCode}
           onSubmitSuccess={async (supercode, matchSlug) => {
-            if (accessCode) {
+            if (accessCode && codeTable) {
               await supabase
-                .from("booking_access_codes_rows")
-                .update({ access_code_status: "active" })
-                .eq("code", accessCode);
+                .from(codeTable)
+                .update({ status: "active" })
+                .eq("code", accessCode)
+                .eq("venue_id", selectedVenueId);
             }
 
             setSupercode(supercode);
