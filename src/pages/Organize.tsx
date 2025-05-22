@@ -8,7 +8,6 @@ import Navbar from "@/components/Navbar";
 import MatchForm from "@/components/MatchForm";
 import MatchPreviewDialog from "@/components/MatchPreviewDialog";
 import MatchSuccessDialog from "@/components/MatchSuccessDialog";
-import { parse, format } from "date-fns";
 
 type Venue = {
   id: string;
@@ -16,38 +15,6 @@ type Venue = {
   name: string;
   city: string;
   verified_status: 'True' | 'False';
-};
-
-type FormValues = {
-  title: string;
-  venue_id: string;
-  match_date: Date | undefined;
-  start_time: string;
-  end_time: string;
-  total_slots: number | undefined;
-  is_paid: boolean;
-  price: number | null | undefined;
-  notes: string | undefined;
-  organizer_name: string;
-  organizer_phone: string | null | undefined;
-  disclose_phone: boolean;
-  player_number_required: boolean;
-  is_private: boolean;
-  access_password: string | null | undefined;
-  allow_bulk_tickets: boolean;
-  skill_level: string | null | undefined;
-  match_type: string | null | undefined;
-  gender: string | null | undefined;
-  sell_tickets: boolean;
-  ticket_price: number | null | undefined;
-  max_tickets: number | null | undefined;
-};
-
-type PrefillData = {
-  venue_id: string;
-  match_date: Date;
-  start_time: string;
-  end_time: string;
 };
 
 const Organize = () => {
@@ -65,12 +32,6 @@ const Organize = () => {
   const [venues, setVenues] = useState<Venue[]>([]);
   const [selectedVenueId, setSelectedVenueId] = useState<string | undefined>(undefined);
   const [hasValidBookingCode, setHasValidBookingCode] = useState(false);
-  const [formMethods, setFormMethods] = useState<{
-    watch: () => FormValues;
-    setValue: (name: keyof FormValues, value: any) => void;
-  } | null>(null);
-  const [prefillData, setPrefillData] = useState<PrefillData | null>(null);
-  const [prefillError, setPrefillError] = useState<string | null>(null);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -84,169 +45,58 @@ const Organize = () => {
 
   useEffect(() => {
     const handlePreFill = async () => {
-      if (!preSelectedVenueSlug || !accessCode) {
-        setPrefillError("Missing venue or access code");
-        console.log("Pre-fill skipped: missing venue or code", { preSelectedVenueSlug, accessCode });
-        return;
-      }
-
-      try {
-        // Fetch venue by slug first
-        let venue: Venue | null = null;
-        const { data: venueBySlug, error: venueError } = await supabase
-          .from("venues")
-          .select("id, slug, name, city, verified_status")
-          .eq("slug", preSelectedVenueSlug)
-          .single();
-
-        if (venueError || !venueBySlug) {
-          console.warn("Venue not found by slug:", preSelectedVenueSlug, venueError?.message);
-        } else {
-          venue = venueBySlug;
-        }
-
-        const normalizedCode = accessCode.toUpperCase();
-        let accessCodeData = null;
-
-        // Try booking_access_codes
-        const { data: bookingData, error: bookingError } = await supabase
-          .from("booking_access_codes")
-          .select("match_date, start_time, end_time, access_code_status, booking_id, venue_id, valid_until")
-          .eq("code", normalizedCode)
-          .single();
-
-        if (!bookingError && bookingData) {
-          accessCodeData = bookingData;
-        } else {
-          // Fallback to venue_access_codes
-          const { data: venueData, error: venueAccessError } = await supabase
-            .from("venue_access_codes")
-            .select("match_date, start_time, end_time, used, venue_id")
-            .eq("code", normalizedCode)
-            .single();
-
-          if (venueAccessError || !venueData) {
-            console.error("Access code fetch error:", { bookingError, venueAccessError });
-            throw new Error("Invalid or expired access code");
-          }
-          accessCodeData = venueData;
-        }
-
-        // If venue not found by slug, fetch by venue_id from access code
-        if (!venue && accessCodeData.venue_id) {
-          const { data: venueById, error: venueIdError } = await supabase
+      if (preSelectedVenueSlug && accessCode) {
+        try {
+          const { data: venue, error: venueError } = await supabase
             .from("venues")
             .select("id, slug, name, city, verified_status")
-            .eq("id", accessCodeData.venue_id)
+            .eq("slug", preSelectedVenueSlug)
             .single();
 
-          if (venueIdError || !venueById) {
-            console.error("Venue not found by ID:", accessCodeData.venue_id, venueIdError?.message);
-            throw new Error("Venue associated with access code not found");
+          if (venueError || !venue) {
+            throw new Error("Venue not found");
           }
-          venue = venueById;
+
+          const { data: accessCodeData, error: accessCodeError } = await supabase
+            .from("venue_access_codes")
+            .select("match_date, start_time, end_time, used")
+            .eq("code", accessCode)
+            .eq("venue_id", venue.id)
+            .single();
+
+          if (accessCodeError || !accessCodeData) {
+            throw new Error("Invalid or expired access code");
+          }
+
+          if (accessCodeData.used) {
+            throw new Error("This booking has already been used to create a match.");
+          }
+
+          setVenues([venue]);
+          setIsPreFilled(true);
+          setSelectedVenueId(venue.id);
+          setHasValidBookingCode(true); // Treat venue_access_codes as a valid booking for verified venues
+
+          toast({
+            title: "Venue Booking Loaded",
+            description: `Form pre-filled with booking details for ${venue.name}.`,
+          });
+        } catch (error: any) {
+          console.error("Error pre-filling form:", error);
+          toast({
+            title: "Error",
+            description: error.message || "Failed to load booking details.",
+            variant: "destructive",
+          });
+          navigate("/organize");
         }
-
-        if (!venue) {
-          console.error("No venue found for pre-fill", { preSelectedVenueSlug, accessCodeData });
-          throw new Error("Venue not found");
-        }
-
-        // Validate access code
-        const isBookingCode = 'access_code_status' in accessCodeData;
-        let isValid = false;
-        if (isBookingCode) {
-          const validUntil = new Date(accessCodeData.valid_until);
-          const now = new Date();
-          // Convert to WAT (UTC+1)
-          const watOffset = 1 * 60 * 60 * 1000;
-          const nowWAT = new Date(now.getTime() + watOffset);
-          isValid = accessCodeData.access_code_status === 'Pending' && validUntil > nowWAT;
-        } else {
-          isValid = !accessCodeData.used;
-        }
-
-        if (!isValid) {
-          console.error("Invalid access code:", normalizedCode, { isBookingCode, accessCodeData });
-          throw new Error("This access code is invalid or has been used.");
-        }
-
-        const matchDate = parse(accessCodeData.match_date, "yyyy-MM-dd", new Date());
-        if (!matchDate || isNaN(matchDate.getTime())) {
-          console.error("Invalid match_date:", accessCodeData.match_date);
-          throw new Error("Invalid date in access code");
-        }
-
-        const convertTo12Hour = (time24: string): string => {
-          const [hours, minutes] = time24.split(':').map(Number);
-          const period = hours >= 12 ? 'PM' : 'AM';
-          const hours12 = hours % 12 || 12;
-          return `${hours12.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')} ${period}`;
-        };
-
-        const prefill = {
-          venue_id: venue.id,
-          match_date: matchDate,
-          start_time: convertTo12Hour(accessCodeData.start_time),
-          end_time: convertTo12Hour(accessCodeData.end_time),
-        };
-
-        setVenues([venue]);
-        setSelectedVenueId(venue.id);
-        setPrefillData(prefill);
-        setHasValidBookingCode(true);
-
-        // Defer form updates until formMethods is ready
-        if (formMethods) {
-          applyPrefill(prefill);
-        }
-
-        console.log("Pre-fill successful:", { venue, prefill });
-        toast({
-          title: "Venue Booking Loaded",
-          description: `Form pre-filled with booking details for ${venue.name}.`,
-        });
-      } catch (error: any) {
-        console.error("Error pre-filling form:", error, { preSelectedVenueSlug, accessCode });
-        setPrefillError(error.message || "Failed to load booking details.");
-        toast({
-          title: "Error",
-          description: error.message || "Failed to load booking details.",
-          variant: "destructive",
-        });
-        setIsPreFilled(false);
-        setPrefillData(null);
-        navigate("/organize"); // Clear query params on error
       }
     };
 
-    if (preSelectedVenueSlug && accessCode) {
-      handlePreFill();
-    }
-  }, [preSelectedVenueSlug, accessCode, toast, navigate, formMethods]);
+    handlePreFill();
+  }, [preSelectedVenueSlug, accessCode, toast, navigate]);
 
-  const applyPrefill = (prefill: PrefillData) => {
-    if (!formMethods) {
-      console.warn("formMethods not ready for prefill:", prefill);
-      return;
-    }
-    formMethods.setValue("venue_id", prefill.venue_id);
-    formMethods.setValue("match_date", prefill.match_date);
-    formMethods.setValue("start_time", prefill.start_time);
-    formMethods.setValue("end_time", prefill.end_time);
-    setIsPreFilled(true);
-    console.log("Prefill applied:", prefill);
-  };
-
-  useEffect(() => {
-    if (formMethods && prefillData && !isPreFilled) {
-      applyPrefill(prefillData);
-    }
-  }, [formMethods, prefillData, isPreFilled]);
-
-  const selectedVenue = formMethods
-    ? venues.find(venue => venue.id === formMethods.watch().venue_id)
-    : undefined;
+  const selectedVenue = venues.find(venue => venue.id === selectedVenueId);
 
   return (
     <div className="min-h-screen pb-20 bg-gray-100 dark:bg-gray-900">
@@ -265,16 +115,10 @@ const Organize = () => {
         </div>
       </header>
       <div className="p-6 max-w-3xl mx-auto">
-        {prefillError && (
-          <div className="mb-4 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 p-4 rounded-lg">
-            <p className="font-medium">Error Loading Booking</p>
-            <p className="text-sm">{prefillError}</p>
-          </div>
-        )}
-        {isPreFilled && !prefillError && (
+        {isPreFilled && (
           <div className="mb-4 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 p-4 rounded-lg">
             <p className="font-medium">Venue Booking Pre-Filled</p>
-            <p className="text-sm">The venue, date, and time are set based on your booking. Contact support to change.</p>
+            <p className="text-sm">The venue, date, and time are set based on your booking. These fields are locked to match your reservation.</p>
           </div>
         )}
         {selectedVenue?.verified_status === "True" && !isPreFilled && !hasValidBookingCode && (
@@ -298,40 +142,28 @@ const Organize = () => {
           }}
           onPreview={() => setPreviewDialogOpen(true)}
           onPrefill={(values) => {
-            if (formMethods) {
-              formMethods.setValue("match_date", values.match_date);
-              formMethods.setValue("start_time", values.start_time);
-              formMethods.setValue("end_time", values.end_time);
-              setHasValidBookingCode(true);
-            }
+            // This will be called by OrganiserVenue when a valid booking_access_code is entered
+            form.setValue("match_date", values.match_date);
+            form.setValue("start_time", values.start_time);
+            form.setValue("end_time", values.end_time);
+            setHasValidBookingCode(true);
           }}
-          onFormReady={(methods) => {
-            setFormMethods(methods);
-            if (prefillData && !isPreFilled) {
-              applyPrefill(prefillData);
-            }
-          }}
-          onVenuesFetched={(venues) => setVenues(venues)}
         />
-        {formMethods && (
-          <>
-            <MatchPreviewDialog
-              open={previewDialogOpen}
-              onOpenChange={setPreviewDialogOpen}
-              formValues={formMethods.watch()}
-              selectedVenue={selectedVenue}
-            />
-            <MatchSuccessDialog
-              open={successDialogOpen}
-              onOpenChange={setSuccessDialogOpen}
-              formValues={formMethods.watch()}
-              selectedVenue={selectedVenue}
-              supercode={supercode}
-              matchSlug={matchSlug}
-              onNavigate={(slug) => navigate(`/match/${slug}`)}
-            />
-          </>
-        )}
+        <MatchPreviewDialog
+          open={previewDialogOpen}
+          onOpenChange={setPreviewDialogOpen}
+          formValues={form.watch()}
+          selectedVenue={selectedVenue}
+        />
+        <MatchSuccessDialog
+          open={successDialogOpen}
+          onOpenChange={setSuccessDialogOpen}
+          formValues={form.watch()}
+          selectedVenue={selectedVenue}
+          supercode={supercode}
+          matchSlug={matchSlug}
+          onNavigate={(slug) => navigate(`/match/${slug}`)}
+        />
       </div>
       <Navbar />
     </div>
