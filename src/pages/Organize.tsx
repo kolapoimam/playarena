@@ -86,30 +86,33 @@ const Organize = () => {
     const handlePreFill = async () => {
       if (!preSelectedVenueSlug || !accessCode) {
         setPrefillError("Missing venue or access code");
+        console.log("Pre-fill skipped: missing venue or code", { preSelectedVenueSlug, accessCode });
         return;
       }
 
       try {
-        const { data: venue, error: venueError } = await supabase
+        // Fetch venue by slug first
+        let venue: Venue | null = null;
+        const { data: venueBySlug, error: venueError } = await supabase
           .from("venues")
           .select("id, slug, name, city, verified_status")
           .eq("slug", preSelectedVenueSlug)
           .single();
 
-        if (venueError || !venue) {
-          console.error("Venue fetch error:", venueError);
-          throw new Error("Venue not found");
+        if (venueError || !venueBySlug) {
+          console.warn("Venue not found by slug:", preSelectedVenueSlug, venueError?.message);
+        } else {
+          venue = venueBySlug;
         }
 
         const normalizedCode = accessCode.toUpperCase();
         let accessCodeData = null;
 
-        // Try booking_access_codes first
+        // Try booking_access_codes
         const { data: bookingData, error: bookingError } = await supabase
           .from("booking_access_codes")
           .select("match_date, start_time, end_time, access_code_status, booking_id, venue_id, valid_until")
           .eq("code", normalizedCode)
-          .eq("venue_id", venue.id)
           .single();
 
         if (!bookingError && bookingData) {
@@ -120,14 +123,33 @@ const Organize = () => {
             .from("venue_access_codes")
             .select("match_date, start_time, end_time, used, venue_id")
             .eq("code", normalizedCode)
-            .eq("venue_id", venue.id)
             .single();
 
           if (venueAccessError || !venueData) {
-            console.error("Access code fetch error:", venueAccessError || bookingError);
+            console.error("Access code fetch error:", { bookingError, venueAccessError });
             throw new Error("Invalid or expired access code");
           }
           accessCodeData = venueData;
+        }
+
+        // If venue not found by slug, fetch by venue_id from access code
+        if (!venue && accessCodeData.venue_id) {
+          const { data: venueById, error: venueIdError } = await supabase
+            .from("venues")
+            .select("id, slug, name, city, verified_status")
+            .eq("id", accessCodeData.venue_id)
+            .single();
+
+          if (venueIdError || !venueById) {
+            console.error("Venue not found by ID:", accessCodeData.venue_id, venueIdError?.message);
+            throw new Error("Venue associated with access code not found");
+          }
+          venue = venueById;
+        }
+
+        if (!venue) {
+          console.error("No venue found for pre-fill", { preSelectedVenueSlug, accessCodeData });
+          throw new Error("Venue not found");
         }
 
         // Validate access code
@@ -179,12 +201,13 @@ const Organize = () => {
           applyPrefill(prefill);
         }
 
+        console.log("Pre-fill successful:", { venue, prefill });
         toast({
           title: "Venue Booking Loaded",
           description: `Form pre-filled with booking details for ${venue.name}.`,
         });
       } catch (error: any) {
-        console.error("Error pre-filling form:", error);
+        console.error("Error pre-filling form:", error, { preSelectedVenueSlug, accessCode });
         setPrefillError(error.message || "Failed to load booking details.");
         toast({
           title: "Error",
@@ -203,12 +226,16 @@ const Organize = () => {
   }, [preSelectedVenueSlug, accessCode, toast, navigate, formMethods]);
 
   const applyPrefill = (prefill: PrefillData) => {
-    if (!formMethods) return;
+    if (!formMethods) {
+      console.warn("formMethods not ready for prefill:", prefill);
+      return;
+    }
     formMethods.setValue("venue_id", prefill.venue_id);
     formMethods.setValue("match_date", prefill.match_date);
     formMethods.setValue("start_time", prefill.start_time);
     formMethods.setValue("end_time", prefill.end_time);
     setIsPreFilled(true);
+    console.log("Prefill applied:", prefill);
   };
 
   useEffect(() => {
