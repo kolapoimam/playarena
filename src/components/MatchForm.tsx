@@ -7,13 +7,13 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { CalendarIcon, Copy } from "lucide-react";
+import { CalendarIcon, Clock, User, ArrowLeft, Copy } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { format, parse } from "date-fns";
+import { format, parse, isValid } from "date-fns";
 import { cn } from "@/lib/utils";
 import TimeInput from "@/components/TimeInput";
 import OrganiserVenue from "@/components/OrganiserVenue";
@@ -140,12 +140,11 @@ const formSchema = z.object({
   if (period === "AM" && startHours === 12) hours = 0;
   selectedDateTime.setHours(hours, startMinutes, 0, 0);
 
-  // Adjust for WAT (UTC+1)
-  const watOffset = 1 * 60 * 60 * 1000;
-  const nowWAT = new Date(now.getTime() + watOffset);
-  const tenMinutesLater = new Date(nowWAT.getTime() + 10 * 60 * 1000);
+  const nowUTC = new Date(now.getTime() + (now.getTimezoneOffset() * 60000));
+  const selectedUTC = new Date(selectedDateTime.getTime() + (selectedDateTime.getTimezoneOffset() * 60000));
+  const tenMinutesLater = new Date(nowUTC.getTime() + 10 * 60 * 1000);
 
-  return selectedDateTime.getTime() >= tenMinutesLater.getTime();
+  return selectedUTC.getTime() >= tenMinutesLater.getTime();
 }, {
   message: "Match must be scheduled at least 10 minutes from now",
   path: ["start_time"],
@@ -181,18 +180,9 @@ type MatchFormProps = {
     watch: () => FormValues;
     setValue: (name: keyof FormValues, value: any) => void;
   }) => void;
-  onVenuesFetched: (venues: Venue[]) => void;
 };
 
-type Venue = {
-  id: string;
-  slug: string;
-  name: string;
-  city: string;
-  verified_status: 'True' | 'False';
-};
-
-const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSubmitSuccess, onPreview, onPrefill, onFormReady, onVenuesFetched }: MatchFormProps) => {
+const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSubmitSuccess, onPreview, onPrefill, onFormReady }: MatchFormProps) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [isPreferencesOpen, setIsPreferencesOpen] = useState(false);
@@ -226,6 +216,7 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
   });
 
   useEffect(() => {
+    // Pass watch and setValue to parent component
     onFormReady({
       watch: form.watch,
       setValue: form.setValue,
@@ -244,7 +235,7 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
           parsed.start_time = parsed.start_time.replace(/^(0[1-9]|1[0-2]):([0-5][0-9]) (AM|PM)$/, "$1:$2 $3");
         }
         if (parsed.end_time) {
-          parsed.end_time = parsed.start_time.replace(/^(0[1-9]|1[0-2]):([0-5][0-9]) (AM|PM)$/, "$1:$2 $3");
+          parsed.end_time = parsed.end_time.replace(/^(0[1-9]|1[0-2]):([0-5][0-9]) (AM|PM)$/, "$1:$2 $3");
         }
         form.reset(parsed);
       }
@@ -276,70 +267,41 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
   const onSubmit = async (data: FormValues) => {
     setLoading(true);
     try {
-      // Validate required fields
-      if (!data.venue_id || !data.match_date || !data.start_time || !data.end_time) {
-        throw new Error("Venue, date, and times are required.");
-      }
-
       const superCode = Math.floor(100000 + Math.random() * 900000).toString();
-      // Generate a more unique slug
-      const timestamp = Date.now();
-      const randomStr = Math.random().toString(36).substring(2, 8);
-      const matchSlug = `${data.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${timestamp}-${randomStr}`;
-
-      const matchData = {
-        title: data.title,
-        venue_id: data.venue_id,
-        match_date: format(data.match_date, "yyyy-MM-dd"),
-        match_time: convertTo24Hour(data.start_time),
-        start_time: convertTo24Hour(data.start_time),
-        end_time: convertTo24Hour(data.end_time),
-        total_slots: data.total_slots,
-        is_paid: data.is_paid,
-        price: data.is_paid ? data.price : null,
-        notes: data.notes || null,
-        organizer_name: data.organizer_name,
-        organizer_phone: data.organizer_phone || null,
-        disclose_phone: data.disclose_phone,
-        player_number_required: data.player_number_required,
-        is_private: data.is_private,
-        access_password: data.is_private ? data.access_password : null,
-        allow_bulk_tickets: data.allow_bulk_tickets,
-        skill_level: data.skill_level || null,
-        match_type: data.match_type || null,
-        gender: data.gender || null,
-        super_code: superCode,
-        sell_tickets: data.sell_tickets,
-        ticket_price: data.sell_tickets ? data.ticket_price : null,
-        max_tickets: data.sell_tickets ? data.max_tickets : null,
-        total_tickets_available: data.sell_tickets && data.max_tickets ? data.max_tickets : 0,
-        slug: matchSlug,
-        organizer_id: userId || null,
-        created_at: new Date().toISOString(),
-      };
-
-      console.log("Submitting match data:", matchData);
 
       const { data: match, error } = await supabase
         .from("matches")
-        .insert(matchData)
+        .insert({
+          title: data.title,
+          venue_id: data.venue_id,
+          match_date: format(data.match_date, "yyyy-MM-dd"),
+          match_time: convertTo24Hour(data.start_time),
+          start_time: convertTo24Hour(data.start_time),
+          end_time: convertTo24Hour(data.end_time),
+          total_slots: data.total_slots,
+          is_paid: data.is_paid,
+          price: data.is_paid ? data.price : null,
+          notes: data.notes || null,
+          organizer_name: data.organizer_name,
+          organizer_phone: data.organizer_phone || null,
+          disclose_phone: data.disclose_phone,
+          player_number_required: data.player_number_required,
+          is_private: data.is_private,
+          access_password: data.is_private ? data.access_password : null,
+          allow_bulk_tickets: data.allow_bulk_tickets,
+          skill_level: data.skill_level || null,
+          match_type: data.match_type || null,
+          gender: data.gender || null,
+          super_code: superCode,
+          sell_tickets: data.sell_tickets,
+          ticket_price: data.sell_tickets ? data.ticket_price : null,
+          max_tickets: data.sell_tickets ? data.max_tickets : null,
+          total_tickets_available: data.sell_tickets && data.max_tickets ? data.max_tickets : 0,
+        })
         .select('id, slug, super_code')
         .single();
 
-      if (error) {
-        console.error("Match insert error:", error);
-        if (error.code === '23503') {
-          throw new Error("Invalid venue selected. Please choose a valid venue.");
-        } else if (error.code === '23505') {
-          throw new Error("A match with this title already exists. Please modify the title.");
-        }
-        throw new Error(`Failed to create match: ${error.message}`);
-      }
-
-      if (!match || !match.id || !match.slug) {
-        console.error("Invalid match data returned:", match);
-        throw new Error("Failed to retrieve match details");
-      }
+      if (error) throw error;
 
       if (userId) {
         const { error: linkError } = await supabase
@@ -349,95 +311,39 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
             match_id: match.id,
           });
 
-        if (linkError) {
-          console.error("User organized match insert error:", linkError);
-          throw new Error(`Failed to link user to match: ${linkError.message}`);
-        }
+        if (linkError) throw linkError;
       }
 
       if (accessCode && preSelectedVenueSlug) {
-        try {
-          const { data: venue, error: venueError } = await supabase
-            .from("venues")
-            .select("id")
-            .eq("slug", preSelectedVenueSlug)
-            .single();
+        const { data: venue } = await supabase
+          .from("venues")
+          .select("id")
+          .eq("slug", preSelectedVenueSlug)
+          .single();
 
-          if (venueError || !venue) {
-            console.error("Venue fetch error:", venueError || "No venue found");
-            toast({
-              title: "Warning",
-              description: "Match created, but failed to link booking due to invalid venue. Contact support.",
-              variant: "destructive",
-            });
-          } else {
-            const paymentReference = new URLSearchParams(window.location.search).get("reference");
-            console.log("Linking booking:", { venue_id: venue.id, paymentReference, accessCode });
+        const { error: bookingUpdateError } = await supabase
+          .from("bookings")
+          .update({ match_id: match.id })
+          .eq("venue_id", venue.id)
+          .eq("payment_reference", new URLSearchParams(window.location.search).get("reference"));
 
-            const { data: booking, error: bookingError } = await supabase
-              .from("bookings")
-              .select("id")
-              .eq("venue_id", venue.id)
-              .eq("payment_reference", paymentReference)
-              .single();
-
-            if (bookingError || !booking) {
-              console.warn("No booking found for payment reference:", paymentReference);
-              toast({
-                title: "Warning",
-                description: "Match created, but no booking found for the provided payment reference. Contact support.",
-                variant: "destructive",
-              });
-            } else {
-              const { error: bookingUpdateError } = await supabase
-                .from("bookings")
-                .update({ match_id: match.id })
-                .eq("id", booking.id);
-
-              if (bookingUpdateError) {
-                console.error("Booking update error:", bookingUpdateError);
-                toast({
-                  title: "Warning",
-                  description: "Match created, but failed to link booking. Contact support.",
-                  variant: "destructive",
-                });
-              } else {
-                console.log("Booking linked successfully:", booking.id);
-                // Update booking_access_codes to Active
-                if (accessCode) {
-                  const { error: codeUpdateError } = await supabase
-                    .from("booking_access_codes")
-                    .update({ access_code_status: 'Active' })
-                    .eq("code", accessCode.toUpperCase())
-                    .eq("venue_id", venue.id);
-                  if (codeUpdateError) {
-                    console.error("Error updating access code status:", codeUpdateError);
-                  }
-                }
-              }
-            }
-          }
-        } catch (bookingError) {
-          console.error("Error in booking update block:", bookingError);
+        if (bookingUpdateError) {
+          console.error("Error updating booking with match_id:", bookingUpdateError);
           toast({
             title: "Warning",
-            description: "Match created, but failed to link booking due to an error. Contact support.",
+            description: "Match created, but failed to link booking. Contact support.",
             variant: "destructive",
           });
         }
       }
 
       localStorage.removeItem("organizeFormState");
-      toast({
-        title: "Success",
-        description: "Match created successfully!",
-      });
       onSubmitSuccess(match.super_code || "N/A", match.slug);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error creating match:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to create match. Please try again.",
+        description: "Failed to create match. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -480,7 +386,6 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
               });
             }}
             onPrefill={onPrefill}
-            onVenuesFetched={onVenuesFetched}
           />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
@@ -609,7 +514,6 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
                     placeholder="E.g., Bring boots, parking available, etc."
                     className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                     {...field}
-                    value={field.value || ""}
                   />
                 </FormControl>
                 <FormMessage />
@@ -986,13 +890,14 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
                     {...field}
                     value={field.value ?? ""}
                     onChange={(e) => {
-                      const value = e.target.value;
-                      field.onChange(value === "" ? null : value);
+                      const numericValue = e.target.value.replace(/\D/g, '');
+                      const truncatedValue = numericValue.slice(0, 11);
+                      field.onChange(truncatedValue || null);
                     }}
                   />
                 </FormControl>
                 <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
-                  Provide a contact number for players (optional)
+                  Provide your phone number for contact purposes (numbers only)
                 </FormDescription>
                 <FormMessage />
               </FormItem>
@@ -1015,29 +920,7 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
                   <Switch
                     checked={field.value}
                     onCheckedChange={field.onChange}
-                    className="data-[state=checked]:bg-green-500"
-                  />
-                </FormControl>
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="player_number_required"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 dark:border-gray-600">
-                <div className="space-y-0.5">
-                  <FormLabel className="text-base font-medium text-gray-700 dark:text-gray-300">
-                    Require Player Phone Numbers
-                  </FormLabel>
-                  <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
-                    Toggle to require players to provide phone numbers
-                  </FormDescription>
-                </div>
-                <FormControl>
-                  <Switch
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
+                    disabled={!form.watch("organizer_phone") || form.watch("organizer_phone")?.length !== 11}
                     className="data-[state=checked]:bg-green-500"
                   />
                 </FormControl>
@@ -1045,18 +928,19 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
             )}
           />
         </div>
-        <div className="flex justify-between gap-4">
+        <div className="flex gap-4">
           <Button
             type="button"
+            variant="outline"
+            className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium rounded-lg px-4 py-3 text-lg shadow-md transition-colors"
             onClick={onPreview}
-            className="bg-gray-200 hover:bg-gray-300 text-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white font-medium rounded-lg px-4 py-2 transition-colors"
-            disabled={loading}
+            disabled={loading || !form.watch("title") || !form.watch("venue_id") || !form.watch("match_date") || !form.watch("start_time") || !form.watch("end_time") || !form.watch("total_slots") || !form.watch("organizer_name")}
           >
             Preview Match
           </Button>
-          <Button
-            type="submit"
-            className="bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 transition-colors"
+          <Button 
+            type="submit" 
+            className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-3 text-lg shadow-md transition-colors" 
             disabled={loading}
           >
             {loading ? "Creating..." : "Create Match"}
