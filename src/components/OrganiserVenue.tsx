@@ -9,6 +9,7 @@ import { FormControl, FormItem, FormLabel, FormMessage } from "@/components/ui/f
 import { Plus } from "lucide-react";
 import VenueForm from "@/components/VenueForm";
 import { parse, isValid } from "date-fns";
+import { debounce } from "lodash";
 
 type Venue = {
   id: string;
@@ -19,7 +20,7 @@ type Venue = {
 };
 
 type OrganiserVenueProps = {
-venueId: string | undefined;
+  venueId: string | undefined;
   onVenueChange: (value: string) => void;
   isPreFilled: boolean;
   preSelectedVenueSlug: string | null;
@@ -45,38 +46,59 @@ const OrganiserVenue = ({ venueId, onVenueChange, isPreFilled, preSelectedVenueS
   const [searchQuery, setSearchQuery] = useState("");
   const selectedVenue = venues.find((venue) => venue.id === venueId);
 
-  useEffect(() => {
-    const fetchVenues = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("venues")
-          .select("id, slug, name, city, verified_status")
-          .order("name");
+  const fetchVenues = debounce(async () => {
+    const cachedVenues = localStorage.getItem("venues");
+    const cacheTime = localStorage.getItem("venues_cache_time");
+    if (cachedVenues && cacheTime && Date.now() - parseInt(cacheTime) < 3600000) {
+      const parsed = JSON.parse(cachedVenues);
+      setVenues(parsed);
+      setFilteredVenues(parsed);
+      setVenuesLoading(false);
 
-        if (error) throw error;
-        setVenues(data || []);
-        setFilteredVenues(data || []);
-
-        if (preSelectedVenueSlug && !isPreFilled) {
-          const venue = data?.find((v) => v.slug === preSelectedVenueSlug);
-          if (venue) {
-            onVenueChange(venue.id);
-          }
+      if (preSelectedVenueSlug && !isPreFilled) {
+        const venue = parsed.find((v: Venue) => v.slug === preSelectedVenueSlug);
+        if (venue) {
+          onVenueChange(venue.id);
         }
-      } catch (error) {
-        console.error("Error fetching venues:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load venues. Please try again.",
-          variant: "destructive",
-        });
-      } finally {
-        setVenuesLoading(false);
       }
-    };
+      return;
+    }
 
+    try {
+      const { data, error } = await supabase
+        .from("venues")
+        .select("id, slug, name, city, verified_status")
+        .order("name")
+        .limit(50);
+
+      if (error) throw error;
+      setVenues(data || []);
+      setFilteredVenues(data || []);
+      localStorage.setItem("venues", JSON.stringify(data || []));
+      localStorage.setItem("venues_cache_time", Date.now().toString());
+
+      if (preSelectedVenueSlug && !isPreFilled) {
+        const venue = data?.find((v) => v.slug === preSelectedVenueSlug);
+        if (venue) {
+          onVenueChange(venue.id);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching venues:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load venues. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setVenuesLoading(false);
+    }
+  }, 500);
+
+  useEffect(() => {
     fetchVenues();
-  }, [toast, preSelectedVenueSlug, isPreFilled, onVenueChange]);
+    return () => fetchVenues.cancel();
+  }, [preSelectedVenueSlug, isPreFilled, onVenueChange]);
 
   useEffect(() => {
     const filtered = venues.filter((venue) =>
@@ -112,7 +134,6 @@ const OrganiserVenue = ({ venueId, onVenueChange, isPreFilled, preSelectedVenueS
         return;
       }
 
-      // Parse and format date and time
       const matchDate = parse(accessCodeData.match_date, "yyyy-MM-dd", new Date());
       if (!isValid(matchDate)) {
         console.error("Invalid match_date:", accessCodeData.match_date);
@@ -123,7 +144,6 @@ const OrganiserVenue = ({ venueId, onVenueChange, isPreFilled, preSelectedVenueS
       const startTime = convertTo12Hour(accessCodeData.start_time);
       const endTime = convertTo12Hour(accessCodeData.end_time);
 
-      // Call onPrefill to update form fields
       onPrefill({
         match_date: matchDate,
         start_time: startTime,
@@ -170,7 +190,7 @@ const OrganiserVenue = ({ venueId, onVenueChange, isPreFilled, preSelectedVenueS
         />
         <Select onValueChange={(value) => {
           onVenueChange(value);
-          setBookingCode(""); // Reset booking code when venue changes
+          setBookingCode("");
           setBookingCodeError(null);
         }} value={venueId} disabled={isPreFilled}>
           <FormControl>
