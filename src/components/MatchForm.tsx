@@ -180,9 +180,18 @@ type MatchFormProps = {
     watch: () => FormValues;
     setValue: (name: keyof FormValues, value: any) => void;
   }) => void;
+  onVenuesFetched: (venues: Venue[]) => void;
 };
 
-const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSubmitSuccess, onPreview, onPrefill, onFormReady }: MatchFormProps) => {
+type Venue = {
+  id: string;
+  slug: string;
+  name: string;
+  city: string;
+  verified_status: 'True' | 'False';
+};
+
+const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSubmitSuccess, onPreview, onPrefill, onFormReady, onVenuesFetched }: MatchFormProps) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [isPreferencesOpen, setIsPreferencesOpen] = useState(false);
@@ -267,42 +276,53 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
     setLoading(true);
     try {
       const superCode = Math.floor(100000 + Math.random() * 900000).toString();
+      const matchSlug = `${data.title.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`; // Generate slug locally
+
+      const matchData = {
+        title: data.title,
+        venue_id: data.venue_id,
+        match_date: format(data.match_date, "yyyy-MM-dd"),
+        match_time: convertTo24Hour(data.start_time),
+        start_time: convertTo24Hour(data.start_time),
+        end_time: convertTo24Hour(data.end_time),
+        total_slots: data.total_slots,
+        is_paid: data.is_paid,
+        price: data.is_paid ? data.price : null,
+        notes: data.notes || null,
+        organizer_name: data.organizer_name,
+        organizer_phone: data.organizer_phone || null,
+        disclose_phone: data.disclose_phone,
+        player_number_required: data.player_number_required,
+        is_private: data.is_private,
+        access_password: data.is_private ? data.access_password : null,
+        allow_bulk_tickets: data.allow_bulk_tickets,
+        skill_level: data.skill_level || null,
+        match_type: data.match_type || null,
+        gender: data.gender || null,
+        super_code: superCode,
+        sell_tickets: data.sell_tickets,
+        ticket_price: data.sell_tickets ? data.ticket_price : null,
+        max_tickets: data.sell_tickets ? data.max_tickets : null,
+        total_tickets_available: data.sell_tickets && data.max_tickets ? data.max_tickets : 0,
+        slug: matchSlug,
+        organizer_id: userId || null, // Use organizer_id instead of user_id
+        created_at: new Date().toISOString(),
+      };
 
       const { data: match, error } = await supabase
         .from("matches")
-        .insert({
-          title: data.title,
-          venue_id: data.venue_id,
-          match_date: format(data.match_date, "yyyy-MM-dd"),
-          match_time: convertTo24Hour(data.start_time),
-          start_time: convertTo24Hour(data.start_time),
-          end_time: convertTo24Hour(data.end_time),
-          total_slots: data.total_slots,
-          is_paid: data.is_paid,
-          price: data.is_paid ? data.price : null,
-          notes: data.notes || null,
-          organizer_name: data.organizer_name,
-          organizer_phone: data.organizer_phone || null,
-          disclose_phone: data.disclose_phone,
-          player_number_required: data.player_number_required,
-          is_private: data.is_private,
-          access_password: data.is_private ? data.access_password : null,
-          allow_bulk_tickets: data.allow_bulk_tickets,
-          skill_level: data.skill_level || null,
-          match_type: data.match_type || null,
-          gender: data.gender || null,
-          super_code: superCode,
-          sell_tickets: data.sell_tickets,
-          ticket_price: data.sell_tickets ? data.ticket_price : null,
-          max_tickets: data.sell_tickets ? data.max_tickets : null,
-          total_tickets_available: data.sell_tickets && data.max_tickets ? data.max_tickets : 0,
-        })
+        .insert(matchData)
         .select('id, slug, super_code')
         .single();
 
       if (error) {
         console.error("Match insert error:", error);
-        throw error;
+        if (error.code === '23503') { // Foreign key violation
+          throw new Error("Invalid venue selected. Please choose a valid venue.");
+        } else if (error.code === '23505') { // Unique constraint violation
+          throw new Error("A match with this slug already exists. Please modify the title.");
+        }
+        throw new Error(`Failed to create match: ${error.message}`);
       }
 
       if (!match || !match.id || !match.slug) {
@@ -314,17 +334,17 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
         const { error: linkError } = await supabase
           .from("user_organized_matches")
           .insert({
-            user_id: userId,
+            user_id: userId, // Correctly uses user_id
             match_id: match.id,
           });
 
         if (linkError) {
           console.error("User organized match insert error:", linkError);
-          throw linkError;
+          throw new Error(`Failed to link user to match: ${linkError.message}`);
         }
       }
 
-      if (accessCode && preSelectedVenueSlug) {
+      if (accessCode && preSelectedVenueSlug && window.location.search.includes("reference=")) {
         try {
           const { data: venue, error: venueError } = await supabase
             .from("venues")
@@ -376,12 +396,16 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
       }
 
       localStorage.removeItem("organizeFormState");
+      toast({
+        title: "Success",
+        description: "Match created successfully!",
+      });
       onSubmitSuccess(match.super_code || "N/A", match.slug);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating match:", error);
       toast({
         title: "Error",
-        description: "Failed to create match. Please try again.",
+        description: error.message || "Failed to create match. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -424,6 +448,7 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
               });
             }}
             onPrefill={onPrefill}
+            onVenuesFetched={onVenuesFetched}
           />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
@@ -929,14 +954,13 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
                     {...field}
                     value={field.value ?? ""}
                     onChange={(e) => {
-                      const numericValue = e.target.value.replace(/\D/g, '');
-                      const truncatedValue = numericValue.slice(0, 11);
-                      field.onChange(truncatedValue || null);
+                      const value = e.target.value;
+                      field.onChange(value === "" ? null : value);
                     }}
                   />
                 </FormControl>
                 <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
-                  Provide your phone number for contact purposes (numbers only)
+                  Provide a contact number for players (optional)
                 </FormDescription>
                 <FormMessage />
               </FormItem>
@@ -959,7 +983,29 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
                   <Switch
                     checked={field.value}
                     onCheckedChange={field.onChange}
-                    disabled={!form.watch("organizer_phone") || form.watch("organizer_phone")?.length !== 11}
+                    className="data-[state=checked]:bg-green-500"
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="player_number_required"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 dark:border-gray-600">
+                <div className="space-y-0.5">
+                  <FormLabel className="text-base font-medium text-gray-700 dark:text-gray-300">
+                    Require Player Phone Numbers
+                  </FormLabel>
+                  <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                    Toggle to require players to provide phone numbers
+                  </FormDescription>
+                </div>
+                <FormControl>
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
                     className="data-[state=checked]:bg-green-500"
                   />
                 </FormControl>
@@ -967,19 +1013,18 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
             )}
           />
         </div>
-        <div className="flex gap-4">
+        <div className="flex justify-between gap-4">
           <Button
             type="button"
-            variant="outline"
-            className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium rounded-lg px-4 py-3 text-lg shadow-md transition-colors"
             onClick={onPreview}
-            disabled={loading || !form.watch("title") || !form.watch("venue_id") || !form.watch("match_date") || !form.watch("start_time") || !form.watch("end_time") || !form.watch("total_slots") || !form.watch("organizer_name")}
+            className="bg-gray-200 hover:bg-gray-300 text-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white font-medium rounded-lg px-4 py-2 transition-colors"
+            disabled={loading}
           >
             Preview Match
           </Button>
-          <Button 
-            type="submit" 
-            className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-3 text-lg shadow-md transition-colors" 
+          <Button
+            type="submit"
+            className="bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 transition-colors"
             disabled={loading}
           >
             {loading ? "Creating..." : "Create Match"}
