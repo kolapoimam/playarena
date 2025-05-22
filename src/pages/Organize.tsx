@@ -118,7 +118,6 @@ const handlePreFill = async () => {
     });
     navigate("/organize");
         }
-      }
     };
 
     if (formMethods) {
