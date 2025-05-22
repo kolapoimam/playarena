@@ -24,7 +24,7 @@ type Venue = {
   slug: string;
   name: string;
   booking_fee: number;
-  verified_vstatus: 'True' | 'False';
+  verified_status: 'True' | 'False';
 };
 
 type PaymentStatus = "pending" | "success" | "failed";
@@ -240,46 +240,46 @@ const VenueBookingForm = () => {
     verifyPayment();
   }, [paymentReference, venue, toast]);
 
-const validateAccessCode = async (code: string) => {
-  try {
-    const { data, error } = await supabase
-      .from("booking_access_codes")
-      .select("code, valid_until, access_code_status, venue_id, match_date, start_time, end_time, booking_id")
-      .eq("code", code)
-      .eq("venue_id", venue?.id)
-      .single();
+  const validateAccessCode = async (code: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("booking_access_codes")
+        .select("code, expiry_date, status, venue_id, match_date, start_time, end_time, booking_id")
+        .eq("code", code)
+        .eq("venue_id", venue?.id)
+        .single();
 
-    if (error || !data) {
-      setAccessCodeError("Invalid access code.");
+      if (error || !data) {
+        setAccessCodeError("Invalid access code.");
+        return null;
+      }
+
+      // Check status
+      if (data.status !== "pending") {
+        setAccessCodeError("Access code is not valid or has already been used.");
+        return null;
+      }
+
+      // Defensive double-check
+      if (data.booking_id) {
+        setAccessCodeError("This booking code has already been linked to a match.");
+        return null;
+      }
+
+      // Client-side expiry check
+      const expiryDate = new Date(data.expiry_date);
+      const now = new Date(); // Current time: 07:59 PM WAT, May 22, 2025
+      if (isNaN(expiryDate.getTime()) || expiryDate < now) {
+        setAccessCodeError("Access code has expired.");
+        return null;
+      }
+
+      // ✅ Only return data if all checks passed
+      return data;
+    } catch (err) {
+      console.error("Error validating access code:", err);
+      setAccessCodeError("An unexpected error occurred while validating your access code.");
       return null;
-    }
-
-    // Check status
-    if (data.access_code_status !== "Pending") {
-      setAccessCodeError("Access code is not valid or has already been used.");
-      return null;
-    }
-
-    // Defensive double-check
-    if (data.booking_id) {
-      setAccessCodeError("This booking code has already been linked to a match.");
-      return null;
-    }
-
-    // Check expiry
-    const validUntil = new Date(data.valid_until);
-    if (isNaN(validUntil.getTime()) || validUntil < new Date()) {
-      setAccessCodeError("Access code has expired.");
-      return null;
-    }
-
-    // ✅ Only return data if all checks passed
-    return data;
-
-  } catch (err) {
-    console.error("Error validating access code:", err);
-    setAccessCodeError("An unexpected error occurred while validating your access code.");
-    return null;
     }
   };
 
@@ -303,9 +303,10 @@ const validateAccessCode = async (code: string) => {
         const checkAvailability = async () => {
           const { data, error } = await supabase
             .from("venue_access_codes")
-            .select("match_date, start_time, end_time")
+            .select("match_date, start_time, end_time, status")
             .eq("venue_id", venue.id)
-            .eq("match_date", format(value.match_date, "yyyy-MM-dd"));
+            .eq("match_date", format(value.match_date, "yyyy-MM-dd"))
+            .in("status", ["pending", "active"]);
 
           if (error) {
             console.error("Error checking availability:", error);
@@ -519,7 +520,7 @@ const validateAccessCode = async (code: string) => {
         match_date: format(values.match_date, "yyyy-MM-dd"),
         start_time: `${startHours.toString().padStart(2, "0")}:${startTime.split(":")[1]}`,
         end_time: `${endHours.toString().padStart(2, "0")}:${endTime.split(":")[1]}`,
-        access_code_status: "Active",
+        status: "pending",
       };
 
       if (useAccessCode) {
@@ -527,7 +528,7 @@ const validateAccessCode = async (code: string) => {
           .from("booking_access_codes")
           .update({
             booking_id: bookingData.id,
-            access_code_status: "Active",
+            status: "pending",
             match_date: format(values.match_date, "yyyy-MM-dd"),
             start_time: `${startHours.toString().padStart(2, "0")}:${startTime.split(":")[1]}`,
             end_time: `${endHours.toString().padStart(2, "0")}:${endTime.split(":")[1]}`,
