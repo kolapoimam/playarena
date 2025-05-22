@@ -403,6 +403,17 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
                 });
               } else {
                 console.log("Booking linked successfully:", booking.id);
+                // Update booking_access_codes to Active
+                if (accessCode) {
+                  const { error: codeUpdateError } = await supabase
+                    .from("booking_access_codes")
+                    .update({ access_code_status: 'Active' })
+                    .eq("code", accessCode.toUpperCase())
+                    .eq("venue_id", venue.id);
+                  if (codeUpdateError) {
+                    console.error("Error updating access code status:", codeUpdateError);
+                  }
+                }
               }
             }
           }
