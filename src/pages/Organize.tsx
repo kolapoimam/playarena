@@ -70,6 +70,7 @@ const Organize = () => {
     setValue: (name: keyof FormValues, value: any) => void;
   } | null>(null);
   const [prefillData, setPrefillData] = useState<PrefillData | null>(null);
+  const [prefillError, setPrefillError] = useState<string | null>(null);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -83,115 +84,134 @@ const Organize = () => {
 
   useEffect(() => {
     const handlePreFill = async () => {
-      if (preSelectedVenueSlug && accessCode) {
-        try {
-          const { data: venue, error: venueError } = await supabase
-            .from("venues")
-            .select("id, slug, name, city, verified_status")
-            .eq("slug", preSelectedVenueSlug)
-            .single();
+      if (!preSelectedVenueSlug || !accessCode) {
+        setPrefillError("Missing venue or access code");
+        return;
+      }
 
-          if (venueError || !venue) {
-            console.error("Venue fetch error:", venueError);
-            throw new Error("Venue not found");
-          }
+      try {
+        const { data: venue, error: venueError } = await supabase
+          .from("venues")
+          .select("id, slug, name, city, verified_status")
+          .eq("slug", preSelectedVenueSlug)
+          .single();
 
-          const normalizedCode = accessCode.toUpperCase();
-          let accessCodeData = null;
+        if (venueError || !venue) {
+          console.error("Venue fetch error:", venueError);
+          throw new Error("Venue not found");
+        }
 
-          // Try booking_access_codes first (manager-generated)
-          const { data: bookingData, error: bookingError } = await supabase
-            .from("booking_access_codes")
-            .select("match_date, start_time, end_time, access_code_status, booking_id, venue_id")
+        const normalizedCode = accessCode.toUpperCase();
+        let accessCodeData = null;
+
+        // Try booking_access_codes first
+        const { data: bookingData, error: bookingError } = await supabase
+          .from("booking_access_codes")
+          .select("match_date, start_time, end_time, access_code_status, booking_id, venue_id, valid_until")
+          .eq("code", normalizedCode)
+          .eq("venue_id", venue.id)
+          .single();
+
+        if (!bookingError && bookingData) {
+          accessCodeData = bookingData;
+        } else {
+          // Fallback to venue_access_codes
+          const { data: venueData, error: venueAccessError } = await supabase
+            .from("venue_access_codes")
+            .select("match_date, start_time, end_time, used, venue_id")
             .eq("code", normalizedCode)
             .eq("venue_id", venue.id)
             .single();
 
-          if (bookingError || !bookingData) {
-            // Fallback to venue_access_codes (payment-based)
-            const { data: venueData, error: venueAccessError } = await supabase
-              .from("venue_access_codes")
-              .select("match_date, start_time, end_time, used, venue_id")
-              .eq("code", normalizedCode)
-              .eq("venue_id", venue.id)
-              .single();
-
-            if (venueAccessError || !venueData) {
-              console.error("Access code fetch error:", venueAccessError || bookingError);
-              throw new Error("Invalid or expired access code");
-            }
-            accessCodeData = venueData;
-          } else {
-            accessCodeData = bookingData;
+          if (venueAccessError || !venueData) {
+            console.error("Access code fetch error:", venueAccessError || bookingError);
+            throw new Error("Invalid or expired access code");
           }
-
-          // Validate based on the table
-          const isUsed = accessCodeData.access_code_status === 'Active' || accessCodeData.used;
-          if (isUsed) {
-            console.error("Access code already used:", normalizedCode);
-            throw new Error("This booking has already been used to create a match.");
-          }
-
-          const matchDate = parse(accessCodeData.match_date, "yyyy-MM-dd", new Date());
-          if (!matchDate || isNaN(matchDate.getTime())) {
-            console.error("Invalid match_date:", accessCodeData.match_date);
-            throw new Error("Invalid date in access code");
-          }
-
-          const convertTo12Hour = (time24: string): string => {
-            const [hours, minutes] = time24.split(':').map(Number);
-            const period = hours >= 12 ? 'PM' : 'AM';
-            const hours12 = hours % 12 || 12;
-            return `${hours12.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')} ${period}`;
-          };
-
-          const prefill = {
-            venue_id: venue.id,
-            match_date: matchDate,
-            start_time: convertTo12Hour(accessCodeData.start_time),
-            end_time: convertTo12Hour(accessCodeData.end_time),
-          };
-
-          setVenues([venue]);
-          setSelectedVenueId(venue.id);
-          setPrefillData(prefill);
-          setHasValidBookingCode(true);
-
-          // Apply prefill after formMethods is ready
-          if (formMethods) {
-            formMethods.setValue("venue_id", prefill.venue_id);
-            formMethods.setValue("match_date", prefill.match_date);
-            formMethods.setValue("start_time", prefill.start_time);
-            formMethods.setValue("end_time", prefill.end_time);
-            setIsPreFilled(true);
-          }
-
-          toast({
-            title: "Venue Booking Loaded",
-            description: `Form pre-filled with booking details for ${venue.name}.`,
-          });
-        } catch (error: any) {
-          console.error("Error pre-filling form:", error);
-          toast({
-            title: "Error",
-            description: error.message || "Failed to load booking details.",
-            variant: "destructive",
-          });
-          navigate("/organize"); // Clear query params on error
+          accessCodeData = venueData;
         }
+
+        // Validate access code
+        const isBookingCode = 'access_code_status' in accessCodeData;
+        let isValid = false;
+        if (isBookingCode) {
+          const validUntil = new Date(accessCodeData.valid_until);
+          const now = new Date();
+          // Convert to WAT (UTC+1)
+          const watOffset = 1 * 60 * 60 * 1000;
+          const nowWAT = new Date(now.getTime() + watOffset);
+          isValid = accessCodeData.access_code_status === 'Pending' && validUntil > nowWAT;
+        } else {
+          isValid = !accessCodeData.used;
+        }
+
+        if (!isValid) {
+          console.error("Invalid access code:", normalizedCode, { isBookingCode, accessCodeData });
+          throw new Error("This access code is invalid or has expired.");
+        }
+
+        const matchDate = parse(accessCodeData.match_date, "yyyy-MM-dd", new Date());
+        if (!matchDate || isNaN(matchDate.getTime())) {
+          console.error("Invalid match_date:", accessCodeData.match_date);
+          throw new Error("Invalid date in access code");
+        }
+
+        const convertTo12Hour = (time24: string): string => {
+          const [hours, minutes] = time24.split(':').map(Number);
+          const period = hours >= 12 ? 'PM' : 'AM';
+          const hours12 = hours % 12 || 12;
+          return `${hours12.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')} ${period}`;
+        };
+
+        const prefill = {
+          venue_id: venue.id,
+          match_date: matchDate,
+          start_time: convertTo12Hour(accessCodeData.start_time),
+          end_time: convertTo12Hour(accessCodeData.end_time),
+        };
+
+        setVenues([venue]);
+        setSelectedVenueId(venue.id);
+        setPrefillData(prefill);
+        setHasValidBookingCode(true);
+
+        // Defer form updates until formMethods is ready
+        if (formMethods) {
+          applyPrefill(prefill);
+        }
+
+        toast({
+          title: "Venue Booking Loaded",
+          description: `Form pre-filled with booking details for ${venue.name}.`,
+        });
+      } catch (error: any) {
+        console.error("Error pre-filling form:", error);
+        setPrefillError(error.message || "Failed to load booking details.");
+        toast({
+          title: "Error",
+          description: error.message || "Failed to load booking details.",
+          variant: "destructive",
+        });
+        setIsPreFilled(false);
+        setPrefillData(null);
+        navigate("/organize"); // Clear query params on error
       }
     };
 
     handlePreFill();
-  }, [preSelectedVenueSlug, accessCode, toast, navigate, formMethods]);
+  }, [preSelectedVenueSlug, accessCode, toast, navigate]);
+
+  const applyPrefill = (prefill: PrefillData) => {
+    if (!formMethods) return;
+    formMethods.setValue("venue_id", prefill.venue_id);
+    formMethods.setValue("match_date", prefill.match_date);
+    formMethods.setValue("start_time", prefill.start_time);
+    formMethods.setValue("end_time", prefill.end_time);
+    setIsPreFilled(true);
+  };
 
   useEffect(() => {
     if (formMethods && prefillData && !isPreFilled) {
-      formMethods.setValue("venue_id", prefillData.venue_id);
-      formMethods.setValue("match_date", prefillData.match_date);
-      formMethods.setValue("start_time", prefillData.start_time);
-      formMethods.setValue("end_time", prefillData.end_time);
-      setIsPreFilled(true);
+      applyPrefill(prefillData);
     }
   }, [formMethods, prefillData, isPreFilled]);
 
@@ -216,7 +236,13 @@ const Organize = () => {
         </div>
       </header>
       <div className="p-6 max-w-3xl mx-auto">
-        {isPreFilled && (
+        {prefillError && (
+          <div className="mb-4 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 p-4 rounded-lg">
+            <p className="font-medium">Error Loading Booking</p>
+            <p className="text-sm">{prefillError}</p>
+          </div>
+        )}
+        {isPreFilled && !prefillError && (
           <div className="mb-4 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 p-4 rounded-lg">
             <p className="font-medium">Venue Booking Pre-Filled</p>
             <p className="text-sm">The venue, date, and time are set based on your booking. These fields are locked to match your reservation.</p>
@@ -250,7 +276,12 @@ const Organize = () => {
               setHasValidBookingCode(true);
             }
           }}
-          onFormReady={(methods) => setFormMethods(methods)}
+          onFormReady={(methods) => {
+            setFormMethods(methods);
+            if (prefillData && !isPreFilled) {
+              applyPrefill(prefillData);
+            }
+          }}
           onVenuesFetched={(venues) => setVenues(venues)}
         />
         {formMethods && (
