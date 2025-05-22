@@ -140,11 +140,12 @@ const formSchema = z.object({
   if (period === "AM" && startHours === 12) hours = 0;
   selectedDateTime.setHours(hours, startMinutes, 0, 0);
 
-  const nowUTC = new Date(now.getTime() + (now.getTimezoneOffset() * 60000));
-  const selectedUTC = new Date(selectedDateTime.getTime() + (selectedDateTime.getTimezoneOffset() * 60000));
-  const tenMinutesLater = new Date(nowUTC.getTime() + 10 * 60 * 1000);
+  // Adjust for WAT (UTC+1)
+  const watOffset = 1 * 60 * 60 * 1000;
+  const nowWAT = new Date(now.getTime() + watOffset);
+  const tenMinutesLater = new Date(nowWAT.getTime() + 10 * 60 * 1000);
 
-  return selectedUTC.getTime() >= tenMinutesLater.getTime();
+  return selectedDateTime.getTime() >= tenMinutesLater.getTime();
 }, {
   message: "Match must be scheduled at least 10 minutes from now",
   path: ["start_time"],
@@ -275,8 +276,16 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
   const onSubmit = async (data: FormValues) => {
     setLoading(true);
     try {
+      // Validate required fields
+      if (!data.venue_id || !data.match_date || !data.start_time || !data.end_time) {
+        throw new Error("Venue, date, and times are required.");
+      }
+
       const superCode = Math.floor(100000 + Math.random() * 900000).toString();
-      const matchSlug = `${data.title.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`; // Generate slug locally
+      // Generate a more unique slug
+      const timestamp = Date.now();
+      const randomStr = Math.random().toString(36).substring(2, 8);
+      const matchSlug = `${data.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${timestamp}-${randomStr}`;
 
       const matchData = {
         title: data.title,
@@ -305,9 +314,11 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
         max_tickets: data.sell_tickets ? data.max_tickets : null,
         total_tickets_available: data.sell_tickets && data.max_tickets ? data.max_tickets : 0,
         slug: matchSlug,
-        organizer_id: userId || null, // Use organizer_id instead of user_id
+        organizer_id: userId || null,
         created_at: new Date().toISOString(),
       };
+
+      console.log("Submitting match data:", matchData);
 
       const { data: match, error } = await supabase
         .from("matches")
@@ -317,10 +328,10 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
 
       if (error) {
         console.error("Match insert error:", error);
-        if (error.code === '23503') { // Foreign key violation
+        if (error.code === '23503') {
           throw new Error("Invalid venue selected. Please choose a valid venue.");
-        } else if (error.code === '23505') { // Unique constraint violation
-          throw new Error("A match with this slug already exists. Please modify the title.");
+        } else if (error.code === '23505') {
+          throw new Error("A match with this title already exists. Please modify the title.");
         }
         throw new Error(`Failed to create match: ${error.message}`);
       }
@@ -334,7 +345,7 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
         const { error: linkError } = await supabase
           .from("user_organized_matches")
           .insert({
-            user_id: userId, // Correctly uses user_id
+            user_id: userId,
             match_id: match.id,
           });
 
@@ -344,7 +355,7 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
         }
       }
 
-      if (accessCode && preSelectedVenueSlug && window.location.search.includes("reference=")) {
+      if (accessCode && preSelectedVenueSlug) {
         try {
           const { data: venue, error: venueError } = await supabase
             .from("venues")
@@ -361,19 +372,27 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
             });
           } else {
             const paymentReference = new URLSearchParams(window.location.search).get("reference");
-            if (!paymentReference) {
-              console.warn("No payment reference found in query params");
+            console.log("Linking booking:", { venue_id: venue.id, paymentReference, accessCode });
+
+            const { data: booking, error: bookingError } = await supabase
+              .from("bookings")
+              .select("id")
+              .eq("venue_id", venue.id)
+              .eq("payment_reference", paymentReference)
+              .single();
+
+            if (bookingError || !booking) {
+              console.warn("No booking found for payment reference:", paymentReference);
               toast({
                 title: "Warning",
-                description: "Match created, but no payment reference provided for booking. Contact support.",
+                description: "Match created, but no booking found for the provided payment reference. Contact support.",
                 variant: "destructive",
               });
             } else {
               const { error: bookingUpdateError } = await supabase
                 .from("bookings")
                 .update({ match_id: match.id })
-                .eq("venue_id", venue.id)
-                .eq("payment_reference", paymentReference);
+                .eq("id", booking.id);
 
               if (bookingUpdateError) {
                 console.error("Booking update error:", bookingUpdateError);
@@ -382,6 +401,8 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
                   description: "Match created, but failed to link booking. Contact support.",
                   variant: "destructive",
                 });
+              } else {
+                console.log("Booking linked successfully:", booking.id);
               }
             }
           }
