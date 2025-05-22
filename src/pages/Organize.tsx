@@ -45,59 +45,78 @@ const Organize = () => {
   }, []);
 
   useEffect(() => {
-    const handlePreFill = async () => {
-      if (preSelectedVenueSlug && accessCode) {
-        try {
-          const { data: venue, error: venueError } = await supabase
-            .from("venues")
-            .select("id, slug, name, city, verified_status")
-            .eq("slug", preSelectedVenueSlug)
-            .single();
+const handlePreFill = async () => {
+  if (!preSelectedVenueSlug || !accessCode) return;
 
-          if (venueError || !venue) {
-            throw new Error("Venue not found");
-          }
+  try {
+    const { data: venue, error: venueError } = await supabase
+      .from("venues")
+      .select("id, slug, name, city, verified_status")
+      .eq("slug", preSelectedVenueSlug)
+      .single();
 
-          const { data: accessCodeData, error: accessCodeError } = await supabase
-            .from("venue_access_codes")
-            .select("match_date, start_time, end_time, used")
-            .eq("code", accessCode)
-            .eq("venue_id", venue.id)
-            .single();
+    if (venueError || !venue) {
+      throw new Error("Venue not found.");
+    }
 
-          if (accessCodeError || !accessCodeData) {
-            throw new Error("Invalid or expired access code");
-          }
+    let accessCodeData = null;
+    let isFromVenueAccessCodes = true;
 
-          if (accessCodeData.used) {
-            throw new Error("This booking has already been used to create a match.");
-          }
+    // First check venue_access_codes
+    const { data: vacData, error: vacError } = await supabase
+      .from("venue_access_codes")
+      .select("match_date, start_time, end_time, used")
+      .eq("code", accessCode)
+      .eq("venue_id", venue.id)
+      .single();
 
-          setVenues([venue]);
-          setIsPreFilled(true);
-          setSelectedVenueId(venue.id);
-          setHasValidBookingCode(true);
+    if (vacData && !vacData.used) {
+      accessCodeData = vacData;
+    } else {
+      // Fallback to booking_access_codes_rows
+      const { data: bacData, error: bacError } = await supabase
+        .from("booking_access_codes_rows")
+        .select("match_date, start_time, end_time, access_code_status")
+        .eq("code", accessCode)
+        .eq("venue_id", venue.id)
+        .single();
 
-          // Use formMethods.setValue to prefill form fields
-          if (formMethods) {
-            formMethods.setValue("venue_id", venue.id);
-            formMethods.setValue("match_date", new Date(accessCodeData.match_date));
-            formMethods.setValue("start_time", accessCodeData.start_time);
-            formMethods.setValue("end_time", accessCodeData.end_time);
-          }
+      if (bacData && bacData.access_code_status === "pending") {
+        accessCodeData = bacData;
+        isFromVenueAccessCodes = false;
+      }
+    }
 
-          toast({
-            title: "Venue Booking Loaded",
-            description: `Form pre-filled with booking details for ${venue.name}.`,
-          });
-        } catch (error: any) {
-          console.error("Error pre-filling form:", error);
-          toast({
-            title: "Error",
-            description: error.message || "Failed to load booking details.",
-            variant: "destructive",
-          });
-          navigate("/organize");
+    if (!accessCodeData) {
+      throw new Error("Invalid, used, or expired access code.");
+    }
+
+    // Set prefill state
+    setVenues([venue]);
+    setIsPreFilled(true);
+    setSelectedVenueId(venue.id);
+    setHasValidBookingCode(true);
+
+    // Prefill form fields
+    if (formMethods) {
+      formMethods.setValue("venue_id", venue.id);
+      formMethods.setValue("match_date", new Date(accessCodeData.match_date));
+      formMethods.setValue("start_time", accessCodeData.start_time);
+      formMethods.setValue("end_time", accessCodeData.end_time);
+    }
+
+    toast({
+      title: "Booking Code Accepted",
+      description: `Form pre-filled with booking details for ${venue.name}.`,
+    });
+  } catch (error: any) {
+    console.error("Error pre-filling form:", error);
+    toast({
+      title: "Invalid Access Code",
+      description: error.message || "Could not load booking information.",
+      variant: "destructive",
+    });
+    navigate("/organize");
         }
       }
     };
