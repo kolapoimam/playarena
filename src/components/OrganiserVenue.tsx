@@ -19,7 +19,7 @@ type Venue = {
 };
 
 type OrganiserVenueProps = {
-  venueId: string | undefined;"
+venueId: string | undefined;
   onVenueChange: (value: string) => void;
   isPreFilled: boolean;
   preSelectedVenueSlug: string | null;
