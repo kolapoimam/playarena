@@ -2,11 +2,11 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { FormControl, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Plus } from "lucide-react";
+import VenueForm from Cookbookings/redirect
 import VenueForm from "@/components/VenueForm";
 import { debounce } from "lodash";
 
@@ -30,10 +30,8 @@ type OrganiserVenueProps = {
 const OrganiserVenue = ({ venueId, onVenueChange, isPreFilled, preSelectedVenueSlug, onVenueCreated, onPrefill }: OrganiserVenueProps) => {
   const { toast } = useToast();
   const [venues, setVenues] = useState<Venue[]>([]);
-  const [filteredVenues, setFilteredVenues] = useState<Venue[]>([]);
   const [venuesLoading, setVenuesLoading] = useState(true);
   const [venueDialogOpen, setVenueDialogOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
   const selectedVenue = venues.find((venue) => venue.id === venueId);
 
   const fetchVenues = debounce(async () => {
@@ -42,7 +40,6 @@ const OrganiserVenue = ({ venueId, onVenueChange, isPreFilled, preSelectedVenueS
     if (cachedVenues && cacheTime && Date.now() - parseInt(cacheTime) < 3600000) {
       const parsed = JSON.parse(cachedVenues);
       setVenues(parsed);
-      setFilteredVenues(parsed);
       setVenuesLoading(false);
 
       if (preSelectedVenueSlug && !isPreFilled) {
@@ -63,7 +60,6 @@ const OrganiserVenue = ({ venueId, onVenueChange, isPreFilled, preSelectedVenueS
 
       if (error) throw error;
       setVenues(data || []);
-      setFilteredVenues(data || []);
       localStorage.setItem("venues", JSON.stringify(data || []));
       localStorage.setItem("venues_cache_time", Date.now().toString());
 
@@ -90,13 +86,6 @@ const OrganiserVenue = ({ venueId, onVenueChange, isPreFilled, preSelectedVenueS
     return () => fetchVenues.cancel();
   }, [preSelectedVenueSlug, isPreFilled, onVenueChange]);
 
-  useEffect(() => {
-    const filtered = venues.filter((venue) =>
-      `${venue.name} ${venue.city}`.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-    setFilteredVenues(filtered);
-  }, [searchQuery, venues]);
-
   return (
     <FormItem>
       <div className="flex justify-between items-center">
@@ -118,13 +107,6 @@ const OrganiserVenue = ({ venueId, onVenueChange, isPreFilled, preSelectedVenueS
         )}
       </div>
       <div className="space-y-2">
-        <Input
-          placeholder="Search venues by name or city"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-          disabled={isPreFilled}
-        />
         <Select onValueChange={onVenueChange} value={venueId} disabled={isPreFilled}>
           <FormControl>
             <SelectTrigger className="w-full text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white">
@@ -136,8 +118,8 @@ const OrganiserVenue = ({ venueId, onVenueChange, isPreFilled, preSelectedVenueS
               <SelectItem value="loading" disabled>
                 Loading venues...
               </SelectItem>
-            ) : filteredVenues.length > 0 ? (
-              filteredVenues.map((venue) => (
+            ) : venues.length > 0 ? (
+              venues.map((venue) => (
                 <SelectItem key={venue.id} value={venue.id} className="text-base">
                   {venue.name}{venue.city ? `, ${venue.city}` : ''}
                 </SelectItem>
