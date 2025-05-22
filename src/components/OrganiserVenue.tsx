@@ -44,6 +44,7 @@ const OrganiserVenue = ({ venueId, onVenueChange, isPreFilled, preSelectedVenueS
         try {
           const parsed = JSON.parse(cachedVenues);
           if (Array.isArray(parsed) && parsed.length > 0) {
+            console.log("Using cached venues:", parsed.length);
             setVenues(parsed);
             onVenuesFetched(parsed);
             if (preSelectedVenueSlug && !isPreFilled) {
@@ -51,13 +52,15 @@ const OrganiserVenue = ({ venueId, onVenueChange, isPreFilled, preSelectedVenueS
               if (venue) {
                 onVenueChange(venue.id);
               } else {
-                console.warn("Preselected venue not found in cache:", preSelectedVenueSlug);
+                console.warn("Preselected venue not in cache:", preSelectedVenueSlug);
               }
             }
             return;
           }
         } catch (e) {
-          console.warn("Invalid cache data, fetching fresh venues:", e);
+          console.error("Invalid cache data:", e);
+          localStorage.removeItem("venues");
+          localStorage.removeItem("venues_cache_time");
         }
       }
 
@@ -68,9 +71,13 @@ const OrganiserVenue = ({ venueId, onVenueChange, isPreFilled, preSelectedVenueS
         .order("name")
         .limit(50);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase venues query error:", error);
+        throw new Error(`Failed to fetch venues: ${error.message}`);
+      }
 
       const fetchedVenues = data || [];
+      console.log("Fetched venues from Supabase:", fetchedVenues.length);
       setVenues(fetchedVenues);
       onVenuesFetched(fetchedVenues);
       localStorage.setItem("venues", JSON.stringify(fetchedVenues));
@@ -81,7 +88,7 @@ const OrganiserVenue = ({ venueId, onVenueChange, isPreFilled, preSelectedVenueS
         if (venue) {
           onVenueChange(venue.id);
         } else {
-          console.warn("Preselected venue not found in fetched data:", preSelectedVenueSlug);
+          console.warn("Preselected venue not found:", preSelectedVenueSlug);
           toast({
             title: "Warning",
             description: "Preselected venue not found. Please select a venue.",
@@ -91,19 +98,20 @@ const OrganiserVenue = ({ venueId, onVenueChange, isPreFilled, preSelectedVenueS
       }
 
       if (fetchedVenues.length === 0) {
+        console.warn("No venues returned from Supabase");
         toast({
           title: "No Venues Available",
           description: "No venues found. Please add a new venue.",
           variant: "destructive",
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching venues:", error);
       setVenues([]);
       onVenuesFetched([]);
       toast({
         title: "Error",
-        description: "Failed to load venues. Please try again or add a new venue.",
+        description: error.message || "Failed to load venues. Please try again or add a new venue.",
         variant: "destructive",
       });
     } finally {
