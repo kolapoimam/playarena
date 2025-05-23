@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -10,21 +10,10 @@ import {
   MapPin, 
   Users, 
   ArrowLeft, 
-  Share2, 
-  Download, 
-  ChevronDown,
   ExternalLink,
-  Trophy,
-  DollarSign,
   CalendarPlus,
   Lock
 } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -33,11 +22,11 @@ import {
   DialogFooter,
   DialogHeader,
 } from "@/components/ui/dialog";
-import { format, isToday, isPast, differenceInHours, addHours } from "date-fns";
-import { Badge } from "@/components/ui/badge";
+import { addHours } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import html2canvas from "html2canvas";
+import PlayersTable from "@/components/PlayersTable";
+import MatchDetailsDialogue from "@/components/MatchDetailsDialogue";
 
 type Match = {
   id: string;
@@ -70,22 +59,14 @@ type Match = {
   }[];
 };
 
-const formatStatus = (status: string) => {
-  return status.toLowerCase() === 'absent' ? 'No Show' : status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, " ");
-};
-
 const MatchDetail = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [match, setMatch] = useState<Match | null>(null);
   const [loading, setLoading] = useState(true);
-  const [downloadDialogOpen, setDownloadDialogOpen] = useState(false);
-  const [isImageLoaded, setIsImageLoaded] = useState(false);
-  const [backgroundOption, setBackgroundOption] = useState("field");
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [password, setPassword] = useState("");
-  const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!slug) return;
@@ -243,122 +224,6 @@ const MatchDetail = () => {
     
     return { isStarted, isEnded, isFull };
   };
-
-  const getStatusStyles = (status: string) => {
-    switch (status.toLowerCase()) {
-      case "registered":
-        return "bg-yellow-500 text-white border-yellow-600";
-      case "checked in":
-        return "bg-green-500 text-white border-green-600";
-      case "absent":
-        return "bg-red-500 text-white border-red-600";
-      default:
-        return "bg-gray-500 text-white border-gray-600";
-    }
-  };
-
-  const shareMatch = async () => {
-    if (!match) return;
-    
-    const url = `${window.location.origin}/match/${match.slug}`;
-    const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
-    const shareText = `Join my Football Match: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. ${totalPlayerSlots}/${match.total_slots} slots. Powered by Sport Cliq. ${url}${match.is_private ? ` (Access Password: ${match.access_password})` : ''}`;
-    
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: `Join my Football Match: ${match.title}`,
-          text: shareText,
-          url: url,
-        });
-      } catch (err) {
-        console.error("Share failed:", err);
-      }
-    } else {
-      try {
-        await navigator.clipboard.writeText(shareText);
-        toast({
-          title: "Link copied!",
-          description: "Share it with your friends to join the match.",
-        });
-      } catch (err) {
-        toast({
-          title: "Failed to copy",
-          description: "Please try again or copy the URL manually.",
-          variant: "destructive",
-        });
-      }
-    }
-  };
-
-  const shareToWhatsApp = () => {
-    if (!match) return;
-    
-    const url = `${window.location.origin}/match/${match.slug}`;
-    const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
-    const shareText = `Join my Football Match: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. ${totalPlayerSlots}/${match.total_slots} slots. Powered by Sport Cliq. ${url}${match.is_private ? ` (Access Password: ${match.access_password})` : ''}`;
-    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
-    window.open(whatsappUrl, '_blank');
-  };
-
-  const shareToTwitter = () => {
-    if (!match) return;
-    
-    const url = `${window.location.origin}/match/${match.slug}`;
-    const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
-    const shareText = `Join my Football Match: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. ${totalPlayerSlots}/${match.total_slots} slots. Powered by Sport Cliq. ${url}${match.is_private ? ` (Access Password: ${match.access_password})` : ''}`;
-    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
-    window.open(twitterUrl, '_blank');
-  };
-
-  const shareToFacebook = () => {
-    if (!match) return;
-    
-    const url = `${window.location.origin}/match/${match.slug}`;
-    const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
-    const shareText = `Join my Football Match: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. ${totalPlayerSlots}/${match.total_slots} slots. Powered by Sport Cliq. ${match.is_private ? ` (Access Password: ${match.access_password})` : ''}`;
-    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}"e=${encodeURIComponent(shareText)}`;
-    window.open(facebookUrl, '_blank');
-  };
-
-  const handleImageLoad = () => {
-    setIsImageLoaded(true);
-  };
-
-  const handleDownload = useCallback(async () => {
-    if (!cardRef.current || !isImageLoaded) {
-      toast({
-        title: "Error",
-        description: "Card is not ready for download. Please wait a moment and try again.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      const canvas = await html2canvas(cardRef.current, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        scrollX: 0,
-        scrollY: -window.scrollY,
-      });
-
-      const link = document.createElement('a');
-      link.download = `SportCliq-Match-${match?.title.replace(/\s+/g, '-')}.png`;
-      link.href = canvas.toDataURL('image/png');
-      link.click();
-    } catch (error) {
-      console.error("Error generating image:", error);
-      toast({
-        title: "Error",
-        description: "Failed to download match card. Please try again.",
-        variant: "destructive",
-      });
-    }
-  }, [isImageLoaded, match, toast]);
 
   const addToCalendar = () => {
     if (!match) return;
@@ -588,241 +453,23 @@ const MatchDetail = () => {
             </div>
           </div>
           
-          <div className="border rounded-lg p-4 bg-card shadow-md">
-            <h2 className="font-semibold mb-3">Players ({totalPlayerSlots}/{match.total_slots})</h2>
-            
-            {match.players && match.players.length > 0 ? (
-              <div className="space-y-2">
-                {match.players.map((player, index) => (
-                  <div key={index} className="flex items-center gap-2 p-2 bg-muted rounded-md justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="w-8 h-8 rounded-full bg-playarena-100 flex items-center justify-center">
-                        {player.player_name.charAt(0).toUpperCase()}
-                      </span>
-                      <span>
-                        {player.number_of_slots > 1 ? `${player.player_name} (${player.number_of_slots})` : player.player_name}
-                      </span>
-                    </div>
-                    <Badge
-                      className={`${getStatusStyles(player.player_status)} !hover:bg-transparent !hover:cursor-default`}
-                    >
-                      {formatStatus(player.player_status)}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-muted-foreground text-sm">No players have joined yet</p>
-            )}
-            
-            <div className="mt-6">
-              {isEnded ? (
-                <Button 
-                  className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
-                  onClick={() => navigate(`/feedback?matchSlug=${match.slug}`)}
-                >
-                  Give Feedback
-                </Button>
-              ) : isFull ? (
-                <Button 
-                  className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
-                  variant="outline"
-                  disabled
-                >
-                  Match Is Full
-                </Button>
-              ) : (
-                <Button 
-                  className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
-                  onClick={() => navigate(`/join/${match.slug}`)}
-                >
-                  Join This Match
-                </Button>
-              )}
-            </div>
-            {match.sell_tickets && !isEnded && (
-              <div className="mt-4">
-                <Button
-                  className="w-full bg-yellow-500 hover:bg-yellow-600 text-white"
-                  onClick={() => navigate(`/ticketing/${match.slug}`)}
-                >
-                  Buy Tickets
-                </Button>
-              </div>
-            )}
-          </div>
+          <PlayersTable 
+            match={match}
+            navigate={navigate}
+            isEnded={isEnded}
+            isFull={isFull}
+            totalPlayerSlots={totalPlayerSlots}
+          />
           
-          <div className="flex gap-3 mt-6">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  className="flex-1"
-                >
-                  <Share2 size={18} className="mr-2" />
-                  Share
-                  <ChevronDown size={16} className="ml-2" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-[200px]">
-                <DropdownMenuItem onClick={shareToWhatsApp}>
-                  Share to WhatsApp
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={shareToTwitter}>
-                  Share to Twitter
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={shareToFacebook}>
-                  Share to Facebook
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={shareMatch}>
-                  Share via Device
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            
-            <Button 
-              variant="outline"
-              className="flex-1"
-              onClick={() => setDownloadDialogOpen(true)}
-            >
-              <Download size={18} className="mr-2" />
-              Download
-            </Button>
-          </div>
+          <MatchDetailsDialogue 
+            match={match}
+            formatDate={formatDate}
+            formatTime={formatTime}
+            totalPlayerSlots={totalPlayerSlots}
+          />
         </div>
       </div>
       <Navbar />
-
-      <Dialog open={downloadDialogOpen} onOpenChange={(open) => {
-        setDownloadDialogOpen(open);
-        setIsImageLoaded(false);
-        if (!open) setBackgroundOption("field");
-      }}>
-        <DialogContent className="sm:max-w-[425px] max-w-[90vw] rounded-2xl">
-          <DialogTitle>Match Details</DialogTitle>
-          <DialogDescription>
-            <p className="text-gray-600 dark:text-gray-300 mb-4">
-              Download this card to share your match details with friends. Choose any background below.
-            </p>
-            <div className="mb-4">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Background:</label>
-              <div className="flex items-center space-x-4 mt-2">
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    value="field"
-                    checked={backgroundOption === "field"}
-                    onChange={() => setBackgroundOption("field")}
-                    className="form-radio text-playarena-500"
-                  />
-                  <span>Default</span>
-                </label>
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    value="white"
-                    checked={backgroundOption === "white"}
-                    onChange={() => setBackgroundOption("white")}
-                    className="form-radio text-playarena-500"
-                  />
-                  <span>White</span>
-                </label>
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    value="green"
-                    checked={backgroundOption === "green"}
-                    onChange={() => setBackgroundOption("green")}
-                    className="form-radio text-playarena-500"
-                  />
-                  <span>Green</span>
-                </label>
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    value="black"
-                    checked={backgroundOption === "black"}
-                    onChange={() => setBackgroundOption("black")}
-                    className="form-radio text-playarena-500"
-                  />
-                  <span>Black</span>
-                </label>
-              </div>
-            </div>
-            <div 
-              ref={cardRef}
-              className={`rounded-lg p-6 shadow-lg relative overflow-hidden ${backgroundOption === "field" ? "bg-cover bg-center" : ""}`}
-              style={{
-                backgroundImage: backgroundOption === "field" ? "url('/football-field.jpg')" : "",
-                backgroundColor: backgroundOption !== "field" ? backgroundOption : "transparent",
-                ...(backgroundOption === "field" && {
-                  backgroundBlendMode: "overlay",
-                  backgroundColor: "rgba(0, 0, 0, 0.5)",
-                }),
-              }}
-            >
-              <div className="relative z-10">
-                <div className="flex items-center justify-between mb-4">
-                  <img 
-                    src={backgroundOption === "white" ? "/playarenalight.png" : "/playarenadark.png"}
-                    alt="PlayArena Logo" 
-                    className="h-8 w-auto"
-                    onLoad={handleImageLoad}
-                    onError={() => {
-                      toast({
-                        title: "Error",
-                        description: "Failed to load logo image.",
-                        variant: "destructive",
-                      });
-                      setIsImageLoaded(true);
-                    }}
-                  />
-                  <Trophy className={`h-6 w-6 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-                </div>
-                <div className="flex items-center justify-between mb-2">
-                  <h2 className={`text-xl font-bold ${backgroundOption === "white" ? "text-black" : "text-white"}`}>{match.title}</h2>
-                </div>
-                <div className="space-y-2 mb-4">
-                  <div className="flex items-center">
-                    <MapPin className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-                    <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{match.venue?.name || "Venue"}, {match.venue?.city || ""}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <Calendar className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-                    <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{formatDate(match.match_date)} at {formatTime(match.match_time)}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <DollarSign className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-                    <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{match.is_paid ? `Paid (₦${match.price?.toFixed(2)})` : "Free"}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <Users className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-                    <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{totalPlayerSlots}/{match.total_slots} slots booked</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400 my-4">
-              <strong>Note:</strong> Save or share this card to invite players to your match.
-            </p>
-            <div className="flex gap-2">
-              <Button 
-                className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
-                onClick={handleDownload}
-                disabled={!isImageLoaded}
-              >
-                Download
-              </Button>
-              <Button 
-                className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
-                onClick={() => setDownloadDialogOpen(false)}
-              >
-                Close
-              </Button>
-            </div>
-          </DialogDescription>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
