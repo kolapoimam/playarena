@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Home, Trophy, Calendar } from "lucide-react";
+import { Home, Trophy, Calendar, Twitter, Facebook, MessageCircle, Copy } from "lucide-react";
 
 type MatchHighlight = {
   match_id: string;
