@@ -214,7 +214,7 @@ const VenueWallet = ({ venueId, availableFunds, setAvailableFunds }: VenueWallet
             disabled={availableFunds === 0 || loading}
             className="bg-green-500 hover:bg-green-600 text-white rounded-lg"
           >
-            Cashout ₦{availableFunds.toFixed(2)}
+            Cashout
           </Button>
         </CardTitle>
       </CardHeader>
