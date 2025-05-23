@@ -146,8 +146,13 @@ useEffect(() => {
       if (formMethods) {
         formMethods.setValue("venue_id", venue.id);
         formMethods.setValue("match_date", new Date(accessCodeData.match_date));
-        formMethods.setValue("start_time", accessCodeData.start_time);
-        formMethods.setValue("end_time", accessCodeData.end_time);
+        // Convert 24-hour to 12-hour format
+        const [startHours, startMinutes] = accessCodeData.start_time.split(':');
+        const startTime12 = new Date(0, 0, 0, startHours, startMinutes).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+        const [endHours, endMinutes] = accessCodeData.end_time.split(':');
+        const endTime12 = new Date(0, 0, 0, endHours, endMinutes).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+        formMethods.setValue("start_time", startTime12);
+        formMethods.setValue("end_time", endTime12);
       }
 
       toast({
