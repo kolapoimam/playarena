@@ -286,49 +286,49 @@ const VenueManagerDashboard = () => {
                           <TabsContent value="upcoming">
                             {upcomingBookings.length > 0 ? (
                               <div className="space-y-4">
-                                {upcomingBookings.map((booking) => {C
-                                  const organizer = organizers.find(org => org.id === booking.organizer_id);
-                                  const isVerified = organizer?.is_verified || false;
-                                  return (
-                                    <div
-                                      key={booking.id}
-                                      className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700"
-                                    >
-                                      <h3 className="font-medium text-gray-900 dark:text-gray-100">{booking.title}</h3>
-                                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                                        Date: {format(new Date(booking.match_date), "MMM d, yyyy")}
-                                      </p>
-                                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                                        Time: {format(new Date(`${booking.match_date}T${booking.start_time}`), "h:mm a")} -{" "}
-                                        {format(new Date(`${booking.match_date}T${booking.end_time}`), "h:mm a")}
-                                      </p>
-                                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                                        Duration: {differenceInHours(
-                                          new Date(`${booking.match_date}T${booking.end_time}`),
-                                          new Date(`${booking.match_date}T${booking.start_time}`)
-                                        )} hours
-                                      </p>
-                                      <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
-                                        Organizer: {booking.organizer_name}
-                                        {isVerified && <img src="/green-verified.png" alt="Verified" className="w-4 h-4 ml-1" />}
-                                      </p>
-                                      <div className="mt-4">
-                                        <Tooltip>
-                                          <TooltipTrigger asChild>
-                                            <span>
-                                              <Button
-                                                className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg"
-                                                onClick={() => booking.slug && navigate(`/match/${booking.slug}`)}
-                                                disabled={!booking.slug}
-                                              >
-                                                View Details
-                                              </Button>
-                                            </span>
-                                          </TooltipTrigger>
-                                          {!booking.slug && (
-                                            <TooltipContent>
-                                              No match details available
-                                            </TooltipContent>
+{upcomingBookings.map((booking) => {
+  const organizer = organizers.find(org => org.id === booking.organizer_id);
+  const isVerified = organizer?.is_verified || false;
+  return (
+    <div
+      key={booking.id}
+      className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700"
+    >
+      <h3 className="font-medium text-gray-900 dark:text-gray-100">{booking.title}</h3>
+      <p className="text-sm text-gray-600 dark:text-gray-400">
+        Date: {format(new Date(booking.match_date), "MMM d, yyyy")}
+      </p>
+      <p className="text-sm text-gray-600 dark:text-gray-400">
+        Time: {format(new Date(`${booking.match_date}T${booking.start_time}`), "h:mm a")} -{" "}
+        {format(new Date(`${booking.match_date}T${booking.end_time}`), "h:mm a")}
+      </p>
+      <p className="text-sm text-gray-600 dark:text-gray-400">
+        Duration: {differenceInHours(
+          new Date(`${booking.match_date}T${booking.end_time}`),
+          new Date(`${booking.match_date}T${booking.start_time}`)
+        )} hours
+      </p>
+      <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
+        Organizer: {booking.organizer_name}
+        {isVerified && <img src="/green-verified.png" alt="Verified" className="w-4 h-4 ml-1" />}
+      </p>
+      <div className="mt-4">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span>
+              <Button
+                className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg"
+                onClick={() => booking.slug && navigate(`/match/${booking.slug}`)}
+                disabled={!booking.slug}
+              >
+                View Details
+              </Button>
+            </span>
+          </TooltipTrigger>
+          {!booking.slug && (
+            <TooltipContent>
+              No match details available
+            </TooltipContent>
                                           )}
                                         </Tooltip>
                                       </div>
