@@ -294,7 +294,7 @@ const VenueDirectory = () => {
                             navigate(`/venue/${venue.slug}/book`);
                           }}
                         >
-                          Book
+                          Book Venue
                         </Button>
                       )}
                     </div>
