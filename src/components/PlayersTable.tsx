@@ -50,7 +50,7 @@ const PlayersTable: React.FC<PlayersTableProps> = ({ match }) => {
   const getMatchStatus = () => {
     const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
     const matchEndTime = addHours(matchDateTime, 2); // Match duration is 2 hours
-    const now = new Date("2025-05-18T19:45:00+01:00"); // 07:45 PM WAT, May 18, 2025
+    const now = new Date(); // Use current date instead of hardcoded date
     
     const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
     const isFull = totalPlayerSlots >= match.total_slots;
