@@ -14,6 +14,7 @@ import {
 import { format } from "date-fns";
 import { Loader2, MapPin, Calendar, Clock, CreditCard } from "lucide-react";
 import Navbar from "@/components/Navbar";
+import { cn } from "@/lib/utils";
 
 type Booking = {
   id: string;
@@ -56,10 +57,10 @@ const VenueBookings = () => {
             amount,
             payment_status,
             payment_reference,
-            venues!inner(name),
+            venues!inner(name, user_id),
             matches!left(title)
           `)
-          .eq("venues.owner_id", userData.user.id)
+          .eq("venues.user_id", userData.user.id)
           .order("match_date", { ascending: false });
 
         if (error) throw error;
