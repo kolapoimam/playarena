@@ -1,15 +1,17 @@
 import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Home, Trophy, Calendar, Twitter, Facebook, MessageCircle, Copy } from "lucide-react";
+import { Home, Trophy, Calendar, Twitter, Facebook, MessageCircle, Copy, ArrowLeft } from "lucide-react";
+import Navbar from "@/components/Navbar";
 
 type MatchHighlight = {
   match_id: string;
   title: string;
   match_date: string;
   match_time: string;
+  venue?: string;
   teams: { name: string; score: number; analytics: { possession: number; shots: number; fouls: number; yellow_cards: number; red_cards: number } }[];
   events: { id: string; type: string; team_name: string; minute: number; description: string }[];
 };
@@ -17,6 +19,7 @@ type MatchHighlight = {
 const MatchHighlights = () => {
   const { slug } = useParams<{ slug: string }>();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [highlight, setHighlight] = useState<MatchHighlight | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -35,6 +38,7 @@ const MatchHighlights = () => {
             title,
             match_date::text,
             match_time::text,
+            venue,
             teams,
             events
           `);
@@ -74,48 +78,36 @@ const MatchHighlights = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50">
-      {/* Navigation Bar */}
-      <nav className="bg-white dark:bg-gray-800 shadow-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <img src="/playarenalight.png" alt="PlayArena Logo" className="h-10" />
-            </div>
-            <div className="flex items-center space-x-4">
-              <Link to="/" className="flex items-center text-gray-700 dark:text-gray-200 hover:text-blue-500">
-                <Home size={20} className="mr-2" />
-                <span className="text-sm font-medium">Home</span>
-              </Link>
-              <Link to="/matches" className="flex items-center text-gray-700 dark:text-gray-200 hover:text-blue-500">
-                <Calendar size={20} className="mr-2" />
-                <span className="text-sm font-medium">Matches</span>
-              </Link>
-              <Link to="/highlights" className="flex items-center text-gray-700 dark:text-gray-200 hover:text-blue-500">
-                <Trophy size={20} className="mr-2" />
-                <span className="text-sm font-medium">Highlights</span>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
-
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 pb-24">
       {/* Header */}
-      <header className="bg-white dark:bg-gray-800 shadow-md py-6">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <img src="/playarenalight.png" alt="PlayArena Logo" className="w-32 mx-auto mb-4" />
-          <h1 className="text-3xl sm:text-4xl font-bold text-blue-800 dark:text-blue-300">{highlight.title}</h1>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-            {highlight.match_date} at {highlight.match_time}
-          </p>
-          <div className="mt-4 text-4xl font-bold text-gray-800 dark:text-gray-200">
-            {highlight.teams[0].name} {highlight.teams[0].score} - {highlight.teams[1].score} {highlight.teams[1].name}
-          </div>
+      <header className="sticky top-0 z-50 bg-green-500 text-white shadow-md">
+        <div className="p-4 flex items-center justify-between">
+          <Button variant="ghost" onClick={() => navigate(-1)} className="text-white hover:text-gray-200">
+            <ArrowLeft size={18} className="mr-2" />
+            Back
+          </Button>
+          <h1 className="text-xl sm:text-2xl font-bold">Match Highlights</h1>
+          <div className="w-10"></div>
         </div>
       </header>
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Match Details Card */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6">
+          <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Match Details</h2>
+          <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+            <p><span className="font-medium">Title:</span> {highlight.title}</p>
+            <p><span className="font-medium">Venue:</span> {highlight.venue || "Venue TBD"}</p>
+            <p><span className="font-medium">Date:</span> {highlight.match_date}</p>
+            <p><span className="font-medium">Time:</span> {highlight.match_time}</p>
+            <div className="text-lg font-bold text-gray-800 dark:text-gray-200">
+              {highlight.teams[0].name} {highlight.teams[0].score} - {highlight.teams[1].score} {highlight.teams[1].name}
+            </div>
+          </div>
+        </div>
+
+        {/* Teams and Events Section */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Teams Section */}
           <div className="md:col-span-2 bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
@@ -197,6 +189,9 @@ const MatchHighlights = () => {
           </div>
         </div>
       </main>
+
+      {/* Navbar */}
+      <Navbar />
     </div>
   );
 };
