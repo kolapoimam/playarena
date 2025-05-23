@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Clock } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
@@ -17,8 +17,6 @@ const TimeInput = ({
 }: TimeInputProps) => {
   const [time, setTime] = useState("12:00");
   const [period, setPeriod] = useState<"AM" | "PM">("AM");
-  const hourRef = useRef<HTMLSelectElement>(null);
-  const minuteRef = useRef<HTMLSelectElement>(null);
 
   useEffect(() => {
     if (value) {
@@ -60,14 +58,6 @@ const TimeInput = ({
 
   const [hour, minute] = time.split(":").map(part => parseInt(part, 10));
 
-  // Enable smooth scrolling for select elements
-  const handleScroll = (ref: React.RefObject<HTMLSelectElement>, type: "hour" | "minute") => {
-    if (ref.current) {
-      const selectedIndex = ref.current.selectedIndex;
-      handleTimeChange(type, type === "hour" ? hours[selectedIndex] : minutes[selectedIndex]);
-    }
-  };
-
   return (
     <div className="flex items-center gap-3 w-full">
       <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-md p-1 flex-1">
@@ -76,15 +66,10 @@ const TimeInput = ({
         {/* Hour Selector */}
         <div className="relative flex-1">
           <select
-            ref={hourRef}
             value={hour || 12}
             onChange={(e) => handleTimeChange("hour", parseInt(e.target.value, 10))}
-            onMouseUp={() => hourRef.current?.blur()}
-            onTouchEnd={() => hourRef.current?.blur()}
-            onScroll={() => handleScroll(hourRef, "hour")}
             disabled={disabled}
-            className="w-full bg-transparent py-2 pl-2 pr-6 appearance-none focus:outline-none cursor-pointer text-center scroll-smooth"
-            size={5} // Makes the select scrollable
+            className="w-full bg-transparent py-2 pl-2 pr-6 appearance-none focus:outline-none cursor-pointer text-center"
           >
             {hours.map((h) => (
               <option key={`hour-${h}`} value={h}>
@@ -104,15 +89,10 @@ const TimeInput = ({
         {/* Minute Selector */}
         <div className="relative flex-1">
           <select
-            ref={minuteRef}
             value={minute || 0}
             onChange={(e) => handleTimeChange("minute", parseInt(e.target.value, 10))}
-            onMouseUp={() => minuteRef.current?.blur()}
-            onTouchEnd={() => minuteRef.current?.blur()}
-            onScroll={() => handleScroll(minuteRef, "minute")}
             disabled={disabled}
-            className="w-full bg-transparent py-2 pl-2 pr-6 appearance-none focus:outline-none cursor-pointer text-center scroll-smooth"
-            size={5} // Makes the select scrollable
+            className="w-full bg-transparent py-2 pl-2 pr-6 appearance-none focus:outline-none cursor-pointer text-center"
           >
             {minutes.map((m) => (
               <option key={`minute-${m}`} value={m}>
@@ -128,22 +108,22 @@ const TimeInput = ({
         </div>
       </div>
 
-      {/* AM/PM Toggle */}
+      {/* Beautiful AM/PM Toggle */}
       <div className="relative flex items-center">
         <input
           type="checkbox"
-          id={`period-toggle-${Math.random().toString(36).substring(2, 9)}`} // Unique ID for each instance
+          id="period-toggle"
           checked={period === "PM"}
           onChange={() => handlePeriodChange(period === "AM" ? "PM" : "AM")}
           disabled={disabled}
           className="sr-only"
         />
         <label
-          htmlFor={`period-toggle-${Math.random().toString(36).substring(2, 9)}`}
+          htmlFor="period-toggle"
           className={`relative flex items-center justify-between h-10 w-24 rounded-full cursor-pointer transition-colors ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
           {/* Track */}
-          <div className={`absolute inset-0 rounded-full transition-colors ${period === "PM" ? 'bg-[#17a34a]' : 'bg-gray-300 dark:bg-gray-600'}`}></div>
+          <div className={`absolute inset-0 rounded-full transition-colors ${period === "PM" ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'}`}></div>
           
           {/* Thumb */}
           <div className={`absolute left-1 top-1 h-8 w-11 rounded-full bg-white shadow-md transform transition-transform ${period === "PM" ? 'translate-x-11' : 'translate-x-0'}`}></div>
