@@ -266,16 +266,16 @@ const VenueDirectory = () => {
                       className="w-full h-36 object-cover rounded-t-xl"
                     />
                     <div className="p-3">
-<div className="flex items-center">
-  <h3 className="font-bold text-lg text-gray-900 dark:text-gray-100 mb-1">{venue.name}</h3>
-  {venue.is_verified && (
-    <img 
-      src="/green-verified.png" 
-      alt="Verified" 
-      className="ml-1 w-4 h-4 object-contain"  // Changed to w-4 h-4 (16px)
-    />
-  )}
-</div>
+                      <div className="flex items-center">
+                        <h3 className="font-bold text-lg text-gray-900 dark:text-gray-100 mb-1">{venue.name}</h3>
+                        {venue.is_verified && (
+                          <img 
+                            src="/green-verified.png" 
+                            alt="Verified" 
+                            className="ml-1 w-4 h-4 object-contain"
+                          />
+                        )}
+                      </div>
                       <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{`${venue.city}, ${venue.state}`}</p>
                       <div className="flex items-center text-sm text-yellow-500 mb-1">
                         <Star size={14} className="mr-1 fill-yellow-500" />
@@ -285,6 +285,18 @@ const VenueDirectory = () => {
                         <Store className="h-4 w-4 mr-1" />
                         <span>{`${venue.match_count} Match${venue.match_count !== 1 ? "es" : ""}`}</span>
                       </div>
+                      {venue.is_verified && (
+                        <Button
+                          variant="outline"
+                          className="mt-2 w-full bg-green-500 text-white border-green-500 hover:bg-green-600 hover:text-white"
+                          onClick={(e) => {
+                            e.stopPropagation(); // Prevent card click from navigating to venue details
+                            navigate(`/venue/${venue.slug}/book`);
+                          }}
+                        >
+                          Book
+                        </Button>
+                      )}
                     </div>
                   </div>
                 );
