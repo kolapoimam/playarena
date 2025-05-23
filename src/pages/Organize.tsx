@@ -18,7 +18,7 @@ type Venue = {
 };
 
 const Organize = () => {
-  const navigate = Navigate();
+const navigate = useNavigate();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
   const preSelectedVenueSlug = searchParams.get("venue");
