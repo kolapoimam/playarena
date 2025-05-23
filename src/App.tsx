@@ -9,7 +9,7 @@ import SplashScreen from "@/components/SplashScreen";
 import ScrollToTop from "@/components/ScrollToTop";
 import InstallPrompt from "@/components/InstallPrompt";
 
-import Home from "@/pages/Home"; // New import for Home page
+import Index from "@/pages/Index";
 import Search from "@/pages/Search";
 import Activities from "@/pages/Activities";
 import Matches from "@/pages/Matches";
@@ -28,7 +28,7 @@ import Feedback from "@/pages/Feedback";
 import Guides from "@/pages/Guides";
 import Auth from "@/pages/Auth";
 import TeamManagement from "@/pages/TeamManagement";
-import MatchHighlights from "@/components/MatchHighlights";
+import MatchHighlights from "@/components/MatchHighlights"; // Added import
 import Ticketing from "@/pages/Ticketing";
 import TermsAndPrivacy from "@/pages/TermsAndPrivacy";
 import Confirm from "@/pages/Confirm";
@@ -49,7 +49,7 @@ const AppRoutes = () => {
 
   return (
     <Routes>
-      <Route path="/" element={<Home />} /> {/* Updated to use Home instead of Index */}
+      <Route path="/" element={<Index />} />
       <Route path="/search" element={<Search />} />
       <Route path="/activities" element={<Activities />} />
       <Route path="/matches" element={<Matches />} />
@@ -68,7 +68,7 @@ const AppRoutes = () => {
       <Route path="/join/:slug" element={<JoinMatch />} />
       <Route path="/venue/:slug" element={<VenueDetail />} />
       <Route path="/match/:slug/team-management" element={<TeamManagement />} />
-      <Route path="/highlights/:slug" element={<MatchHighlights />} />
+      <Route path="/highlights/:slug" element={<MatchHighlights />} /> {/* Added route */}
       <Route path="/match-id/:id" element={<MatchRedirect />} />
       <Route path="/venue-id/:id" element={<VenueRedirect />} />
       <Route path="/venuemanager/dashboard/:venueId" element={<VenueManagerDashboard />} />
