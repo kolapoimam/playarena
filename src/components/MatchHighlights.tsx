@@ -1,15 +1,16 @@
 import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Home, Trophy, Calendar, Twitter, Facebook, MessageCircle, Copy } from "lucide-react";
+import { ArrowLeft, Twitter, Facebook, MessageCircle, Copy } from "lucide-react";
 
 type MatchHighlight = {
   match_id: string;
   title: string;
   match_date: string;
   match_time: string;
+  venue?: string;
   teams: { name: string; score: number; analytics: { possession: number; shots: number; fouls: number; yellow_cards: number; red_cards: number } }[];
   events: { id: string; type: string; team_name: string; minute: number; description: string }[];
 };
@@ -17,6 +18,7 @@ type MatchHighlight = {
 const MatchHighlights = () => {
   const { slug } = useParams<{ slug: string }>();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [highlight, setHighlight] = useState<MatchHighlight | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -103,8 +105,6 @@ const MatchHighlights = () => {
           </div>
         </div>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Teams Section */}
           <div className="md:col-span-2 bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
@@ -153,56 +153,56 @@ const MatchHighlights = () => {
           </div>
         </div>
 
-    {/* Share Section */}
-<div className="mt-8 bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 text-center">
-  <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Spread the Word</h2>
-  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-    Enjoyed this match? Let your friends catch the action too — share the highlights!
-  </p>
-  <div className="flex justify-center gap-4">
-    <a
-      href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(`${window.location.origin}/highlights/${highlight.match_id}`)}&text=Don’t miss this thrilling highlight on SportCliq!`}
-      target="_blank"
-      rel="noopener noreferrer"
-    >
-      <Button variant="outline" className="p-2">
-        <Twitter size={20} className="text-blue-400" />
-      </Button>
-    </a>
-    <a
-      href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(`${window.location.origin}/highlights/${highlight.match_id}`)}`}
-      target="_blank"
-      rel="noopener noreferrer"
-    >
-      <Button variant="outline" className="p-2">
-        <Facebook size={20} className="text-blue-600" />
-      </Button>
-    </a>
-    <a
-      href={`https://api.whatsapp.com/send?text=Check out this amazing match highlight on SportCliq! ${encodeURIComponent(`${window.location.origin}/highlights/${highlight.match_id}`)}`}
-      target="_blank"
-      rel="noopener noreferrer"
-    >
-      <Button variant="outline" className="p-2">
-        <MessageCircle size={20} className="text-green-500" />
-      </Button>
-    </a>
-    <Button
-      variant="outline"
-      onClick={async () => {
-        try {
-          await navigator.clipboard.writeText(`${window.location.origin}/highlights/${highlight.match_id}`);
-          toast({ title: "Copied!", description: "Highlight link is ready to share." });
-        } catch (error) {
-          toast({ title: "Error", description: "Couldn't copy the link.", variant: "destructive" });
-        }
-      }}
-      className="p-2"
-    >
-      <Copy size={20} className="text-gray-600" />
-    </Button>
-  </div>
-</div>
+        {/* Share Section */}
+        <div className="mt-8 bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 text-center">
+          <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Spread the Word</h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            Enjoyed this match? Let your friends catch the action too — share the highlights!
+          </p>
+          <div className="flex justify-center gap-4">
+            <a
+              href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(`${window.location.origin}/highlights/${highlight.match_id}`)}&text=Don't miss this thrilling highlight on SportCliq!`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Button variant="outline" className="p-2">
+                <Twitter size={20} className="text-blue-400" />
+              </Button>
+            </a>
+            <a
+              href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(`${window.location.origin}/highlights/${highlight.match_id}`)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Button variant="outline" className="p-2">
+                <Facebook size={20} className="text-blue-600" />
+              </Button>
+            </a>
+            <a
+              href={`https://api.whatsapp.com/send?text=Check out this amazing match highlight on SportCliq! ${encodeURIComponent(`${window.location.origin}/highlights/${highlight.match_id}`)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Button variant="outline" className="p-2">
+                <MessageCircle size={20} className="text-green-500" />
+              </Button>
+            </a>
+            <Button
+              variant="outline"
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(`${window.location.origin}/highlights/${highlight.match_id}`);
+                  toast({ title: "Copied!", description: "Highlight link is ready to share." });
+                } catch (error) {
+                  toast({ title: "Error", description: "Couldn't copy the link.", variant: "destructive" });
+                }
+              }}
+              className="p-2"
+            >
+              <Copy size={20} className="text-gray-600" />
+            </Button>
+          </div>
+        </div>
       </main>
     </div>
   );
