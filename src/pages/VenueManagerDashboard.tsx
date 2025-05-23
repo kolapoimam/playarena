@@ -4,13 +4,23 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Loader2, ArrowLeft } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Loader2, ArrowLeft, Users, Trophy, CheckCircle } from "lucide-react";
 import { format, differenceInHours } from "date-fns";
 import VenueWallet from "@/components/VenueWallet";
 import VenueAccessCode from "@/components/VenueAccessCode";
+import Navbar from "@/components/Navbar";
 
 type Venue = { id: string; name: string; city: string; price_per_hour: number; is_verified: string };
-type Booking = { id: string; title: string; match_date: string; start_time: string; end_time: string; organizer_name: string | null };
+type Booking = { 
+  id: string; 
+  title: string; 
+  slug: string; // Added slug for navigation
+  match_date: string; 
+  start_time: string; 
+  end_time: string; 
+  organizer_name: string | null 
+};
 
 const VenueManagerDashboard = () => {
   const { venueId } = useParams<{ venueId: string }>();
@@ -72,7 +82,12 @@ const VenueManagerDashboard = () => {
           console.error("Upcoming bookings error:", upcomingError);
           throw new Error(upcomingError.message);
         }
-        const sortedUpcoming = (upcoming || []).sort((a, b) => new Date(a.match_date).getTime() - new Date(b.match_date).getTime());
+        const sortedUpcoming = (upcoming || []).map(booking => ({
+          ...booking,
+          title: booking.title || "No Title Provided",
+          organizer_name: booking.organizer_name || "Anonymous Organizer",
+          slug: booking.slug || "" // Assume slug is returned or fetched
+        })).sort((a, b) => new Date(a.match_date).getTime() - new Date(b.match_date).getTime());
         setUpcomingBookings(sortedUpcoming);
 
         // Fetch past bookings
@@ -87,7 +102,12 @@ const VenueManagerDashboard = () => {
           console.error("Past bookings error:", pastError);
           throw new Error(pastError.message);
         }
-        const sortedPast = (past || []).sort((a, b) => new Date(b.match_date).getTime() - new Date(a.match_date).getTime());
+        const sortedPast = (past || []).map(booking => ({
+          ...booking,
+          title: booking.title || "No Title Provided",
+          organizer_name: booking.organizer_name || "Anonymous Organizer",
+          slug: booking.slug || ""
+        })).sort((a, b) => new Date(b.match_date).getTime() - new Date(a.match_date).getTime());
         setPastBookings(sortedPast);
 
         // Fetch total events
@@ -162,26 +182,21 @@ const VenueManagerDashboard = () => {
   }, [venueId, toast, navigate]);
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
-      <header className="bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900 dark:to-green-800 p-4 shadow-md">
-        <div className="container mx-auto flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <Button
-              variant="ghost"
-              onClick={() => navigate("/profile")}
-              className="text-green-700 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-700 rounded-lg"
-            >
-              <ArrowLeft className="w-5 h-5 mr-2" />
-              Back
-            </Button>
-            <div>
-              <h1 className="text-2xl font-bold text-green-700 dark:text-green-400">Venue Manager</h1>
-            </div>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex flex-col">
+      <div className="bg-gradient-to-r from-green-600 to-green-800 text-white p-4 flex items-center justify-between shadow-lg sticky top-0 z-20">
+        <Button
+          variant="ghost"
+          onClick={() => navigate("/profile")}
+          className="text-white hover:text-gray-200 text-sm flex items-center"
+        >
+          <ArrowLeft className="w-5 h-5 mr-2" />
+          Back
+        </Button>
+        <h1 className="text-2xl font-bold text-center flex-1">Venue Manager</h1>
+        <div className="w-10" /> {/* Spacer for alignment */}
+      </div>
 
-      <main className="container mx-auto p-4 pb-24 space-y-8">
+      <main className="container mx-auto p-4 pb-24 space-y-8 flex-1">
         {loading ? (
           <div className="flex justify-center items-center h-64">
             <Loader2 className="w-8 h-8 animate-spin text-green-500" />
@@ -191,32 +206,29 @@ const VenueManagerDashboard = () => {
         ) : (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              <Card className="bg-white dark:bg-gray-800 border-none shadow-lg rounded-xl">
-                <CardHeader>
-                  <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Events</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{totalEvents}</p>
-                </CardContent>
-              </Card>
-              <Card className="bg-white dark:bg-gray-800 border-none shadow-lg rounded-xl">
-                <CardHeader>
-                  <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Funds</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">₦{totalFunds.toFixed(2)}</p>
-                </CardContent>
-              </Card>
-              <Card className="bg-white dark:bg-gray-800 border-none shadow-lg rounded-xl">
-                <CardHeader>
-                  <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-300">Verified Since</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
+              <div className="p-4 bg-green-50 dark:bg-green-900/50 rounded-lg flex items-center gap-3 shadow-md">
+                <Users className="h-8 w-8 text-green-600" />
+                <div>
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Events</p>
+                  <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{totalEvents}</p>
+                </div>
+              </div>
+              <div className="p-4 bg-green-50 dark:bg-green-900/50 rounded-lg flex items-center gap-3 shadow-md">
+                <Trophy className="h-8 w-8 text-green-600" />
+                <div>
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Funds</p>
+                  <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">₦{totalFunds.toFixed(2)}</p>
+                </div>
+              </div>
+              <div className="p-4 bg-green-50 dark:bg-green-900/50 rounded-lg flex items-center gap-3 shadow-md">
+                <CheckCircle className="h-8 w-8 text-green-600" />
+                <div>
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Verified Since</p>
+                  <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                     {verifiedSince ? format(new Date(verifiedSince), "MMM d, yyyy") : "Not Verified"}
                   </p>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </div>
 
             <VenueWallet
@@ -227,63 +239,111 @@ const VenueManagerDashboard = () => {
 
             <Card className="bg-white dark:bg-gray-800 border-none shadow-lg rounded-xl">
               <CardHeader>
-                <CardTitle className="text-lg font-semibold text-gray-900 dark:text-gray-100">Upcoming Bookings</CardTitle>
+                <CardTitle className="text-lg font-semibold text-gray-900 dark:text-gray-100">Bookings</CardTitle>
               </CardHeader>
               <CardContent>
-                {upcomingBookings.length > 0 ? (
-                  <div className="space-y-4">
-                    {upcomingBookings.map((booking) => (
-                      <div key={booking.id} className="border-b border-gray-200 dark:border-gray-700 pb-4">
-                        <h3 className="font-medium text-gray-900 dark:text-gray-100">{booking.title}</h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          Date: {format(new Date(booking.match_date), "MMM d, yyyy")}
-                        </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          Duration: {differenceInHours(
-                            new Date(`${booking.match_date}T${booking.end_time}`),
-                            new Date(`${booking.match_date}T${booking.start_time}`)
-                          )} hours
-                        </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          Organizer: {booking.organizer_name || "Unknown"}
-                        </p>
+                <Tabs defaultValue="upcoming" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2 bg-gray-100 dark:bg-gray-700 rounded-t-lg sticky top-[64px] z-10">
+                    <TabsTrigger
+                      value="upcoming"
+                      className="data-[state=active]:bg-green-500 data-[state=active]:text-white"
+                    >
+                      Upcoming
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="past"
+                      className="data-[state=active]:bg-green-500 data-[state=active]:text-white"
+                    >
+                      Past
+                    </TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="upcoming">
+                    {upcomingBookings.length > 0 ? (
+                      <div className="space-y-4">
+                        {upcomingBookings.map((booking) => (
+                          <div
+                            key={booking.id}
+                            className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700"
+                          >
+                            <h3 className="font-medium text-gray-900 dark:text-gray-100">{booking.title}</h3>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                              Date: {format(new Date(booking.match_date), "MMM d, yyyy")}
+                            </p>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                              Time: {format(new Date(`${booking.match_date}T${booking.start_time}`), "h:mm a")} -{" "}
+                              {format(new Date(`${booking.match_date}T${booking.end_time}`), "h:mm a")}
+                            </p>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                              Duration: {differenceInHours(
+                                new Date(`${booking.match_date}T${booking.end_time}`),
+                                new Date(`${booking.match_date}T${booking.start_time}`)
+                              )} hours
+                            </p>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                              Organizer: {booking.organizer_name}
+                            </p>
+                            <div className="mt-4">
+                              <Button
+                                className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg"
+                                onClick={() => booking.slug && navigate(`/match/${booking.slug}`)}
+                                disabled={!booking.slug}
+                              >
+                                View Details
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-gray-600 dark:text-gray-400">No upcoming bookings.</p>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card className="bg-white dark:bg-gray-800 border-none shadow-lg rounded-xl">
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold text-gray-900 dark:text-gray-100">Past Bookings</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {pastBookings.length > 0 ? (
-                  <div className="space-y-4">
-                    {pastBookings.map((booking) => (
-                      <div key={booking.id} className="border-b border-gray-200 dark:border-gray-700 pb-4">
-                        <h3 className="font-medium text-gray-900 dark:text-gray-100">{booking.title}</h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          Date: {format(new Date(booking.match_date), "MMM d, yyyy")}
-                        </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          Duration: {differenceInHours(
-                            new Date(`${booking.match_date}T${booking.end_time}`),
-                            new Date(`${booking.match_date}T${booking.start_time}`)
-                          )} hours
-                        </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          Organizer: {booking.organizer_name || "Unknown"}
-                        </p>
+                    ) : (
+                      <p className="text-sm text-gray-600 dark:text-gray-400 p-4">
+                        No upcoming bookings found.
+                      </p>
+                    )}
+                  </TabsContent>
+                  <TabsContent value="past">
+                    {pastBookings.length > 0 ? (
+                      <div className="space-y-4">
+                        {pastBookings.map((booking) => (
+                          <div
+                            key={booking.id}
+                            className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700"
+                          >
+                            <h3 className="font-medium text-gray-900 dark:text-gray-100">{booking.title}</h3>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                              Date: {format(new Date(booking.match_date), "MMM d, yyyy")}
+                            </p>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                              Time: {format(new Date(`${booking.match_date}T${booking.start_time}`), "h:mm a")} -{" "}
+                              {format(new Date(`${booking.match_date}T${booking.end_time}`), "h:mm a")}
+                            </p>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                              Duration: {differenceInHours(
+                                new Date(`${booking.match_date}T${booking.end_time}`),
+                                new Date(`${booking.match_date}T${booking.start_time}`)
+                              )} hours
+                            </p>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                              Organizer: {booking.organizer_name}
+                            </p>
+                            <div className="mt-4">
+                              <Button
+                                className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg"
+                                onClick={() => booking.slug && navigate(`/match/${booking.slug}`)}
+                                disabled={!booking.slug}
+                              >
+                                View Details
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-gray-600 dark:text-gray-400">No past bookings.</p>
-                )}
+                    ) : (
+                      <p className="text-sm text-gray-600 dark:text-gray-400 p-4">
+                        No past bookings found.
+                      </p>
+                    )}
+                  </TabsContent>
+                </Tabs>
               </CardContent>
             </Card>
 
@@ -291,6 +351,10 @@ const VenueManagerDashboard = () => {
           </>
         )}
       </main>
+
+      <div className="sticky bottom-0 z-20">
+        <Navbar />
+      </div>
     </div>
   );
 };
