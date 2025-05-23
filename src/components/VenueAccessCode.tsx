@@ -182,7 +182,7 @@ const VenueAccessCode = ({ venueId }: VenueAccessCodeProps) => {
     <Card className="bg-white dark:bg-gray-800 border-none shadow-lg rounded-xl">
       <CardHeader>
         <CardTitle className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex justify-between items-center">
-          Generate Access Code
+          Booking Code
           <Button
             onClick={() => setShowAccessCodeDialog(true)}
             className="bg-green-500 hover:bg-green-600 text-white rounded-lg"
