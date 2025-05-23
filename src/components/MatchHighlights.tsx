@@ -122,35 +122,45 @@ const MatchHighlights = () => {
           </div>
         </div>
 
+        {/* Original Header */}
+        <header className="bg-white dark:bg-gray-800 shadow-md py-6">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <img src="/playarenalight.png" alt="PlayArena Logo" className="w-32 mx-auto mb-4" />
+            <h1 className="text-3xl sm:text-4xl font-bold text-blue-800 dark:text-blue-300">{highlight.title}</h1>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+              {highlight.match_date} at {highlight.match_time}
+            </p>
+            <div className="mt-4 text-4xl font-bold text-gray-800 dark:text-gray-200">
+              {highlight.teams[0].name} {highlight.teams[0].score} - {highlight.teams[1].score} {highlight.teams[1].name}
+            </div>
+          </div>
+        </header>
+
         {/* Teams and Events Section */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Teams Section */}
           <div className="md:col-span-2 bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
             <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Teams</h2>
             <div className="space-y-4">
-              {highlight.teams.length === 0 ? (
-                <p className="text-sm text-gray-600 dark:text-gray-400">No team data available.</p>
-              ) : (
-                highlight.teams.map((team, index) => (
-                  <div key={team.name} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border-l-4 border-blue-500">
-                    <div className="flex justify-between items-center mb-2">
-                      <h3 className="text-lg font-medium text-gray-800 dark:text-gray-200">{team.name}</h3>
-                      <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">{team.score}</span>
+              {highlight.teams.map((team, index) => (
+                <div key={team.name} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border-l-4 border-blue-500">
+                  <div className="flex justify-between items-center mb-2">
+                    <h3 className="text-lg font-medium text-gray-800 dark:text-gray-200">{team.name}</h3>
+                    <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">{team.score}</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <p className="text-gray-600 dark:text-gray-400">Possession: {team.analytics.possession}%</p>
+                      <p className="text-gray-600 dark:text-gray-400">Shots: {team.analytics.shots}</p>
                     </div>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div>
-                        <p className="text-gray-600 dark:text-gray-400">Possession: {team.analytics.possession}%</p>
-                        <p className="text-gray-600 dark:text-gray-400">Shots: {team.analytics.shots}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-600 dark:text-gray-400">Fouls: {team.analytics.fouls}</p>
-                        <p className="text-gray-600 dark:text-gray-400">Yellow Cards: {team.analytics.yellow_cards}</p>
-                        <p className="text-gray-600 dark:text-gray-400">Red Cards: {team.analytics.red_cards}</p>
-                      </div>
+                    <div>
+                      <p className="text-gray-600 dark:text-gray-400">Fouls: {team.analytics.fouls}</p>
+                      <p className="text-gray-600 dark:text-gray-400">Yellow Cards: {team.analytics.yellow_cards}</p>
+                      <p className="text-gray-600 dark:text-gray-400">Red Cards: {team.analytics.red_cards}</p>
                     </div>
                   </div>
-                ))
-              )}
+                </div>
+              ))}
             </div>
           </div>
 
