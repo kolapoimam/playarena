@@ -23,7 +23,7 @@ type Booking = {
   start_time: string; 
   end_time: string; 
   organizer_name: string;
-  organizer_id?: string; // Added to check for verified status
+  organizer_id: string | null;
 };
 
 const VenueManagerDashboard = () => {
@@ -98,16 +98,7 @@ const VenueManagerDashboard = () => {
           console.error("Upcoming bookings error:", upcomingError);
           throw new Error(upcomingError.message);
         }
-        const sortedUpcoming = (upcoming || []).map(booking => ({
-          ...booking,
-          organizer_id: booking.match_id ? (await supabase
-            .from("matches")
-            .select("organizer_id")
-            .eq("id", booking.match_id)
-            .single()
-            .then(({ data }) => data?.organizer_id)
-          ) : undefined
-        })).sort((a, b) => new Date(a.match_date).getTime() - new Date(b.match_date).getTime());
+        const sortedUpcoming = (upcoming || []).sort((a, b) => new Date(a.match_date).getTime() - new Date(b.match_date).getTime());
         setUpcomingBookings(sortedUpcoming);
 
         // Fetch past bookings
@@ -122,16 +113,7 @@ const VenueManagerDashboard = () => {
           console.error("Past bookings error:", pastError);
           throw new Error(pastError.message);
         }
-        const sortedPast = (past || []).map(booking => ({
-          ...booking,
-          organizer_id: booking.match_id ? (await supabase
-            .from("matches")
-            .select("organizer_id")
-            .eq("id", booking.match_id)
-            .single()
-            .then(({ data }) => data?.organizer_id)
-          ) : undefined
-        })).sort((a, b) => new Date(b.match_date).getTime() - new Date(a.match_date).getTime());
+        const sortedPast = (past || []).sort((a, b) => new Date(b.match_date).getTime() - new Date(a.match_date).getTime());
         setPastBookings(sortedPast);
 
         // Fetch total events
