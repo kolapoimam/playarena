@@ -3,7 +3,17 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Twitter, Facebook, MessageCircle, Copy } from "lucide-react";
+import { 
+  ArrowLeft, 
+  Twitter, 
+  Facebook, 
+  MessageCircle, 
+  Copy,
+  Trophy,
+  MapPin,
+  CalendarDays,
+  Clock as ClockIcon
+} from "lucide-react";
 
 type MatchHighlight = {
   match_id: string;
@@ -14,6 +24,8 @@ type MatchHighlight = {
   teams: { name: string; score: number; analytics: { possession: number; shots: number; fouls: number; yellow_cards: number; red_cards: number } }[];
   events: { id: string; type: string; team_name: string; minute: number; description: string }[];
 };
+
+const Navbar = lazy(() => import("@/components/Navbar"));
 
 const MatchHighlights = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -91,19 +103,78 @@ const MatchHighlights = () => {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Match Details Card */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6">
-          <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Match Details</h2>
-          <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-            <p><span className="font-medium">Title:</span> {highlight.title}</p>
-            <p><span className="font-medium">Venue:</span> {highlight.venue || "Venue TBD"}</p>
-            <p><span className="font-medium">Date:</span> {highlight.match_date}</p>
-            <p><span className="font-medium">Time:</span> {highlight.match_time}</p>
-            <div className="text-lg font-bold text-gray-800 dark:text-gray-200">
-              {highlight.teams[0]?.name || "Team 1"} {highlight.teams[0]?.score || 0} - {highlight.teams[1]?.score || 0} {highlight.teams[1]?.name || "Team 2"}
-            </div>
-          </div>
-        </div>
+{/* Match Details Card */}
+<div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6">
+  <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Match Details</h2>
+  
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    {/* Match Title */}
+    <div className="flex items-start space-x-3">
+      <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-600 dark:text-green-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+        </svg>
+      </div>
+      <div>
+        <p className="text-xs font-medium text-gray-500 dark:text-gray-400">TITLE</p>
+        <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{highlight.title}</p>
+      </div>
+    </div>
+
+    {/* Venue */}
+    <div className="flex items-start space-x-3">
+      <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600 dark:text-blue-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+      </div>
+      <div>
+        <p className="text-xs font-medium text-gray-500 dark:text-gray-400">VENUE</p>
+        <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{highlight.venue || "Venue TBD"}</p>
+      </div>
+    </div>
+
+    {/* Match Date */}
+    <div className="flex items-start space-x-3">
+      <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-purple-600 dark:text-purple-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+      </div>
+      <div>
+        <p className="text-xs font-medium text-gray-500 dark:text-gray-400">DATE</p>
+        <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{highlight.match_date}</p>
+      </div>
+    </div>
+
+    {/* Match Time */}
+    <div className="flex items-start space-x-3">
+      <div className="p-2 bg-amber-100 dark:bg-amber-900 rounded-lg">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-amber-600 dark:text-amber-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </div>
+      <div>
+        <p className="text-xs font-medium text-gray-500 dark:text-gray-400">TIME</p>
+        <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{highlight.match_time}</p>
+      </div>
+    </div>
+  </div>
+
+  {/* Score Display */}
+  <div className="mt-6 flex items-center justify-center space-x-4">
+    <div className="text-center">
+      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{highlight.teams[0]?.name || "Team 1"}</p>
+      <p className="text-3xl font-bold text-gray-900 dark:text-white">{highlight.teams[0]?.score || 0}</p>
+    </div>
+    <div className="text-2xl font-bold text-gray-900 dark:text-white">-</div>
+    <div className="text-center">
+      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{highlight.teams[1]?.name || "Team 2"}</p>
+      <p className="text-3xl font-bold text-gray-900 dark:text-white">{highlight.teams[1]?.score || 0}</p>
+    </div>
+  </div>
+</div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Teams Section */}
@@ -131,27 +202,6 @@ const MatchHighlights = () => {
               ))}
             </div>
           </div>
-
-          {/* Events Section */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-            <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Events</h2>
-            {highlight.events.length === 0 ? (
-              <p className="text-sm text-gray-600 dark:text-gray-400">No events recorded.</p>
-            ) : (
-              <ul className="space-y-3">
-                {highlight.events.map((event) => (
-                  <li key={event.id} className="flex items-start">
-                    <span className="inline-block w-12 text-center font-semibold text-blue-600 dark:text-blue-400">{event.minute}'</span>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{event.type.replace("_", " ")} ({event.team_name})</p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">{event.description}</p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
 
         {/* Share Section */}
         <div className="mt-8 bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 text-center">
