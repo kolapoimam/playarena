@@ -87,22 +87,22 @@ const MatchHighlights = () => {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 pb-24">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-green-500 text-white shadow-md">
-        <div className="p-4 flex items-center justify-between">
-          <Button variant="ghost" onClick={() => navigate(-1)} className="text-white hover:text-gray-200">
-            <ArrowLeft size={18} className="mr-2" />
-            Back
-          </Button>
-          <h1 className="text-xl sm:text-2xl font-bold">Match Highlights</h1>
-          <div className="w-10"></div>
-        </div>
-      </header>
+return (
+  <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 pb-24">
+    {/* Header */}
+    <header className="sticky top-0 z-50 bg-green-500 text-white shadow-md">
+      <div className="p-4 flex items-center justify-between">
+        <Button variant="ghost" onClick={() => navigate(-1)} className="text-white hover:text-gray-200">
+          <ArrowLeft size={18} className="mr-2" />
+          Back
+        </Button>
+        <h1 className="text-xl sm:text-2xl font-bold">Match Highlights</h1>
+        <div className="w-10"></div>
+      </div>
+    </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 {/* Match Details Card */}
 <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6">
   <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Match Details</h2>
