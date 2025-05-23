@@ -39,7 +39,7 @@ interface Match {
     player_name: string;
   }[];
   created_at: string;
-  status: string; // live, today, upcoming, or past
+  status: string; // live, today, next_day, upcoming, or past
 };
 
 type Organizer = {
@@ -208,6 +208,7 @@ const Matches = () => {
       const now = DateTime.now().setZone(LAGOS_TIMEZONE);
       const today = now.startOf('day');
       const tomorrow = today.plus({ days: 1 });
+      const dayAfterTomorrow = tomorrow.plus({ days: 1 });
 
       const sortedMatches = (data as Match[]).map(match => {
         const matchDateTime = DateTime.fromISO(`${match.match_date}T${match.match_time}`).setZone(LAGOS_TIMEZONE);
@@ -222,6 +223,8 @@ const Matches = () => {
           if (matchDateTime <= now && now <= endDateTime) {
             status = "live";
           }
+        } else if (matchDateTime >= tomorrow && matchDateTime < dayAfterTomorrow) {
+          status = "next_day";
         } else {
           status = "upcoming";
         }
@@ -232,12 +235,13 @@ const Matches = () => {
         };
       })
       .sort((a, b) => {
-        // Priority: Live > Today > Upcoming > Past
+        // Priority: Live > Today > Next Day > Upcoming > Past
         const statusOrder = {
           live: 0,
           today: 1,
-          upcoming: 2,
-          past: 3
+          next_day: 2,
+          upcoming: 3,
+          past: 4
         };
 
         // First sort by status priority
@@ -273,9 +277,10 @@ const Matches = () => {
     const matchDateTime = DateTime.fromISO(`${match.match_date}T${match.match_time}`).setZone(LAGOS_TIMEZONE);
     const endDateTime = DateTime.fromISO(`${match.match_date}T${match.end_time}`).setZone(LAGOS_TIMEZONE);
 
-    if (match.status === "live") return { statusLabel: "Live Match", statusClass: "bg-red-100 text-red-700 animate-pulse" };
+    if (match.status === "live") return { statusLabel: "Live", statusClass: "bg-red-100 text-red-700 animate-pulse" };
     if (match.status === "today") return { statusLabel: "Today", statusClass: "bg-green-100 text-green-700" };
-    if (match.status === "upcoming") return { statusLabel: "Upcoming Match", statusClass: "bg-blue-100 text-blue-800" };
+    if (match.status === "next_day") return { statusLabel: "Tomorrow", statusClass: "bg-yellow-100 text-yellow-700" };
+    if (match.status === "upcoming") return { statusLabel: "Upcoming", statusClass: "bg-blue-100 text-blue-800" };
     return { statusLabel: "Passed", statusClass: "bg-gray-200 text-gray-600" };
   };
 
@@ -399,6 +404,7 @@ const Matches = () => {
                     <SelectItem value="all">All</SelectItem>
                     <SelectItem value="live">Live</SelectItem>
                     <SelectItem value="today">Today</SelectItem>
+                    <SelectItem value="next_day">Tomorrow</SelectItem>
                     <SelectItem value="upcoming">Upcoming</SelectItem>
                     <SelectItem value="past">Past</SelectItem>
                   </SelectContent>
@@ -526,7 +532,7 @@ const Matches = () => {
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <Lock size={16} className="inline text-gray-500" />
+                              <Lock size={16} className="inline text-gray-500 dark:text-gray-400" />
                             </TooltipTrigger>
                             <TooltipContent>
                               <p>This is a private match</p>
@@ -549,22 +555,22 @@ const Matches = () => {
                     </div>
                   </div>
                   
-                  <div className="mt-2 space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                  <div className="mt-2 space-y-2 text-sm text-gray-600 dark:text-gray-300">
                     <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4" />
-                      <span className="text-sm font-medium text-gray-900">
-                        {match.status === "today" ? "Today" : formatDate(match.match_date)}
+                      <Calendar className="h-4 w-4 text-gray-600 dark:text-gray-300" />
+                      <span className="text-sm font-medium text-gray-900 dark:text-gray-200">
+                        {match.status === "today" ? "Today" : match.status === "next_day" ? "Tomorrow" : formatDate(match.match_date)}
                       </span>
                     </div>
                     
                     <div className="flex items-center gap-2">
-                      <Clock size={16} />
+                      <Clock size={16} className="text-gray-600 dark:text-gray-300" />
                       <span>{formatTime(match.match_time)}</span>
                     </div>
                     
                     {match.venue && (
                       <div className="flex items-center gap-2">
-                        <MapPin size={16} />
+                        <MapPin size={16} className="text-gray-600 dark:text-gray-300" />
                         <a
                           href={`/venue/${match.venue.slug}`}
                           className="text-primary hover:underline"
@@ -579,7 +585,7 @@ const Matches = () => {
                     )}
                     
                     <div className="flex items-center gap-2">
-                      <Users size={16} />
+                      <Users size={16} className="text-gray-600 dark:text-gray-300" />
                       <span>
                         {match.players?.length || 0}/{match.total_slots} spots filled
                       </span>
