@@ -3,20 +3,20 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, LogOut, Settings, Bell } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ArrowLeft, LogOut, Settings } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import UserDashboard from "@/components/UserDashboard";
 import UserMatches from "@/components/UserMatches";
 import ProfileSettings from "@/components/ProfileSettings";
 import Performance from "@/components/Performance";
-import UserNotifications from "@/components/UserNotifications";
 
 const Profile = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [profile, setProfile] = useState(null);
+  const [activeTab, setActiveTab] = useState("dashboard");
   const [showSettings, setShowSettings] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
 
   useEffect(() => {
@@ -51,13 +51,6 @@ const Profile = () => {
 
   const handleSettingsClick = () => {
     setShowSettings(true);
-    setShowNotifications(false);
-    setShowDropdown(false);
-  };
-
-  const handleNotificationsClick = () => {
-    setShowNotifications(true);
-    setShowSettings(false);
     setShowDropdown(false);
   };
 
@@ -68,22 +61,13 @@ const Profile = () => {
       <div className="bg-gradient-to-r from-green-600 to-green-800 text-white p-4 flex items-center justify-between shadow-lg sticky top-0 z-20">
         <Button
           variant="ghost"
-          onClick={() => {
-            if (showSettings || showNotifications) {
-              setShowSettings(false);
-              setShowNotifications(false);
-            } else {
-              navigate(-1);
-            }
-          }}
+          onClick={() => navigate(-1)}
           className="text-white hover:text-gray-200 text-sm flex items-center"
         >
           <ArrowLeft size={16} className="mr-2" />
           Back
         </Button>
-        <h1 className="text-2xl font-bold text-center flex-1">
-          {showSettings ? "Profile & Settings" : showNotifications ? "Notifications" : "My Profile"}
-        </h1>
+        <h1 className="text-2xl font-bold text-center flex-1">My Profile</h1>
         <div className="relative">
           <img
             src={
@@ -113,14 +97,6 @@ const Profile = () => {
               </Button>
               <Button
                 variant="ghost"
-                className="w-full text-gray-700 dark:text-gray-300 hover:bg-green-100 dark:hover:bg-green-900 flex items-center justify-start px-4 py-3 text-sm rounded-none"
-                onClick={handleNotificationsClick}
-              >
-                <Bell size={16} className="mr-2" />
-                Notifications
-              </Button>
-              <Button
-                variant="ghost"
                 className="w-full text-red-500 hover:text-red-700 hover:bg-red-100 dark:hover:bg-red-900 flex items-center justify-start px-4 py-3 text-sm rounded-none"
                 onClick={handleLogout}
               >
@@ -138,22 +114,14 @@ const Profile = () => {
             Welcome, {username}!
           </h2>
           <p className="text-gray-700 dark:text-gray-300 mb-2">
-            {showSettings
-              ? "Manage your account and preferences."
-              : showNotifications
-              ? "Customize your notification settings."
-              : "Explore your dashboard, manage matches, or check your performance stats."}
+            Explore your dashboard, manage matches, or check your performance stats.
           </p>
         </div>
 
-        <div className="flex-1 flex flex-col pb-24">
+        <div className="flex-1 flex flex-col pb-24"> {/* Added padding bottom for space above navbar */}
           {showSettings ? (
             <div className="px-6 pt-2">
               <ProfileSettings profile={profile} setProfile={setProfile} setShowSettings={setShowSettings} />
-            </div>
-          ) : showNotifications ? (
-            <div className="px-6 pt-2">
-              <UserNotifications profile={profile} setShowNotifications={setShowNotifications} />
             </div>
           ) : (
             <Tabs
@@ -162,7 +130,7 @@ const Profile = () => {
               className="w-full flex-1 flex flex-col"
             >
               <div className="sticky top-[136px] z-10 px-6">
-                <TabsList className="grid w-full grid-cols-3 bg-gray-100 dark:bg-gray-700 rounded-lg h-12">
+                <TabsList className="grid w-full grid-cols-3 bg-gray-100 dark:bg-gray-700 rounded-lg h-12"> {/* Fixed height */}
                   <TabsTrigger
                     value="dashboard"
                     className="data-[state=active]:bg-green-500 data-[state=active]:text-white py-2 text-sm font-medium rounded-md"
@@ -183,7 +151,7 @@ const Profile = () => {
                   </TabsTrigger>
                 </TabsList>
               </div>
-              <div className="flex-1 overflow-y-auto px-6 pt-6">
+              <div className="flex-1 overflow-y-auto px-6 pt-6"> {/* Content area with padding and scrolling */}
                 <TabsContent value="dashboard" className="mt-0 pb-6">
                   <UserDashboard profile={profile} />
                 </TabsContent>

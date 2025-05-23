@@ -1,13 +1,12 @@
 {
-  "name": "Sport Cliq",
-  "short_name": "Sport Cliq",
+  "name": "Play Arena",
+  "short_name": "Play Arena",
   "description": "Discover and organise football matches in Nigeria.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#317EFB",
   "orientation": "portrait",
-  "gcm_sender_id": "467709163411",
   "icons": [
     {
       "src": "/android-chrome-192x192.png",
