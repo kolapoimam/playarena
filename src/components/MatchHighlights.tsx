@@ -1,17 +1,15 @@
 import { useState, useEffect } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Home, Trophy, Calendar, Twitter, Facebook, MessageCircle, Copy, ArrowLeft } from "lucide-react";
-import Navbar from "@/components/Navbar";
+import { Home, Trophy, Calendar, Twitter, Facebook, MessageCircle, Copy } from "lucide-react";
 
 type MatchHighlight = {
   match_id: string;
   title: string;
   match_date: string;
   match_time: string;
-  venue?: string;
   teams: { name: string; score: number; analytics: { possession: number; shots: number; fouls: number; yellow_cards: number; red_cards: number } }[];
   events: { id: string; type: string; team_name: string; minute: number; description: string }[];
 };
@@ -19,7 +17,6 @@ type MatchHighlight = {
 const MatchHighlights = () => {
   const { slug } = useParams<{ slug: string }>();
   const { toast } = useToast();
-  const navigate = useNavigate();
   const [highlight, setHighlight] = useState<MatchHighlight | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -31,38 +28,24 @@ const MatchHighlights = () => {
       }
 
       try {
-        const { data: matchData, error: matchError } = await supabase
-          .from("matches")
+        const { data, error } = await supabase
+          .rpc("get_match_highlights_by_slug", { p_slug: slug })
           .select(`
-            id,
+            match_id,
             title,
             match_date::text,
             match_time::text,
-            venue,
-            team_assignments!fk_match (teams),
-            match_events (id, type, team_name, minute, description)
-          `)
-          .eq("slug", slug)
-          .eq("team_assignments.is_public", true)
-          .single();
+            teams,
+            events
+          `);
 
-        if (matchError) throw matchError;
-        if (!matchData) {
+        if (error) throw error;
+        if (!data || data.length === 0) {
           toast({ title: "Error", description: "Match highlights not found or not public.", variant: "destructive" });
           return;
         }
 
-        const highlightData: MatchHighlight = {
-          match_id: matchData.id,
-          title: matchData.title,
-          match_date: matchData.match_date,
-          match_time: matchData.match_time,
-          venue: matchData.venue,
-          teams: matchData.team_assignments?.teams || [],
-          events: matchData.match_events || [],
-        };
-
-        setHighlight(highlightData);
+        setHighlight(data[0]);
       } catch (error) {
         console.error("Error fetching highlights:", error);
         toast({ title: "Error", description: "Failed to load match highlights.", variant: "destructive" });
@@ -120,21 +103,8 @@ const MatchHighlights = () => {
           </div>
         </div>
 
-        {/* Original Header */}
-        <header className="bg-white dark:bg-gray-800 shadow-md py-6">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <img src="/playarenalight.png" alt="PlayArena Logo" className="w-32 mx-auto mb-4" />
-            <h1 className="text-3xl sm:text-4xl font-bold text-blue-800 dark:text-blue-300">{highlight.title}</h1>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-              {highlight.match_date} at {highlight.match_time}
-            </p>
-            <div className="mt-4 text-4xl font-bold text-gray-800 dark:text-gray-200">
-              {highlight.teams[0].name} {highlight.teams[0].score} - {highlight.teams[1].score} {highlight.teams[1].name}
-            </div>
-          </div>
-        </header>
-
-        {/* Teams and Events Section */}
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Teams Section */}
           <div className="md:col-span-2 bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
@@ -183,7 +153,7 @@ const MatchHighlights = () => {
           </div>
         </div>
 
-{/* Share Section */}
+    {/* Share Section */}
 <div className="mt-8 bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 text-center">
   <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Spread the Word</h2>
   <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
@@ -234,9 +204,6 @@ const MatchHighlights = () => {
   </div>
 </div>
       </main>
-
-      {/* Navbar */}
-      <Navbar />
     </div>
   );
 };
