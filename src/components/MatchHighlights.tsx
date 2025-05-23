@@ -31,7 +31,6 @@ const MatchHighlights = () => {
       }
 
       try {
-        // Fetch match details including venue from matches table
         const { data: matchData, error: matchError } = await supabase
           .from("matches")
           .select(`
@@ -44,7 +43,7 @@ const MatchHighlights = () => {
             match_events (id, type, team_name, minute, description)
           `)
           .eq("slug", slug)
-          .eq("team_assignments.is_public", true) // Ensure only public highlights are accessible
+          .eq("team_assignments.is_public", true)
           .single();
 
         if (matchError) throw matchError;
@@ -53,7 +52,6 @@ const MatchHighlights = () => {
           return;
         }
 
-        // Map the data to MatchHighlight type
         const highlightData: MatchHighlight = {
           match_id: matchData.id,
           title: matchData.title,
