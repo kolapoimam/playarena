@@ -3,10 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Loader2, Copy } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import TimeInput from "@/components/TimeInput";
 
 type AccessCode = {
   id: string;
@@ -45,7 +45,7 @@ const VenueAccessCode = ({ venueId }: VenueAccessCodeProps) => {
       if (error) throw error;
 
       // Client-side expiry check: Update status to inactive if expired
-      const now = new Date(); // Current time: 08:27 PM WAT, May 22, 2025
+      const now = new Date();
       const updatedCodes = await Promise.all(
         (data || []).map(async (code) => {
           const expiryDate = new Date(code.expiry_date);
@@ -178,6 +178,10 @@ const VenueAccessCode = ({ venueId }: VenueAccessCodeProps) => {
     }
   };
 
+  const capitalizeStatus = (status: string) => {
+    return status.charAt(0).toUpperCase() + status.slice(1);
+  };
+
   return (
     <Card className="bg-white dark:bg-gray-800 border-none shadow-lg rounded-xl">
       <CardHeader>
@@ -234,7 +238,7 @@ const VenueAccessCode = ({ venueId }: VenueAccessCodeProps) => {
                     <span
                       className={`inline-block px-3 py-1 text-sm font-medium rounded border ${getStatusStyles(code.status)}`}
                     >
-                      {code.status}
+                      {capitalizeStatus(code.status)}
                     </span>
                   </div>
                 </div>
@@ -245,7 +249,7 @@ const VenueAccessCode = ({ venueId }: VenueAccessCodeProps) => {
       </CardContent>
 
       <Dialog open={showAccessCodeDialog} onOpenChange={setShowAccessCodeDialog}>
-        <DialogContent className="sm:max-w-md rounded-2xl bg-white dark:bg-gray-800 border-none shadow-lg">
+        <DialogContent className="max-w-md bg-white dark:bg-gray-800 border-none shadow-lg rounded-2xl">
           <DialogHeader>
             <DialogTitle className="text-lg font-semibold text-gray-900 dark:text-gray-100">Generate Access Code</DialogTitle>
             <DialogDescription className="text-sm text-gray-600 dark:text-gray-400">
@@ -259,17 +263,15 @@ const VenueAccessCode = ({ venueId }: VenueAccessCodeProps) => {
               onChange={(e) => setAccessCodeForm({ ...accessCodeForm, match_date: e.target.value })}
               className="text-base bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg"
             />
-            <Input
-              type="time"
+            <TimeInput
               value={accessCodeForm.start_time}
-              onChange={(e) => setAccessCodeForm({ ...accessCodeForm, start_time: e.target.value })}
-              className="text-base bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg"
+              onChange={(value) => setAccessCodeForm({ ...accessCodeForm, start_time: value })}
+              placeholder="e.g., 01:00 PM"
             />
-            <Input
-              type="time"
+            <TimeInput
               value={accessCodeForm.end_time}
-              onChange={(e) => setAccessCodeForm({ ...accessCodeForm, end_time: e.target.value })}
-              className="text-base bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg"
+              onChange={(value) => setAccessCodeForm({ ...accessCodeForm, end_time: value })}
+              placeholder="e.g., 03:00 PM"
             />
             {generatedCode && (
               <div className="text-center">
@@ -282,7 +284,7 @@ const VenueAccessCode = ({ venueId }: VenueAccessCodeProps) => {
               </div>
             )}
           </div>
-          <DialogFooter className="flex justify-between">
+          <DialogFooter className="flex flex-row justify-end gap-3">
             <Button
               variant="outline"
               onClick={() => {
