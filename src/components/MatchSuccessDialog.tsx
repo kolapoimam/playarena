@@ -36,31 +36,79 @@ const MatchSuccessDialog = ({ open, onOpenChange, formValues, selectedVenue, sup
   const [isDownloading, setIsDownloading] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
-  const handleDownload = async () => {
-    if (!cardRef.current) {
-      toast({
-        title: "Error",
-        description: "Card element is not ready. Please try again.",
-        variant: "destructive",
-      });
-      return;
+const handleDownload = async () => {
+  if (!cardRef.current) {
+    toast({
+      title: "Error",
+      description: "Card element is not ready. Please try again.",
+      variant: "destructive",
+    });
+    return;
+  }
+  setIsDownloading(true);
+  try {
+    // Ensure images are preloaded to avoid CORS issues
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.src = "/playarenadark.png";
+    await new Promise((resolve) => {
+      img.onload = resolve;
+      img.onerror = () => {
+        console.warn("Failed to load logo image for canvas");
+        resolve(null); // Proceed even if image fails
+      };
+    });
+
+    const canvas = await html2canvas(cardRef.current, {
+      scale: 2,
+      useCORS: true,
+      logging: false, // Set to true for debugging on mobile/PWA
+    });
+
+    // Convert canvas to Blob for better compatibility
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob((blob) => resolve(blob), "image/png")
+    );
+
+    if (!blob) {
+      throw new Error("Failed to convert canvas to Blob");
     }
-    setIsDownloading(true);
-    try {
-      const canvas = await html2canvas(cardRef.current, { scale: 2 });
-      const link = document.createElement('a');
-      link.download = `SportCliq-Supercode-${formValues.title.replace(/\s+/g, '-')}.png`;
-      link.href = canvas.toDataURL('image/png');
-      link.click();
-    } catch (error) {
-      console.error("Error generating image:", error);
-      toast({
-        title: "Error",
-        description: "Failed to download supercode card.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsDownloading(false);
+
+    const filename = `SportCliq-Supercode-${formValues.title.replace(/\s+/g, '-')}.png`;
+    const url = URL.createObjectURL(blob);
+
+    // Try navigator.share for mobile/PWA if available
+    if (navigator.share && (navigator as any).canShare?.({ files: [new File([blob], filename, { type: "image/png" })] })) {
+      try {
+        await navigator.share({
+          files: [new File([blob], filename, { type: "image/png" })],
+          title: formValues.title,
+          text: `Join my match with supercode ${supercode}!`,
+        });
+        URL.revokeObjectURL(url);
+        return; // Share completed, no need to proceed to download
+      } catch (shareError) {
+        console.warn("Share API failed, falling back to download:", shareError);
+      }
+    }
+
+    // Fallback to traditional download
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error("Error generating image:", error);
+    toast({
+      title: "Error",
+      description: "Failed to download supercode card. Please try again.",
+      variant: "destructive",
+    });
+  } finally {
+    setIsDownloading(false);
     }
   };
 
@@ -121,7 +169,7 @@ const MatchSuccessDialog = ({ open, onOpenChange, formValues, selectedVenue, sup
             </div>
           </div>
           <p className="text-sm text-gray-500 dark:text-gray-400 my-4">
-            <strong>Note:</strong> Save or download this code. You'll need it to confirm and check in players on match day.
+            <strong>Note:</strong> Save or download this code. You'll need it on match day.
             {formValues.is_private && " Share the access password with invited players to allow them to join."}
           </p>
           <div className="flex flex-col sm:flex-row gap-3">
