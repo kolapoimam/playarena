@@ -21,7 +21,7 @@ type Match = { id: string; slug: string; super_code: string; title: string; matc
 
 // Utility function for generating a random emoji
 const getRandomAvatar = (playerId: string) => {
-  const emojis = ["⚽", "🏀", "🏈", "🎾", "🏐", "🏉", "🥊", "🏓", "🏸", "🤾"];
+  const emojis = ["🎽", "👕"];
   const seed = playerId.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
   return emojis[seed % emojis.length];
 };
