@@ -172,7 +172,7 @@ const VenueManagerDashboard = () => {
               className="text-green-700 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-700 rounded-lg"
             >
               <ArrowLeft className="w-5 h-5 mr-2" />
-              Back to Profile
+              Back
             </Button>
             <div>
               <h1 className="text-2xl font-bold text-green-700 dark:text-green-400">Venue Manager</h1>
