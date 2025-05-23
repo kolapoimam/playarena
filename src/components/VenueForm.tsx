@@ -27,6 +27,12 @@ import { Trash2 } from "lucide-react";
 import { RichTextEditor } from "@mantine/tiptap";
 import { useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 // Nigerian states including FCT
 const nigerianStates = [
@@ -49,9 +55,7 @@ const formSchema = z.object({
     .transform(val => val.slice(0, 11)),
   description: z.string().optional(),
   map_link: z.string().url({ message: "Please enter a valid URL" }).or(z.literal("")),
-  facilities: z.string().optional(),
   opening_hours: z.string().optional(),
-  pricing: z.string().optional(),
   booking_fee: z.number().optional().refine((val) => val === undefined || (Number.isFinite(val) && val >= 0), {
     message: "Booking fee must be a valid number (NGN per hour)",
   }),
@@ -93,29 +97,27 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
       venue_phone: "",
       description: "",
       map_link: "",
-      facilities: "",
       opening_hours: "",
-      pricing: "",
       booking_fee: undefined,
     },
   });
 
-  // Initialize editor for facilities field
+  // Initialize editor for facilities field (removed facilities, but keeping editor logic as a placeholder)
   const editor = useEditor({
     extensions: [StarterKit],
     content: "",
     onUpdate: ({ editor }) => {
       const html = editor.getHTML();
-      form.setValue("facilities", html === "<p></p>" ? "" : html);
+      form.setValue("description", html === "<p></p>" ? "" : html);
     },
   });
 
   // Sync editor content with form field on mount or reset
   useEffect(() => {
     if (editor) {
-      const currentFacilities = form.getValues("facilities");
-      if (currentFacilities && currentFacilities !== editor.getHTML()) {
-        editor.commands.setContent(currentFacilities);
+      const currentDescription = form.getValues("description");
+      if (currentDescription && currentDescription !== editor.getHTML()) {
+        editor.commands.setContent(currentDescription);
       }
     }
   }, [editor, form]);
@@ -181,9 +183,7 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
           venue_phone: data.venue_phone,
           description: data.description || null,
           map_link: data.map_link || null,
-          facilities: data.facilities || null,
           opening_hours: data.opening_hours || null,
-          pricing: data.pricing || null,
           booking_fee: data.booking_fee || null,
           image_urls: imageUrl ? [imageUrl] : null,
         })
@@ -223,298 +223,277 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 w-full">
       <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-6">Create New Venue</h2>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-          {/* Venue Details Section */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
-            <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Venue Details</h3>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 w-full">
+          <Accordion type="single" collapsible className="w-full">
+            {/* Venue Details Section */}
+            <AccordionItem value="venue-details">
+              <AccordionTrigger className="text-xl font-semibold text-gray-800 dark:text-gray-200">
+                Venue Details
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Venue Name</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="E.g., National Stadium"
+                            {...field}
+                            className="border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                          />
+                        </FormControl>
+                        <FormMessage className="text-red-500" />
+                      </FormItem>
+                    )}
+                  />
 
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Venue Name</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="E.g., National Stadium"
-                      {...field}
-                      className="border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                  <FormField
+                    control={form.control}
+                    name="address"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Address</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Full street address"
+                            {...field}
+                            className="border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                          />
+                        </FormControl>
+                        <FormMessage className="text-red-500" />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="city"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">City</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="E.g., Lagos"
+                              {...field}
+                              className="border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                            />
+                          </FormControl>
+                          <FormMessage className="text-red-500" />
+                        </FormItem>
+                      )}
                     />
-                  </FormControl>
-                  <FormMessage className="text-red-500" />
-                </FormItem>
-              )}
-            />
 
-            <FormField
-              control={form.control}
-              name="address"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Address</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Full street address"
-                      {...field}
-                      className="border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                    <FormField
+                      control={form.control}
+                      name="state"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">State</FormLabel>
+                          <FormControl>
+                            <Select
+                              onValueChange={field.onChange}
+                              value={field.value}
+                            >
+                              <SelectTrigger className="border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white">
+                                <SelectValue placeholder="Select a state" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {nigerianStates.map((state) => (
+                                  <SelectItem key={state} value={state}>
+                                    {state}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </FormControl>
+                          <FormMessage className="text-red-500" />
+                        </FormItem>
+                      )}
                     />
-                  </FormControl>
-                  <FormMessage className="text-red-500" />
-                </FormItem>
-              )}
-            />
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="city"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">City</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="E.g., Lagos"
-                        {...field}
-                        className="border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                      />
-                    </FormControl>
-                    <FormMessage className="text-red-500" />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="state"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">State</FormLabel>
-                    <FormControl>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                      >
-                        <SelectTrigger className="border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white">
-                          <SelectValue placeholder="Select a state" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {nigerianStates.map((state) => (
-                            <SelectItem key={state} value={state}>
-                              {state}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </FormControl>
-                    <FormMessage className="text-red-500" />
-                  </FormItem>
-                )}
-              />
-            </div>
-          </div>
-
-          {/* Contact & Location Section */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
-            <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Contact & Location</h3>
-
-            <FormField
-              control={form.control}
-              name="venue_phone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Venue Phone Number</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="tel"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      placeholder="Enter 11-digit phone number"
-                      {...field}
-                      value={field.value}
-                      onChange={(e) => {
-                        const numericValue = e.target.value.replace(/\D/g, '');
-                        field.onChange(numericValue.slice(0, 11));
-                      }}
-                      className="border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                    />
-                  </FormControl>
-                  <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
-                    Provide a valid phone number of the Venue owner or Manager (numbers only)
-                  </FormDescription>
-                  <FormMessage className="text-red-500" />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="map_link"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Google Maps Link (Optional)</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Paste Google Maps URL here"
-                      {...field}
-                      className="border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                    />
-                  </FormControl>
-                  <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
-                    Add a Google Maps link to help players find the venue easily
-                  </FormDescription>
-                  <FormMessage className="text-red-500" />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="booking_fee"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Booking Fee (NGN per hour, Optional)</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      placeholder="Enter fee per hour"
-                      {...field}
-                      value={field.value === undefined ? "" : field.value}
-                      onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
-                      className="border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                    />
-                  </FormControl>
-                  <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
-                    Enter the hourly booking fee in NGN (optional)
-                  </FormDescription>
-                  <FormMessage className="text-red-500" />
-                </FormItem>
-              )}
-            />
-          </div>
-
-          {/* Additional Info Section */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
-            <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Additional Info</h3>
-
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Description (Optional)</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Describe the venue, facilities, etc."
-                      {...field}
-                      className="border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                    />
-                  </FormControl>
-                  <FormMessage className="text-red-500" />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="facilities"
-              render={() => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Facilities (Optional)</FormLabel>
-                  <FormControl>
-                    {editor ? <RichTextEditor editor={editor} /> : <p>Loading editor...</p>}
-                  </FormControl>
-                  <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
-                    Add details about facilities (e.g., pitches, seating) using rich text
-                  </FormDescription>
-                  <FormMessage className="text-red-500" />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="opening_hours"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Opening Hours (Optional)</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="E.g., 8:00 AM - 6:00 PM"
-                      {...field}
-                      className="border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                    />
-                  </FormControl>
-                  <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
-                    Specify the venue's operating hours
-                  </FormDescription>
-                  <FormMessage className="text-red-500" />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="pricing"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Pricing (Optional)</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="E.g., General admission: NGN 500"
-                      {...field}
-                      className="border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                    />
-                  </FormControl>
-                  <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
-                    Describe pricing details (e.g., admission fees)
-                  </FormDescription>
-                  <FormMessage className="text-red-500" />
-                </FormItem>
-              )}
-            />
-
-            <FormItem>
-              <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Image (Optional)</FormLabel>
-              <div className="space-y-2">
-                {selectedFile ? (
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-700 dark:text-gray-300">
-                      {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)}MB)
-                    </span>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={removeSelectedFile}
-                      className="text-red-500 hover:text-red-700"
-                    >
-                      <Trash2 size={16} />
-                    </Button>
                   </div>
-                ) : (
-                  <FormControl>
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      ref={fileInputRef}
-                      onChange={(e) => handleFileChange(e.target.files)}
-                      className="border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                    />
-                  </FormControl>
-                )}
-              </div>
-              <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
-                Upload 1 image (max 5MB) to showcase the venue
-              </FormDescription>
-              {fileError && <p className="text-red-500 text-sm">{fileError}</p>}
-            </FormItem>
-          </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
 
-          <div className="flex gap-4">
+            {/* Contact & Location Section */}
+            <AccordionItem value="contact-location">
+              <AccordionTrigger className="text-xl font-semibold text-gray-800 dark:text-gray-200">
+                Contact & Location
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
+                  <FormField
+                    control={form.control}
+                    name="venue_phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Venue Phone Number</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="tel"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            placeholder="Enter 11-digit phone number"
+                            {...field}
+                            value={field.value}
+                            onChange={(e) => {
+                              const numericValue = e.target.value.replace(/\D/g, '');
+                              field.onChange(numericValue.slice(0, 11));
+                            }}
+                            className="border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                          />
+                        </FormControl>
+                        <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                          Provide a valid phone number of the Venue owner or Manager (numbers only)
+                        </FormDescription>
+                        <FormMessage className="text-red-500" />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="map_link"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Google Maps Link (Optional)</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Paste Google Maps URL here"
+                            {...field}
+                            className="border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                          />
+                        </FormControl>
+                        <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                          Add a Google Maps link to help players find the venue easily
+                        </FormDescription>
+                        <FormMessage className="text-red-500" />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="booking_fee"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Booking Fee (NGN per hour, Optional)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="Enter fee per hour"
+                            {...field}
+                            value={field.value === undefined ? "" : field.value}
+                            onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
+                            className="border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                          />
+                        </FormControl>
+                        <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                          Enter the hourly booking fee in NGN (optional)
+                        </FormDescription>
+                        <FormMessage className="text-red-500" />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Additional Info Section */}
+            <AccordionItem value="additional-info">
+              <AccordionTrigger className="text-xl font-semibold text-gray-800 dark:text-gray-200">
+                Additional Info
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Description (Optional)</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Describe the venue, facilities, etc."
+                            {...field}
+                            className="border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                          />
+                        </FormControl>
+                        <FormMessage className="text-red-500" />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="opening_hours"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Opening Hours (Optional)</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="E.g., 8:00 AM - 6:00 PM"
+                            {...field}
+                            className="border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                          />
+                        </FormControl>
+                        <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                          Specify the venue's operating hours
+                        </FormDescription>
+                        <FormMessage className="text-red-500" />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormItem>
+                    <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Image (Optional)</FormLabel>
+                    <div className="space-y-2">
+                      {selectedFile ? (
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-700 dark:text-gray-300">
+                            {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)}MB)
+                          </span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={removeSelectedFile}
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            <Trash2 size={16} />
+                          </Button>
+                        </div>
+                      ) : (
+                        <FormControl>
+                          <Input
+                            type="file"
+                            accept="image/*"
+                            ref={fileInputRef}
+                            onChange={(e) => handleFileChange(e.target.files)}
+                            className="border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                          />
+                        </FormControl>
+                      )}
+                    </div>
+                    <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                      Upload 1 image (max 5MB) to showcase the venue
+                    </FormDescription>
+                    {fileError && <p className="text-red-500 text-sm">{fileError}</p>}
+                  </FormItem>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+
+          <div className="flex gap-4 w-full">
             <Button
               type="submit"
               className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-3 text-lg shadow-md transition-colors"
