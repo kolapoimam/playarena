@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -254,6 +254,9 @@ const MatchHighlights = () => {
           </div>
         </div>
       </main>
+
+        <Navbar />
+
     </div>
   );
 };
