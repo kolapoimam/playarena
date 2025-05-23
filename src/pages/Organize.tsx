@@ -45,37 +45,75 @@ const Organize = () => {
     checkAuth();
   }, []);
 
-  useEffect(() => {
-    const handlePreFill = async () => {
-      if (!preSelectedVenueSlug || !accessCode) return;
+useEffect(() => {
+  const handlePreFill = async () => {
+    if (!preSelectedVenueSlug || !accessCode) return;
 
-      try {
-        const { data: venue, error: venueError } = await supabase
-          .from("venues")
-          .select("id, slug, name, city, verified_status")
-          .eq("slug", preSelectedVenueSlug)
-          .single();
+    try {
+      const { data: venue, error: venueError } = await supabase
+        .from("venues")
+        .select("id, slug, name, city, verified_status")
+        .eq("slug", preSelectedVenueSlug)
+        .single();
 
-        if (venueError || !venue) {
-          throw new Error("Venue not found.");
+      if (venueError || !venue) {
+        throw new Error("Venue not found.");
+      }
+
+      let accessCodeData = null;
+
+      // Check booking_access_codes first
+      const { data: bacData, error: bacError } = await supabase
+        .from("booking_access_codes")
+        .select("match_date, start_time, end_time, status, expiry_date, booking_id")
+        .eq("code", accessCode)
+        .eq("venue_id", venue.id)
+        .single();
+
+      if (bacData && bacData.status === "pending") {
+        const expiryDate = bacData.expiry_date
+          ? new Date(bacData.expiry_date + 'Z')
+          : new Date(new Date(bacData.created_at).getTime() + 48 * 60 * 60 * 1000);
+        const now = new Date();
+        console.log("Booking Access Code:", {
+          code: accessCode,
+          status: bacData.status,
+          expiryDate,
+          now,
+          isExpired: expiryDate < now,
+          venue_id: venue.id,
+        });
+        if (expiryDate < now) {
+          await supabase
+            .from("booking_access_codes")
+            .update({ status: "inactive" })
+            .eq("code", accessCode)
+            .eq("venue_id", venue.id);
+          throw new Error("Booking access code has expired.");
         }
+        accessCodeData = bacData;
+        setCodeTable("booking_access_codes");
+      } else if (bacError && bacError.code !== "PGRST116") {
+        console.error("Booking access code error:", bacError);
+      }
 
-        let accessCodeData = null;
-
-        // Check booking_access_codes first (payment-based bookings)
-        const { data: bacData, error: bacError } = await supabase
-          .from("booking_access_codes")
-          .select("match_date, start_time, end_time, status, expiry_date, booking_id")
+      // Fallback to venue_access_codes
+      if (!accessCodeData) {
+        const { data: vacData, error: vacError } = await supabase
+          .from("venue_access_codes")
+          .select("match_date, start_time, end_time, status, expiry_date")
           .eq("code", accessCode)
           .eq("venue_id", venue.id)
           .single();
 
-        if (bacData && bacData.status === "pending") {
-          const expiryDate = new Date(bacData.expiry_date + 'Z'); // Parse as UTC
+        if (vacData && vacData.status === "pending") {
+          const expiryDate = vacData.expiry_date
+            ? new Date(vacData.expiry_date + 'Z')
+            : new Date(new Date(vacData.created_at).getTime() + 48 * 60 * 60 * 1000);
           const now = new Date();
-          console.log("Booking Access Code:", {
+          console.log("Venue Access Code:", {
             code: accessCode,
-            status: bacData.status,
+            status: vacData.status,
             expiryDate,
             now,
             isExpired: expiryDate < now,
@@ -83,88 +121,54 @@ const Organize = () => {
           });
           if (expiryDate < now) {
             await supabase
-              .from("booking_access_codes")
+              .from("venue_access_codes")
               .update({ status: "inactive" })
               .eq("code", accessCode)
               .eq("venue_id", venue.id);
-            throw new Error("Booking access code has expired.");
+            throw new Error("Venue access code has expired.");
           }
-          accessCodeData = bacData;
-          setCodeTable("booking_access_codes");
-        } else if (bacError && bacError.code !== "PGRST116") {
-          console.error("Booking access code error:", bacError);
+          accessCodeData = vacData;
+          setCodeTable("venue_access_codes");
+        } else if (vacError && vacError.code !== "PGRST116") {
+          console.error("Venue access code error:", vacError);
         }
-
-        // Fallback to venue_access_codes (non-payment codes)
-        if (!accessCodeData) {
-          const { data: vacData, error: vacError } = await supabase
-            .from("venue_access_codes")
-            .select("match_date, start_time, end_time, status, expiry_date")
-            .eq("code", accessCode)
-            .eq("venue_id", venue.id)
-            .single();
-
-          if (vacData && vacData.status === "pending") {
-            const expiryDate = new Date(vacData.expiry_date + 'Z'); // Parse as UTC
-            const now = new Date();
-            console.log("Venue Access Code:", {
-              code: accessCode,
-              status: vacData.status,
-              expiryDate,
-              now,
-              isExpired: expiryDate < now,
-              venue_id: venue.id,
-            });
-            if (expiryDate < now) {
-              await supabase
-                .from("venue_access_codes")
-                .update({ status: "inactive" })
-                .eq("code", accessCode)
-                .eq("venue_id", venue.id);
-              throw new Error("Venue access code has expired.");
-            }
-            accessCodeData = vacData;
-            setCodeTable("venue_access_codes");
-          } else if (vacError && vacError.code !== "PGRST116") {
-            console.error("Venue access code error:", vacError);
-          }
-        }
-
-        if (!accessCodeData) {
-          throw new Error("Invalid, used, or expired access code.");
-        }
-
-        setVenues([venue]);
-        setIsPreFilled(true);
-        setSelectedVenueId(venue.id);
-        setHasValidBookingCode(true);
-
-        if (formMethods) {
-          formMethods.setValue("venue_id", venue.id);
-          formMethods.setValue("match_date", new Date(accessCodeData.match_date));
-          formMethods.setValue("start_time", accessCodeData.start_time);
-          formMethods.setValue("end_time", accessCodeData.end_time);
-        }
-
-        toast({
-          title: "Booking Code Accepted",
-          description: `Form pre-filled with booking details for ${venue.name}.`,
-        });
-      } catch (error: any) {
-        console.error("Error pre-filling form:", error);
-        toast({
-          title: "Invalid Access Code",
-          description: error.message || "Could not load booking information.",
-          variant: "destructive",
-        });
-        navigate("/organize");
       }
-    };
 
-    if (formMethods) {
-      handlePreFill();
+      if (!accessCodeData) {
+        throw new Error("Invalid, used, or expired access code.");
+      }
+
+      setVenues([venue]);
+      setIsPreFilled(true);
+      setSelectedVenueId(venue.id);
+      setHasValidBookingCode(true);
+
+      if (formMethods) {
+        formMethods.setValue("venue_id", venue.id);
+        formMethods.setValue("match_date", new Date(accessCodeData.match_date));
+        formMethods.setValue("start_time", accessCodeData.start_time);
+        formMethods.setValue("end_time", accessCodeData.end_time);
+      }
+
+      toast({
+        title: "Booking Code Accepted",
+        description: `Form pre-filled with booking details for ${venue.name}.`,
+      });
+    } catch (error: any) {
+      console.error("Error pre-filling form:", error);
+      toast({
+        title: "Invalid Access Code",
+        description: error.message || "Could not load booking information.",
+        variant: "destructive",
+      });
+      navigate("/organize");
     }
-  }, [preSelectedVenueSlug, accessCode, toast, navigate, formMethods]);
+  };
+
+  if (formMethods) {
+    handlePreFill();
+  }
+}, [preSelectedVenueSlug, accessCode, toast, navigate, formMethods]);
 
   const handleFormReady = useCallback(({ watch, setValue }) => {
     setFormMethods({ watch, setValue });
