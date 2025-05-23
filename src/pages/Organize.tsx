@@ -18,7 +18,7 @@ type Venue = {
 };
 
 const Organize = () => {
-  const navigate = useNavigate();
+  const navigate = Navigate();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
   const preSelectedVenueSlug = searchParams.get("venue");
@@ -62,49 +62,71 @@ const Organize = () => {
 
         let accessCodeData = null;
 
-        // Check venue_access_codes
-        const { data: vacData } = await supabase
-          .from("venue_access_codes")
-          .select("match_date, start_time, end_time, status, expiry_date")
+        // Check booking_access_codes first (payment-based bookings)
+        const { data: bacData, error: bacError } = await supabase
+          .from("booking_access_codes")
+          .select("match_date, start_time, end_time, status, expiry_date, booking_id")
           .eq("code", accessCode)
           .eq("venue_id", venue.id)
           .single();
 
-        if (vacData && vacData.status === "pending") {
-          const expiryDate = new Date(vacData.expiry_date);
-          const now = new Date(); // Current time: 08:32 PM WAT, May 22, 2025
+        if (bacData && bacData.status === "pending") {
+          const expiryDate = new Date(bacData.expiry_date + 'Z'); // Parse as UTC
+          const now = new Date();
+          console.log("Booking Access Code:", {
+            code: accessCode,
+            status: bacData.status,
+            expiryDate,
+            now,
+            isExpired: expiryDate < now,
+            venue_id: venue.id,
+          });
           if (expiryDate < now) {
             await supabase
-              .from("venue_access_codes")
+              .from("booking_access_codes")
               .update({ status: "inactive" })
               .eq("code", accessCode)
               .eq("venue_id", venue.id);
-            throw new Error("Access code has expired.");
+            throw new Error("Booking access code has expired.");
           }
-          accessCodeData = vacData;
-          setCodeTable("venue_access_codes");
-        } else {
-          // Check booking_access_codes
-          const { data: bacData } = await supabase
-            .from("booking_access_codes")
+          accessCodeData = bacData;
+          setCodeTable("booking_access_codes");
+        } else if (bacError && bacError.code !== "PGRST116") {
+          console.error("Booking access code error:", bacError);
+        }
+
+        // Fallback to venue_access_codes (non-payment codes)
+        if (!accessCodeData) {
+          const { data: vacData, error: vacError } = await supabase
+            .from("venue_access_codes")
             .select("match_date, start_time, end_time, status, expiry_date")
             .eq("code", accessCode)
             .eq("venue_id", venue.id)
             .single();
 
-          if (bacData && bacData.status === "pending") {
-            const expiryDate = new Date(bacData.expiry_date);
-            const now = new Date(); // Current time: 08:32 PM WAT, May 22, 2025
+          if (vacData && vacData.status === "pending") {
+            const expiryDate = new Date(vacData.expiry_date + 'Z'); // Parse as UTC
+            const now = new Date();
+            console.log("Venue Access Code:", {
+              code: accessCode,
+              status: vacData.status,
+              expiryDate,
+              now,
+              isExpired: expiryDate < now,
+              venue_id: venue.id,
+            });
             if (expiryDate < now) {
               await supabase
-                .from("booking_access_codes")
+                .from("venue_access_codes")
                 .update({ status: "inactive" })
                 .eq("code", accessCode)
                 .eq("venue_id", venue.id);
-              throw new Error("Access code has expired.");
+              throw new Error("Venue access code has expired.");
             }
-            accessCodeData = bacData;
-            setCodeTable("booking_access_codes");
+            accessCodeData = vacData;
+            setCodeTable("venue_access_codes");
+          } else if (vacError && vacError.code !== "PGRST116") {
+            console.error("Venue access code error:", vacError);
           }
         }
 
@@ -189,11 +211,19 @@ const Organize = () => {
           accessCode={accessCode}
           onSubmitSuccess={async (supercode, matchSlug) => {
             if (accessCode && codeTable) {
-              await supabase
+              const { error } = await supabase
                 .from(codeTable)
                 .update({ status: "active" })
                 .eq("code", accessCode)
                 .eq("venue_id", selectedVenueId);
+              if (error) {
+                console.error("Error updating code status:", error);
+                toast({
+                  title: "Error",
+                  description: "Failed to update access code status.",
+                  variant: "destructive",
+                });
+              }
             }
 
             setSupercode(supercode);
