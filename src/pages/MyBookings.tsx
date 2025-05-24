@@ -48,7 +48,7 @@ const MyBookings = () => {
             description: "User not authenticated",
             variant: "destructive",
           });
-          navigate("/login");
+          navigate("/auth");
           return;
         }
 
@@ -64,7 +64,7 @@ const MyBookings = () => {
             description: "Please link a venue to view bookings.",
             variant: "destructive",
           });
-          navigate("/my-venue");
+          navigate("/profile/my-venue");
           return;
         }
 
@@ -158,7 +158,7 @@ const MyBookings = () => {
           description: error.message || "Failed to load bookings.",
           variant: "destructive",
         });
-        navigate("/my-venue");
+        navigate("/profile/my-venue");
       } finally {
         setLoading(false);
       }
@@ -188,11 +188,11 @@ const MyBookings = () => {
             <Loader2 className="w-8 h-8 animate-spin text-green-500" />
           </div>
         ) : !venueId ? (
-          <Card className="bg-white dark:bg-gray-800 shadow-md rounded-lg max-w-md mx-auto">
+          <Card className="bg-gradient-to-b from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 shadow-lg rounded-xl border border-gray-200 dark:border-gray-700 w-full">
             <CardContent className="text-center py-6">
               <p className="text-gray-600 dark:text-gray-400">No linked venue found. Please link a venue.</p>
               <Button
-                onClick={() => navigate("/my-venue")}
+                onClick={() => navigate("/profile/my-venue")}
                 className="mt-4 bg-green-500 hover:bg-green-600 text-white"
               >
                 Link Venue
@@ -200,7 +200,7 @@ const MyBookings = () => {
             </CardContent>
           </Card>
         ) : (
-          <Card className="bg-white dark:bg-gray-800 shadow-md rounded-lg w-full">
+          <Card className="bg-gradient-to-b from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 shadow-lg rounded-xl border border-gray-200 dark:border-gray-700 w-full">
             <CardHeader>
               <CardTitle className="text-lg font-semibold text-gray-700 dark:text-gray-300">Venue Bookings</CardTitle>
             </CardHeader>
@@ -227,7 +227,7 @@ const MyBookings = () => {
                         const organizer = organizers.find(org => org.id === booking.organizer_id);
                         const isVerified = organizer?.is_verified || false;
                         return (
-                          <Card key={booking.id} className="w-full max-w-md p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md">
+                          <Card key={booking.id} className="w-full p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md">
                             <h3 className="font-medium text-gray-900 dark:text-gray-100">{booking.title}</h3>
                             <p className="text-sm text-gray-600 dark:text-gray-400">
                               Date: {format(new Date(booking.match_date), "MMM d, yyyy")}
@@ -285,7 +285,7 @@ const MyBookings = () => {
                         const organizer = organizers.find(org => org.id === booking.organizer_id);
                         const isVerified = organizer?.is_verified || false;
                         return (
-                          <Card key={booking.id} className="w-full max-w-md p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md">
+                          <Card key={booking.id} className="w-full p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md">
                             <h3 className="font-medium text-gray-900 dark:text-gray-100">{booking.title}</h3>
                             <p className="text-sm text-gray-600 dark:text-gray-400">
                               Date: {format(new Date(booking.match_date), "MMM d, yyyy")}
