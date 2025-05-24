@@ -73,7 +73,7 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({ title, children
   };
 
   return (
-    <div className="w-full max-w-7xl mx-auto bg-white dark:bg-gray-700 shadow-lg rounded-lg">
+    <div className="w-full max-w-screen-xl mx-auto bg-white dark:bg-gray-700 shadow-lg rounded-lg">
       <div
         className="flex justify-between items-center cursor-pointer p-4 border-b border-gray-200 dark:border-gray-600"
         onClick={handleToggle}
@@ -228,7 +228,7 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
   return (
     <div className="min-h-screen flex flex-col bg-gray-100 dark:bg-gray-900">
       <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg w-full">
-        <div className="flex items-center justify-between max-w-7xl mx-auto">
+        <div className="flex items-center justify-between max-w-screen-xl mx-auto">
           <Button
             variant="ghost"
             onClick={() => navigate("/profile")}
@@ -241,7 +241,7 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
         </div>
       </header>
 
-      <main className="flex-grow px-4 py-6 w-full max-w-7xl mx-auto">
+      <main className="flex-grow px-4 py-6 w-full max-w-screen-xl mx-auto">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 w-full">
             {/* Venue Details Section */}
