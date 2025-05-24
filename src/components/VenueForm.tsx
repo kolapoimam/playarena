@@ -214,8 +214,8 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-6">Create New Venue</h2>
+    <div className="max-w-6xl mx-auto p-6">
+      <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-6">New Venue</h2>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           {/* Venue Details Section */}
