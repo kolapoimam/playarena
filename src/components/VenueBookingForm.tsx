@@ -25,6 +25,7 @@ type Venue = {
   name: string;
   booking_fee: number;
   verified_status: 'True' | 'False';
+  email?: string; // Added email field
 };
 
 type PaymentStatus = "pending" | "success" | "failed";
@@ -161,7 +162,7 @@ const VenueBookingForm = () => {
       try {
         const { data: venueData, error: venueError } = await supabase
           .from("venues")
-          .select("id, slug, name, booking_fee, verified_status")
+          .select("id, slug, name, booking_fee, verified_status, email") // Added email
           .eq("slug", slug)
           .single();
 
@@ -268,7 +269,7 @@ const VenueBookingForm = () => {
 
       // Client-side expiry check
       const expiryDate = new Date(data.expiry_date);
-      const now = new Date(); // Current time: 07:59 PM WAT, May 22, 2025
+      const now = new Date();
       if (isNaN(expiryDate.getTime()) || expiryDate < now) {
         setAccessCodeError("Access code has expired.");
         return null;
@@ -462,112 +463,127 @@ const VenueBookingForm = () => {
     }
   };
 
- const onSubmit = async (values: BookingFormValues) => {
-  if (!venue || (paymentStatus !== "success" && !useAccessCode)) {
-    toast({
-      title: "Error",
-      description: "Please complete the payment or enter a valid access code before submitting the booking.",
-      variant: "destructive",
-    });
-    return;
-  }
-
-  try {
-    setPaying(true);
-    let bookingAccessCode = accessCode;
-    if (!useAccessCode) {
-      bookingAccessCode = generateAccessCode();
+  const onSubmit = async (values: BookingFormValues) => {
+    if (!venue || (paymentStatus !== "success" && !useAccessCode)) {
+      toast({
+        title: "Error",
+        description: "Please complete the payment or enter a valid access code before submitting the booking.",
+        variant: "destructive",
+      });
+      return;
     }
 
-    const [startTime, startPeriod] = values.start_time.split(" ");
-    let startHours = parseInt(startTime.split(":")[0], 10);
-    if (startPeriod === "PM" && startHours !== 12) startHours += 12;
-    if (startPeriod === "AM" && startHours === 12) startHours = 0;
+    try {
+      setPaying(true);
+      let bookingAccessCode = accessCode;
+      if (!useAccessCode) {
+        bookingAccessCode = generateAccessCode();
+      }
 
-    const [endTime, endPeriod] = values.end_time.split(" ");
-    let endHours = parseInt(endTime.split(":")[0], 10);
-    if (endPeriod === "PM" && endHours !== 12) endHours += 12;
-    if (endPeriod === "AM" && endHours === 12) endHours = 0;
+      const [startTime, startPeriod] = values.start_time.split(" ");
+      let startHours = parseInt(startTime.split(":")[0], 10);
+      if (startPeriod === "PM" && startHours !== 12) startHours += 12;
+      if (startPeriod === "AM" && startHours === 12) startHours = 0;
 
-    const bookingPayload = useAccessCode
-      ? {
-          venue_id: venue.id,
-          amount: 0,
-          payment_status: "paid",
-          payment_reference: null,
-          match_date: format(values.match_date, "yyyy-MM-dd"),
-          start_time: `${startHours.toString().padStart(2, "0")}:${startTime.split(":")[1]}`,
-          end_time: `${endHours.toString().padStart(2, "0")}:${endTime.split(":")[1]}`,
-        }
-      : {
-          venue_id: venue.id,
-          amount: amount,
-          payment_status: "paid",
-          payment_reference: paymentReference,
-          match_date: format(values.match_date, "yyyy-MM-dd"),
-          start_time: `${startHours.toString().padStart(2, "0")}:${startTime.split(":")[1]}`,
-          end_time: `${endHours.toString().padStart(2, "0")}:${endTime.split(":")[1]}`,
-        };
+      const [endTime, endPeriod] = values.end_time.split(" ");
+      let endHours = parseInt(endTime.split(":")[0], 10);
+      if (endPeriod === "PM" && endHours !== 12) endHours += 12;
+      if (endPeriod === "AM" && endHours === 12) endHours = 0;
 
-    const { data: bookingData, error: bookingError } = await supabase
-      .from("bookings")
-      .insert(bookingPayload)
-      .select()
-      .single();
+      const bookingPayload = useAccessCode
+        ? {
+            venue_id: venue.id,
+            amount: 0,
+            payment_status: "paid",
+            payment_reference: null,
+            match_date: format(values.match_date, "yyyy-MM-dd"),
+            start_time: `${startHours.toString().padStart(2, "0")}:${startTime.split(":")[1]}`,
+            end_time: `${endHours.toString().padStart(2, "0")}:${endTime.split(":")[1]}`,
+          }
+        : {
+            venue_id: venue.id,
+            amount: amount,
+            payment_status: "paid",
+            payment_reference: paymentReference,
+            match_date: format(values.match_date, "yyyy-MM-dd"),
+            start_time: `${startHours.toString().padStart(2, "0")}:${startTime.split(":")[1]}`,
+            end_time: `${endHours.toString().padStart(2, "0")}:${endTime.split(":")[1]}`,
+          };
 
-    if (bookingError) throw bookingError;
+      const { data: bookingData, error: bookingError } = await supabase
+        .from("bookings")
+        .insert(bookingPayload)
+        .select()
+        .single();
 
-    const createdAt = new Date().toISOString();
-    const accessCodePayload = {
-      venue_id: venue.id,
-      booking_id: bookingData.id,
-      code: bookingAccessCode,
-      match_date: format(values.match_date, "yyyy-MM-dd"),
-      start_time: `${startHours.toString().padStart(2, "0")}:${startTime.split(":")[1]}`,
-      end_time: `${endHours.toString().padStart(2, "0")}:${endTime.split(":")[1]}`,
-      status: "pending",
-      created_at: createdAt,
-      expiry_date: new Date(new Date(createdAt).getTime() + 48 * 60 * 60 * 1000).toISOString(),
-    };
+      if (bookingError) throw bookingError;
 
-    if (useAccessCode) {
-      const { error: updateAccessCodeError } = await supabase
-        .from("booking_access_codes")
-        .update({
-          booking_id: bookingData.id,
-          status: "pending",
-          match_date: format(values.match_date, "yyyy-MM-dd"),
-          start_time: `${startHours.toString().padStart(2, "0")}:${startTime.split(":")[1]}`,
-          end_time: `${endHours.toString().padStart(2, "0")}:${endTime.split(":")[1]}`,
-          expiry_date: new Date(new Date(createdAt).getTime() + 48 * 60 * 60 * 1000).toISOString(),
-        })
-        .eq("code", bookingAccessCode)
-        .eq("venue_id", venue.id);
+      const createdAt = new Date().toISOString();
+      const accessCodePayload = {
+        venue_id: venue.id,
+        booking_id: bookingData.id,
+        code: bookingAccessCode,
+        match_date: format(values.match_date, "yyyy-MM-dd"),
+        start_time: `${startHours.toString().padStart(2, "0")}:${startTime.split(":")[1]}`,
+        end_time: `${endHours.toString().padStart(2, "0")}:${endTime.split(":")[1]}`,
+        status: "pending",
+        created_at: createdAt,
+        expiry_date: new Date(new Date(createdAt).getTime() + 48 * 60 * 60 * 1000).toISOString(),
+      };
 
-      if (updateAccessCodeError) throw updateAccessCodeError;
-    } else {
-      const { error: accessCodeError } = await supabase
-        .from("booking_access_codes")
-        .insert(accessCodePayload);
+      if (useAccessCode) {
+        const { error: updateAccessCodeError } = await supabase
+          .from("booking_access_codes")
+          .update({
+            booking_id: bookingData.id,
+            status: "pending",
+            match_date: format(values.match_date, "yyyy-MM-dd"),
+            start_time: `${startHours.toString().padStart(2, "0")}:${startTime.split(":")[1]}`,
+            end_time: `${endHours.toString().padStart(2, "0")}:${endTime.split(":")[1]}`,
+            expiry_date: new Date(new Date(createdAt).getTime() + 48 * 60 * 60 * 1000).toISOString(),
+          })
+          .eq("code", bookingAccessCode)
+          .eq("venue_id", venue.id);
 
-      if (accessCodeError) throw accessCodeError;
-    }
+        if (updateAccessCodeError) throw updateAccessCodeError;
+      } else {
+        const { error: accessCodeError } = await supabase
+          .from("booking_access_codes")
+          .insert(accessCodePayload);
 
-    toast({
-      title: "Success",
-      description: "Booking successful! Redirecting to organize match...",
-    });
+        if (accessCodeError) throw accessCodeError;
+      }
 
-    navigate(`/organize?venue=${venue.slug}&code=${bookingAccessCode}`);
-  } catch (error: any) {
-    console.error("Error saving booking:", error);
-    toast({
-      title: "Error",
-      description: "Failed to save booking. Please try again.",
-      variant: "destructive",
-    });
-  } finally {
-    setPaying(false);
+      // Send email notification to venue if email exists
+      if (venue.email) {
+        await supabase.functions.invoke("send-booking-notification", {
+          body: {
+            venue_email: venue.email,
+            venue_name: venue.name,
+            match_date: format(values.match_date, "yyyy-MM-dd"),
+            start_time: `${startHours.toString().padStart(2, "0")}:${startTime.split(":")[1]}`,
+            end_time: `${endHours.toString().padStart(2, "0")}:${endTime.split(":")[1]}`,
+            user_email: userEmail || defaultEmail,
+            access_code: bookingAccessCode,
+          },
+        });
+      }
+
+      toast({
+        title: "Success",
+        description: "Booking successful! Redirecting to organize match...",
+      });
+
+      navigate(`/organize?venue=${venue.slug}&code=${bookingAccessCode}`);
+    } catch (error: any) {
+      console.error("Error saving booking:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save booking. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setPaying(false);
     }
   };
 
