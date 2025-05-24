@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MantineProvider } from '@mantine/core';
 import { useState, useEffect } from 'react';
+import MobileOnlyGuard from "@/components/MobileOnlyGuard";
 
 import SplashScreen from "@/components/SplashScreen";
 import ScrollToTop from "@/components/ScrollToTop";
@@ -58,7 +59,8 @@ const AppRoutes = () => {
   }, [location]);
 
   return (
-    <Routes>
+    <MobileOnlyGuard>
+      <Routes>
       <Route path="/" element={<Index />} />
       <Route path="/search" element={<Search />} />
       <Route path="/activities" element={<Activities />} />
@@ -97,6 +99,7 @@ const AppRoutes = () => {
       <Route path="/venue/:slug/book" element={<VenueBookingForm />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
+      </MobileOnlyGuard>
   );
 };
 
