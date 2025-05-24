@@ -65,7 +65,7 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({ title, children
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 w-full">
       <div
         className="flex justify-between items-center cursor-pointer"
         onClick={() => setIsOpen(!isOpen)}
@@ -75,7 +75,7 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({ title, children
       </div>
       <div
         className={`transition-all duration-300 ease-in-out overflow-hidden ${
-          isOpen ? "max-h-screen" : "max-h-0"
+          isOpen ? "max-h-screen py-2" : "max-h-0"
         }`}
       >
         {children}
@@ -93,8 +93,8 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    mode: "onSubmit", // Validate on submit
-    reValidateMode: "onSubmit", // Re-validate on submit
+    mode: "onSubmit",
+    reValidateMode: "onSubmit",
     defaultValues: {
       name: "",
       address: "",
@@ -214,7 +214,7 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
   };
 
   return (
-    <div className="max-w-3xl mx-auto p-6">
+    <div className="max-w-4xl mx-auto p-6">
       <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-6">Create New Venue</h2>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
