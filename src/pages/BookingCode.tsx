@@ -73,13 +73,13 @@ const BookingCode = () => {
             <Loader2 className="w-8 h-8 animate-spin text-green-500" />
           </div>
         ) : venueId ? (
-          <Card className="bg-white dark:bg-gray-800 shadow-md rounded-lg w-full">
+          <Card className="bg-gradient-to-b from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 shadow-lg rounded-xl border border-gray-200 dark:border-gray-700 w-full">
             <CardContent className="p-6">
               <VenueAccessCode venueId={venueId} />
             </CardContent>
           </Card>
         ) : (
-          <Card className="bg-white dark:bg-gray-800 shadow-md rounded-lg max-w-md mx-auto">
+          <Card className="bg-gradient-to-b from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 shadow-lg rounded-xl border border-gray-200 dark:border-gray-700 w-full">
             <CardContent className="p-6 text-center">
               <p className="text-gray-600 dark:text-gray-400 mb-4">No linked venue found.</p>
               <Button
