@@ -82,7 +82,7 @@ const MyVenue = () => {
         const { data: venueData, error: venueError } = await supabase
           .from("venues")
           .select("id")
-          .eq("manager_id", userData.user.id)
+          .eq("user_id", userData.user.id)
           .single();
 
         if (venueData) {
@@ -139,7 +139,7 @@ const MyVenue = () => {
     try {
       const { data: venueData, error: venueError } = await supabase
         .from("venues")
-        .select("id, name, city, price_per_hour, is_verified, manager_id")
+        .select("id, name, city, price_per_hour, is_verified, user_id")
         .eq("id", venueId)
         .single();
 
@@ -148,7 +148,7 @@ const MyVenue = () => {
       }
 
       const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user || venueData.manager_id !== userData.user.id) {
+      if (!userData.user || venueData.user_id !== userData.user.id) {
         throw new Error("Unauthorized access to this venue");
       }
 
