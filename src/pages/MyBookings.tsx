@@ -182,13 +182,13 @@ const MyBookings = () => {
         </div>
       </header>
 
-      <main className="flex-grow max-w-7xl mx-auto px-4 py-6 space-y-6">
+      <main className="flex-grow max-w-7xl mx-auto px-4 py-6 w-full">
         {loading ? (
           <div className="flex justify-center items-center h-64">
             <Loader2 className="w-8 h-8 animate-spin text-green-500" />
           </div>
         ) : !venueId ? (
-          <Card className="bg-gradient-to-b from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 shadow-lg rounded-xl border border-gray-200 dark:border-gray-700 w-full">
+          <Card className="w-full bg-gradient-to-b from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 shadow-lg rounded-xl border border-gray-200 dark:border-gray-700">
             <CardContent className="text-center py-6">
               <p className="text-gray-600 dark:text-gray-400">No linked venue found. Please link a venue.</p>
               <Button
@@ -200,7 +200,7 @@ const MyBookings = () => {
             </CardContent>
           </Card>
         ) : (
-          <Card className="bg-gradient-to-b from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 shadow-lg rounded-xl border border-gray-200 dark:border-gray-700 w-full">
+          <Card className="w-full bg-gradient-to-b from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 shadow-lg rounded-xl border border-gray-200 dark:border-gray-700">
             <CardHeader>
               <CardTitle className="text-lg font-semibold text-gray-700 dark:text-gray-300">Venue Bookings</CardTitle>
             </CardHeader>
