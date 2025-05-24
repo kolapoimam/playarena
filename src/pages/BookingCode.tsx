@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, ArrowLeft } from "lucide-react";
 import Navbar from "@/components/Navbar";
-import VenueAccessCode from "./VenueAccessCode";
+import VenueAccessCode from "@/components/VenueAccessCode";
 
 const BookingCode = () => {
   const navigate = useNavigate();
