@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { MapPin, ArrowLeft, ExternalLink, Calendar, Clock, MessageCircle, CalendarPlus, Star, CalendarCheck, Wallet } from "lucide-react";
+import { MapPin, ArrowLeft, ExternalLink, Calendar, Clock, MessageCircle, CalendarPlus, Star, CalendarCheck, Wallet, Info, Building } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
@@ -239,21 +239,32 @@ const VenueDetail = () => {
               </div>
 
               {venue.description && (
-                <div>
-                  <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Description</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{venue.description}</p>
+                <div className="flex items-start">
+                  <Info size={18} className="mr-2 text-gray-700 dark:text-gray-300 mt-1" />
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Description</h3>
+                    <ReactQuill
+                      value={venue.description || "<p>No description available.</p>"}
+                      readOnly={true}
+                      modules={quillModules}
+                      className="w-full border-none bg-transparent text-gray-600 dark:text-gray-400"
+                    />
+                  </div>
                 </div>
               )}
 
               {venue.facilities && (
-                <div>
-                  <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Facilities</h3>
-                  <ReactQuill
-                    value={venue.facilities || "<p>No facilities information available.</p>"}
-                    readOnly={true}
-                    modules={quillModules}
-                    className="w-full border-none bg-transparent text-gray-600 dark:text-gray-400"
-                  />
+                <div className="flex items-start">
+                  <Building size={18} className="mr-2 text-gray-700 dark:text-gray-300 mt-1" />
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Facilities</h3>
+                    <ReactQuill
+                      value={venue.facilities || "<p>No facilities information available.</p>"}
+                      readOnly={true}
+                      modules={quillModules}
+                      className="w-full border-none bg-transparent text-gray-600 dark:text-gray-400"
+                    />
+                  </div>
                 </div>
               )}
 
@@ -264,13 +275,6 @@ const VenueDetail = () => {
                     <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Opening Hours</h3>
                     <p className="text-sm text-gray-600 dark:text-gray-400">{venue.opening_hours}</p>
                   </div>
-                </div>
-              )}
-
-              {venue.pricing && (
-                <div>
-                  <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Pricing</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{venue.pricing}</p>
                 </div>
               )}
 
