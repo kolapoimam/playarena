@@ -39,6 +39,7 @@ const BookingCode = () => {
 
         setVenueId(venueData.id);
       } catch (error) {
+        console.error("Error checking venue:", error);
         toast({ title: "Error", description: "Failed to check venue status.", variant: "destructive" });
         navigate("/profile");
       } finally {
@@ -50,71 +51,51 @@ const BookingCode = () => {
   }, [navigate, toast]);
 
   return (
-    <div className="min-h-screen bg-brand-light text-foreground font-nunito">
-      {/* Header */}
-      <div className="flex items-center p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 sticky top-0 z-20">
-        <Button
-          variant="ghost"
-          onClick={() => navigate("/profile")}
-          className="text-brand hover:text-brand-dark flex items-center"
-        >
-          <ArrowLeft className="w-5 h-5 mr-2" />
-          Back
-        </Button>
-        <h1 className="text-xl font-bold ml-4 text-gray-900 dark:text-gray-100">Booking Code</h1>
-      </div>
+    <div className="min-h-screen flex flex-col bg-gray-100 dark:bg-gray-900">
+      <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg sticky top-0 z-20">
+        <div className="flex items-center justify-between max-w-7xl mx-auto">
+          <Button
+            variant="ghost"
+            onClick={() => navigate("/profile")}
+            className="text-white hover:bg-green-600 flex items-center"
+          >
+            <ArrowLeft className="w-5 h-5 mr-2" />
+            Back
+          </Button>
+          <h1 className="text-2xl font-bold">Booking Code</h1>
+          <div className="w-10"></div>
+        </div>
+      </header>
 
-      {/* Main Content */}
-      <div className="container mx-auto px-4 py-6">
+      <main className="container mx-auto px-4 py-6 flex-grow">
         {loading ? (
           <div className="flex justify-center items-center h-64">
-            <Loader2 className="w-8 h-8 animate-spin text-brand" />
+            <Loader2 className="w-8 h-8 animate-spin text-green-500" />
           </div>
         ) : venueId ? (
-          <Card className="border-none shadow-lg bg-white dark:bg-gray-800 rounded-2xl">
+          <Card className="bg-white dark:bg-gray-800 shadow-md rounded-lg">
             <CardContent className="p-6">
               <VenueAccessCode venueId={venueId} />
             </CardContent>
           </Card>
         ) : (
-          <Card className="border-none shadow-lg bg-white dark:bg-gray-800 rounded-2xl">
+          <Card className="bg-white dark:bg-gray-800 shadow-md rounded-lg max-w-md mx-auto">
             <CardContent className="p-6 text-center">
               <p className="text-gray-600 dark:text-gray-400 mb-4">No linked venue found.</p>
               <Button
                 onClick={() => navigate("/profile/my-venue")}
-                className="bg-brand hover:bg-brand-dark text-white rounded-lg"
+                className="bg-green-500 hover:bg-green-600 text-white rounded-lg"
               >
                 Link a Venue
               </Button>
             </CardContent>
           </Card>
         )}
-      </div>
+      </main>
 
-      {/* Bottom Navbar */}
-      <div className="sticky bottom-0 z-20">
+      <div className="pb-28">
         <Navbar />
       </div>
-
-      {/* Custom Styles */}
-      <style jsx>{`
-        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&display=swap');
-        .font-nunito {
-          font-family: 'Nunito', sans-serif;
-        }
-        .bg-brand-light {
-          background-color: #e6f4ea;
-        }
-        .text-brand {
-          color: #17a34a;
-        }
-        .hover\:text-brand-dark:hover {
-          color: #13863b;
-        }
-        .bg-brand-dark {
-          background-color: #13863b;
-        }
-      `}</style>
     </div>
   );
 };
