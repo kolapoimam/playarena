@@ -250,14 +250,14 @@ const VenueAccessCode = ({ venueId }: VenueAccessCodeProps) => {
       </CardContent>
 
       <Dialog open={showAccessCodeDialog} onOpenChange={setShowAccessCodeDialog}>
-        <DialogContent className="max-w-md bg-white dark:bg-gray-800 border-none shadow-lg rounded-2xl">
+        <DialogContent className="w-auto bg-white dark:bg-gray-800 border-none shadow-lg rounded-2xl p-6">
           <DialogHeader>
             <DialogTitle className="text-lg font-semibold text-gray-900 dark:text-gray-100">Generate Access Code</DialogTitle>
             <DialogDescription className="text-sm text-gray-600 dark:text-gray-400">
               Enter the date and time range for the free booking.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 p-4">
+          <div className="space-y-4">
             <Input
               type="date"
               value={accessCodeForm.match_date}
@@ -285,7 +285,7 @@ const VenueAccessCode = ({ venueId }: VenueAccessCodeProps) => {
               </div>
             )}
           </div>
-          <DialogFooter className="flex flex-row justify-end gap-3">
+          <DialogFooter className="flex gap-3 justify-center mt-4">
             <Button
               variant="outline"
               onClick={() => {
