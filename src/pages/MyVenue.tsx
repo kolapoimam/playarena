@@ -29,7 +29,7 @@ type Venue = {
   id: string;
   name: string;
   slug: string;
-  access_code: string;
+  pin: string; // Changed from access_code to pin to match the schema
   verified: boolean;
 };
 
@@ -101,7 +101,7 @@ const MyVenue = () => {
               id,
               name,
               slug,
-              access_code
+              pin
             )
           `)
           .eq("user_id", userData.user.id);
@@ -117,7 +117,7 @@ const MyVenue = () => {
             id: item.venues.id,
             name: item.venues.name,
             slug: item.venues.slug,
-            access_code: item.venues.access_code,
+            pin: item.venues.pin, // Changed from access_code to pin
             verified: item.verified === 'true',
           }))
         );
@@ -230,8 +230,8 @@ const MyVenue = () => {
 
       const { data: venueData, error: venueError } = await supabase
         .from("venues")
-        .select("id, name, slug, access_code, manager_id")
-        .eq("access_code", data.access_code)
+        .select("id, name, slug, pin, manager_id")
+        .eq("pin", data.access_code)
         .single();
 
       if (venueError || !venueData) {
@@ -255,7 +255,7 @@ const MyVenue = () => {
         id: venueData.id,
         name: venueData.name,
         slug: venueData.slug,
-        access_code: venueData.access_code,
+        pin: venueData.pin,
         verified: true,
       };
 
@@ -415,7 +415,7 @@ const MyVenue = () => {
                       <div className="flex justify-between items-center">
                         <div>
                           <p className="font-medium text-gray-900 dark:text-gray-100">{venue.name}</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">Code: {venue.access_code}</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">Code: {venue.pin}</p>
                         </div>
                         <Button
                           type="button"
