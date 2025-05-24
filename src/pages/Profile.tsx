@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { createClient } from "@supabase/supabase-js";
+import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { User, LogOut, Trophy, Wallet, Calendar, BookOpen, Mail, Key, MapPin, ChevronRight } from "lucide-react";
 import Navbar from "@/components/Navbar";
 
-const supabase = createClient("https://your-supabase-url", "your-supabase-key");
 
 const Profile = () => {
   const [profile, setProfile] = useState(null);
