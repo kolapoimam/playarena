@@ -29,7 +29,7 @@ type Venue = {
   id: string;
   name: string;
   slug: string;
-  pin: string; // Changed from access_code to pin to match the schema
+  pin: string;
   verified: boolean;
 };
 
@@ -79,7 +79,7 @@ const MyVenue = () => {
           return;
         }
 
-        const { data: venueData } = await supabase
+        const { data: venueData, error: venueError } = await supabase
           .from("venues")
           .select("id")
           .eq("manager_id", userData.user.id)
@@ -100,8 +100,7 @@ const MyVenue = () => {
             venues (
               id,
               name,
-              slug,
-              pin
+              slug
             )
           `)
           .eq("user_id", userData.user.id);
@@ -117,7 +116,7 @@ const MyVenue = () => {
             id: item.venues.id,
             name: item.venues.name,
             slug: item.venues.slug,
-            pin: item.venues.pin, // Changed from access_code to pin
+            pin: item.pin,
             verified: item.verified === 'true',
           }))
         );
@@ -228,18 +227,28 @@ const MyVenue = () => {
         return;
       }
 
-      const { data: venueData, error: venueError } = await supabase
-        .from("venues")
-        .select("id, name, slug, pin, manager_id")
+      const { data: pinData, error: pinError } = await supabase
+        .from("access_pins")
+        .select("venue_id, pin, verified, user_id")
         .eq("pin", data.access_code)
         .single();
 
-      if (venueError || !venueData) {
+      if (pinError || !pinData) {
         throw new Error("Invalid access code");
       }
 
-      if (venueData.manager_id) {
+      if (pinData.verified === 'true' || pinData.user_id) {
         throw new Error("Venue already linked to another user");
+      }
+
+      const { data: venueData, error: venueError } = await supabase
+        .from("venues")
+        .select("id, name, slug")
+        .eq("id", pinData.venue_id)
+        .single();
+
+      if (venueError || !venueData) {
+        throw new Error("Venue not found");
       }
 
       const { error: updateError } = await supabase
@@ -251,11 +260,20 @@ const MyVenue = () => {
         throw new Error("Failed to link venue");
       }
 
+      const { error: updatePinError } = await supabase
+        .from("access_pins")
+        .update({ user_id: userData.user.id, verified: 'true', updated_at: new Date().toISOString() })
+        .eq("pin", data.access_code);
+
+      if (updatePinError) {
+        throw new Error("Failed to verify pin");
+      }
+
       const newVenue = {
         id: venueData.id,
         name: venueData.name,
         slug: venueData.slug,
-        pin: venueData.pin,
+        pin: data.access_code,
         verified: true,
       };
 
