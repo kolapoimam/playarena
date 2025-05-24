@@ -297,7 +297,7 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
                         </SelectTrigger>
                         <SelectContent>
                           {nigerianStates.map((state) => (
-                            <SelectItem key={state) value={state}>
+                            <SelectItem key={state} value={state}>
                               {state}
                             </SelectItem>
                           ))}
