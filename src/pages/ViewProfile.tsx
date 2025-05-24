@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft } from "lucide-react";
 import UserDashboard from "../components/UserDashboard";
-import Performance from "../components/Performance";
+import Performance from "@/components/Performance";
 import Navbar from "@/components/Navbar";
 
 const ViewProfile = () => {
