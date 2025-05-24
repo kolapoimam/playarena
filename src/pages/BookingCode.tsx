@@ -4,26 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Loader2, ArrowLeft } from "lucide-react";
 import Navbar from "@/components/Navbar";
-
-const VenueAccessCode = ({ venueId }: { venueId: string }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [code, setCode] = useState("");
-  const { toast } = useToast();
-
-  const handleGenerateCode = async () => {
-    try {
-      // Placeholder: Call Supabase to generate code
-      const generatedCode = "ABC123"; // Mock code
-      setCode(generatedCode);
-      toast({ title: "Success", description: "Code generated successfully." });
-    } catch (error) {
-      toast({ title: "Error", description: "Failed to generate code.", variant: "destructive" });
-    }
-  };
+import VenueAccessCode from "./VenueAccessCode";
 
 const BookingCode = () => {
   const navigate = useNavigate();
@@ -38,7 +21,7 @@ const BookingCode = () => {
         const { data: userData, error: userError } = await supabase.auth.getUser();
         if (userError || !userData.user) {
           toast({ title: "Error", description: "User not authenticated.", variant: "destructive" });
-          navigate("/login");
+          navigate("/auth");
           return;
         }
 
