@@ -5,8 +5,8 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { User, LogOut, Trophy, Wallet, Calendar, BookOpen, Mail, Key, MapPin, ChevronRight, ChevronDown, ChevronUp } from "lucide-react";
-import UserDashboard from "./UserDashboard";
-import Performance from "./Performance";
+import UserDashboard from "../components/UserDashboard";
+import Performance from "../components/Performance";
 
 const supabase = createClient("https://your-supabase-url", "your-supabase-key");
 
@@ -162,7 +162,7 @@ const Profile = () => {
         </div>
       </div>
 
-      {/* Bottom Navbar (Assumed to be a shared component) */}
+      {/* Bottom Navbar */}
       <nav className="fixed bottom-0 left-0 right-0 bg-background border-t border-gray-200 dark:border-gray-700">
         <div className="flex justify-around py-2">
           <Link to="/home" className="text-gray-500 hover:text-brand">
