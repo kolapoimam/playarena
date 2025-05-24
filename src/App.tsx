@@ -14,7 +14,7 @@ import Search from "@/pages/Search";
 import Activities from "@/pages/Activities";
 import Matches from "@/pages/Matches";
 import Profile from "@/pages/Profile";
-import ViewProfile from "@/pages/ViewProfile"; // Added import
+import ViewProfile from "@/pages/ViewProfile";
 import NotFound from "@/pages/NotFound";
 import Organize from "@/pages/Organize";
 import MatchDetail from "@/pages/MatchDetail";
@@ -36,6 +36,13 @@ import Confirm from "@/pages/Confirm";
 import VenueManagerDashboard from "@/pages/VenueManagerDashboard";
 import VenueBookings from "@/pages/VenueBookings";
 import VenueBookingForm from "@/components/VenueBookingForm";
+import MyVenue from "@/pages/MyVenue";
+import MyBookings from "@/pages/MyBookings";
+import BookingCode from "@/pages/BookingCode";
+import AccountDetails from "@/pages/AccountDetails"; // Added import
+import MyMatches from "@/pages/MyMatches"; // Added import
+import MatchPreferences from "@/pages/MatchPreferences"; // Added import
+import Wallet from "@/pages/Wallet"; // Added import
 
 import * as gtag from "@/lib/gtag";
 
@@ -56,7 +63,14 @@ const AppRoutes = () => {
       <Route path="/matches" element={<Matches />} />
       <Route path="/guides" element={<Guides />} />
       <Route path="/profile" element={<Profile />} />
-      <Route path="/profile/view-profile" element={<ViewProfile />} /> {/* Added route */}
+      <Route path="/profile/view-profile" element={<ViewProfile />} />
+      <Route path="/profile/my-venue" element={<MyVenue />} />
+      <Route path="/profile/my-bookings" element={<MyBookings />} />
+      <Route path="/profile/booking-code" element={<BookingCode />} />
+      <Route path="/profile/account-details" element={<AccountDetails />} /> {/* Added route */}
+      <Route path="/profile/my-matches" element={<MyMatches />} /> {/* Added route */}
+      <Route path="/profile/match-preferences" element={<MatchPreferences />} /> {/* Added route */}
+      <Route path="/profile/wallet" element={<Wallet />} /> {/* Added route */}
       <Route path="/auth" element={<Auth />} />
       <Route path="/confirm" element={<Confirm />} />
       <Route path="/organize" element={<Organize />} />
