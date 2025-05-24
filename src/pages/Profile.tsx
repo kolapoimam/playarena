@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -8,6 +9,7 @@ import { User, LogOut, Trophy, Wallet, Calendar, BookOpen, Mail, Key, MapPin, Ch
 import Navbar from "@/components/Navbar";
 
 const Profile = () => {
+  const { toast } = useToast();
   const [profile, setProfile] = useState(null);
   const [isVenueLinked, setIsVenueLinked] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -58,8 +60,21 @@ const Profile = () => {
   }, []);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate("/login");
+    try {
+      await supabase.auth.signOut();
+      toast({
+        title: "Success",
+        description: "You have been logged out successfully.",
+      });
+      navigate("/auth");
+    } catch (error) {
+      console.error("Error logging out:", error);
+      toast({
+        title: "Error",
+        description: "Failed to log out. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const avatarUrl =
