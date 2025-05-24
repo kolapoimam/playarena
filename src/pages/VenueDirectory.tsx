@@ -26,6 +26,7 @@ type Venue = {
   match_dates?: string[];
   aggregated_rating: number | null;
   is_verified: boolean;
+  booking_fee: number | null;
 };
 
 // List of Nigerian states
@@ -70,6 +71,7 @@ const VenueDirectory = () => {
             image_urls,
             aggregated_rating,
             is_verified,
+            booking_fee,
             matches:matches!venue_id (match_date)
           `)
           .order("created_at", { ascending: false });
@@ -284,6 +286,9 @@ const VenueDirectory = () => {
                       <div className="flex items-center text-sm font-medium text-green-600 dark:text-green-400">
                         <Store className="h-4 w-4 mr-1" />
                         <span>{`${venue.match_count} Match${venue.match_count !== 1 ? "es" : ""}`}</span>
+                        {venue.booking_fee !== null && (
+                          <span className="ml-auto">NGN {venue.booking_fee.toFixed(2)}</span>
+                        )}
                       </div>
                       {venue.is_verified && (
                         <Button
