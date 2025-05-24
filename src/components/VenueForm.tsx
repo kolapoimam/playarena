@@ -8,9 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2 } from "lucide-react";
+import { ArrowLeft, Trash2 } from "lucide-react";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
+import Navbar from "@/components/Navbar";
+import { useNavigate } from "react-router-dom";
 
 // Nigerian states including FCT
 const nigerianStates = [
@@ -71,7 +73,7 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({ title, children
   };
 
   return (
-    <div className="bg-gradient-to-b from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 w-full">
+    <div className="w-full bg-gradient-to-b from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 shadow-lg rounded-xl border border-gray-200 dark:border-gray-700 p-6">
       <div
         className="flex justify-between items-center cursor-pointer"
         onClick={handleToggle}
@@ -91,6 +93,7 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({ title, children
 };
 
 const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -224,10 +227,24 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-100 dark:bg-gray-900">
-      <main className="flex-grow max-w-7xl mx-auto px-4 py-6">
-        <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-6">New Venue</h2>
+      <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg">
+        <div className="flex items-center justify-between max-w-7xl mx-auto">
+          <Button
+            variant="ghost"
+            onClick={() => navigate("/profile")}
+            className="text-white hover:bg-green-600"
+          >
+            <ArrowLeft className="w-5 h-5 mr-2" /> Back
+          </Button>
+          <h1 className="text-2xl font-bold">New Venue</h1>
+          <div className="w-10"></div>
+        </div>
+      </header>
+
+      <main className="flex-grow max-w-7xl mx-auto px-4 py-6 w-full">
+        <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-6">Create a New Venue</h2>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 w-full">
             {/* Venue Details Section */}
             <CollapsibleSection
               title="Venue Details"
@@ -401,7 +418,7 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
                           value={field.value}
                           onChange={(content) => field.onChange(content === "<p><br></p>" ? "" : content)}
                           modules={quillModules}
-                          className="w-full min-h-[200px] border-2 border-gray-400 dark:border-gray-500 bg-white dark:bg-gray-700 dark:text-white rounded-md p-2"
+                          className="w-full min-h-[200px] border-2 border-gray-400 dark:border-gray-500 bg-white dark:bg-gray-700 dark:text-white rounded-md"
                         />
                       </FormControl>
                       <FormDescription>Describe the venue in more details.</FormDescription>
@@ -420,7 +437,7 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
                           value={field.value}
                           onChange={(content) => field.onChange(content === "<p><br></p>" ? "" : content)}
                           modules={quillModules}
-                          className="w-full min-h-[200px] border-2 border-gray-400 dark:border-gray-500 bg-white dark:bg-gray-700 dark:text-white rounded-md p-2"
+                          className="w-full min-h-[200px] border-2 border-gray-400 dark:border-gray-500 bg-white dark:bg-gray-700 dark:text-white rounded-md"
                         />
                       </FormControl>
                       <FormDescription>Describe the facilities available at the venue (e.g., changing rooms, parking)</FormDescription>
