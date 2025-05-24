@@ -71,7 +71,7 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({ title, children
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 w-full">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 w-full max-w-none">
       <div
         className="flex justify-between items-center cursor-pointer"
         onClick={handleToggle}
@@ -223,7 +223,7 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
   };
 
   return (
-    <div className="max-w-[100rem] mx-auto px-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-6">New Venue</h2>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
