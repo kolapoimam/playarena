@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import Navbar from "@/components/Navbar";
-import { ChevronLeft, CheckCircle, Loader2 } from "lucide-react";
+import { ChevronLeft, CheckCircle, Loader2, Card } from "lucide-react";
 import { format } from "date-fns";
 
 const profileSchema = z.object({
