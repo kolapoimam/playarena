@@ -45,7 +45,7 @@ const Profile = () => {
       : "https://img-new.cgtrader.com/items/4506145/4d6ab481d2/large/football-player-avatar-3d-icon-3d-model-4d6ab481d2.jpg";
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-gray-100 dark:bg-gray-900">
       <div className="flex-grow overflow-y-auto">
         <div className="container mx-auto px-4 py-6">
           <div className="flex flex-col items-center mb-6">
@@ -64,7 +64,7 @@ const Profile = () => {
             </Link>
           </div>
 
-          <div className="max-w-md mx-auto space-y-6">
+          <div className="max-w-md mx-auto space-y-4">
             <Card className="border-none shadow-lg">
               <CardContent className="p-4">
                 <nav className="space-y-2">
@@ -172,7 +172,7 @@ const Profile = () => {
           </div>
         </div>
       </div>
-      <div className="pb-22">
+      <div className="pb-28">
         <Navbar />
       </div>
     </div>
