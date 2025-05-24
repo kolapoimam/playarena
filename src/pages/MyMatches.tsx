@@ -2,7 +2,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import UserMatches from "./UserMatches";
+import UserMatches from "@/components/UserMatches";
 import Navbar from "@/components/Navbar";
 import { ChevronLeft } from "lucide-react";
 
