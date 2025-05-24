@@ -73,9 +73,9 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({ title, children
   };
 
   return (
-    <div className="w-full bg-gradient-to-b from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 shadow-lg rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+    <div className="w-full bg-gradient-to-b from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 shadow-lg rounded-xl border border-gray-200 dark:border-gray-700">
       <div
-        className="flex justify-between items-center cursor-pointer"
+        className="flex justify-between items-center cursor-pointer p-6"
         onClick={handleToggle}
       >
         <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200">{title}</h2>
@@ -83,7 +83,7 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({ title, children
       </div>
       <div
         className={`transition-all duration-300 ease-in-out overflow-hidden ${
-          isOpen ? "max-h-screen py-2" : "max-h-0"
+          isOpen ? "max-h-screen p-6 pt-0" : "max-h-0"
         }`}
       >
         {children}
@@ -225,304 +225,290 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
     }
   };
 
-  return (
-    <div className="min-h-screen flex flex-col bg-gray-100 dark:bg-gray-900">
-      <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg">
-        <div className="flex items-center justify-between max-w-7xl mx-auto">
-          <Button
-            variant="ghost"
-            onClick={() => navigate("/profile")}
-            className="text-white hover:bg-green-600"
+return (
+  <div className="min-h-screen flex flex-col bg-gray-100 dark:bg-gray-900">
+    <main className="flex-grow max-w-7xl mx-auto px-4 py-6 w-full">
+      <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-6">Create a New Venue</h2>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 w-full">
+          {/* Venue Details Section */}
+          <CollapsibleSection
+            title="Venue Details"
+            defaultOpen={false}
+            isOpen={openSection === "venue-details"}
+            setOpenSection={setOpenSection}
+            sectionId="venue-details"
           >
-            <ArrowLeft className="w-5 h-5 mr-2" /> Back
-          </Button>
-          <h1 className="text-2xl font-bold">New Venue</h1>
-          <div className="w-10"></div>
-        </div>
-      </header>
-
-      <main className="flex-grow max-w-7xl mx-auto px-4 py-6 w-full">
-        <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-6">Create a New Venue</h2>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 w-full">
-            {/* Venue Details Section */}
-            <CollapsibleSection
-              title="Venue Details"
-              defaultOpen={false}
-              isOpen={openSection === "venue-details"}
-              setOpenSection={setOpenSection}
-              sectionId="venue-details"
-            >
-              <div className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Venue Name</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          className="w-full border-gray-300 dark:border-gray-600 focus:ring-0 focus:shadow-md dark:bg-gray-700 dark:text-white rounded-md"
-                        />
-                      </FormControl>
-                      <FormMessage className="text-red-500" />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="address"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Address</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          className="w-full border-gray-300 dark:border-gray-600 focus:ring-0 focus:shadow-md dark:bg-gray-700 dark:text-white rounded-md"
-                        />
-                      </FormControl>
-                      <FormMessage className="text-red-500" />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="city"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>City</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          className="w-full border-gray-300 dark:border-gray-600 focus:ring-0 focus:shadow-md dark:bg-gray-700 dark:text-white rounded-md"
-                        />
-                      </FormControl>
-                      <FormMessage className="text-red-500" />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="state"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>State</FormLabel>
-                      <FormControl>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <SelectTrigger className="w-full border-gray-300 dark:border-gray-600 focus:ring-0 focus:shadow-md dark:bg-gray-700 dark:text-white rounded-md">
-                            <SelectValue placeholder="Select a state" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {nigerianStates.map((state) => (
-                              <SelectItem key={state} value={state}>
-                                {state}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </FormControl>
-                      <FormMessage className="text-red-500" />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </CollapsibleSection>
-
-            {/* Contact & Location Section */}
-            <CollapsibleSection
-              title="Contact & Location"
-              defaultOpen={false}
-              isOpen={openSection === "contact-location"}
-              setOpenSection={setOpenSection}
-              sectionId="contact-location"
-            >
-              <div className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="venue_phone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Venue Phone Number</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          onChange={(e) => {
-                            const numericValue = e.target.value.replace(/\D/g, "");
-                            field.onChange(numericValue.slice(0, 11));
-                          }}
-                          className="w-full border-gray-300 dark:border-gray-600 focus:ring-0 focus:shadow-md dark:bg-gray-700 dark:text-white rounded-md"
-                        />
-                      </FormControl>
-                      <FormDescription>Provide a valid phone number of the Venue owner or Manager (numbers only)</FormDescription>
-                      <FormMessage className="text-red-500" />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="map_link"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Google Maps Link (Optional)</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          className="w-full border-gray-300 dark:border-gray-600 focus:ring-0 focus:shadow-md dark:bg-gray-700 dark:text-white rounded-md"
-                        />
-                      </FormControl>
-                      <FormDescription>Add a Google Maps link to help players find the venue easily</FormDescription>
-                      <FormMessage className="text-red-500" />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="booking_fee"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Booking Fee (NGN per hour, Optional)</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          {...field}
-                          onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
-                          className="w-full border-gray-300 dark:border-gray-600 focus:ring-0 focus:shadow-md dark:bg-gray-700 dark:text-white rounded-md"
-                        />
-                      </FormControl>
-                      <FormDescription>Enter the hourly booking fee in NGN (numbers only)</FormDescription>
-                      <FormMessage className="text-red-500" />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </CollapsibleSection>
-
-            {/* Additional Info Section */}
-            <CollapsibleSection
-              title="Additional Info"
-              defaultOpen={false}
-              isOpen={openSection === "additional-info"}
-              setOpenSection={setOpenSection}
-              sectionId="additional-info"
-            >
-              <div className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description (Optional)</FormLabel>
-                      <FormControl>
-                        <ReactQuill
-                          value={field.value}
-                          onChange={(content) => field.onChange(content === "<p><br></p>" ? "" : content)}
-                          modules={quillModules}
-                          className="w-full min-h-[200px] border-2 border-gray-400 dark:border-gray-500 bg-white dark:bg-gray-700 dark:text-white rounded-md"
-                        />
-                      </FormControl>
-                      <FormDescription>Describe the venue in more details.</FormDescription>
-                      <FormMessage className="text-red-500" />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="facilities"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Facilities (Optional)</FormLabel>
-                      <FormControl>
-                        <ReactQuill
-                          value={field.value}
-                          onChange={(content) => field.onChange(content === "<p><br></p>" ? "" : content)}
-                          modules={quillModules}
-                          className="w-full min-h-[200px] border-2 border-gray-400 dark:border-gray-500 bg-white dark:bg-gray-700 dark:text-white rounded-md"
-                        />
-                      </FormControl>
-                      <FormDescription>Describe the facilities available at the venue (e.g., changing rooms, parking)</FormDescription>
-                      <FormMessage className="text-red-500" />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="opening_hours"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Opening Hours (Optional)</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          className="w-full border-gray-300 dark:border-gray-600 focus:ring-0 focus:shadow-md dark:bg-gray-700 dark:text-white rounded-md"
-                        />
-                      </FormControl>
-                      <FormDescription>Specify the venue's operating hours</FormDescription>
-                      <FormMessage className="text-red-500" />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="image"
-                  render={() => (
-                    <FormItem>
-                      <FormLabel>Image (Optional)</FormLabel>
-                      <FormControl>
-                        {selectedFile ? (
-                          <div className="flex items-center space-x-2">
-                            <p>
-                              {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)}MB)
-                            </p>
-                            <Button variant="ghost" size="icon" onClick={removeSelectedFile}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ) : (
-                          <Input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => handleFileChange(e.target.files)}
-                            ref={fileInputRef}
-                            className="w-full border-gray-300 dark:border-gray-600 focus:ring-0 focus:shadow-md dark:bg-gray-700 dark:text-white rounded-md"
-                          />
-                        )}
-                      </FormControl>
-                      <FormDescription>Upload 1 image (max 5MB) to showcase the venue</FormDescription>
-                      {fileError && <FormMessage className="text-red-500">{fileError}</FormMessage>}
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </CollapsibleSection>
-
-            <div className="flex flex-col items-center gap-4">
-              <Button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-3 text-lg shadow-md transition-colors"
-              >
-                {loading ? "Creating..." : "Create Venue"}
-              </Button>
-              {onCancel && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={onCancel}
-                  className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium rounded-lg px-4 py-3 text-lg shadow-md transition-colors"
-                >
-                  Cancel
-                </Button>
-              )}
+            <div className="space-y-4 w-full">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Venue Name</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        className="w-full border-gray-300 dark:border-gray-600 focus:ring-0 focus:shadow-md dark:bg-gray-700 dark:text-white rounded-md"
+                      />
+                    </FormControl>
+                    <FormMessage className="text-red-500" />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="address"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Address</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        className="w-full border-gray-300 dark:border-gray-600 focus:ring-0 focus:shadow-md dark:bg-gray-700 dark:text-white rounded-md"
+                      />
+                    </FormControl>
+                    <FormMessage className="text-red-500" />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="city"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>City</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        className="w-full border-gray-300 dark:border-gray-600 focus:ring-0 focus:shadow-md dark:bg-gray-700 dark:text-white rounded-md"
+                      />
+                    </FormControl>
+                    <FormMessage className="text-red-500" />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="state"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>State</FormLabel>
+                    <FormControl>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <SelectTrigger className="w-full border-gray-300 dark:border-gray-600 focus:ring-0 focus:shadow-md dark:bg-gray-700 dark:text-white rounded-md">
+                          <SelectValue placeholder="Select a state" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {nigerianStates.map((state) => (
+                            <SelectItem key={state} value={state}>
+                              {state}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                    <FormMessage className="text-red-500" />
+                  </FormItem>
+                )}
+              />
             </div>
-          </form>
-        </Form>
-      </main>
+          </CollapsibleSection>
 
-      <div className="pb-28">
-        <Navbar />
-      </div>
+          {/* Contact & Location Section */}
+          <CollapsibleSection
+            title="Contact & Location"
+            defaultOpen={false}
+            isOpen={openSection === "contact-location"}
+            setOpenSection={setOpenSection}
+            sectionId="contact-location"
+          >
+            <div className="space-y-4 w-full">
+              <FormField
+                control={form.control}
+                name="venue_phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Venue Phone Number</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        onChange={(e) => {
+                          const numericValue = e.target.value.replace(/\D/g, "");
+                          field.onChange(numericValue.slice(0, 11));
+                        }}
+                        className="w-full border-gray-300 dark:border-gray-600 focus:ring-0 focus:shadow-md dark:bg-gray-700 dark:text-white rounded-md"
+                      />
+                    </FormControl>
+                    <FormDescription>Provide a valid phone number of the Venue owner or Manager (numbers only)</FormDescription>
+                    <FormMessage className="text-red-500" />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="map_link"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Google Maps Link (Optional)</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        className="w-full border-gray-300 dark:border-gray-600 focus:ring-0 focus:shadow-md dark:bg-gray-700 dark:text-white rounded-md"
+                      />
+                    </FormControl>
+                    <FormDescription>Add a Google Maps link to help players find the venue easily</FormDescription>
+                    <FormMessage className="text-red-500" />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="booking_fee"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Booking Fee (NGN per hour, Optional)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        {...field}
+                        onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
+                        className="w-full border-gray-300 dark:border-gray-600 focus:ring-0 focus:shadow-md dark:bg-gray-700 dark:text-white rounded-md"
+                      />
+                    </FormControl>
+                    <FormDescription>Enter the hourly booking fee in NGN (numbers only)</FormDescription>
+                    <FormMessage className="text-red-500" />
+                  </FormItem>
+                )}
+              />
+            </div>
+          </CollapsibleSection>
+
+          {/* Additional Info Section */}
+          <CollapsibleSection
+            title="Additional Info"
+            defaultOpen={false}
+            isOpen={openSection === "additional-info"}
+            setOpenSection={setOpenSection}
+            sectionId="additional-info"
+          >
+            <div className="space-y-4 w-full">
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description (Optional)</FormLabel>
+                    <FormControl>
+                      <ReactQuill
+                        value={field.value}
+                        onChange={(content) => field.onChange(content === "<p><br></p>" ? "" : content)}
+                        modules={quillModules}
+                        className="w-full bg-white dark:bg-gray-700 dark:text-white rounded-md"
+                      />
+                    </FormControl>
+                    <FormDescription>Describe the venue in more details.</FormDescription>
+                    <FormMessage className="text-red-500" />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="facilities"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Facilities (Optional)</FormLabel>
+                    <FormControl>
+                      <ReactQuill
+                        value={field.value}
+                        onChange={(content) => field.onChange(content === "<p><br></p>" ? "" : content)}
+                        modules={quillModules}
+                        className="w-full bg-white dark:bg-gray-700 dark:text-white rounded-md"
+                      />
+                    </FormControl>
+                    <FormDescription>Describe the facilities available at the venue (e.g., changing rooms, parking)</FormDescription>
+                    <FormMessage className="text-red-500" />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="opening_hours"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Opening Hours (Optional)</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        className="w-full border-gray-300 dark:border-gray-600 focus:ring-0 focus:shadow-md dark:bg-gray-700 dark:text-white rounded-md"
+                      />
+                    </FormControl>
+                    <FormDescription>Specify the venue's operating hours</FormDescription>
+                    <FormMessage className="text-red-500" />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="image"
+                render={() => (
+                  <FormItem>
+                    <FormLabel>Image (Optional)</FormLabel>
+                    <FormControl>
+                      {selectedFile ? (
+                        <div className="flex items-center space-x-2">
+                          <p>
+                            {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)}MB)
+                          </p>
+                          <Button variant="ghost" size="icon" onClick={removeSelectedFile}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <Input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleFileChange(e.target.files)}
+                          ref={fileInputRef}
+                          className="w-full border-gray-300 dark:border-gray-600 focus:ring-0 focus:shadow-md dark:bg-gray-700 dark:text-white rounded-md"
+                        />
+                      )}
+                    </FormControl>
+                    <FormDescription>Upload 1 image (max 5MB) to showcase the venue</FormDescription>
+                    {fileError && <FormMessage className="text-red-500">{fileError}</FormMessage>}
+                  </FormItem>
+                )}
+              />
+            </div>
+          </CollapsibleSection>
+
+          <div className="flex flex-col gap-4">
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-3 text-lg shadow-md transition-colors"
+            >
+              {loading ? "Creating..." : "Create Venue"}
+            </Button>
+            {onCancel && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onCancel}
+                className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium rounded-lg px-4 py-3 text-lg shadow-md transition-colors"
+              >
+                Cancel
+              </Button>
+            )}
+          </div>
+        </form>
+      </Form>
+    </main>
+
+    <div className="pb-28">
+      <Navbar />
     </div>
+  </div>
   );
 };
 
