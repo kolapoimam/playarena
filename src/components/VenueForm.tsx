@@ -223,7 +223,7 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
   };
 
   return (
-    <div className="w-full px-12">
+    <div className="max-w-[100rem] mx-auto px-6">
       <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-6">New Venue</h2>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -297,7 +297,7 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
                         </SelectTrigger>
                         <SelectContent>
                           {nigerianStates.map((state) => (
-                            <SelectItem key={state} value={state}>
+                            <SelectItem key={state) value={state}>
                               {state}
                             </SelectItem>
                           ))}
