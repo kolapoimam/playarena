@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { User, LogOut, Trophy, Wallet, Calendar, BookOpen, Mail, Key, MapPin, ChevronRight } from "lucide-react";
+import { User, LogOut, Trophy, Wallet, Calendar, BookOpen, Mail, Key, MapPin, ChevronRight, FileText } from "lucide-react";
 import Navbar from "@/components/Navbar";
 
 const Profile = () => {
@@ -17,19 +17,34 @@ const Profile = () => {
     const fetchUser = async () => {
       try {
         setIsLoading(true);
-        const { data } = await supabase.auth.getUser();
+        const { data, error: userError } = await supabase.auth.getUser();
+        if (userError) throw userError;
+
         if (data.user) {
-          const { data: profileData } = await supabase
+          const { data: profileData, error: profileError } = await supabase
             .from("profiles")
             .select("nickname, gender")
             .eq("id", data.user.id)
             .single();
+          if (profileError) throw profileError;
+
           setProfile({ ...data.user, ...profileData });
-          const { data: venueData } = await supabase
-            .from("venues")
-            .select("*")
-            .eq("manager_id", data.user.id);
-          setIsVenueLinked(venueData && venueData.length > 0);
+
+          try {
+            const { data: venueData, error: venueError } = await supabase
+              .from("venues")
+              .select("*")
+              .eq("manager_id", data.user.id);
+            if (venueError) {
+              console.error("Error fetching venue data:", venueError);
+              setIsVenueLinked(false);
+            } else {
+              setIsVenueLinked(venueData && venueData.length > 0);
+            }
+          } catch (venueError) {
+            console.error("Error fetching venue data:", venueError);
+            setIsVenueLinked(false);
+          }
         }
       } catch (error) {
         console.error("Error fetching user data:", error);
@@ -39,7 +54,6 @@ const Profile = () => {
     };
     fetchUser();
 
-    // Restore scroll position
     window.scrollTo(0, 0);
   }, []);
 
@@ -90,7 +104,7 @@ const Profile = () => {
                   <Link
                     to="/profile/account-details"
                     className="flex items-center p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300"
-                    onClick={() => console.log("Navigating to /profile/account-details")} // Debug
+                    onClick={() => console.log("Navigating to /profile/account-details")}
                   >
                     <User className="w-5 h-5 mr-3 text-brand" />
                     <span>Account Details</span>
@@ -99,7 +113,7 @@ const Profile = () => {
                   <Link
                     to="/profile/my-matches"
                     className="flex items-center p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300"
-                    onClick={() => console.log("Navigating to /profile/my-matches")} // Debug
+                    onClick={() => console.log("Navigating to /profile/my-matches")}
                   >
                     <Calendar className="w-5 h-5 mr-3 text-brand" />
                     <span>My Matches</span>
@@ -108,7 +122,7 @@ const Profile = () => {
                   <Link
                     to="/profile/match-preferences"
                     className="flex items-center p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300"
-                    onClick={() => console.log("Navigating to /profile/match-preferences")} // Debug
+                    onClick={() => console.log("Navigating to /profile/match-preferences")}
                   >
                     <Trophy className="w-5 h-5 mr-3 text-brand" />
                     <span>Match Preferences</span>
@@ -117,7 +131,7 @@ const Profile = () => {
                   <Link
                     to="/profile/wallet"
                     className="flex items-center p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300"
-                    onClick={() => console.log("Navigating to /profile/wallet")} // Debug
+                    onClick={() => console.log("Navigating to /profile/wallet")}
                   >
                     <Wallet className="w-5 h-5 mr-3 text-brand" />
                     <span>Wallet</span>
@@ -133,7 +147,7 @@ const Profile = () => {
                   <Link
                     to="/profile/my-venue"
                     className="flex items-center p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300"
-                    onClick={() => console.log("Navigating to /profile/my-venue")} // Debug
+                    onClick={() => console.log("Navigating to /profile/my-venue")}
                   >
                     <MapPin className="w-5 h-5 mr-3 text-brand" />
                     <span>My Venue</span>
@@ -144,7 +158,7 @@ const Profile = () => {
                       <Link
                         to="/profile/my-bookings"
                         className="flex items-center p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300"
-                        onClick={() => console.log("Navigating to /profile/my-bookings")} // Debug
+                        onClick={() => console.log("Navigating to /profile/my-bookings")}
                       >
                         <Calendar className="w-5 h-5 mr-3 text-brand" />
                         <span>Bookings</span>
@@ -153,7 +167,7 @@ const Profile = () => {
                       <Link
                         to="/profile/booking-code"
                         className="flex items-center p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300"
-                        onClick={() => console.log("Navigating to /profile/booking-code")} // Debug
+                        onClick={() => console.log("Navigating to /profile/booking-code")}
                       >
                         <Key className="w-5 h-5 mr-3 text-brand" />
                         <span>Booking Code</span>
@@ -171,7 +185,7 @@ const Profile = () => {
                   <Link
                     to="/guides"
                     className="flex items-center p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300"
-                    onClick={() => console.log("Navigating to /guides")} // Debug
+                    onClick={() => console.log("Navigating to /guides")}
                   >
                     <BookOpen className="w-5 h-5 mr-3 text-brand" />
                     <span>Guides</span>
@@ -185,6 +199,15 @@ const Profile = () => {
                     <span>Support</span>
                     <ChevronRight className="w-5 h-5 ml-auto text-gray-400" />
                   </a>
+                  <Link
+                    to="/terms-privacy"
+                    className="flex items-center p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300"
+                    onClick={() => console.log("Navigating to /terms-privacy")}
+                  >
+                    <FileText className="w-5 h-5 mr-3 text-brand" />
+                    <span>Terms & Conditions</span>
+                    <ChevronRight className="w-5 h-5 ml-auto text-gray-400" />
+                  </Link>
                   <button
                     onClick={handleLogout}
                     className="w-full flex items-center p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300"
