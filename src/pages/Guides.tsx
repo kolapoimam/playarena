@@ -128,7 +128,7 @@ const Guides = () => {
                       Managing Matches
                     </AccordionTrigger>
                     <AccordionContent className="text-sm text-gray-700 dark:text-gray-300 px-2 py-2">
-                      Access the "Manage Matches" section with your Super Code to edit details, view players, and update statuses. The dashboard gives you an overview of registered players, available slots, and payment status. In compliance with GDPR, player phone numbers are hidden by default but will be available during check-in for verification purposes.
+                      Access the "Manage Matches" section with your Super Code to edit details, view players, and update statuses. The dashboard gives you an overview of registered players, available slots, and payment status. In compliance with NDPR, player phone numbers are hidden by default but will be available during check-in for verification purposes.
                     </AccordionContent>
                   </AccordionItem>
                   <AccordionItem value="confirmAttendance" className="border-b border-gray-200 dark:border-gray-700">
@@ -152,7 +152,7 @@ const Guides = () => {
                       Contact Information
                     </AccordionTrigger>
                     <AccordionContent className="text-sm text-gray-700 dark:text-gray-300 px-2 py-2">
-                      You can choose to display your phone number on match details. This is optional but recommended for easier communication with players. Player phone numbers are hidden by default (GDPR compliance) but will be available to you during check-in for verification purposes.
+                      You can choose to display your phone number on match details. This is optional but recommended for easier communication with players. Player phone numbers are hidden by default (NDPR compliance) but will be available to you during check-in for verification purposes.
                     </AccordionContent>
                   </AccordionItem>
                 </Accordion>
@@ -192,7 +192,7 @@ const Guides = () => {
                     </AccordionContent>
                   </AccordionItem>
                   <AccordionItem value="refund" className="border-b border-gray-200 dark:border-gray-700">
-                    <AccordionTrigger Fidelis Adewole, [24/05/2025 17:57] className="text-base font-medium hover:bg-green-50 dark:hover:bg-gray-700 py-3 px-2 data-[state=open]:border-l-4 data-[state=open]:border-green-500">
+                    <AccordionTrigger className="text-base font-medium hover:bg-green-50 dark:hover:bg-gray-700 py-3 px-2 data-[state=open]:border-l-4 data-[state=open]:border-green-500">
                       Refund Policy
                     </AccordionTrigger>
                     <AccordionContent className="text-sm text-gray-700 dark:text-gray-300 px-2 py-2">
@@ -223,7 +223,7 @@ const Guides = () => {
                       Privacy & Data Protection
                     </AccordionTrigger>
                     <AccordionContent className="text-sm text-gray-700 dark:text-gray-300 px-2 py-2">
-                      In compliance with GDPR, your phone number is hidden from other players by default. However, organizers will have access to your contact information during check-in for verification purposes. This is necessary to confirm identities and prevent fraudulent bookings.
+                      In compliance with NDPR, your phone number is hidden from other players by default. However, organizers will have access to your contact information during check-in for verification purposes. This is necessary to confirm identities and prevent fraudulent bookings.
                     </AccordionContent>
                   </AccordionItem>
                 </Accordion>
