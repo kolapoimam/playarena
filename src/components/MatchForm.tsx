@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -6,344 +6,205 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { CalendarIcon, Clock, User, ArrowLeft, Copy } from "lucide-react";
-import { Calendar } from "@/components/ui/calendar";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { format, parse, isValid } from "date-fns";
-import { cn } from "@/lib/utils";
-import TimeInput from "@/components/TimeInput";
-import OrganiserVenue from "@/components/OrganiserVenue";
+import { Trash2 } from "lucide-react";
+import ReactQuill from "react-quill";
+import "react-quill/dist/quill.snow.css";
 
-const skillLevels = ["Beginner", "Amateur", "Intermediate", "Advanced", "Professional", "All", "None"] as const;
-const matchTypes = ["4-a-side", "5-a-side", "7-a-side", "11-a-side (Regular)", "Double", "Friendly", "All", "None"] as const;
-const genders = ["Male", "Female", "All", "None"] as const;
+// Nigerian states including FCT
+const nigerianStates = [
+  "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", "Borno", "Cross River",
+  "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu", "FCT", "Gombe", "Imo", "Jigawa", "Kaduna", "Kano",
+  "Katsina", "Kebbi", "Kogi", "Kwara", "Lagos", "Nasarawa", "Niger", "Ogun", "Ondo", "Osun",
+  "Oyo", "Plateau", "Rivers", "Sokoto", "Taraba", "Yobe", "Zamfara"
+];
 
-const timePattern = /^(0[1-9]|1[0-2]):[0-5][0-9] (AM|PM)$/i;
+// Form schema using zod
 const formSchema = z.object({
-  title: z.string()
-    .min(3, { message: "Title must be at least 3 characters" })
-    .max(100, { message: "Title cannot exceed 100 characters" }),
-  venue_id: z.string()
-    .uuid({ message: "Please select a valid venue" }),
-  match_date: z.date({ 
-    required_error: "Please select a date",
-    invalid_type_error: "Please select a valid date" 
-  }),
-  start_time: z.string()
-    .regex(timePattern, { 
-      message: "Please enter a valid start time in HH:MM AM/PM format (12-hour clock)" 
-    }),
-  end_time: z.string()
-    .regex(timePattern, { 
-      message: "Please enter a valid end time in HH:MM AM/PM format (12-hour clock)" 
-    }),
-  total_slots: z.number()
-    .int({ message: "Must be a whole number" })
-    .min(2, { message: "At least 2 players are required" })
-    .max(100, { message: "Maximum 100 players allowed" }),
-  is_paid: z.boolean().default(false),
-  price: z.number()
-    .min(0, { message: "Price cannot be negative" })
-    .max(100000, { message: "Maximum price is ₦100,000" })
+  name: z.string().min(3, { message: "Name must be at least 3 characters" }),
+  address: z.string().min(5, { message: "Address must be at least 5 characters" }),
+  city: z.string().min(2, { message: "City must be at least 2 characters" }),
+  state: z.enum(nigerianStates as [string, ...string[]], { message: "Please select a valid state" }),
+  venue_phone: z
+    .string()
+    .regex(/^[0-9]+$/, { message: "Phone number must contain only numbers" })
+    .length(11, { message: "Phone number must be exactly 11 digits" })
+    .transform((val) => val.slice(0, 11)),
+  description: z.string().optional(),
+  map_link: z.string().url({ message: "Please enter a valid URL" }).or(z.literal("")),
+  opening_hours: z.string().optional(),
+  booking_fee: z
+    .number()
     .optional()
-    .nullable()
-    .refine(val => val === null || val === undefined || val >= 0, {
-      message: "Price must be positive if provided"
+    .refine((val) => val === undefined || (Number.isFinite(val) && val >= 0), {
+      message: "Booking fee must be a valid number (NGN per hour)",
     }),
-  notes: z.string()
-    .max(500, { message: "Notes cannot exceed 500 characters" })
-    .optional(),
-  organizer_name: z.string()
-    .min(3, { message: "Name must be at least 3 characters" })
-    .max(50, { message: "Name cannot exceed 50 characters" }),
-  organizer_phone: z.string()
-    .regex(/^[0-9]+$/, { message: "Must contain only numbers" })
-    .length(11, { message: "Must be exactly 11 digits" })
-    .optional()
-    .nullable()
-    .transform(val => val === "" ? null : val),
-  disclose_phone: z.boolean().default(false),
-  player_number_required: z.boolean().default(false),
-  is_private: z.boolean().default(false),
-  access_password: z.string().nullable().optional(),
-  allow_bulk_tickets: z.boolean().default(false),
-  skill_level: z.enum(skillLevels).optional().nullable()
-    .transform(val => {
-      if (val === "All") return null;
-      if (val === "None") return "";
-      return val;
-    }),
-  match_type: z.enum(matchTypes).optional().nullable()
-    .transform(val => {
-      if (val === "All") return null;
-      if (val === "None") return "";
-      return val;
-    }),
-  gender: z.enum(genders).optional().nullable()
-    .transform(val => {
-      if (val === "All") return null;
-      if (val === "None") return "";
-      return val;
-    }),
-  sell_tickets: z.boolean().default(false),
-  ticket_price: z.number()
-    .min(200, { message: "Ticket price must be at least ₦200" })
-    .max(100000, { message: "Maximum ticket price is ₦100,000" })
-    .optional()
-    .nullable()
-    .refine(val => val === null || val === undefined || val >= 200, {
-      message: "Ticket price must be at least ₦200 if provided"
-    }),
-  max_tickets: z.number()
-    .int({ message: "Must be a whole number" })
-    .min(1, { message: "At least 1 ticket is required" })
-    .max(5000, { message: "Maximum 5000 tickets allowed" })
-    .optional()
-    .nullable(),
-}).refine(data => {
-  const startDateTime = new Date(data.match_date);
-  const [startHours, startMinutes] = data.start_time.replace(/ AM|PM/i, "").split(':').map(Number);
-  const startPeriod = data.start_time.slice(-2).toUpperCase();
-  let startH = startHours;
-  if (startPeriod === "PM" && startHours !== 12) startH += 12;
-  if (startPeriod === "AM" && startHours === 12) startH = 0;
-  startDateTime.setHours(startH, startMinutes, 0, 0);
-
-  const endDateTime = new Date(data.match_date);
-  const [endHours, endMinutes] = data.end_time.replace(/ AM|PM/i, "").split(':').map(Number);
-  const endPeriod = data.end_time.slice(-2).toUpperCase();
-  let endH = endHours;
-  if (endPeriod === "PM" && endHours !== 12) endH += 12;
-  if (endPeriod === "AM" && endHours === 12) endH = 0;
-  endDateTime.setHours(endH, endMinutes, 0, 0);
-
-  const sameDayEarlier = endH < startH || (endH === startH && endMinutes <= startMinutes);
-  if (sameDayEarlier) {
-    endDateTime.setDate(endDateTime.getDate() + 1);
-  }
-
-  return startDateTime < endDateTime;
-}, {
-  message: "Start time must be before end time",
-  path: ["end_time"],
-}).refine(data => {
-  const now = new Date();
-  const selectedDateTime = new Date(data.match_date);
-  const [startHours, startMinutes] = data.start_time.replace(/ AM|PM/i, "").split(':').map(Number);
-  const period = data.start_time.slice(-2).toUpperCase();
-  let hours = startHours;
-  if (period === "PM" && startHours !== 12) hours += 12;
-  if (period === "AM" && startHours === 12) hours = 0;
-  selectedDateTime.setHours(hours, startMinutes, 0, 0);
-
-  const nowUTC = new Date(now.getTime() + (now.getTimezoneOffset() * 60000));
-  const selectedUTC = new Date(selectedDateTime.getTime() + (selectedDateTime.getTimezoneOffset() * 60000));
-  const tenMinutesLater = new Date(nowUTC.getTime() + 10 * 60 * 1000);
-
-  return selectedUTC.getTime() >= tenMinutesLater.getTime();
-}, {
-  message: "Match must be scheduled at least 10 minutes from now",
-  path: ["start_time"],
-}).refine(data => {
-  if (data.sell_tickets && !data.ticket_price) {
-    return false;
-  }
-  return true;
-}, {
-  message: "Ticket price is required when selling tickets",
-  path: ["ticket_price"],
 });
 
-const convertTo24Hour = (time12: string): string => {
-  const [time, period] = time12.split(' ');
-  let [hours, minutes] = time.split(':').map(Number);
-  if (period.toUpperCase() === 'PM' && hours !== 12) hours += 12;
-  if (period.toUpperCase() === 'AM' && hours === 12) hours = 0;
-  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-};
+// File schema for single image validation
+const fileSchema = z
+  .instanceof(File)
+  .refine((file) => file.type.startsWith("image/"), { message: "Only image files are allowed" })
+  .refine((file) => file.size <= 5 * 1024 * 1024, { message: "Image must be less than 5MB" });
 
 type FormValues = z.infer<typeof formSchema>;
 
-type MatchFormProps = {
-  userId: string | null;
-  isPreFilled: boolean;
-  preSelectedVenueSlug: string | null;
-  accessCode: string | null;
-  onSubmitSuccess: (supercode: string, matchSlug: string) => void;
-  onPreview: () => void;
-  onPrefill: (values: { match_date: Date; start_time: string; end_time: string }) => void;
-  onFormReady: (formMethods: {
-    watch: () => FormValues;
-    setValue: (name: keyof FormValues, value: any) => void;
-  }) => void;
+interface VenueFormProps {
+  onSuccess?: (venueId: string, venueSlug: string, venueName: string) => void;
+  onCancel?: () => void;
+}
+
+interface CollapsibleSectionProps {
+  title: string;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}
+
+const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({ title, children, defaultOpen = false }) => {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
+      <div
+        className="flex justify-between items-center cursor-pointer"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">{title}</h2>
+        <span className="text-gray-800 dark:text-gray-200">{isOpen ? "-" : "+"}</span>
+      </div>
+      <div
+        className={`transition-all duration-300 ease-in-out overflow-hidden ${
+          isOpen ? "max-h-screen" : "max-h-0"
+        }`}
+      >
+        {children}
+      </div>
+    </div>
+  );
 };
 
-const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSubmitSuccess, onPreview, onPrefill, onFormReady }: MatchFormProps) => {
+const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [isPreferencesOpen, setIsPreferencesOpen] = useState(false);
-  const [isPaymentOpen, setIsPaymentOpen] = useState(false);
-  const [isTicketSalesOpen, setIsTicketSalesOpen] = useState(false);
+  const [fileError, setFileError] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
+    mode: "onSubmit", // Validate on submit to prevent premature error display
     defaultValues: {
-      title: "",
-      total_slots: 10,
-      is_paid: false,
-      price: null,
-      notes: "",
-      organizer_name: "",
-      organizer_phone: null,
-      disclose_phone: false,
-      player_number_required: false,
-      is_private: false,
-      access_password: null,
-      allow_bulk_tickets: false,
-      skill_level: null,
-      match_type: null,
-      gender: null,
-      sell_tickets: false,
-      ticket_price: null,
-      max_tickets: null,
-      start_time: "",
-      end_time: "",
+      name: "",
+      address: "",
+      city: "",
+      state: undefined,
+      venue_phone: "",
+      description: "",
+      map_link: "",
+      opening_hours: "",
+      booking_fee: undefined,
     },
   });
 
-  useEffect(() => {
-    // Pass watch and setValue to parent component
-    onFormReady({
-      watch: form.watch,
-      setValue: form.setValue,
-    });
-  }, [form, onFormReady]);
+  // Quill toolbar configuration
+  const quillModules = {
+    toolbar: [
+      [{ header: [1, 2, false] }],
+      ["bold", "italic", "underline"],
+      [{ list: "ordered" }, { list: "bullet" }],
+      ["clean"],
+    ],
+  };
 
-  useEffect(() => {
-    if (!isPreFilled) {
-      const savedForm = localStorage.getItem("organizeFormState");
-      if (savedForm) {
-        const parsed = JSON.parse(savedForm);
-        if (parsed.match_date) {
-          parsed.match_date = new Date(parsed.match_date);
-        }
-        if (parsed.start_time) {
-          parsed.start_time = parsed.start_time.replace(/^(0[1-9]|1[0-2]):([0-5][0-9]) (AM|PM)$/, "$1:$2 $3");
-        }
-        if (parsed.end_time) {
-          parsed.end_time = parsed.end_time.replace(/^(0[1-9]|1[0-2]):([0-5][0-9]) (AM|PM)$/, "$1:$2 $3");
-        }
-        form.reset(parsed);
-      }
+  const handleFileChange = (files: FileList | null) => {
+    setFileError(null);
+    if (!files || files.length === 0) return;
+
+    const file = files[0];
+    const result = fileSchema.safeParse(file);
+
+    if (!result.success) {
+      setFileError(result.error.errors[0].message);
+      return;
     }
-  }, [form, isPreFilled]);
 
-  useEffect(() => {
-    const subscription = form.watch((value) => {
-      if (!isPreFilled) {
-        localStorage.setItem("organizeFormState", JSON.stringify(value));
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [form.watch, isPreFilled]);
+    setSelectedFile(file);
+  };
 
-  useEffect(() => {
-    if (form.watch("is_private") && !form.watch("access_password")) {
-      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-      let password = '';
-      for (let i = 0; i < 6; i++) {
-        password += chars.charAt(Math.floor(Math.random() * chars.length));
-      }
-      form.setValue('access_password', password);
-    } else if (!form.watch("is_private")) {
-      form.setValue('access_password', null);
+  const removeSelectedFile = () => {
+    setSelectedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
     }
-  }, [form]);
+  };
 
   const onSubmit = async (data: FormValues) => {
     setLoading(true);
+    setFileError(null);
+
     try {
-      const superCode = Math.floor(100000 + Math.random() * 900000).toString();
+      let imageUrl: string | null = null;
 
-      const { data: match, error } = await supabase
-        .from("matches")
-        .insert({
-          title: data.title,
-          venue_id: data.venue_id,
-          match_date: format(data.match_date, "yyyy-MM-dd"),
-          match_time: convertTo24Hour(data.start_time),
-          start_time: convertTo24Hour(data.start_time),
-          end_time: convertTo24Hour(data.end_time),
-          total_slots: data.total_slots,
-          is_paid: data.is_paid,
-          price: data.is_paid ? data.price : null,
-          notes: data.notes || null,
-          organizer_name: data.organizer_name,
-          organizer_phone: data.organizer_phone || null,
-          disclose_phone: data.disclose_phone,
-          player_number_required: data.player_number_required,
-          is_private: data.is_private,
-          access_password: data.is_private ? data.access_password : null,
-          allow_bulk_tickets: data.allow_bulk_tickets,
-          skill_level: data.skill_level || null,
-          match_type: data.match_type || null,
-          gender: data.gender || null,
-          super_code: superCode,
-          sell_tickets: data.sell_tickets,
-          ticket_price: data.sell_tickets ? data.ticket_price : null,
-          max_tickets: data.sell_tickets ? data.max_tickets : null,
-          total_tickets_available: data.sell_tickets && data.max_tickets ? data.max_tickets : 0,
-        })
-        .select('id, slug, super_code')
-        .single();
-
-      if (error) throw error;
-
-      if (userId) {
-        const { error: linkError } = await supabase
-          .from("user_organized_matches")
-          .insert({
-            user_id: userId,
-            match_id: match.id,
+      if (selectedFile) {
+        const fileName = `${Date.now()}-${selectedFile.name}`;
+        const { error: uploadError } = await supabase.storage
+          .from("venue-images")
+          .upload(fileName, selectedFile, {
+            cacheControl: "3600",
+            upsert: false,
           });
 
-        if (linkError) throw linkError;
-      }
+        if (uploadError) throw new Error(uploadError.message || "Failed to upload image.");
 
-      if (accessCode && preSelectedVenueSlug) {
-        const { data: venue } = await supabase
-          .from("venues")
-          .select("id")
-          .eq("slug", preSelectedVenueSlug)
-          .single();
+        const { data: publicUrlData } = supabase.storage.from("venue-images").getPublicUrl(fileName);
 
-        const { error: bookingUpdateError } = await supabase
-          .from("bookings")
-          .update({ match_id: match.id })
-          .eq("venue_id", venue.id)
-          .eq("payment_reference", new URLSearchParams(window.location.search).get("reference"));
-
-        if (bookingUpdateError) {
-          console.error("Error updating booking with match_id:", bookingUpdateError);
-          toast({
-            title: "Warning",
-            description: "Match created, but failed to link booking. Contact support.",
-            variant: "destructive",
-          });
+        if (publicUrlData) {
+          imageUrl = publicUrlData.publicUrl;
+        } else {
+          throw new Error("Failed to retrieve image URL.");
         }
       }
 
-      localStorage.removeItem("organizeFormState");
-      onSubmitSuccess(match.super_code || "N/A", match.slug);
+      const { data: venue, error } = await supabase
+        .from("venues")
+        .insert({
+          name: data.name,
+          address: data.address,
+          city: data.city,
+          state: data.state,
+          venue_phone: data.venue_phone,
+          description: data.description || null,
+          map_link: data.map_link || null,
+          opening_hours: data.opening_hours || null,
+          booking_fee: data.booking_fee || null,
+          image_urls: imageUrl ? [imageUrl] : null,
+        })
+        .select("id, slug, name")
+        .single();
+
+      if (error) throw new Error(error.message || "Failed to create venue.");
+
+      toast({
+        title: "Venue created!",
+        description: "Your venue has been successfully added.",
+      });
+
+      form.reset();
+      setSelectedFile(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+
+      if (onSuccess && venue) {
+        onSuccess(venue.id, venue.slug, venue.name);
+      }
     } catch (error) {
-      console.error("Error creating match:", error);
+      const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred.";
+      console.error("Error creating venue:", errorMessage);
       toast({
         title: "Error",
-        description: "Failed to create match. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -352,603 +213,226 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
   };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
-          <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Match Details</h2>
-          <FormField
-            control={form.control}
-            name="title"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Match Title</FormLabel>
-                <FormControl>
-                  <Input 
-                    placeholder="E.g., Saturday Friendly" 
-                    className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white" 
-                    {...field} 
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <OrganiserVenue
-            venueId={form.watch("venue_id")}
-            onVenueChange={(value) => form.setValue("venue_id", value)}
-            isPreFilled={isPreFilled}
-            preSelectedVenueSlug={preSelectedVenueSlug}
-            onVenueCreated={(venueId, venueSlug, venueName) => {
-              form.setValue("venue_id", venueId);
-              toast({
-                title: "Venue created",
-                description: `${venueName} has been added to venues.`,
-              });
-            }}
-            onPrefill={onPrefill}
-          />
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="match_date"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Date</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild disabled={isPreFilled}>
-                      <FormControl>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "pl-3 text-left text-base font-normal border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          {field.value ? (
-                            format(field.value, "PPP")
-                          ) : (
-                            <span>Pick a date</span>
-                          )}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        disabled={(date) => {
-                          const now = new Date();
-                          const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                          return date < today;
+    <div className="max-w-3xl mx-auto p-6">
+      <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-6">Create New Venue</h2>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          {/* Venue Details Section */}
+          <CollapsibleSection title="Venue Details" defaultOpen={false}>
+            <div className="space-y-4">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Venue Name</FormLabel>
+                    <FormControl>
+                      <Input {...field} className="w-full border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white rounded-md" />
+                    </FormControl>
+                    <FormMessage className="text-red-500" />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="address"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Address</FormLabel>
+                    <FormControl>
+                      <Input {...field} className="w-full border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white rounded-md" />
+                    </FormControl>
+                    <FormMessage className="text-red-500" />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="city"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>City</FormLabel>
+                    <FormControl>
+                      <Input {...field} className="w-full border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white rounded-md" />
+                    </FormControl>
+                    <FormMessage className="text-red-500" />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="state"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>State</FormLabel>
+                    <FormControl>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <SelectTrigger className="w-full border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white rounded-md">
+                          <SelectValue placeholder="Select a state" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {nigerianStates.map((state) => (
+                            <SelectItem key={state} value={state}>
+                              {state}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                    <FormMessage className="text-red-500" />
+                  </FormItem>
+                )}
+              />
+            </div>
+          </CollapsibleSection>
+
+          {/* Contact & Location Section */}
+          <CollapsibleSection title="Contact & Location" defaultOpen={false}>
+            <div className="space-y-4">
+              <FormField
+                control={form.control}
+                name="venue_phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Venue Phone Number</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        onChange={(e) => {
+                          const numericValue = e.target.value.replace(/\D/g, "");
+                          field.onChange(numericValue.slice(0, 11));
                         }}
-                        initialFocus
+                        className="w-full border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white rounded-md"
                       />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="start_time"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Start Time</FormLabel>
-                  <FormControl>
-                    <TimeInput
-                      value={field.value || ""}
-                      onChange={field.onChange}
-                      disabled={isPreFilled}
-                      placeholder="e.g., 01:00 PM"
+                    </FormControl>
+                    <FormDescription>Provide a valid phone number of the Venue owner or Manager (numbers only)</FormDescription>
+                    <FormMessage className="text-red-500" />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="map_link"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Google Maps Link (Optional)</FormLabel>
+                    <FormControl>
+                      <Input {...field} className="w-full border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white rounded-md" />
+                    </FormControl>
+                    <FormDescription>Add a Google Maps link to help players find the venue easily</FormDescription>
+                    <FormMessage className="text-red-500" />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="booking_fee"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Booking Fee (NGN per hour, Optional)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        {...field}
+                        onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
+                        className="w-full border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white rounded-md"
+                      />
+                    </FormControl>
+                    <FormDescription>Enter the hourly booking fee in NGN (numbers only)</FormDescription>
+                    <FormMessage className="text-red-500" />
+                  </FormItem>
+                )}
+              />
+            </div>
+          </CollapsibleSection>
+
+          {/* Additional Info Section */}
+          <CollapsibleSection title="Additional Info" defaultOpen={false}>
+            <div className="space-y-4">
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description (Optional)</FormLabel>
+                    <FormControl>
+                      <ReactQuill
+                        value={field.value}
+                        onChange={(content) => field.onChange(content === "<p><br></p>" ? "" : content)}
+                        modules={quillModules}
+                        className="w-full min-h-[200px] border-2 border-gray-400 dark:border-gray-500 bg-white dark:bg-gray-700 dark:text-white rounded-md p-2"
+                      />
+                    </FormControl>
+                    <FormDescription>Use the rich text editor to describe the venue, facilities, etc.</FormDescription>
+                    <FormMessage className="text-red-500" />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="opening_hours"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Opening Hours (Optional)</FormLabel>
+                    <FormControl>
+                      <Input {...field} className="w-full border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white rounded-md" />
+                    </FormControl>
+                    <FormDescription>Specify the venue's operating hours</FormDescription>
+                    <FormMessage className="text-red-500" />
+                  </FormItem>
+                )}
+              />
+              <FormItem>
+                <FormLabel>Image (Optional)</FormLabel>
+                <FormControl>
+                  {selectedFile ? (
+                    <div className="flex items-center space-x-2">
+                      <p>
+                        {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)}MB)
+                      </p>
+                      <Button variant="ghost" size="icon" onClick={removeSelectedFile}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleFileChange(e.target.files)}
+                      ref={fileInputRef}
+                      className="w-full border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white rounded-md"
                     />
-                  </FormControl>
-                  <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
-                    Match start time (12-hour clock, e.g., 01:00 PM)
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="end_time"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">End Time</FormLabel>
-                  <FormControl>
-                    <TimeInput
-                      value={field.value || ""}
-                      onChange={field.onChange}
-                      disabled={isPreFilled}
-                      placeholder="e.g., 03:00 PM"
-                    />
-                  </FormControl>
-                  <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
-                    Match end time (12-hour clock, e.g., 03:00 PM)
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-          <FormField
-            control={form.control}
-            name="total_slots"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Number of Players</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    min={2}
-                    max={100}
-                    className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                    {...field}
-                    value={field.value ?? ""}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      field.onChange(value === "" ? null : parseInt(value, 10));
-                    }}
-                  />
-                </FormControl>
-                <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
-                  Total number of players needed for this match (2-100)
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="notes"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Notes (Optional)</FormLabel>
-                <FormControl>
-                  <Textarea
-                    placeholder="E.g., Bring boots, parking available, etc."
-                    className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
-          <div className="flex justify-between items-center cursor-pointer" onClick={() => setIsPreferencesOpen(!isPreferencesOpen)}>
-            <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Preferences (Optional)</h2>
-            <span>{isPreferencesOpen ? '-' : '+'}</span>
-          </div>
-          {isPreferencesOpen && (
-            <>
-              <FormField
-                control={form.control}
-                name="skill_level"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Skill Level</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || undefined}>
-                      <FormControl>
-                        <SelectTrigger className="w-full text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white">
-                          <SelectValue placeholder="Select Skill Level" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {skillLevels.map((level) => (
-                          <SelectItem key={level} value={level} className="text-base">
-                            {level}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
-                      Select the preferred skill level for this match (optional)
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="match_type"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Match Type</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || undefined}>
-                      <FormControl>
-                        <SelectTrigger className="w-full text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white">
-                          <SelectValue placeholder="Select Match Type" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {matchTypes.map((type) => (
-                          <SelectItem key={type} value={type} className="text-base">
-                            {type}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
-                      Select the type of match (optional)
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="gender"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Gender Preference</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || undefined}>
-                      <FormControl>
-                        <SelectTrigger className="w-full text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white">
-                          <SelectValue placeholder="Select Gender" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {genders.map((gender) => (
-                          <SelectItem key={gender} value={gender} className="text-base">
-                            {gender}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
-                      Select the preferred gender for this match (optional)
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </>
-          )}
-        </div>
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
-          <div className="flex justify-between items-center cursor-pointer" onClick={() => setIsPaymentOpen(!isPaymentOpen)}>
-            <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Payment & Privacy</h2>
-            <span>{isPaymentOpen ? '-' : '+'}</span>
-          </div>
-          {isPaymentOpen && (
-            <>
-              <FormField
-                control={form.control}
-                name="is_paid"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 dark:border-gray-600">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-base font-medium text-gray-700 dark:text-gray-300">
-                        Paid Match
-                      </FormLabel>
-                      <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
-                        Toggle if players need to pay to join this match
-                      </FormDescription>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        className="data-[state=checked]:bg-green-500"
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              {form.watch("is_paid") && (
-                <FormField
-                  control={form.control}
-                  name="price"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Price per Player (₦)</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          placeholder="0.00"
-                          min={0}
-                          step="0.01"
-                          className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                          {...field}
-                          value={field.value ?? ""}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            field.onChange(value === "" ? null : parseFloat(value));
-                          }}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
                   )}
-                />
-              )}
-              {form.watch("is_paid") && (
-                <FormField
-                  control={form.control}
-                  name="allow_bulk_tickets"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 dark:border-gray-600">
-                      <div className="space-y-0.5">
-                        <FormLabel className="text-base font-medium text-gray-700 dark:text-gray-300">
-                          Allow Bulk Ticket Purchase
-                        </FormLabel>
-                        <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
-                          Toggle to allow players to purchase multiple slots (up to 5 or available slots)
-                        </FormDescription>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                          className="data-[state=checked]:bg-green-500"
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              )}
-              <FormField
-                control={form.control}
-                name="is_private"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 dark:border-gray-600">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-base font-medium text-gray-700 dark:text-gray-300">
-                        Private Match
-                      </FormLabel>
-                      <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
-                        Toggle to restrict access to invited players only
-                      </FormDescription>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        className="data-[state=checked]:bg-green-500"
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              {form.watch("is_private") && (
-                <FormField
-                  control={form.control}
-                  name="access_password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Access Password</FormLabel>
-                      <div className="flex items-center gap-2">
-                        <FormControl>
-                          <Input
-                            value={field.value || ''}
-                            readOnly
-                            className="font-mono text-base border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                          />
-                        </FormControl>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="text-sm font-medium hover:bg-green-50 dark:hover:bg-gray-700 transition-colors"
-                          onClick={() => {
-                            navigator.clipboard.writeText(field.value || '');
-                            toast({
-                              title: "Copied!",
-                              description: "Password copied to clipboard",
-                            });
-                          }}
-                        >
-                          <Copy size={16} className="mr-2" />
-                          Copy
-                        </Button>
-                      </div>
-                      <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
-                        Share this password with players you want to invite
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
-            </>
-          )}
-        </div>
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
-          <div className="flex justify-between items-center cursor-pointer" onClick={() => setIsTicketSalesOpen(!isTicketSalesOpen)}>
-            <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Ticket Sales</h2>
-            <span>{isTicketSalesOpen ? '-' : '+'}</span>
+                </FormControl>
+                <FormDescription>Upload 1 image (max 5MB) to showcase the venue</FormDescription>
+                {fileError && <FormMessage className="text-red-500">{fileError}</FormMessage>}
+              </FormItem>
+            </div>
+          </CollapsibleSection>
+
+          <div className="flex flex-col items-center gap-4">
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-3 text-lg shadow-md transition-colors"
+            >
+              {loading ? "Creating..." : "Create Venue"}
+            </Button>
+            {onCancel && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onCancel}
+                className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium rounded-lg px-4 py-3 text-lg shadow-md transition-colors"
+              >
+                Cancel
+              </Button>
+            )}
           </div>
-          {isTicketSalesOpen && (
-            <>
-              <FormField
-                control={form.control}
-                name="sell_tickets"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 dark:border-gray-600">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-base font-medium text-gray-700 dark:text-gray-300">
-                        Sell Tickets to Fans
-                      </FormLabel>
-                      <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
-                        Toggle to allow fans to purchase tickets to watch the match
-                      </FormDescription>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        className="data-[state=checked]:bg-green-500"
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              {form.watch("sell_tickets") && (
-                <>
-                  <FormField
-                    control={form.control}
-                    name="ticket_price"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Ticket Price (₦)</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            placeholder="200.00"
-                            min={200}
-                            step="0.01"
-                            className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                            {...field}
-                            value={field.value ?? ""}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              field.onChange(value === "" ? null : parseFloat(value));
-                            }}
-                          />
-                        </FormControl>
-                        <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
-                          Set the price for each ticket (minimum ₦200)
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="max_tickets"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Maximum Tickets (Optional)</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            placeholder="Enter maximum number of tickets"
-                            min={1}
-                            max={1000}
-                            className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                            {...field}
-                            value={field.value ?? ""}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              field.onChange(value === "" ? null : parseInt(value, 10));
-                            }}
-                          />
-                        </FormControl>
-                        <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
-                          Limit the total number of tickets available for purchase (1-1000)
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </>
-              )}
-            </>
-          )}
-        </div>
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
-          <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Organizer Details</h2>
-          <FormField
-            control={form.control}
-            name="organizer_name"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Your Name</FormLabel>
-                <FormControl>
-                  <Input 
-                    placeholder="Your name" 
-                    className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white" 
-                    {...field} 
-                  />
-                </FormControl>
-                <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
-                  This will be displayed as the organizer of the match
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="organizer_phone"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Your Phone Number (Optional)</FormLabel>
-                <FormControl>
-                  <Input
-                    type="tel"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    placeholder="Enter 11-digit phone number"
-                    className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                    {...field}
-                    value={field.value ?? ""}
-                    onChange={(e) => {
-                      const numericValue = e.target.value.replace(/\D/g, '');
-                      const truncatedValue = numericValue.slice(0, 11);
-                      field.onChange(truncatedValue || null);
-                    }}
-                  />
-                </FormControl>
-                <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
-                  Provide your phone number for contact purposes (numbers only)
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="disclose_phone"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 dark:border-gray-600">
-                <div className="space-y-0.5">
-                  <FormLabel className="text-base font-medium text-gray-700 dark:text-gray-300">
-                    Disclose Phone Number
-                  </FormLabel>
-                  <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
-                    Toggle to share your phone number with players
-                  </FormDescription>
-                </div>
-                <FormControl>
-                  <Switch
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                    disabled={!form.watch("organizer_phone") || form.watch("organizer_phone")?.length !== 11}
-                    className="data-[state=checked]:bg-green-500"
-                  />
-                </FormControl>
-              </FormItem>
-            )}
-          />
-        </div>
-        <div className="flex gap-4">
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium rounded-lg px-4 py-3 text-lg shadow-md transition-colors"
-            onClick={onPreview}
-            disabled={loading || !form.watch("title") || !form.watch("venue_id") || !form.watch("match_date") || !form.watch("start_time") || !form.watch("end_time") || !form.watch("total_slots") || !form.watch("organizer_name")}
-          >
-            Preview Match
-          </Button>
-          <Button 
-            type="submit" 
-            className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-3 text-lg shadow-md transition-colors" 
-            disabled={loading}
-          >
-            {loading ? "Creating..." : "Create Match"}
-          </Button>
-        </div>
-      </form>
-    </Form>
+        </form>
+      </Form>
+    </div>
   );
 };
 
-export default MatchForm;
+export default VenueForm;
