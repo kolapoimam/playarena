@@ -67,31 +67,25 @@ const BookingCode = () => {
         </div>
       </header>
 
-      <main className="flex-grow max-w-7xl mx-auto px-4 py-6 w-full">
-        {loading ? (
-          <div className="flex justify-center items-center h-64">
-            <Loader2 className="w-8 h-8 animate-spin text-green-500" />
-          </div>
-        ) : venueId ? (
-          <Card className="w-full bg-gradient-to-b from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 shadow-lg rounded-xl border border-gray-200 dark:border-gray-700">
-            <CardContent className="p-6">
-              <VenueAccessCode venueId={venueId} />
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="w-full bg-gradient-to-b from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 shadow-lg rounded-xl border border-gray-200 dark:border-gray-700">
-            <CardContent className="p-6 text-center">
-              <p className="text-gray-600 dark:text-gray-400 mb-4">No linked venue found.</p>
-              <Button
-                onClick={() => navigate("/profile/my-venue")}
-                className="bg-green-500 hover:bg-green-600 text-white rounded-lg"
-              >
-                Link a Venue
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-      </main>
+<main className="flex-grow max-w-7xl mx-auto px-4 py-6 w-full">
+  {loading ? (
+    <div className="flex justify-center items-center h-64">
+      <Loader2 className="w-8 h-8 animate-spin text-green-500" />
+    </div>
+  ) : venueId ? (
+    <VenueAccessCode venueId={venueId} />
+  ) : (
+    <div className="w-full bg-gradient-to-b from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 shadow-lg rounded-xl border border-gray-200 dark:border-gray-700 p-6 text-center">
+      <p className="text-gray-600 dark:text-gray-400 mb-4">No linked venue found.</p>
+      <Button
+        onClick={() => navigate("/profile/my-venue")}
+        className="bg-green-500 hover:bg-green-600 text-white rounded-lg"
+      >
+        Link a Venue
+      </Button>
+    </div>
+  )}
+</main>
 
       <div className="pb-28">
         <Navbar />
