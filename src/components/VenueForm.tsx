@@ -102,7 +102,7 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
     },
   });
 
-  // Initialize editor for facilities field (removed facilities, but keeping editor logic as a placeholder)
+  // Initialize editor for description field
   const editor = useEditor({
     extensions: [StarterKit],
     content: "",
@@ -246,7 +246,7 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
                           <Input
                             placeholder="E.g., National Stadium"
                             {...field}
-                            className="border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                            className="w-full max-w-full border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                           />
                         </FormControl>
                         <FormMessage className="text-red-500" />
@@ -264,7 +264,7 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
                           <Input
                             placeholder="Full street address"
                             {...field}
-                            className="border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                            className="w-full max-w-full border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                           />
                         </FormControl>
                         <FormMessage className="text-red-500" />
@@ -283,7 +283,7 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
                             <Input
                               placeholder="E.g., Lagos"
                               {...field}
-                              className="border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                              className="w-full max-w-full border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                             />
                           </FormControl>
                           <FormMessage className="text-red-500" />
@@ -302,7 +302,7 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
                               onValueChange={field.onChange}
                               value={field.value}
                             >
-                              <SelectTrigger className="border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white">
+                              <SelectTrigger className="w-full max-w-full border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white">
                                 <SelectValue placeholder="Select a state" />
                               </SelectTrigger>
                               <SelectContent>
@@ -348,7 +348,7 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
                               const numericValue = e.target.value.replace(/\D/g, '');
                               field.onChange(numericValue.slice(0, 11));
                             }}
-                            className="border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                            className="w-full max-w-full border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                           />
                         </FormControl>
                         <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
@@ -369,7 +369,7 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
                           <Input
                             placeholder="Paste Google Maps URL here"
                             {...field}
-                            className="border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                            className="w-full max-w-full border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                           />
                         </FormControl>
                         <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
@@ -393,7 +393,7 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
                             {...field}
                             value={field.value === undefined ? "" : field.value}
                             onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
-                            className="border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                            className="w-full max-w-full border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                           />
                         </FormControl>
                         <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
@@ -424,7 +424,7 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
                           <Textarea
                             placeholder="Describe the venue, facilities, etc."
                             {...field}
-                            className="border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                            className="w-full max-w-full border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                           />
                         </FormControl>
                         <FormMessage className="text-red-500" />
@@ -442,7 +442,7 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
                           <Input
                             placeholder="E.g., 8:00 AM - 6:00 PM"
                             {...field}
-                            className="border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                            className="w-full max-w-full border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                           />
                         </FormControl>
                         <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
@@ -478,7 +478,7 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
                             accept="image/*"
                             ref={fileInputRef}
                             onChange={(e) => handleFileChange(e.target.files)}
-                            className="border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                            className="w-full max-w-full border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                           />
                         </FormControl>
                       )}
