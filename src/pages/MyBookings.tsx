@@ -80,6 +80,7 @@ const MyBookings = () => {
         }
         setOrganizers(organizersData || []);
 
+        // Fetch upcoming bookings
         const { data: upcoming, error: upcomingError } = await supabase
           .rpc("get_bookings_by_venue_v4", {
             p_venue_id: venueData.id,
@@ -91,9 +92,31 @@ const MyBookings = () => {
           console.error("Upcoming bookings error:", upcomingError);
           throw new Error(upcomingError.message);
         }
-        const sortedUpcoming = (upcoming || []).sort((a, b) => new Date(a.match_date).getTime() - new Date(b.match_date).getTime());
+
+        // Fetch match details for upcoming bookings
+        const upcomingWithMatchDetails = await Promise.all(
+          (upcoming || []).map(async (booking: Booking) => {
+            if (booking.match_id) {
+              const { data: matchData, error: matchError } = await supabase
+                .from("matches")
+                .select("id, title, slug")
+                .eq("id", booking.match_id)
+                .single();
+              if (matchError) {
+                console.error("Match fetch error:", matchError);
+                return booking;
+              }
+              return { ...booking, title: matchData?.title || booking.title, slug: matchData?.slug || booking.slug };
+            }
+            return booking;
+          })
+        );
+        const sortedUpcoming = upcomingWithMatchDetails.sort(
+          (a, b) => new Date(a.match_date).getTime() - new Date(b.match_date).getTime()
+        );
         setUpcomingBookings(sortedUpcoming);
 
+        // Fetch past bookings
         const { data: past, error: pastError } = await supabase
           .rpc("get_bookings_by_venue_v4", {
             p_venue_id: venueData.id,
@@ -105,7 +128,28 @@ const MyBookings = () => {
           console.error("Past bookings error:", pastError);
           throw new Error(pastError.message);
         }
-        const sortedPast = (past || []).sort((a, b) => new Date(b.match_date).getTime() - new Date(a.match_date).getTime());
+
+        // Fetch match details for past bookings
+        const pastWithMatchDetails = await Promise.all(
+          (past || []).map(async (booking: Booking) => {
+            if (booking.match_id) {
+              const { data: matchData, error: matchError } = await supabase
+                .from("matches")
+                .select("id, title, slug")
+                .eq("id", booking.match_id)
+                .single();
+              if (matchError) {
+                console.error("Match fetch error:", matchError);
+                return booking;
+              }
+              return { ...booking, title: matchData?.title || booking.title, slug: matchData?.slug || booking.slug };
+            }
+            return booking;
+          })
+        );
+        const sortedPast = pastWithMatchDetails.sort(
+          (a, b) => new Date(b.match_date).getTime() - new Date(a.match_date).getTime()
+        );
         setPastBookings(sortedPast);
       } catch (error: any) {
         console.error("Fetch bookings error:", error);
@@ -138,7 +182,7 @@ const MyBookings = () => {
         </div>
       </header>
 
-      <main className="flex-grow overflow-y-auto container mx-auto px-4 py-6 space-y-6">
+      <main className="flex-grow max-w-7xl mx-auto px-4 py-6 space-y-6">
         {loading ? (
           <div className="flex justify-center items-center h-64">
             <Loader2 className="w-8 h-8 animate-spin text-green-500" />
@@ -156,7 +200,7 @@ const MyBookings = () => {
             </CardContent>
           </Card>
         ) : (
-          <Card className="bg-white dark:bg-gray-800 shadow-md rounded-lg">
+          <Card className="bg-white dark:bg-gray-800 shadow-md rounded-lg w-full">
             <CardHeader>
               <CardTitle className="text-lg font-semibold text-gray-700 dark:text-gray-300">Venue Bookings</CardTitle>
             </CardHeader>
@@ -208,7 +252,11 @@ const MyBookings = () => {
                                   <span>
                                     <Button
                                       className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg"
-                                      onClick={() => booking.slug && navigate(`/match/${booking.slug}`)}
+                                      onClick={() => {
+                                        if (booking.slug) {
+                                          navigate(`/match/${booking.slug}`);
+                                        }
+                                      }}
                                       disabled={!booking.slug}
                                     >
                                       View Details
@@ -262,7 +310,11 @@ const MyBookings = () => {
                                   <span>
                                     <Button
                                       className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg"
-                                      onClick={() => booking.slug && navigate(`/match/${booking.slug}`)}
+                                      onClick={() => {
+                                        if (booking.slug) {
+                                          navigate(`/match/${booking.slug}`);
+                                        }
+                                      }}
                                       disabled={!booking.slug}
                                     >
                                       View Details
