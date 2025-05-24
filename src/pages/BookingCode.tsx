@@ -28,7 +28,7 @@ const BookingCode = () => {
         const { data: venueData, error: venueError } = await supabase
           .from("venues")
           .select("id")
-          .eq("manager_id", userData.user.id)
+          .eq("user_id", userData.user.id)
           .single();
 
         if (venueError || !venueData) {
