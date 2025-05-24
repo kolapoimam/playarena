@@ -287,8 +287,9 @@ const VenueDirectory = () => {
                         <Store className="h-4 w-4 mr-1" />
                         <span>{`${venue.match_count} Match${venue.match_count !== 1 ? "es" : ""}`}</span>
                         {venue.booking_fee !== null && (
-                          <span className="ml-auto">NGN {venue.booking_fee.toFixed(2)}</span>
-                        )}
+  <div className="ml-auto bg-green-100 dark:bg-green-900 rounded-full px-2 py-1 text-xs font-semibold text-green-700 dark:text-green-300">
+    NGN {venue.booking_fee.toFixed(2)}
+  </div>                        )}
                       </div>
                       {venue.is_verified && (
                         <Button
