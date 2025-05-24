@@ -34,7 +34,7 @@ const Profile = () => {
             const { data: venueData, error: venueError } = await supabase
               .from("venues")
               .select("*")
-              .eq("manager_id", data.user.id);
+              .eq("user_id", data.user.id);
             if (venueError) {
               console.error("Error fetching venue data:", venueError);
               setIsVenueLinked(false);
