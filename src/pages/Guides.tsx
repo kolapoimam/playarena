@@ -17,9 +17,9 @@ const Guides = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen pb-32">
+    <div className="min-h-screen flex flex-col bg-gray-100 dark:bg-gray-900">
       <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between max-w-7xl mx-auto">
           <Button 
             variant="ghost" 
             onClick={() => navigate(-1)} 
@@ -35,6 +35,7 @@ const Guides = () => {
         </div>
       </header>
 
+      <main className="flex-grow max-w-7xl mx-auto px-4 py-6">
         <Card className="bg-gradient-to-b from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 shadow-lg rounded-xl border border-gray-200 dark:border-gray-700">
           <CardHeader>
             <CardTitle className="text-2xl text-center text-gray-900 dark:text-gray-100">
@@ -191,7 +192,7 @@ const Guides = () => {
                     </AccordionContent>
                   </AccordionItem>
                   <AccordionItem value="refund" className="border-b border-gray-200 dark:border-gray-700">
-                    <AccordionTrigger className="text-base font-medium hover:bg-green-50 dark:hover:bg-gray-700 py-3 px-2 data-[state=open]:border-l-4 data-[state=open]:border-green-500">
+                    <AccordionTrigger Fidelis Adewole, [24/05/2025 17:57] className="text-base font-medium hover:bg-green-50 dark:hover:bg-gray-700 py-3 px-2 data-[state=open]:border-l-4 data-[state=open]:border-green-500">
                       Refund Policy
                     </AccordionTrigger>
                     <AccordionContent className="text-sm text-gray-700 dark:text-gray-300 px-2 py-2">
@@ -301,11 +302,12 @@ const Guides = () => {
             </Button>
           </CardContent>
         </Card>
+      </main>
 
-
-
+      <div className="pb-28">
         <Navbar />
       </div>
+    </div>
   );
 };
 
