@@ -50,6 +50,7 @@ const queryClient = new QueryClient();
 
 const AppRoutes = () => {
   const location = useLocation();
+  const [profile, setProfile] = useState(null);
 
   useEffect(() => {
     console.log("Current path:", location.pathname);
@@ -63,16 +64,18 @@ const AppRoutes = () => {
       <Route path="/activities" element={<Activities />} />
       <Route path="/matches" element={<Matches />} />
       <Route path="/guides" element={<Guides />} />
-      <Route path="/profile" element={<Profile />}>
-        <Route path="view-profile" element={<ViewProfile />} />
-        <Route path="my-venue" element={<MyVenue />} />
-        <Route path="my-bookings" element={<MyBookings />} />
-        <Route path="booking-code" element={<BookingCode />} />
-        <Route path="account-details" element={<AccountDetails />} />
-        <Route path="my-matches" element={<MyMatches />} />
-        <Route path="match-preferences" element={<MatchPreferences />} />
-        <Route path="wallet" element={<Wallet />} />
-      </Route>
+      <Route path="/profile" element={<Profile />} />
+      <Route path="/profile/view-profile" element={<ViewProfile />} />
+      <Route
+        path="/profile/account-details"
+        element={<AccountDetails profile={profile} setProfile={setProfile} />}
+      />
+      <Route path="/profile/my-matches" element={<MyMatches profile={profile} />} />
+      <Route path="/profile/match-preferences" element={<MatchPreferences />} />
+      <Route path="/profile/wallet" element={<Wallet />} />
+      <Route path="/profile/my-venue" element={<MyVenue />} />
+      <Route path="/profile/my-bookings" element={<MyBookings />} />
+      <Route path="/profile/booking-code" element={<BookingCode />} />
       <Route path="/auth" element={<Auth />} />
       <Route path="/confirm" element={<Confirm />} />
       <Route path="/organize" element={<Organize />} />
