@@ -73,9 +73,9 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({ title, children
   };
 
   return (
-    <div className="w-full bg-gradient-to-b from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 shadow-lg rounded-xl border border-gray-200 dark:border-gray-700">
+    <div className="w-full bg-white dark:bg-gray-700 shadow-lg rounded-lg">
       <div
-        className="flex justify-between items-center cursor-pointer p-6"
+        className="flex justify-between items-center cursor-pointer p-4 border-b border-gray-200 dark:border-gray-600"
         onClick={handleToggle}
       >
         <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200">{title}</h2>
@@ -83,7 +83,7 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({ title, children
       </div>
       <div
         className={`transition-all duration-300 ease-in-out overflow-hidden ${
-          isOpen ? "max-h-screen p-6 pt-0" : "max-h-0"
+          isOpen ? "max-h-screen p-4" : "max-h-0"
         }`}
       >
         {children}
@@ -227,8 +227,22 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
 
 return (
   <div className="min-h-screen flex flex-col bg-gray-100 dark:bg-gray-900">
-    <main className="flex-grow max-w-7xl mx-auto px-4 py-6 w-full">
-      <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-6">Create a New Venue</h2>
+    <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg w-full">
+      <div className="flex items-center justify-between">
+        <Button
+          variant="ghost"
+          onClick={() => navigate("/profile")}
+          className="text-white hover:bg-green-600"
+        >
+          <ArrowLeft className="w-5 h-5 mr-2" /> Back
+        </Button>
+        <h1 className="text-2xl font-bold">Create New Venue</h1>
+        <div className="w-10"></div>
+      </div>
+    </header>
+
+    <main className="flex-grow px-4 py-6 w-full">
+      <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Create a New Venue</h2>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 w-full">
           {/* Venue Details Section */}
