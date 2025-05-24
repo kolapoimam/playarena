@@ -4,9 +4,26 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Loader2, ArrowLeft } from "lucide-react";
-import VenueAccessCode from "@/components/VenueAccessCode";
 import Navbar from "@/components/Navbar";
+
+const VenueAccessCode = ({ venueId }: { venueId: string }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [code, setCode] = useState("");
+  const { toast } = useToast();
+
+  const handleGenerateCode = async () => {
+    try {
+      // Placeholder: Call Supabase to generate code
+      const generatedCode = "ABC123"; // Mock code
+      setCode(generatedCode);
+      toast({ title: "Success", description: "Code generated successfully." });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to generate code.", variant: "destructive" });
+    }
+  };
 
 const BookingCode = () => {
   const navigate = useNavigate();
@@ -67,13 +84,13 @@ const BookingCode = () => {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-6 flex-grow">
+      <main className="flex-grow max-w-7xl mx-auto px-4 py-6">
         {loading ? (
           <div className="flex justify-center items-center h-64">
             <Loader2 className="w-8 h-8 animate-spin text-green-500" />
           </div>
         ) : venueId ? (
-          <Card className="bg-white dark:bg-gray-800 shadow-md rounded-lg">
+          <Card className="bg-white dark:bg-gray-800 shadow-md rounded-lg w-full">
             <CardContent className="p-6">
               <VenueAccessCode venueId={venueId} />
             </CardContent>
