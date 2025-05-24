@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronDown, ChevronUp, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 
@@ -65,17 +65,17 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({ title, children
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
-    <div className="mb-4">
-      <button
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
+      <div
+        className="flex justify-between items-center cursor-pointer"
         onClick={() => setIsOpen(!isOpen)}
-        className="flex justify-between items-center w-full py-3 text-xl font-semibold text-gray-800 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
       >
-        {title}
-        {isOpen ? <ChevronUp /> : <ChevronDown />}
-      </button>
+        <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">{title}</h2>
+        <span className="text-gray-800 dark:text-gray-200">{isOpen ? "-" : "+"}</span>
+      </div>
       <div
         className={`transition-all duration-300 ease-in-out overflow-hidden ${
-          isOpen ? "max-h-screen py-4" : "max-h-0 py-0"
+          isOpen ? "max-h-screen" : "max-h-0"
         }`}
       >
         {children}
@@ -93,6 +93,8 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
+    mode: "onSubmit", // Validate on submit
+    reValidateMode: "onSubmit", // Re-validate on submit
     defaultValues: {
       name: "",
       address: "",
@@ -217,7 +219,7 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           {/* Venue Details Section */}
-          <CollapsibleSection title="Venue Details" defaultOpen>
+          <CollapsibleSection title="Venue Details" defaultOpen={false}>
             <div className="space-y-4">
               <FormField
                 control={form.control}
@@ -226,9 +228,12 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
                   <FormItem>
                     <FormLabel>Venue Name</FormLabel>
                     <FormControl>
-                      <Input {...field} className="w-full border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white rounded-md" />
+                      <Input
+                        {...field}
+                        className="w-full border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white rounded-md"
+                      />
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-red-500" />
                   </FormItem>
                 )}
               />
@@ -239,9 +244,12 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
                   <FormItem>
                     <FormLabel>Address</FormLabel>
                     <FormControl>
-                      <Input {...field} className="w-full border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white rounded-md" />
+                      <Input
+                        {...field}
+                        className="w-full border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white rounded-md"
+                      />
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-red-500" />
                   </FormItem>
                 )}
               />
@@ -252,9 +260,12 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
                   <FormItem>
                     <FormLabel>City</FormLabel>
                     <FormControl>
-                      <Input {...field} className="w-full border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white rounded-md" />
+                      <Input
+                        {...field}
+                        className="w-full border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white rounded-md"
+                      />
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-red-500" />
                   </FormItem>
                 )}
               />
@@ -278,7 +289,7 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
                         </SelectContent>
                       </Select>
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-red-500" />
                   </FormItem>
                 )}
               />
@@ -286,7 +297,7 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
           </CollapsibleSection>
 
           {/* Contact & Location Section */}
-          <CollapsibleSection title="Contact & Location">
+          <CollapsibleSection title="Contact & Location" defaultOpen={false}>
             <div className="space-y-4">
               <FormField
                 control={form.control}
@@ -305,7 +316,7 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
                       />
                     </FormControl>
                     <FormDescription>Provide a valid phone number of the Venue owner or Manager (numbers only)</FormDescription>
-                    <FormMessage />
+                    <FormMessage className="text-red-500" />
                   </FormItem>
                 )}
               />
@@ -316,10 +327,13 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
                   <FormItem>
                     <FormLabel>Google Maps Link (Optional)</FormLabel>
                     <FormControl>
-                      <Input {...field} className="w-full border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white rounded-md" />
+                      <Input
+                        {...field}
+                        className="w-full border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white rounded-md"
+                      />
                     </FormControl>
                     <FormDescription>Add a Google Maps link to help players find the venue easily</FormDescription>
-                    <FormMessage />
+                    <FormMessage className="text-red-500" />
                   </FormItem>
                 )}
               />
@@ -338,7 +352,7 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
                       />
                     </FormControl>
                     <FormDescription>Enter the hourly booking fee in NGN (numbers only)</FormDescription>
-                    <FormMessage />
+                    <FormMessage className="text-red-500" />
                   </FormItem>
                 )}
               />
@@ -346,7 +360,7 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
           </CollapsibleSection>
 
           {/* Additional Info Section */}
-          <CollapsibleSection title="Additional Info">
+          <CollapsibleSection title="Additional Info" defaultOpen={false}>
             <div className="space-y-4">
               <FormField
                 control={form.control}
@@ -363,7 +377,7 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
                       />
                     </FormControl>
                     <FormDescription>Use the rich text editor to describe the venue, facilities, etc.</FormDescription>
-                    <FormMessage />
+                    <FormMessage className="text-red-500" />
                   </FormItem>
                 )}
               />
@@ -374,10 +388,13 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
                   <FormItem>
                     <FormLabel>Opening Hours (Optional)</FormLabel>
                     <FormControl>
-                      <Input {...field} className="w-full border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white rounded-md" />
+                      <Input
+                        {...field}
+                        className="w-full border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white rounded-md"
+                      />
                     </FormControl>
                     <FormDescription>Specify the venue's operating hours</FormDescription>
-                    <FormMessage />
+                    <FormMessage className="text-red-500" />
                   </FormItem>
                 )}
               />
@@ -404,7 +421,7 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
                   )}
                 </FormControl>
                 <FormDescription>Upload 1 image (max 5MB) to showcase the venue</FormDescription>
-                {fileError && <FormMessage>{fileError}</FormMessage>}
+                {fileError && <FormMessage className="text-red-500">{fileError}</FormMessage>}
               </FormItem>
             </div>
           </CollapsibleSection>
