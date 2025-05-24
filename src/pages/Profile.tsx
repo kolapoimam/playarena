@@ -10,26 +10,37 @@ import Navbar from "@/components/Navbar";
 const Profile = () => {
   const [profile, setProfile] = useState(null);
   const [isVenueLinked, setIsVenueLinked] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
     const fetchUser = async () => {
-      const { data } = await supabase.auth.getUser();
-      if (data.user) {
-        const { data: profileData } = await supabase
-          .from("profiles")
-          .select("nickname, gender")
-          .eq("id", data.user.id)
-          .single();
-        setProfile({ ...data.user, ...profileData });
-        const { data: venueData } = await supabase
-          .from("venues")
-          .select("*")
-          .eq("manager_id", data.user.id);
-        setIsVenueLinked(venueData && venueData.length > 0);
+      try {
+        setIsLoading(true);
+        const { data } = await supabase.auth.getUser();
+        if (data.user) {
+          const { data: profileData } = await supabase
+            .from("profiles")
+            .select("nickname, gender")
+            .eq("id", data.user.id)
+            .single();
+          setProfile({ ...data.user, ...profileData });
+          const { data: venueData } = await supabase
+            .from("venues")
+            .select("*")
+            .eq("manager_id", data.user.id);
+          setIsVenueLinked(venueData && venueData.length > 0);
+        }
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+      } finally {
+        setIsLoading(false);
       }
     };
     fetchUser();
+
+    // Restore scroll position
+    window.scrollTo(0, 0);
   }, []);
 
   const handleLogout = async () => {
@@ -43,6 +54,14 @@ const Profile = () => {
       : profile?.gender === "female"
       ? "https://img.freepik.com/free-vector/young-girl-with-pigtails_1308-176684.jpg"
       : "https://img-new.cgtrader.com/items/4506145/4d6ab481d2/large/football-player-avatar-3d-icon-3d-model-4d6ab481d2.jpg";
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-100 dark:bg-gray-900">
@@ -71,6 +90,7 @@ const Profile = () => {
                   <Link
                     to="/profile/account-details"
                     className="flex items-center p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300"
+                    onClick={() => console.log("Navigating to /profile/account-details")} // Debug
                   >
                     <User className="w-5 h-5 mr-3 text-brand" />
                     <span>Account Details</span>
@@ -79,6 +99,7 @@ const Profile = () => {
                   <Link
                     to="/profile/my-matches"
                     className="flex items-center p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300"
+                    onClick={() => console.log("Navigating to /profile/my-matches")} // Debug
                   >
                     <Calendar className="w-5 h-5 mr-3 text-brand" />
                     <span>My Matches</span>
@@ -87,6 +108,7 @@ const Profile = () => {
                   <Link
                     to="/profile/match-preferences"
                     className="flex items-center p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300"
+                    onClick={() => console.log("Navigating to /profile/match-preferences")} // Debug
                   >
                     <Trophy className="w-5 h-5 mr-3 text-brand" />
                     <span>Match Preferences</span>
@@ -95,6 +117,7 @@ const Profile = () => {
                   <Link
                     to="/profile/wallet"
                     className="flex items-center p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300"
+                    onClick={() => console.log("Navigating to /profile/wallet")} // Debug
                   >
                     <Wallet className="w-5 h-5 mr-3 text-brand" />
                     <span>Wallet</span>
@@ -110,6 +133,7 @@ const Profile = () => {
                   <Link
                     to="/profile/my-venue"
                     className="flex items-center p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300"
+                    onClick={() => console.log("Navigating to /profile/my-venue")} // Debug
                   >
                     <MapPin className="w-5 h-5 mr-3 text-brand" />
                     <span>My Venue</span>
@@ -120,6 +144,7 @@ const Profile = () => {
                       <Link
                         to="/profile/my-bookings"
                         className="flex items-center p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300"
+                        onClick={() => console.log("Navigating to /profile/my-bookings")} // Debug
                       >
                         <Calendar className="w-5 h-5 mr-3 text-brand" />
                         <span>Bookings</span>
@@ -128,6 +153,7 @@ const Profile = () => {
                       <Link
                         to="/profile/booking-code"
                         className="flex items-center p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300"
+                        onClick={() => console.log("Navigating to /profile/booking-code")} // Debug
                       >
                         <Key className="w-5 h-5 mr-3 text-brand" />
                         <span>Booking Code</span>
@@ -145,6 +171,7 @@ const Profile = () => {
                   <Link
                     to="/guides"
                     className="flex items-center p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300"
+                    onClick={() => console.log("Navigating to /guides")} // Debug
                   >
                     <BookOpen className="w-5 h-5 mr-3 text-brand" />
                     <span>Guides</span>
