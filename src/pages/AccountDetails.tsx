@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import ProfileSettings from "./ProfileSettings";
+import ProfileSettings from "@/components/ProfileSettings";
 import Navbar from "@/components/Navbar";
 import { ChevronLeft } from "lucide-react";
 
