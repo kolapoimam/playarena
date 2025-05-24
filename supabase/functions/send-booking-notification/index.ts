@@ -8,8 +8,9 @@ serve(async (req: Request) => {
     const { venue_email, venue_name, match_date, start_time, end_time, user_email, access_code } = await req.json();
 
     if (!venue_email || !venue_name || !match_date || !start_time || !end_time || !user_email) {
+      console.error("Missing required fields:", { venue_email, venue_name, match_date, start_time, end_time, user_email, access_code });
       return new Response(
-        JSON.stringify({ error: "Missing required fields" }),
+        JSON.stringify({ error: "Missing required fields", missing: { venue_email, venue_name, match_date, start_time, end_time, user_email } }),
         { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }
@@ -154,21 +155,23 @@ serve(async (req: Request) => {
 </html>
 `;
 
-    await resend.emails.send({
+    const response = await resend.emails.send({
       from: "hello@sportcliq.com",
       to: venue_email,
       subject: `⚽ New Booking for ${venue_name}!`,
       html: emailHtml,
     });
 
+    console.log("Email sent successfully:", response);
+
     return new Response(
-      JSON.stringify({ success: true }),
+      JSON.stringify({ success: true, emailId: response.id }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error("Error sending email:", error);
     return new Response(
-      JSON.stringify({ error: "Failed to send email" }),
+      JSON.stringify({ error: "Failed to send email", details: error.message }),
       { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }
