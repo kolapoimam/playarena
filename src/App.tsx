@@ -14,6 +14,7 @@ import Search from "@/pages/Search";
 import Activities from "@/pages/Activities";
 import Matches from "@/pages/Matches";
 import Profile from "@/pages/Profile";
+import ViewProfile from "@/pages/ViewProfile"; // Added import
 import NotFound from "@/pages/NotFound";
 import Organize from "@/pages/Organize";
 import MatchDetail from "@/pages/MatchDetail";
@@ -28,7 +29,7 @@ import Feedback from "@/pages/Feedback";
 import Guides from "@/pages/Guides";
 import Auth from "@/pages/Auth";
 import TeamManagement from "@/pages/TeamManagement";
-import MatchHighlights from "@/components/MatchHighlights"; // Added import
+import MatchHighlights from "@/components/MatchHighlights";
 import Ticketing from "@/pages/Ticketing";
 import TermsAndPrivacy from "@/pages/TermsAndPrivacy";
 import Confirm from "@/pages/Confirm";
@@ -55,6 +56,7 @@ const AppRoutes = () => {
       <Route path="/matches" element={<Matches />} />
       <Route path="/guides" element={<Guides />} />
       <Route path="/profile" element={<Profile />} />
+      <Route path="/profile/view-profile" element={<ViewProfile />} /> {/* Added route */}
       <Route path="/auth" element={<Auth />} />
       <Route path="/confirm" element={<Confirm />} />
       <Route path="/organize" element={<Organize />} />
@@ -68,7 +70,7 @@ const AppRoutes = () => {
       <Route path="/join/:slug" element={<JoinMatch />} />
       <Route path="/venue/:slug" element={<VenueDetail />} />
       <Route path="/match/:slug/team-management" element={<TeamManagement />} />
-      <Route path="/highlights/:slug" element={<MatchHighlights />} /> {/* Added route */}
+      <Route path="/highlights/:slug" element={<MatchHighlights />} />
       <Route path="/match-id/:id" element={<MatchRedirect />} />
       <Route path="/venue-id/:id" element={<VenueRedirect />} />
       <Route path="/venuemanager/dashboard/:venueId" element={<VenueManagerDashboard />} />
