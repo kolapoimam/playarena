@@ -8,6 +8,26 @@ import Navbar from "@/components/Navbar";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 
+// Custom CSS to style ReactQuill for description and facilities
+const quillStyles = `
+  .ql-container {
+    border: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+  }
+  .ql-editor {
+    padding: 0 !important;
+    font-family: 'Nunito', sans-serif !important;
+    color: inherit !important;
+  }
+  .ql-editor p {
+    margin: 0 !important;
+  }
+  .dark .ql-editor {
+    color: #d1d5db !important; /* Tailwind gray-300 */
+  }
+`;
+
 type Venue = {
   id: string;
   slug: string;
@@ -22,7 +42,6 @@ type Venue = {
   match_count?: number;
   facilities: string | null;
   opening_hours: string | null;
-  pricing: string | null;
   booking_fee: number | null;
   aggregated_rating: number | null;
   verified_status: 'True' | 'False';
@@ -72,7 +91,7 @@ const VenueDetail = () => {
       try {
         const { data, error } = await supabase
           .from("venues")
-          .select("id, slug, name, address, city, state, description, map_link, venue_phone, image_urls, facilities, opening_hours, pricing, booking_fee, aggregated_rating, verified_status")
+          .select("id, slug, name, address, city, state, description, map_link, venue_phone, image_urls, facilities, opening_hours, booking_fee, aggregated_rating, verified_status")
           .eq("slug", slug)
           .single();
 
@@ -180,6 +199,7 @@ const VenueDetail = () => {
 
   return (
     <div className="min-h-screen pb-20 bg-gray-50 dark:bg-gray-900">
+      <style>{quillStyles}</style>
       <header className="sticky top-0 z-50 bg-green-500 text-white shadow-md">
         <div className="p-4 flex items-center justify-between">
           <Button
@@ -247,7 +267,7 @@ const VenueDetail = () => {
                       value={venue.description || "<p>No description available.</p>"}
                       readOnly={true}
                       modules={quillModules}
-                      className="w-full border-none bg-transparent text-gray-600 dark:text-gray-400"
+                      className="w-full border-none bg-transparent p-0 text-gray-600 dark:text-gray-400"
                     />
                   </div>
                 </div>
@@ -262,7 +282,7 @@ const VenueDetail = () => {
                       value={venue.facilities || "<p>No facilities information available.</p>"}
                       readOnly={true}
                       modules={quillModules}
-                      className="w-full border-none bg-transparent text-gray-600 dark:text-gray-400"
+                      className="w-full border-none bg-transparent p-0 text-gray-600 dark:text-gray-400"
                     />
                   </div>
                 </div>
