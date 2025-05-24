@@ -223,7 +223,7 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
   };
 
   return (
-    <div className="max-w-[100rem] mx-auto px-6">
+    <div className="max-w-7xl mx-auto px-4 py-6">
       <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-6">New Venue</h2>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -403,7 +403,7 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
                         className="w-full min-h-[200px] border-2 border-gray-400 dark:border-gray-500 bg-white dark:bg-gray-700 dark:text-white rounded-md p-2"
                       />
                     </FormControl>
-                    <FormDescription>Use the rich text editor to describe the venue, facilities, etc.</FormDescription>
+                    <FormDescription>Describe the venue in more details.</FormDescription>
                     <FormMessage className="text-red-500" />
                   </FormItem>
                 )}
@@ -444,31 +444,37 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
                   </FormItem>
                 )}
               />
-              <FormItem>
-                <FormLabel>Image (Optional)</FormLabel>
-                <FormControl>
-                  {selectedFile ? (
-                    <div className="flex items-center space-x-2">
-                      <p>
-                        {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)}MB)
-                      </p>
-                      <Button variant="ghost" size="icon" onClick={removeSelectedFile}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleFileChange(e.target.files)}
-                      ref={fileInputRef}
-                      className="w-full border-gray-300 dark:border-gray-600 focus:ring-0 focus:shadow-md dark:bg-gray-700 dark:text-white rounded-md"
-                    />
-                  )}
-                </FormControl>
-                <FormDescription>Upload 1 image (max 5MB) to showcase the venue</FormDescription>
-                {fileError && <FormMessage className="text-red-500">{fileError}</FormMessage>}
-              </FormItem>
+              <FormField
+                control={form.control}
+                name="image"
+                render={() => (
+                  <FormItem>
+                    <FormLabel>Image (Optional)</FormLabel>
+                    <FormControl>
+                      {selectedFile ? (
+                        <div className="flex items-center space-x-2">
+                          <p>
+                            {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)}MB)
+                          </p>
+                          <Button variant="ghost" size="icon" onClick={removeSelectedFile}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <Input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleFileChange(e.target.files)}
+                          ref={fileInputRef}
+                          className="w-full border-gray-300 dark:border-gray-600 focus:ring-0 focus:shadow-md dark:bg-gray-700 dark:text-white rounded-md"
+                        />
+                      )}
+                    </FormControl>
+                    <FormDescription>Upload 1 image (max 5MB) to showcase the venue</FormDescription>
+                    {fileError && <FormMessage className="text-red-500">{fileError}</FormMessage>}
+                  </FormItem>
+                )}
+              />
             </div>
           </CollapsibleSection>
 
