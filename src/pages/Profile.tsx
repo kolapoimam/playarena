@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, LogOut, Settings, Bell, User, Wallet, Trophy, MapPin, Book, HelpCircle } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ArrowLeft, LogOut, Settings } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import UserDashboard from "@/components/UserDashboard";
 import UserMatches from "@/components/UserMatches";
@@ -14,10 +15,9 @@ const Profile = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [profile, setProfile] = useState(null);
+  const [activeTab, setActiveTab] = useState("dashboard");
   const [showSettings, setShowSettings] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
-  const [activeSection, setActiveSection] = useState("dashboard");
 
   useEffect(() => {
     fetchProfile();
@@ -51,16 +51,7 @@ const Profile = () => {
 
   const handleSettingsClick = () => {
     setShowSettings(true);
-    setShowNotifications(false);
     setShowDropdown(false);
-    setActiveSection("settings");
-  };
-
-  const handleNotificationsClick = () => {
-    setShowNotifications(true);
-    setShowSettings(false);
-    setShowDropdown(false);
-    setActiveSection("notifications");
   };
 
   const username = profile?.nickname || profile?.first_name || "User";
@@ -70,20 +61,13 @@ const Profile = () => {
       <div className="bg-gradient-to-r from-green-600 to-green-800 text-white p-4 flex items-center justify-between shadow-lg sticky top-0 z-20">
         <Button
           variant="ghost"
-          onClick={() => {
-            if (showSettings || showNotifications) {
-              setShowSettings(false);
-              setShowNotifications(false);
-            } else {
-              navigate(-1);
-            }
-          }}
+          onClick={() => navigate(-1)}
           className="text-white hover:text-gray-200 text-sm flex items-center"
         >
           <ArrowLeft size={16} className="mr-2" />
           Back
         </Button>
-        <h1 className="text-2xl font-bold text-center flex-1">Welcome, {username}!</h1>
+        <h1 className="text-2xl font-bold text-center flex-1">My Profile</h1>
         <div className="relative">
           <img
             src={
@@ -98,120 +82,26 @@ const Profile = () => {
             onClick={() => setShowDropdown(!showDropdown)}
           />
           {showDropdown && (
-            <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl z-10">
-              <div className="p-2 border-b border-gray-200 dark:border-gray-700 flex items-center">
-                <img
-                  src={
-                    profile?.gender === "male"
-                      ? "https://img.freepik.com/premium-psd/smiling-3d-cartoon-man-avatar_975163-789.jpg"
-                      : profile?.gender === "female"
-                      ? "https://img.freepik.com/free-vector/young-girl-with-pigtails_1308-176684.jpg"
-                      : "https://img-new.cgtrader.com/items/4506145/4d6ab481d2/large/football-player-avatar-3d-icon-3d-model-4d6ab481d2.jpg"
-                  }
-                  alt="Avatar"
-                  className="w-8 h-8 rounded-full mr-2"
-                />
-                <div>
-                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{username}</p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">View your full profile</p>
-                </div>
+            <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl z-10 overflow-hidden">
+              <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{username}</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">{profile?.email}</p>
               </div>
               <Button
                 variant="ghost"
-                className="w-full text-gray-700 dark:text-gray-300 hover:bg-green-100 dark:hover:bg-green-900 flex items-center justify-start px-4 py-2 text-sm rounded-none"
-                onClick={() => navigate("/account-details")}
-              >
-                <User size={16} className="mr-2" /> Account Details
-              </Button>
-              <Button
-                variant="ghost"
-                className="w-full text-gray-700 dark:text-gray-300 hover:bg-green-100 dark:hover:bg-green-900 flex items-center justify-start px-4 py-2 text-sm rounded-none"
+                className="w-full text-gray-700 dark:text-gray-300 hover:bg-green-100 dark:hover:bg-green-900 flex items-center justify-start px-4 py-3 text-sm rounded-none"
                 onClick={handleSettingsClick}
               >
-                <Settings size={16} className="mr-2" /> Profile Settings
+                <Settings size={16} className="mr-2" />
+                Profile & Settings
               </Button>
               <Button
                 variant="ghost"
-                className="w-full text-gray-700 dark:text-gray-300 hover:bg-green-100 dark:hover:bg-green-900 flex items-center justify-start px-4 py-2 text-sm rounded-none"
-                onClick={handleNotificationsClick}
-              >
-                <Bell size={16} className="mr-2" /> Match Preference
-              </Button>
-              <Button
-                variant="ghost"
-                className="w-full text-gray-700 dark:text-gray-300 hover:bg-green-100 dark:hover:bg-green-900 flex items-center justify-start px-4 py-2 text-sm rounded-none"
-              >
-                <Wallet size={16} className="mr-2" /> Wallet
-              </Button>
-              <Button
-                variant="ghost"
-                className="w-full text-gray-700 dark:text-gray-300 hover:bg-green-100 dark:hover:bg-green-900 flex items-center justify-start px-4 py-2 text-sm rounded-none"
-                onClick={() => setActiveSection("matches")}
-              >
-                <User size={16} className="mr-2" /> My Matches
-              </Button>
-              <Button
-                variant="ghost"
-                className="w-full text-gray-700 dark:text-gray-300 hover:bg-green-100 dark:hover:bg-green-900 flex items-center justify-start px-4 py-2 text-sm rounded-none"
-                onClick={() => setActiveSection("stats")}
-              >
-                <Trophy size={16} className="mr-2" /> Statistics
-              </Button>
-              <Button
-                variant="ghost"
-                className="w-full text-gray-700 dark:text-gray-300 hover:bg-green-100 dark:hover:bg-green-900 flex items-center justify-start px-4 py-2 text-sm rounded-none"
-                onClick={() => setActiveSection("badges")}
-              >
-                <Trophy size={16} className="mr-2" /> Badges
-              </Button>
-              <Button
-                variant="ghost"
-                className="w-full text-gray-700 dark:text-gray-300 hover:bg-green-100 dark:hover:bg-green-900 flex items-center justify-start px-4 py-2 text-sm rounded-none"
-                onClick={() => setActiveSection("venue-stats")}
-              >
-                <MapPin size={16} className="mr-2" /> Venue Stats
-              </Button>
-              <Button
-                variant="ghost"
-                className="w-full text-gray-700 dark:text-gray-300 hover:bg-green-100 dark:hover:bg-green-900 flex items-center justify-start px-4 py-2 text-sm rounded-none"
-                onClick={() => setActiveSection("access-codes")}
-              >
-                <Key size={16} className="mr-2" /> Access Codes
-              </Button>
-              <Button
-                variant="ghost"
-                className="w-full text-gray-700 dark:text-gray-300 hover:bg-green-100 dark:hover:bg-green-900 flex items-center justify-start px-4 py-2 text-sm rounded-none"
-                onClick={() => setActiveSection("venue-wallet")}
-              >
-                <Wallet size={16} className="mr-2" /> Venue Wallet
-              </Button>
-              <Button
-                variant="ghost"
-                className="w-full text-gray-700 dark:text-gray-300 hover:bg-green-100 dark:hover:bg-green-900 flex items-center justify-start px-4 py-2 text-sm rounded-none"
-                onClick={() => setActiveSection("bookings")}
-              >
-                <Book size={16} className="mr-2" /> Bookings
-              </Button>
-              <Button
-                variant="ghost"
-                className="w-full text-gray-700 dark:text-gray-300 hover:bg-green-100 dark:hover:bg-green-900 flex items-center justify-start px-4 py-2 text-sm rounded-none"
-                onClick={() => setActiveSection("guides")}
-              >
-                <HelpCircle size={16} className="mr-2" /> Guides
-              </Button>
-              <Button
-                variant="ghost"
-                className="w-full text-gray-700 dark:text-gray-300 hover:bg-green-100 dark:hover:bg-green-900 flex items-center justify-start px-4 py-2 text-sm rounded-none"
-                onClick={() => setActiveSection("faqs")}
-              >
-                <HelpCircle size={16} className="mr-2" /> FAQs
-              </Button>
-              <Button
-                variant="ghost"
-                className="w-full text-red-500 hover:text-red-700 hover:bg-red-100 dark:hover:bg-red-900 flex items-center justify-start px-4 py-2 text-sm rounded-none"
+                className="w-full text-red-500 hover:text-red-700 hover:bg-red-100 dark:hover:bg-red-900 flex items-center justify-start px-4 py-3 text-sm rounded-none"
                 onClick={handleLogout}
               >
-                <LogOut size={16} className="mr-2" /> Log Out
+                <LogOut size={16} className="mr-2" />
+                Log Out
               </Button>
             </div>
           )}
@@ -220,93 +110,59 @@ const Profile = () => {
 
       <div className="max-w-4xl mx-auto w-full flex-1 flex flex-col">
         <div className="bg-white dark:bg-gray-900 px-6 py-4 sticky top-[64px] z-10 shadow-sm">
+          <h2 className="text-xl font-semibold text-green-700 dark:text-green-400">
+            Welcome, {username}!
+          </h2>
           <p className="text-gray-700 dark:text-gray-300 mb-2">
-            {activeSection === "dashboard" && "Explore your dashboard, manage matches, or check your stats."}
-            {activeSection === "settings" && "Manage your account and preferences."}
-            {activeSection === "notifications" && "Customize your notification settings."}
-            {activeSection === "matches" && "View and manage your organized or played matches."}
-            {activeSection === "stats" && "Check your performance statistics."}
-            {activeSection === "badges" && "View your earned badges."}
-            {activeSection === "venue-stats" && "Track your venue performance."}
-            {activeSection === "access-codes" && "Manage your venue access codes."}
-            {activeSection === "venue-wallet" && "Manage your venue wallet."}
-            {activeSection === "bookings" && "View your bookings and transactions."}
-            {activeSection === "guides" && "Access helpful guides."}
-            {activeSection === "faqs" && "Find answers to common questions."}
+            Explore your dashboard, manage matches, or check your performance stats.
           </p>
         </div>
 
-        <div className="flex-1 flex flex-col pb-24">
-          {showSettings && (
+        <div className="flex-1 flex flex-col pb-24"> {/* Added padding bottom for space above navbar */}
+          {showSettings ? (
             <div className="px-6 pt-2">
               <ProfileSettings profile={profile} setProfile={setProfile} setShowSettings={setShowSettings} />
             </div>
-          )}
-          {showNotifications && (
-            <div className="px-6 pt-2">
-              <UserNotifications profile={profile} setShowNotifications={setShowNotifications} />
-            </div>
-          )}
-          {!showSettings && !showNotifications && (
-            <>
-              {activeSection === "dashboard" && (
-                <div className="px-6 pt-2">
+          ) : (
+            <Tabs
+              value={activeTab}
+              onValueChange={setActiveTab}
+              className="w-full flex-1 flex flex-col"
+            >
+              <div className="sticky top-[136px] z-10 px-6">
+                <TabsList className="grid w-full grid-cols-3 bg-gray-100 dark:bg-gray-700 rounded-lg h-12"> {/* Fixed height */}
+                  <TabsTrigger
+                    value="dashboard"
+                    className="data-[state=active]:bg-green-500 data-[state=active]:text-white py-2 text-sm font-medium rounded-md"
+                  >
+                    Dashboard
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="matches"
+                    className="data-[state=active]:bg-green-500 data-[state=active]:text-white py-2 text-sm font-medium rounded-md"
+                  >
+                    My Matches
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="performance"
+                    className="data-[state=active]:bg-green-500 data-[state=active]:text-white py-2 text-sm font-medium rounded-md"
+                  >
+                    Performance
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+              <div className="flex-1 overflow-y-auto px-6 pt-6"> {/* Content area with padding and scrolling */}
+                <TabsContent value="dashboard" className="mt-0 pb-6">
                   <UserDashboard profile={profile} />
-                </div>
-              )}
-              {activeSection === "matches" && (
-                <div className="px-6 pt-2">
+                </TabsContent>
+                <TabsContent value="matches" className="mt-0 pb-6">
                   <UserMatches profile={profile} />
-                </div>
-              )}
-              {activeSection === "stats" && (
-                <div className="px-6 pt-2">
+                </TabsContent>
+                <TabsContent value="performance" className="mt-0 pb-6">
                   <Performance profile={profile} />
-                </div>
-              )}
-              {activeSection === "badges" && (
-                <div className="px-6 pt-2">
-                  {/* Add Badges component here if created */}
-                  <p>Badges content goes here.</p>
-                </div>
-              )}
-              {activeSection === "venue-stats" && (
-                <div className="px-6 pt-2">
-                  {/* Add VenueStats component here if created */}
-                  <p>Venue Stats content goes here.</p>
-                </div>
-              )}
-              {activeSection === "access-codes" && (
-                <div className="px-6 pt-2">
-                  {/* Add AccessCodes component here if created */}
-                  <p>Access Codes content goes here.</p>
-                </div>
-              )}
-              {activeSection === "venue-wallet" && (
-                <div className="px-6 pt-2">
-                  {/* Add VenueWallet component here if created */}
-                  <p>Venue Wallet content goes here.</p>
-                </div>
-              )}
-              {activeSection === "bookings" && (
-                <div className="px-6 pt-2">
-                  {/* Add Bookings component here if created */}
-                  <p>Bookings content goes here.</p>
-                </div>
-              )}
-              {activeSection === "guides" && (
-                <div className="px-6 pt-2">
-                  {/* Add Guides component here if created */}
-                  <p>Guides content goes here.</p>
-                </div>
-              )}
-              {activeSection === "faqs" && (
-                <div className="px-6 pt-2">
-                  {/* Add FAQs component here if created */}
-                  <p>FAQs content goes here.</p>
-                </div>
-              )}
-            </>
+                </TabsContent>
+              </div>
+            </Tabs>
           )}
         </div>
       </div>
