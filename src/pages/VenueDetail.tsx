@@ -3,11 +3,10 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { MapPin, ArrowLeft, ExternalLink, Calendar, Clock, MessageCircle, CalendarPlus, Star, CalendarCheck } from "lucide-react";
+import { MapPin, ArrowLeft, ExternalLink, Calendar, Clock, MessageCircle, CalendarPlus, Star, CalendarCheck, Wallet } from "lucide-react";
 import Navbar from "@/components/Navbar";
-import { RichTextEditor } from "@mantine/tiptap";
-import { useEditor } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
+import ReactQuill from "react-quill";
+import "react-quill/dist/quill.snow.css";
 
 type Venue = {
   id: string;
@@ -140,12 +139,10 @@ const VenueDetail = () => {
     }
   };
 
-  // Initialize editor only when venue is available
-  const editor = useEditor({
-    extensions: [StarterKit],
-    content: venue?.facilities || "<p>No facilities information available.</p>",
-    editable: false,
-  });
+  // Quill toolbar configuration (read-only, so no toolbar)
+  const quillModules = {
+    toolbar: false,
+  };
 
   if (loading) {
     return (
@@ -233,9 +230,12 @@ const VenueDetail = () => {
             <h2 className="font-semibold text-lg mb-4 text-gray-900 dark:text-gray-100">Venue Details</h2>
 
             <div className="space-y-4">
-              <div>
-                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Address</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">{venue.address}</p>
+              <div className="flex items-center">
+                <MapPin size={18} className="mr-2 text-gray-700 dark:text-gray-300" />
+                <div>
+                  <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Address</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{venue.address}</p>
+                </div>
               </div>
 
               {venue.description && (
@@ -245,17 +245,25 @@ const VenueDetail = () => {
                 </div>
               )}
 
-              {editor && (
+              {venue.facilities && (
                 <div>
                   <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Facilities</h3>
-                  <RichTextEditor editor={editor} className="bg-white dark:bg-gray-800" />
+                  <ReactQuill
+                    value={venue.facilities || "<p>No facilities information available.</p>"}
+                    readOnly={true}
+                    modules={quillModules}
+                    className="w-full border-none bg-transparent text-gray-600 dark:text-gray-400"
+                  />
                 </div>
               )}
 
               {venue.opening_hours && (
-                <div>
-                  <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Opening Hours</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{venue.opening_hours}</p>
+                <div className="flex items-center">
+                  <Clock size={18} className="mr-2 text-gray-700 dark:text-gray-300" />
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Opening Hours</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">{venue.opening_hours}</p>
+                  </div>
                 </div>
               )}
 
@@ -267,9 +275,12 @@ const VenueDetail = () => {
               )}
 
               {venue.booking_fee !== null && (
-                <div>
-                  <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Booking Fee (per hour)</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">NGN {venue.booking_fee?.toFixed(2)}</p>
+                <div className="flex items-center">
+                  <Wallet size={18} className="mr-2 text-gray-700 dark:text-gray-300" />
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Booking Fee (per hour)</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">NGN {venue.booking_fee?.toFixed(2)}</p>
+                  </div>
                 </div>
               )}
 
