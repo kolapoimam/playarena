@@ -9,8 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Card, CardContent } from "@/components/ui/card"; // Added missing imports
 import Navbar from "@/components/Navbar";
-import { ChevronLeft, CheckCircle, Loader2, Card } from "lucide-react";
+import { ChevronLeft, CheckCircle, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 
 const profileSchema = z.object({
@@ -21,7 +22,7 @@ const profileSchema = z.object({
     .string()
     .refine((date) => {
       const birthDate = new Date(date);
-      const today = new Date("2025-05-24T16:46:00+01:00");
+      const today = new Date("2025-05-24T16:54:00+01:00");
       let age = today.getFullYear() - birthDate.getFullYear();
       const monthDiff = today.getMonth() - birthDate.getMonth();
       if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) age--;
@@ -77,7 +78,7 @@ const MatchPreferences = () => {
   const calculateAge = (dob?: string) => {
     if (!dob) return null;
     const birthDate = new Date(dob);
-    const today = new Date("2025-05-24T16:46:00+01:00");
+    const today = new Date("2025-05-24T16:54:00+01:00");
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) age--;
