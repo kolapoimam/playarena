@@ -39,10 +39,10 @@ import VenueBookingForm from "@/components/VenueBookingForm";
 import MyVenue from "@/pages/MyVenue";
 import MyBookings from "@/pages/MyBookings";
 import BookingCode from "@/pages/BookingCode";
-import AccountDetails from "@/pages/AccountDetails"; // Added import
-import MyMatches from "@/pages/MyMatches"; // Added import
-import MatchPreferences from "@/pages/MatchPreferences"; // Added import
-import Wallet from "@/pages/Wallet"; // Added import
+import AccountDetails from "@/pages/AccountDetails";
+import MyMatches from "@/pages/MyMatches";
+import MatchPreferences from "@/pages/MatchPreferences";
+import Wallet from "@/pages/Wallet";
 
 import * as gtag from "@/lib/gtag";
 
@@ -52,6 +52,7 @@ const AppRoutes = () => {
   const location = useLocation();
 
   useEffect(() => {
+    console.log("Current path:", location.pathname); // Debug
     gtag.pageview(location.pathname + location.search);
   }, [location]);
 
@@ -62,15 +63,16 @@ const AppRoutes = () => {
       <Route path="/activities" element={<Activities />} />
       <Route path="/matches" element={<Matches />} />
       <Route path="/guides" element={<Guides />} />
-      <Route path="/profile" element={<Profile />} />
-      <Route path="/profile/view-profile" element={<ViewProfile />} />
-      <Route path="/profile/my-venue" element={<MyVenue />} />
-      <Route path="/profile/my-bookings" element={<MyBookings />} />
-      <Route path="/profile/booking-code" element={<BookingCode />} />
-      <Route path="/profile/account-details" element={<AccountDetails />} /> {/* Added route */}
-      <Route path="/profile/my-matches" element={<MyMatches />} /> {/* Added route */}
-      <Route path="/profile/match-preferences" element={<MatchPreferences />} /> {/* Added route */}
-      <Route path="/profile/wallet" element={<Wallet />} /> {/* Added route */}
+      <Route path="/profile" element={<Profile />}>
+        <Route path="view-profile" element={<ViewProfile />} />
+        <Route path="my-venue" element={<MyVenue />} />
+        <Route path="my-bookings" element={<MyBookings />} />
+        <Route path="booking-code" element={<BookingCode />} />
+        <Route path="account-details" element={<AccountDetails />} />
+        <Route path="my-matches" element={<MyMatches />} />
+        <Route path="match-preferences" element={<MatchPreferences />} />
+        <Route path="wallet" element={<Wallet />} />
+      </Route>
       <Route path="/auth" element={<Auth />} />
       <Route path="/confirm" element={<Confirm />} />
       <Route path="/organize" element={<Organize />} />
