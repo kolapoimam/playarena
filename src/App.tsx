@@ -52,7 +52,7 @@ const AppRoutes = () => {
   const location = useLocation();
 
   useEffect(() => {
-    console.log("Current path:", location.pathname); // Debug
+    console.log("Current path:", location.pathname);
     gtag.pageview(location.pathname + location.search);
   }, [location]);
 
