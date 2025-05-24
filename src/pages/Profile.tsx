@@ -9,7 +9,6 @@ import UserDashboard from "@/components/UserDashboard";
 import UserMatches from "@/components/UserMatches";
 import ProfileSettings from "@/components/ProfileSettings";
 import Performance from "@/components/Performance";
-import UserNotifications from "@/components/UserNotifications";
 
 const Profile = () => {
   const navigate = useNavigate();
