@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Card, CardContent } from "@/components/ui/card"; // Added missing imports
+import { Card, CardContent } from "@/components/ui/card";
 import Navbar from "@/components/Navbar";
 import { ChevronLeft, CheckCircle, Loader2 } from "lucide-react";
 import { format } from "date-fns";
@@ -22,7 +22,7 @@ const profileSchema = z.object({
     .string()
     .refine((date) => {
       const birthDate = new Date(date);
-      const today = new Date("2025-05-24T16:54:00+01:00");
+      const today = new Date("2025-05-24T17:01:00+01:00");
       let age = today.getFullYear() - birthDate.getFullYear();
       const monthDiff = today.getMonth() - birthDate.getMonth();
       if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) age--;
@@ -36,6 +36,19 @@ const MatchPreferences = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState(null);
+
+  const form = useForm<z.infer<typeof profileSchema>>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: {
+      state: "",
+      skill_level: "",
+      gender: undefined,
+      date_of_birth: "",
+    },
+  });
+
+  const { watch } = form;
+  const dateOfBirth = watch("date_of_birth");
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -59,26 +72,22 @@ const MatchPreferences = () => {
       }
 
       setProfile(data);
+      form.reset({
+        state: data?.state || "",
+        skill_level: data?.skill_level || "",
+        gender: data?.gender || undefined,
+        date_of_birth: data?.date_of_birth ? format(new Date(data.date_of_birth), "yyyy-MM-dd") : "",
+      });
       setLoading(false);
     };
 
     fetchProfile();
-  }, [navigate, toast]);
-
-  const form = useForm<z.infer<typeof profileSchema>>({
-    resolver: zodResolver(profileSchema),
-    defaultValues: {
-      state: profile?.state || "",
-      skill_level: profile?.skill_level || "",
-      gender: profile?.gender || undefined,
-      date_of_birth: profile?.date_of_birth ? format(new Date(profile.date_of_birth), "yyyy-MM-dd") : "",
-    },
-  });
+  }, [navigate, toast, form]);
 
   const calculateAge = (dob?: string) => {
     if (!dob) return null;
     const birthDate = new Date(dob);
-    const today = new Date("2025-05-24T16:54:00+01:00");
+    const today = new Date("2025-05-24T17:01:00+01:00");
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) age--;
@@ -247,9 +256,9 @@ const MatchPreferences = () => {
                             className="text-base bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg"
                           />
                         </FormControl>
-                        {field.value && (
+                        {dateOfBirth && (
                           <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                            Age: {calculateAge(field.value)} years
+                            Age: {calculateAge(dateOfBirth)} years
                           </p>
                         )}
                         <FormMessage />
