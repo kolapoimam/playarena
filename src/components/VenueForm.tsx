@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -6,40 +6,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Trash2 } from "lucide-react";
-import { RichTextEditor } from "@mantine/tiptap";
-import { useEditor } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ChevronDown, ChevronUp, Trash2 } from "lucide-react";
+import ReactQuill from "react-quill";
+import "react-quill/dist/quill.snow.css";
 
 // Nigerian states including FCT
 const nigerianStates = [
-  "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue",
-  "Borno", "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu",
-  "FCT", "Gombe", "Imo", "Jigawa", "Kaduna", "Kano", "Katsina", "Kebbi",
-  "Kogi", "Kwara", "Lagos", "Nasarawa", "Niger", "Ogun", "Ondo", "Osun",
+  "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", "Borno", "Cross River",
+  "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu", "FCT", "Gombe", "Imo", "Jigawa", "Kaduna", "Kano",
+  "Katsina", "Kebbi", "Kogi", "Kwara", "Lagos", "Nasarawa", "Niger", "Ogun", "Ondo", "Osun",
   "Oyo", "Plateau", "Rivers", "Sokoto", "Taraba", "Yobe", "Zamfara"
 ];
 
@@ -49,29 +26,27 @@ const formSchema = z.object({
   address: z.string().min(5, { message: "Address must be at least 5 characters" }),
   city: z.string().min(2, { message: "City must be at least 2 characters" }),
   state: z.enum(nigerianStates as [string, ...string[]], { message: "Please select a valid state" }),
-  venue_phone: z.string()
+  venue_phone: z
+    .string()
     .regex(/^[0-9]+$/, { message: "Phone number must contain only numbers" })
     .length(11, { message: "Phone number must be exactly 11 digits" })
-    .transform(val => val.slice(0, 11)),
+    .transform((val) => val.slice(0, 11)),
   description: z.string().optional(),
   map_link: z.string().url({ message: "Please enter a valid URL" }).or(z.literal("")),
   opening_hours: z.string().optional(),
-  booking_fee: z.number().optional().refine((val) => val === undefined || (Number.isFinite(val) && val >= 0), {
-    message: "Booking fee must be a valid number (NGN per hour)",
-  }),
+  booking_fee: z
+    .number()
+    .optional()
+    .refine((val) => val === undefined || (Number.isFinite(val) && val >= 0), {
+      message: "Booking fee must be a valid number (NGN per hour)",
+    }),
 });
 
 // File schema for single image validation
 const fileSchema = z
   .instanceof(File)
-  .refine(
-    (file) => file.type.startsWith("image/"),
-    { message: "Only image files are allowed" }
-  )
-  .refine(
-    (file) => file.size <= 5 * 1024 * 1024,
-    { message: "Image must be less than 5MB" }
-  );
+  .refine((file) => file.type.startsWith("image/"), { message: "Only image files are allowed" })
+  .refine((file) => file.size <= 5 * 1024 * 1024, { message: "Image must be less than 5MB" });
 
 type FormValues = z.infer<typeof formSchema>;
 
@@ -80,7 +55,36 @@ interface VenueFormProps {
   onCancel?: () => void;
 }
 
-const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
+interface CollapsibleSectionProps {
+  title: string;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}
+
+const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({ title, children, defaultOpen = false }) => {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  return (
+    <div className="mb-4">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex justify-between items-center w-full py-3 text-xl font-semibold text-gray-800 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+      >
+        {title}
+        {isOpen ? <ChevronUp /> : <ChevronDown />}
+      </button>
+      <div
+        className={`transition-all duration-300 ease-in-out overflow-hidden ${
+          isOpen ? "max-h-screen py-4" : "max-h-0 py-0"
+        }`}
+      >
+        {children}
+      </div>
+    </div>
+  );
+};
+
+const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -102,25 +106,15 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
     },
   });
 
-  // Initialize editor for description field
-  const editor = useEditor({
-    extensions: [StarterKit],
-    content: "",
-    onUpdate: ({ editor }) => {
-      const html = editor.getHTML();
-      form.setValue("description", html === "<p></p>" ? "" : html);
-    },
-  });
-
-  // Sync editor content with form field on mount or reset
-  useEffect(() => {
-    if (editor) {
-      const currentDescription = form.getValues("description");
-      if (currentDescription && currentDescription !== editor.getHTML()) {
-        editor.commands.setContent(currentDescription);
-      }
-    }
-  }, [editor, form]);
+  // Quill toolbar configuration
+  const quillModules = {
+    toolbar: [
+      [{ header: [1, 2, false] }],
+      ["bold", "italic", "underline"],
+      [{ list: "ordered" }, { list: "bullet" }],
+      ["clean"],
+    ],
+  };
 
   const handleFileChange = (files: FileList | null) => {
     setFileError(null);
@@ -128,7 +122,7 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
 
     const file = files[0];
     const result = fileSchema.safeParse(file);
-    
+
     if (!result.success) {
       setFileError(result.error.errors[0].message);
       return;
@@ -150,7 +144,7 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
 
     try {
       let imageUrl: string | null = null;
-      
+
       if (selectedFile) {
         const fileName = `${Date.now()}-${selectedFile.name}`;
         const { error: uploadError } = await supabase.storage
@@ -162,9 +156,7 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
 
         if (uploadError) throw new Error(uploadError.message || "Failed to upload image.");
 
-        const { data: publicUrlData } = supabase.storage
-          .from("venue-images")
-          .getPublicUrl(fileName);
+        const { data: publicUrlData } = supabase.storage.from("venue-images").getPublicUrl(fileName);
 
         if (publicUrlData) {
           imageUrl = publicUrlData.publicUrl;
@@ -202,9 +194,6 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
-      if (editor) {
-        editor.commands.setContent("");
-      }
 
       if (onSuccess && venue) {
         onSuccess(venue.id, venue.slug, venue.name);
@@ -223,283 +212,208 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 w-full">
+    <div className="max-w-3xl mx-auto p-6">
       <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-6">Create New Venue</h2>
-
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 w-full">
-          <Accordion type="single" collapsible className="w-full">
-            {/* Venue Details Section */}
-            <AccordionItem value="venue-details">
-              <AccordionTrigger className="text-xl font-semibold text-gray-800 dark:text-gray-200">
-                Venue Details
-              </AccordionTrigger>
-              <AccordionContent>
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Venue Name</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="E.g., National Stadium"
-                            {...field}
-                            className="w-full border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                          />
-                        </FormControl>
-                        <FormMessage className="text-red-500" />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="address"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Address</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Full street address"
-                            {...field}
-                            className="w-full border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                          />
-                        </FormControl>
-                        <FormMessage className="text-red-500" />
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="city"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">City</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="E.g., Lagos"
-                              {...field}
-                              className="w-full border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                            />
-                          </FormControl>
-                          <FormMessage className="text-red-500" />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="state"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">State</FormLabel>
-                          <FormControl>
-                            <Select
-                              onValueChange={field.onChange}
-                              value={field.value}
-                            >
-                              <SelectTrigger className="w-full border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white">
-                                <SelectValue placeholder="Select a state" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {nigerianStates.map((state) => (
-                                  <SelectItem key={state} value={state}>
-                                    {state}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </FormControl>
-                          <FormMessage className="text-red-500" />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            {/* Contact & Location Section */}
-            <AccordionItem value="contact-location">
-              <AccordionTrigger className="text-xl font-semibold text-gray-800 dark:text-gray-200">
-                Contact & Location
-              </AccordionTrigger>
-              <AccordionContent>
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
-                  <FormField
-                    control={form.control}
-                    name="venue_phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Venue Phone Number</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="tel"
-                            inputMode="numeric"
-                            pattern="[0-9]*"
-                            placeholder="Enter 11-digit phone number"
-                            {...field}
-                            value={field.value}
-                            onChange={(e) => {
-                              const numericValue = e.target.value.replace(/\D/g, '');
-                              field.onChange(numericValue.slice(0, 11));
-                            }}
-                            className="w-full border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                          />
-                        </FormControl>
-                        <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
-                          Provide a valid phone number of the Venue owner or Manager (numbers only)
-                        </FormDescription>
-                        <FormMessage className="text-red-500" />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="map_link"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Google Maps Link (Optional)</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Paste Google Maps URL here"
-                            {...field}
-                            className="w-full border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                          />
-                        </FormControl>
-                        <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
-                          Add a Google Maps link to help players find the venue easily
-                        </FormDescription>
-                        <FormMessage className="text-red-500" />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="booking_fee"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Booking Fee (NGN per hour, Optional)</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            inputMode="numeric"
-                            placeholder="Enter fee per hour"
-                            {...field}
-                            value={field.value === undefined ? "" : field.value}
-                            onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
-                            className="w-full border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                          />
-                        </FormControl>
-                        <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
-                          Enter the hourly booking fee in NGN (numbers only)
-                        </FormDescription>
-                        <FormMessage className="text-red-500" />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            {/* Additional Info Section */}
-            <AccordionItem value="additional-info">
-              <AccordionTrigger className="text-xl font-semibold text-gray-800 dark:text-gray-200">
-                Additional Info
-              </AccordionTrigger>
-              <AccordionContent>
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
-                  <FormField
-                    control={form.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Description (Optional)</FormLabel>
-                        <FormControl>
-                          <RichTextEditor editor={editor} className="w-full min-h-[200px]">
-                            <RichTextEditor.Content />
-                          </RichTextEditor>
-                        </FormControl>
-                        <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
-                          Use the rich text editor to describe the venue, facilities, etc.
-                        </FormDescription>
-                        <FormMessage className="text-red-500" />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="opening_hours"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Opening Hours (Optional)</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="E.g., 8:00 AM - 6:00 PM"
-                            {...field}
-                            className="w-full border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                          />
-                        </FormControl>
-                        <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
-                          Specify the venue's operating hours
-                        </FormDescription>
-                        <FormMessage className="text-red-500" />
-                      </FormItem>
-                    )}
-                  />
-
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          {/* Venue Details Section */}
+          <CollapsibleSection title="Venue Details" defaultOpen>
+            <div className="space-y-4">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Image (Optional)</FormLabel>
-                    <div className="space-y-2">
-                      {selectedFile ? (
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-gray-700 dark:text-gray-300">
-                            {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)}MB)
-                          </span>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={removeSelectedFile}
-                            className="text-red-500 hover:text-red-700"
-                          >
-                            <Trash2 size={16} />
-                          </Button>
-                        </div>
-                      ) : (
-                        <FormControl>
-                          <Input
-                            type="file"
-                            accept="image/*"
-                            ref={fileInputRef}
-                            onChange={(e) => handleFileChange(e.target.files)}
-                            className="w-full border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                          />
-                        </FormControl>
-                      )}
-                    </div>
-                    <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
-                      Upload 1 image (max 5MB) to showcase the venue
-                    </FormDescription>
-                    {fileError && <p className="text-red-500 text-sm">{fileError}</p>}
+                    <FormLabel>Venue Name</FormLabel>
+                    <FormControl>
+                      <Input {...field} className="w-full border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white rounded-md" />
+                    </FormControl>
+                    <FormMessage />
                   </FormItem>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="address"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Address</FormLabel>
+                    <FormControl>
+                      <Input {...field} className="w-full border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white rounded-md" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="city"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>City</FormLabel>
+                    <FormControl>
+                      <Input {...field} className="w-full border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white rounded-md" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="state"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>State</FormLabel>
+                    <FormControl>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <SelectTrigger className="w-full border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white rounded-md">
+                          <SelectValue placeholder="Select a state" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {nigerianStates.map((state) => (
+                            <SelectItem key={state} value={state}>
+                              {state}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          </CollapsibleSection>
 
-          <div className="flex gap-4 w-full">
+          {/* Contact & Location Section */}
+          <CollapsibleSection title="Contact & Location">
+            <div className="space-y-4">
+              <FormField
+                control={form.control}
+                name="venue_phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Venue Phone Number</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        onChange={(e) => {
+                          const numericValue = e.target.value.replace(/\D/g, "");
+                          field.onChange(numericValue.slice(0, 11));
+                        }}
+                        className="w-full border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white rounded-md"
+                      />
+                    </FormControl>
+                    <FormDescription>Provide a valid phone number of the Venue owner or Manager (numbers only)</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="map_link"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Google Maps Link (Optional)</FormLabel>
+                    <FormControl>
+                      <Input {...field} className="w-full border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white rounded-md" />
+                    </FormControl>
+                    <FormDescription>Add a Google Maps link to help players find the venue easily</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="booking_fee"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Booking Fee (NGN per hour, Optional)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        {...field}
+                        onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
+                        className="w-full border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white rounded-md"
+                      />
+                    </FormControl>
+                    <FormDescription>Enter the hourly booking fee in NGN (numbers only)</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          </CollapsibleSection>
+
+          {/* Additional Info Section */}
+          <CollapsibleSection title="Additional Info">
+            <div className="space-y-4">
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description (Optional)</FormLabel>
+                    <FormControl>
+                      <ReactQuill
+                        value={field.value}
+                        onChange={(content) => field.onChange(content === "<p><br></p>" ? "" : content)}
+                        modules={quillModules}
+                        className="w-full min-h-[200px] border-2 border-gray-400 dark:border-gray-500 bg-white dark:bg-gray-700 dark:text-white rounded-md p-2"
+                      />
+                    </FormControl>
+                    <FormDescription>Use the rich text editor to describe the venue, facilities, etc.</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="opening_hours"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Opening Hours (Optional)</FormLabel>
+                    <FormControl>
+                      <Input {...field} className="w-full border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white rounded-md" />
+                    </FormControl>
+                    <FormDescription>Specify the venue's operating hours</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormItem>
+                <FormLabel>Image (Optional)</FormLabel>
+                <FormControl>
+                  {selectedFile ? (
+                    <div className="flex items-center space-x-2">
+                      <p>
+                        {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)}MB)
+                      </p>
+                      <Button variant="ghost" size="icon" onClick={removeSelectedFile}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleFileChange(e.target.files)}
+                      ref={fileInputRef}
+                      className="w-full border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white rounded-md"
+                    />
+                  )}
+                </FormControl>
+                <FormDescription>Upload 1 image (max 5MB) to showcase the venue</FormDescription>
+                {fileError && <FormMessage>{fileError}</FormMessage>}
+              </FormItem>
+            </div>
+          </CollapsibleSection>
+
+          <div className="flex flex-col items-center gap-4">
             <Button
               type="submit"
+              disabled={loading}
               className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-3 text-lg shadow-md transition-colors"
-              disabled={loading || !editor}
             >
               {loading ? "Creating..." : "Create Venue"}
             </Button>
@@ -507,8 +421,8 @@ const VenueForm = ({ onSuccess, onCancel }: VenueFormProps) => {
               <Button
                 type="button"
                 variant="outline"
-                className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium rounded-lg px-4 py-3 text-lg shadow-md transition-colors"
                 onClick={onCancel}
+                className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium rounded-lg px-4 py-3 text-lg shadow-md transition-colors"
               >
                 Cancel
               </Button>
