@@ -59,7 +59,7 @@ const SearchPage = () => {
 
   useEffect(() => {
     const query = searchParams.get("q")?.trim();
-    if (query && query.length >= 3) { // Allow searches with 3 or more characters
+    if (query && query.length >= 3) {
       searchMatchesAndVenues(query);
       setHasSearched(true);
       setCurrentPage(1);
@@ -95,10 +95,9 @@ const SearchPage = () => {
         match_dates: venue.matches ? venue.matches.map((m: any) => m.match_date).filter((date: string) => date) : [],
       })) as Venue[] || [];
 
-      // Extract venue IDs for match search
       const venueIds = venuesWithDetails.map((venue) => venue.id);
 
-      // Search for matches by title or associated venue
+      // Search for matches by title OR by associated venue
       const { data: matchData, error: matchError } = await supabase
         .from("matches")
         .select(`
@@ -115,7 +114,8 @@ const SearchPage = () => {
           players(player_name, number_of_slots, cancellation_status)
         `)
         .or(
-          `title.ilike.%${query}%,venue_id.in.(${venueIds.length > 0 ? venueIds.join(",") : "''"})`
+          `title.ilike.%${query}%,and(venue_id.in.(${venueIds.length > 0 ? venueIds.join(",") : "''"}))`,
+          { referencedTable: "matches" }
         );
 
       if (matchError) throw matchError;
