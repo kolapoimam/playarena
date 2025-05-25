@@ -62,7 +62,7 @@ const MatchDetailsDialogue: React.FC<MatchDetailsDialogueProps> = ({ match }) =>
   const { toast } = useToast();
   const [downloadDialogOpen, setDownloadDialogOpen] = useState(false);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
-  const [isDownloading, setIsDownloading] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false); // New state for download status
   const [backgroundOption, setBackgroundOption] = useState("field");
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -135,7 +135,7 @@ const MatchDetailsDialogue: React.FC<MatchDetailsDialogueProps> = ({ match }) =>
     const url = `${window.location.origin}/match/${match.slug}`;
     const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
     const shareText = `Join my Football Match: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. ${totalPlayerSlots}/${match.total_slots} slots. Powered by Sport Cliq. ${match.is_private ? ` (Access Password: ${match.access_password})` : ''}`;
-    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(shareText)}`;
+    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(shareText)}`; // Fixed quote parameter
     window.open(facebookUrl, '_blank');
   };
 
@@ -155,6 +155,7 @@ const MatchDetailsDialogue: React.FC<MatchDetailsDialogueProps> = ({ match }) =>
 
     setIsDownloading(true);
     try {
+      // Preload logo image to avoid CORS issues
       const logoSrc = backgroundOption === "white" ? "/playarenalight.png" : "/playarenadark.png";
       const img = new Image();
       img.crossOrigin = "anonymous";
@@ -163,10 +164,11 @@ const MatchDetailsDialogue: React.FC<MatchDetailsDialogueProps> = ({ match }) =>
         img.onload = resolve;
         img.onerror = () => {
           console.warn("Failed to load logo image for canvas");
-          resolve(null);
+          resolve(null); // Proceed even if image fails
         };
       });
 
+      // Preload background image if using field
       if (backgroundOption === "field") {
         const bgImg = new Image();
         bgImg.crossOrigin = "anonymous";
@@ -175,7 +177,7 @@ const MatchDetailsDialogue: React.FC<MatchDetailsDialogueProps> = ({ match }) =>
           bgImg.onload = resolve;
           bgImg.onerror = () => {
             console.warn("Failed to load background image for canvas");
-            resolve(null);
+            resolve(null); // Proceed even if image fails
           };
         });
       }
@@ -188,6 +190,7 @@ const MatchDetailsDialogue: React.FC<MatchDetailsDialogueProps> = ({ match }) =>
         scrollY: -window.scrollY,
       });
 
+      // Convert canvas to Blob
       const blob = await new Promise<Blob | null>((resolve) =>
         canvas.toBlob((blob) => resolve(blob), "image/png")
       );
@@ -199,6 +202,7 @@ const MatchDetailsDialogue: React.FC<MatchDetailsDialogueProps> = ({ match }) =>
       const filename = `SportCliq-Match-${match.title.replace(/\s+/g, '-')}.png`;
       const url = URL.createObjectURL(blob);
 
+      // Try navigator.share for mobile/PWA
       if (navigator.share && (navigator as any).canShare?.({ files: [new File([blob], filename, { type: "image/png" })] })) {
         try {
           await navigator.share({
@@ -207,12 +211,13 @@ const MatchDetailsDialogue: React.FC<MatchDetailsDialogueProps> = ({ match }) =>
             text: `Join my match at ${match.venue?.name || 'unknown venue'}!`,
           });
           URL.revokeObjectURL(url);
-          return;
+          return; // Share completed, no need to proceed to download
         } catch (shareError) {
           console.warn("Share API failed, falling back to download:", shareError);
         }
       }
 
+      // Fallback to traditional download
       const link = document.createElement("a");
       link.href = url;
       link.download = filename;
@@ -337,7 +342,7 @@ const MatchDetailsDialogue: React.FC<MatchDetailsDialogueProps> = ({ match }) =>
             </div>
             <div 
               ref={cardRef}
-              className={`rounded-lg shadow-lg w-full min-h-[400px] flex flex-col box-sizing-border-box ${backgroundOption === "field" ? "bg-cover bg-center" : ""}`}
+              className={`rounded-lg p-6 shadow-lg relative overflow-hidden ${backgroundOption === "field" ? "bg-cover bg-center" : ""}`}
               style={{
                 backgroundImage: backgroundOption === "field" ? "url('/football-field.jpg')" : "",
                 backgroundColor: backgroundOption !== "field" ? backgroundOption : "transparent",
@@ -345,17 +350,15 @@ const MatchDetailsDialogue: React.FC<MatchDetailsDialogueProps> = ({ match }) =>
                   backgroundBlendMode: "overlay",
                   backgroundColor: "rgba(0, 0, 0, 0.5)",
                 }),
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
               }}
             >
-              <div className="p-6 flex flex-col h-full relative z-10">
+              <div className="relative z-10">
                 <div className="flex items-center justify-between mb-4">
                   <img 
                     src={backgroundOption === "white" ? "/playarenalight.png" : "/playarenadark.png"}
                     alt="PlayArena Logo" 
                     className="h-8 w-auto"
-                    crossOrigin="anonymous"
+                    crossOrigin="anonymous" // Ensure CORS compatibility
                     onLoad={handleImageLoad}
                     onError={() => {
                       toast({
@@ -368,25 +371,25 @@ const MatchDetailsDialogue: React.FC<MatchDetailsDialogueProps> = ({ match }) =>
                   />
                   <Trophy className={`h-6 w-6 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
                 </div>
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center justify-between mb-2">
                   <h2 className={`text-xl font-bold ${backgroundOption === "white" ? "text-black" : "text-white"}`}>{match.title}</h2>
                 </div>
-                <div className="space-y-3 mb-4 flex-grow">
-                  <div className="inline-flex items-center">
-                    <MapPin className={`h-4 w-4 mr-2 flex-shrink-0 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-                    <span className={`leading-tight ${backgroundOption === "white" ? "text-black" : "text-white"}`}>{match.venue?.name || "Venue"}, {match.venue?.city || ""}</span>
+                <div className="space-y-2 mb-4">
+                  <div className="flex items-center">
+                    <MapPin className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
+                    <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{match.venue?.name || "Venue"}, {match.venue?.city || ""}</span>
                   </div>
-                  <div className="inline-flex items-center">
-                    <Calendar className={`h-4 w-4 mr-2 flex-shrink-0 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-                    <span className={`leading-tight ${backgroundOption === "white" ? "text-black" : "text-white"}`}>{formatDate(match.match_date)} at {formatTime(match.match_time)}</span>
+                  <div className="flex items-center">
+                    <Calendar className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
+                    <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{formatDate(match.match_date)} at {formatTime(match.match_time)}</span>
                   </div>
-                  <div className="inline-flex items-center">
-                    <DollarSign className={`h-4 w-4 mr-2 flex-shrink-0 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-                    <span className={`leading-tight ${backgroundOption === "white" ? "text-black" : "text-white"}`}>{match.is_paid ? `Paid (₦${match.price?.toFixed(2)})` : "Free"}</span>
+                  <div className="flex items-center">
+                    <DollarSign className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
+                    <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{match.is_paid ? `Paid (₦${match.price?.toFixed(2)})` : "Free"}</span>
                   </div>
-                  <div className="inline-flex items-center">
-                    <Users className={`h-4 w-4 mr-2 flex-shrink-0 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-                    <span className={`leading-tight ${backgroundOption === "white" ? "text-black" : "text-white"}`}>{totalPlayerSlots}/{match.total_slots} slots booked</span>
+                  <div className="flex items-center">
+                    <Users className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
+                    <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{totalPlayerSlots}/{match.total_slots} slots booked</span>
                   </div>
                 </div>
               </div>
