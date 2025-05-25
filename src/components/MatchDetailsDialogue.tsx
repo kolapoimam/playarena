@@ -62,6 +62,7 @@ const MatchDetailsDialogue: React.FC<MatchDetailsDialogueProps> = ({ match }) =>
   const { toast } = useToast();
   const [downloadDialogOpen, setDownloadDialogOpen] = useState(false);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const [backgroundOption, setBackgroundOption] = useState("field");
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -134,7 +135,7 @@ const MatchDetailsDialogue: React.FC<MatchDetailsDialogueProps> = ({ match }) =>
     const url = `${window.location.origin}/match/${match.slug}`;
     const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
     const shareText = `Join my Football Match: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. ${totalPlayerSlots}/${match.total_slots} slots. Powered by Sport Cliq. ${match.is_private ? ` (Access Password: ${match.access_password})` : ''}`;
-    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}"e=${encodeURIComponent(shareText)}`;
+    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(shareText)}`;
     window.open(facebookUrl, '_blank');
   };
 
@@ -152,9 +153,33 @@ const MatchDetailsDialogue: React.FC<MatchDetailsDialogueProps> = ({ match }) =>
       return;
     }
 
+    setIsDownloading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
+      const logoSrc = backgroundOption === "white" ? "/playarenalight.png" : "/playarenadark.png";
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.src = logoSrc;
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = () => {
+          console.warn("Failed to load logo image for canvas");
+          resolve(null);
+        };
+      });
+
+      if (backgroundOption === "field") {
+        const bgImg = new Image();
+        bgImg.crossOrigin = "anonymous";
+        bgImg.src = "/football-field.jpg";
+        await new Promise((resolve, reject) => {
+          bgImg.onload = resolve;
+          bgImg.onerror = () => {
+            console.warn("Failed to load background image for canvas");
+            resolve(null);
+          };
+        });
+      }
+
       const canvas = await html2canvas(cardRef.current, {
         scale: 2,
         useCORS: true,
@@ -163,10 +188,38 @@ const MatchDetailsDialogue: React.FC<MatchDetailsDialogueProps> = ({ match }) =>
         scrollY: -window.scrollY,
       });
 
-      const link = document.createElement('a');
-      link.download = `SportCliq-Match-${match?.title.replace(/\s+/g, '-')}.png`;
-      link.href = canvas.toDataURL('image/png');
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob((blob) => resolve(blob), "image/png")
+      );
+
+      if (!blob) {
+        throw new Error("Failed to convert canvas to Blob");
+      }
+
+      const filename = `SportCliq-Match-${match.title.replace(/\s+/g, '-')}.png`;
+      const url = URL.createObjectURL(blob);
+
+      if (navigator.share && (navigator as any).canShare?.({ files: [new File([blob], filename, { type: "image/png" })] })) {
+        try {
+          await navigator.share({
+            files: [new File([blob], filename, { type: "image/png" })],
+            title: match.title,
+            text: `Join my match at ${match.venue?.name || 'unknown venue'}!`,
+          });
+          URL.revokeObjectURL(url);
+          return;
+        } catch (shareError) {
+          console.warn("Share API failed, falling back to download:", shareError);
+        }
+      }
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Error generating image:", error);
       toast({
@@ -174,8 +227,10 @@ const MatchDetailsDialogue: React.FC<MatchDetailsDialogueProps> = ({ match }) =>
         description: "Failed to download match card. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsDownloading(false);
     }
-  }, [isImageLoaded, match, toast]);
+  }, [isImageLoaded, match, toast, backgroundOption]);
 
   const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
 
@@ -213,9 +268,10 @@ const MatchDetailsDialogue: React.FC<MatchDetailsDialogueProps> = ({ match }) =>
           variant="outline"
           className="flex-1"
           onClick={() => setDownloadDialogOpen(true)}
+          disabled={isDownloading}
         >
           <Download size={18} className="mr-2" />
-          Download
+          {isDownloading ? "Downloading..." : "Download"}
         </Button>
       </div>
 
@@ -240,6 +296,7 @@ const MatchDetailsDialogue: React.FC<MatchDetailsDialogueProps> = ({ match }) =>
                     checked={backgroundOption === "field"}
                     onChange={() => setBackgroundOption("field")}
                     className="form-radio text-playarena-500"
+                    disabled={isDownloading}
                   />
                   <span>Default</span>
                 </label>
@@ -250,6 +307,7 @@ const MatchDetailsDialogue: React.FC<MatchDetailsDialogueProps> = ({ match }) =>
                     checked={backgroundOption === "white"}
                     onChange={() => setBackgroundOption("white")}
                     className="form-radio text-playarena-500"
+                    disabled={isDownloading}
                   />
                   <span>White</span>
                 </label>
@@ -260,6 +318,7 @@ const MatchDetailsDialogue: React.FC<MatchDetailsDialogueProps> = ({ match }) =>
                     checked={backgroundOption === "green"}
                     onChange={() => setBackgroundOption("green")}
                     className="form-radio text-playarena-500"
+                    disabled={isDownloading}
                   />
                   <span>Green</span>
                 </label>
@@ -270,6 +329,7 @@ const MatchDetailsDialogue: React.FC<MatchDetailsDialogueProps> = ({ match }) =>
                     checked={backgroundOption === "black"}
                     onChange={() => setBackgroundOption("black")}
                     className="form-radio text-playarena-500"
+                    disabled={isDownloading}
                   />
                   <span>Black</span>
                 </label>
@@ -277,7 +337,7 @@ const MatchDetailsDialogue: React.FC<MatchDetailsDialogueProps> = ({ match }) =>
             </div>
             <div 
               ref={cardRef}
-              className={`rounded-lg p-6 shadow-lg relative overflow-hidden ${backgroundOption === "field" ? "bg-cover bg-center" : ""}`}
+              className={`rounded-lg shadow-lg w-full min-h-[400px] flex flex-col box-sizing-border-box ${backgroundOption === "field" ? "bg-cover bg-center" : ""}`}
               style={{
                 backgroundImage: backgroundOption === "field" ? "url('/football-field.jpg')" : "",
                 backgroundColor: backgroundOption !== "field" ? backgroundOption : "transparent",
@@ -285,14 +345,17 @@ const MatchDetailsDialogue: React.FC<MatchDetailsDialogueProps> = ({ match }) =>
                   backgroundBlendMode: "overlay",
                   backgroundColor: "rgba(0, 0, 0, 0.5)",
                 }),
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
               }}
             >
-              <div className="relative z-10">
+              <div className="p-6 flex flex-col h-full relative z-10">
                 <div className="flex items-center justify-between mb-4">
                   <img 
                     src={backgroundOption === "white" ? "/playarenalight.png" : "/playarenadark.png"}
                     alt="PlayArena Logo" 
                     className="h-8 w-auto"
+                    crossOrigin="anonymous"
                     onLoad={handleImageLoad}
                     onError={() => {
                       toast({
@@ -305,25 +368,25 @@ const MatchDetailsDialogue: React.FC<MatchDetailsDialogueProps> = ({ match }) =>
                   />
                   <Trophy className={`h-6 w-6 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
                 </div>
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center justify-between mb-4">
                   <h2 className={`text-xl font-bold ${backgroundOption === "white" ? "text-black" : "text-white"}`}>{match.title}</h2>
                 </div>
-                <div className="space-y-2 mb-4">
-                  <div className="flex items-center">
-                    <MapPin className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-                    <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{match.venue?.name || "Venue"}, {match.venue?.city || ""}</span>
+                <div className="space-y-3 mb-4 flex-grow">
+                  <div className="inline-flex items-center">
+                    <MapPin className={`h-4 w-4 mr-2 flex-shrink-0 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
+                    <span className={`leading-tight ${backgroundOption === "white" ? "text-black" : "text-white"}`}>{match.venue?.name || "Venue"}, {match.venue?.city || ""}</span>
                   </div>
-                  <div className="flex items-center">
-                    <Calendar className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-                    <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{formatDate(match.match_date)} at {formatTime(match.match_time)}</span>
+                  <div className="inline-flex items-center">
+                    <Calendar className={`h-4 w-4 mr-2 flex-shrink-0 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
+                    <span className={`leading-tight ${backgroundOption === "white" ? "text-black" : "text-white"}`}>{formatDate(match.match_date)} at {formatTime(match.match_time)}</span>
                   </div>
-                  <div className="flex items-center">
-                    <DollarSign className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-                    <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{match.is_paid ? `Paid (₦${match.price?.toFixed(2)})` : "Free"}</span>
+                  <div className="inline-flex items-center">
+                    <DollarSign className={`h-4 w-4 mr-2 flex-shrink-0 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
+                    <span className={`leading-tight ${backgroundOption === "white" ? "text-black" : "text-white"}`}>{match.is_paid ? `Paid (₦${match.price?.toFixed(2)})` : "Free"}</span>
                   </div>
-                  <div className="flex items-center">
-                    <Users className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-                    <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{totalPlayerSlots}/{match.total_slots} slots booked</span>
+                  <div className="inline-flex items-center">
+                    <Users className={`h-4 w-4 mr-2 flex-shrink-0 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
+                    <span className={`leading-tight ${backgroundOption === "white" ? "text-black" : "text-white"}`}>{totalPlayerSlots}/{match.total_slots} slots booked</span>
                   </div>
                 </div>
               </div>
@@ -335,13 +398,14 @@ const MatchDetailsDialogue: React.FC<MatchDetailsDialogueProps> = ({ match }) =>
               <Button 
                 className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
                 onClick={handleDownload}
-                disabled={!isImageLoaded}
+                disabled={!isImageLoaded || isDownloading}
               >
-                Download
+                {isDownloading ? "Downloading..." : "Download"}
               </Button>
               <Button 
                 className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
                 onClick={() => setDownloadDialogOpen(false)}
+                disabled={isDownloading}
               >
                 Close
               </Button>
