@@ -58,26 +58,47 @@ const SearchPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
-    const query = searchParams.get("q");
-    if (query) {
+    const query = searchParams.get("q")?.trim();
+    if (query && query.length >= 3) { // Allow searches with 3 or more characters
       searchMatchesAndVenues(query);
       setHasSearched(true);
       setCurrentPage(1);
+    } else {
+      setHasSearched(false);
+      setMatches([]);
+      setVenues([]);
     }
   }, [searchParams]);
 
   const searchMatchesAndVenues = async (query: string) => {
     setLoading(true);
     try {
+      // Search for venues matching the query in name, city, or state
       const { data: matchingVenues, error: venueError } = await supabase
         .from("venues")
-        .select("id")
+        .select("id, slug, name, city, state, is_verified, image_urls, aggregated_rating, matches:matches!venue_id (match_date)")
         .or(`name.ilike.%${query}%,city.ilike.%${query}%,state.ilike.%${query}%`);
 
       if (venueError) throw venueError;
 
-      const venueIds = matchingVenues.map((venue) => venue.id);
+      // Convert venue data to proper Venue type
+      const venuesWithDetails = matchingVenues?.map((venue: any) => ({
+        id: venue.id,
+        slug: venue.slug,
+        name: venue.name,
+        city: venue.city,
+        state: venue.state,
+        is_verified: venue.is_verified,
+        image_urls: venue.image_urls,
+        aggregated_rating: venue.aggregated_rating,
+        match_count: venue.matches ? venue.matches.length : 0,
+        match_dates: venue.matches ? venue.matches.map((m: any) => m.match_date).filter((date: string) => date) : [],
+      })) as Venue[] || [];
 
+      // Extract venue IDs for match search
+      const venueIds = venuesWithDetails.map((venue) => venue.id);
+
+      // Search for matches by title or associated venue
       const { data: matchData, error: matchError } = await supabase
         .from("matches")
         .select(`
@@ -93,7 +114,9 @@ const SearchPage = () => {
           venue:venues(slug, name, city, state),
           players(player_name, number_of_slots, cancellation_status)
         `)
-        .or(`title.ilike.%${query}%,venue_id.in.(${venueIds.join(",")})`);
+        .or(
+          `title.ilike.%${query}%,venue_id.in.(${venueIds.length > 0 ? venueIds.join(",") : "''"})`
+        );
 
       if (matchError) throw matchError;
 
@@ -107,9 +130,10 @@ const SearchPage = () => {
         is_paid: match.is_paid,
         price: match.price,
         total_slots: match.total_slots,
-        status: match.cancellation_status ? "cancelled" : "upcoming",
+        status: match.status,
         venue: match.venue,
-        players: match.players
+        players: match.players,
+        cancellation_status: match.players.some((p: any) => p.cancellation_status),
       })) as Match[] || [];
 
       // Filter and sort matches: upcoming first, then past
@@ -117,54 +141,17 @@ const SearchPage = () => {
       const sortedMatches = matchesWithDetails.sort((a, b) => {
         const aDateTime = DateTime.fromISO(`${a.match_date}T${a.match_time}`);
         const bDateTime = DateTime.fromISO(`${b.match_date}T${b.match_time}`);
-        
+
         // Upcoming matches first
         if (aDateTime > now && bDateTime <= now) return -1;
         if (aDateTime <= now && bDateTime > now) return 1;
-        
+
         // Then sort by date/time within each group
         return aDateTime.toMillis() - bDateTime.toMillis();
       });
 
       setMatches(sortedMatches);
-
-      if (matchError) throw matchError;
-
-      const { data: venueData, error: venueSearchError } = await supabase
-        .from("venues")
-        .select(`
-          id,
-          slug,
-          name,
-          city,
-          state,
-          is_verified,
-          image_urls,
-          aggregated_rating,
-          matches:matches!venue_id (match_date)
-        `)
-        .or(`name.ilike.%${query}%,city.ilike.%${query}%,state.ilike.%${query}%`);
-
-      if (venueSearchError) throw venueSearchError;
-
-      // Convert venue data to proper Venue type
-      const venuesWithDetails = venueData?.map((venue: any) => ({
-        id: venue.id,
-        slug: venue.slug,
-        name: venue.name,
-        city: venue.city,
-        state: venue.state,
-        is_verified: venue.is_verified,
-        image_urls: venue.image_urls,
-        aggregated_rating: venue.aggregated_rating,
-        match_count: venue.matches ? venue.matches.length : 0,
-        match_dates: venue.matches ? venue.matches.map((m: any) => m.match_date).filter((date: string) => date) : [],
-      })) as Venue[] || [];
-
       setVenues(venuesWithDetails);
-
-      setMatches(matchData as Match[]);
-      setVenues(venueData as Venue[]);
     } catch (error) {
       console.error("Error searching:", error);
       setMatches([]);
