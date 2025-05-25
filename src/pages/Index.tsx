@@ -192,10 +192,11 @@ return (
           <span className="font-medium">Add Venue</span>
         </Button>
       </div>
-    <img
+<img
   src="/downolad now.jpg"
   alt="Download Now"
   className="w-full h-auto px-4 mb-8 rounded-lg object-cover"
+  style={{ borderRadius: '16px' }}
 />
 
       {loading ? (
