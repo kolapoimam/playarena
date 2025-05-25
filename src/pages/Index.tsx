@@ -192,12 +192,13 @@ return (
           <span className="font-medium">Add Venue</span>
         </Button>
       </div>
-<img
-  src="/downolad now.jpg"
-  alt="Download Now"
-  className="w-full h-auto px-4 mb-8 rounded-lg object-cover"
-  style={{ borderRadius: '16px' }}
-/>
+<div className="px-4 mb-8" style={{ overflow: 'hidden', borderRadius: '24px' }}>
+  <img
+    src="/downolad now.jpg"
+    alt="Download Now"
+    className="w-full h-auto object-cover"
+  />
+</div>
 
       {loading ? (
         <div className="flex justify-center items-center h-32">
