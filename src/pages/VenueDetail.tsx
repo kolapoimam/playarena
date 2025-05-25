@@ -17,8 +17,9 @@ const quillStyles = `
   }
   .ql-editor {
     padding: 0 !important;
-    font-family: 'Nunito', sans-serif !important;
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
     color: inherit !important;
+    font-size: 1rem !important; /* Matches surrounding text size */
   }
   .ql-editor p {
     margin: 0 !important;
