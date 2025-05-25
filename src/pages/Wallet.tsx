@@ -99,7 +99,7 @@ const Wallet = () => {
               <Button
                 className="flex-1 bg-green-700 hover:bg-green-800 text-white font-medium rounded-lg px-4 py-2 text-sm flex items-center justify-center"
               >
-                Top-up <span
+                Top-up
               </Button>
               <Button
                 className="flex-1 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 text-sm flex items-center justify-center"
