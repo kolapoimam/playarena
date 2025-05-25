@@ -36,79 +36,75 @@ const MatchSuccessDialog = ({ open, onOpenChange, formValues, selectedVenue, sup
   const [isDownloading, setIsDownloading] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
-const handleDownload = async () => {
-  if (!cardRef.current) {
-    toast({
-      title: "Error",
-      description: "Card element is not ready. Please try again.",
-      variant: "destructive",
-    });
-    return;
-  }
-  setIsDownloading(true);
-  try {
-    // Ensure images are preloaded to avoid CORS issues
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.src = "/playarenadark.png";
-    await new Promise((resolve) => {
-      img.onload = resolve;
-      img.onerror = () => {
-        console.warn("Failed to load logo image for canvas");
-        resolve(null); // Proceed even if image fails
-      };
-    });
-
-    const canvas = await html2canvas(cardRef.current, {
-      scale: 2,
-      useCORS: true,
-      logging: false, // Set to true for debugging on mobile/PWA
-    });
-
-    // Convert canvas to Blob for better compatibility
-    const blob = await new Promise<Blob | null>((resolve) =>
-      canvas.toBlob((blob) => resolve(blob), "image/png")
-    );
-
-    if (!blob) {
-      throw new Error("Failed to convert canvas to Blob");
+  const handleDownload = async () => {
+    if (!cardRef.current) {
+      toast({
+        title: "Error",
+        description: "Card element is not ready. Please try again.",
+        variant: "destructive",
+      });
+      return;
     }
+    setIsDownloading(true);
+    try {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.src = "/playarenadark.png";
+      await new Promise((resolve) => {
+        img.onload = resolve;
+        img.onerror = () => {
+          console.warn("Failed to load logo image for canvas");
+          resolve(null);
+        };
+      });
 
-    const filename = `SportCliq-Supercode-${formValues.title.replace(/\s+/g, '-')}.png`;
-    const url = URL.createObjectURL(blob);
+      const canvas = await html2canvas(cardRef.current, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+      });
 
-    // Try navigator.share for mobile/PWA if available
-    if (navigator.share && (navigator as any).canShare?.({ files: [new File([blob], filename, { type: "image/png" })] })) {
-      try {
-        await navigator.share({
-          files: [new File([blob], filename, { type: "image/png" })],
-          title: formValues.title,
-          text: `Join my match with supercode ${supercode}!`,
-        });
-        URL.revokeObjectURL(url);
-        return; // Share completed, no need to proceed to download
-      } catch (shareError) {
-        console.warn("Share API failed, falling back to download:", shareError);
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob((blob) => resolve(blob), "image/png")
+      );
+
+      if (!blob) {
+        throw new Error("Failed to convert canvas to Blob");
       }
-    }
 
-    // Fallback to traditional download
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  } catch (error) {
-    console.error("Error generating image:", error);
-    toast({
-      title: "Error",
-      description: "Failed to download supercode card. Please try again.",
-      variant: "destructive",
-    });
-  } finally {
-    setIsDownloading(false);
+      const filename = `SportCliq-Supercode-${formValues.title.replace(/\s+/g, '-')}.png`;
+      const url = URL.createObjectURL(blob);
+
+      if (navigator.share && (navigator as any).canShare?.({ files: [new File([blob], filename, { type: "image/png" })] })) {
+        try {
+          await navigator.share({
+            files: [new File([blob], filename, { type: "image/png" })],
+            title: formValues.title,
+            text: `Join my match with supercode ${supercode}!`,
+          });
+          URL.revokeObjectURL(url);
+          return;
+        } catch (shareError) {
+          console.warn("Share API failed, falling back to download:", shareError);
+        }
+      }
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Error generating image:", error);
+      toast({
+        title: "Error",
+        description: "Failed to download supercode card. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -128,44 +124,47 @@ const handleDownload = async () => {
           </p>
           <div 
             ref={cardRef}
-            className="bg-gradient-to-br from-green-500 to-green-700 rounded-xl p-6 text-white shadow-lg"
+            className="bg-gradient-to-br from-green-500 to-green-700 rounded-xl text-white shadow-lg w-full min-h-[400px] flex flex-col box-sizing-border-box"
+            style={{ backgroundSize: 'cover', backgroundPosition: 'center' }}
           >
-            <div className="flex items-center justify-between mb-4">
-              <img 
-                src="/playarenadark.png" 
-                alt="PlayArena Logo" 
-                className="h-8 w-auto"
-              />
-              <Trophy className="h-6 w-6" />
-            </div>
-            <h2 className="text-xl font-bold mb-2">{formValues.title || "Your Match"}</h2>
-            <div className="space-y-2 mb-4 text-sm">
-              <div className="flex items-center">
-                <MapPin className="h-4 w-4 mr-2" />
-                <span>{selectedVenue?.name || "Venue"}</span>
+            <div className="p-6 flex flex-col h-full">
+              <div className="flex items-center justify-between mb-4">
+                <img 
+                  src="/playarenadark.png" 
+                  alt="PlayArena Logo" 
+                  className="h-8 w-auto"
+                />
+                <Trophy className="h-6 w-6" />
               </div>
-              <div className="flex items-center">
-                <CalendarIcon className="h-4 w-4 mr-2" />
-                <span>{formValues.match_date ? format(formValues.match_date, "PPP") : "Date"}</span>
-              </div>
-              <div className="flex items-center">
-                <Clock className="h-4 w-4 mr-2" />
-                <span>From {formValues.start_time || "Start"} to {formValues.end_time || "End"}</span>
-              </div>
-              <div className="flex items-center">
-                <User className="h-4 w-4 mr-2" />
-                <span>Organized by {formValues.organizer_name || "Organizer"}</span>
-              </div>
-              {formValues.is_private && (
-                <div className="flex items-center">
-                  <span className="font-semibold">Access Password: </span>
-                  <span className="ml-2 font-mono">{formValues.access_password || "N/A"}</span>
+              <h2 className="text-xl font-bold mb-4">{formValues.title || "Your Match"}</h2>
+              <div className="space-y-3 mb-4 text-sm flex-grow">
+                <div className="inline-flex items-center">
+                  <MapPin className="h-4 w-4 mr-2 flex-shrink-0" />
+                  <span className="leading-tight">{selectedVenue?.name || "Venue"}</span>
                 </div>
-              )}
-            </div>
-            <div className="bg-white text-green-600 rounded-md p-4 text-center shadow-inner">
-              <p className="text-sm font-medium">Supercode</p>
-              <p className="text-3xl font-bold tracking-wider">{supercode || "N/A"}</p>
+                <div className="inline-flex items-center">
+                  <CalendarIcon className="h-4 w-4 mr-2 flex-shrink-0" />
+                  <span className="leading-tight">{formValues.match_date ? format(formValues.match_date, "PPP") : "Date"}</span>
+                </div>
+                <div className="inline-flex items-center">
+                  <Clock className="h-4 w-4 mr-2 flex-shrink-0" />
+                  <span className="leading-tight">From {formValues.start_time || "Start"} to {formValues.end_time || "End"}</span>
+                </div>
+                <div className="inline-flex items-center">
+                  <User className="h-4 w-4 mr-2 flex-shrink-0" />
+                  <span className="leading-tight">Organized by {formValues.organizer_name || "Organizer"}</span>
+                </div>
+                {formValues.is_private && (
+                  <div className="inline-flex items-center">
+                    <span className="font-semibold mr-2">Access Password:</span>
+                    <span className="font-mono leading-tight">{formValues.access_password || "N/A"}</span>
+                  </div>
+                )}
+              </div>
+              <div className="bg-white text-green-600 rounded-md p-4 text-center shadow-inner">
+                <p className="text-sm font-medium">Supercode</p>
+                <p className="text-3xl font-bold tracking-wider">{supercode || "N/A"}</p>
+              </div>
             </div>
           </div>
           <p className="text-sm text-gray-500 dark:text-gray-400 my-4">
