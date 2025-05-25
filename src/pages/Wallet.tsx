@@ -99,29 +99,29 @@ const Wallet = () => {
               <Button
                 className="flex-1 bg-green-700 hover:bg-green-800 text-white font-medium rounded-lg px-4 py-2 text-sm flex items-center justify-center"
               >
-                Top-up <span className="ml-2">💰</span>
+                Top-up <span
               </Button>
               <Button
                 className="flex-1 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 text-sm flex items-center justify-center"
               >
-                Withdraw <span className="ml-2">💸</span>
+                Withdraw
               </Button>
             </div>
           </div>
 
           <div className="mt-6 w-full max-w-md bg-white rounded-lg shadow-lg p-4 flex items-center justify-between">
-            <img src="/navlogo.png" alt="Logo" className="w-10 h-10" />
-            <div className="text-right">
-              <p className="text-lg font-semibold text-gray-900 flex items-center justify-end">
-                <CreditCard className="w-5 h-5 mr-2" /> 1234567890
-              </p>
-              <p className="text-sm text-gray-600 flex items-center justify-end">
-                <Building className="w-5 h-5 mr-2" /> Sport Cliq Bank
-              </p>
-              <p className="text-sm text-gray-500 flex items-center justify-end">
-                <User className="w-5 h-5 mr-2" /> {nickname}
-              </p>
-            </div>
+            <img src="/navlogo.png" alt="Logo" className="w-14 h-14" />
+<div className="text-right space-y-2">
+  <p className="text-lg font-semibold text-gray-900 flex items-center justify-end">
+    <CreditCard className="w-5 h-5 mr-2" /> 1234567890
+  </p>
+  <p className="text-sm text-gray-600 flex items-center justify-end">
+    <Building className="w-5 h-5 mr-2" /> Sport Cliq Bank
+  </p>
+  <p className="text-sm text-gray-500 flex items-center justify-end">
+    <User className="w-5 h-5 mr-2" /> {nickname}
+  </p>
+</div>
           </div>
         </div>
       </div>
