@@ -73,6 +73,7 @@ const JoinMatch = () => {
   const [successDialogOpen, setSuccessDialogOpen] = useState(false);
   const [confirmationCode, setConfirmationCode] = useState<string | null>(null);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const [backgroundOption, setBackgroundOption] = useState("field");
   const [selectedSlots, setSelectedSlots] = useState(1);
   const [userId, setUserId] = useState<string | null>(null);
@@ -167,14 +168,21 @@ const JoinMatch = () => {
 
         // Auto-populate form for logged-in users
         if (userId) {
-          const { data: profile } = await supabase
+          const { data: profile, error: profileError } = await supabase
             .from("profiles")
             .select("nickname, phone_number")
             .eq("id", userId)
             .single();
-          if (profile) {
-            defaultValues["name"] = profile.nickname || "";
-            defaultValues["phone"] = profile.phone_number || "";
+          if (profileError) {
+            console.error("Error fetching profile:", profileError);
+            toast({
+              title: "Error",
+              description: "Failed to load profile details.",
+              variant: "destructive",
+            });
+          } else {
+            if (profile.nickname) defaultValues["name"] = profile.nickname;
+            if (profile.phone_number) defaultValues["phone"] = profile.phone_number;
           }
         }
 
@@ -316,9 +324,35 @@ const JoinMatch = () => {
       return;
     }
 
+    setIsDownloading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
+      // Preload logo image
+      const logoSrc = backgroundOption === "white" ? "/playarenalight.png" : "/playarenadark.png";
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.src = logoSrc;
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = () => {
+          console.warn("Failed to load logo image for canvas");
+          resolve(null);
+        };
+      });
+
+      // Preload background image if using field
+      if (backgroundOption === "field") {
+        const bgImg = new Image();
+        bgImg.crossOrigin = "anonymous";
+        bgImg.src = "/football-field.jpg";
+        await new Promise((resolve, reject) => {
+          bgImg.onload = resolve;
+          bgImg.onerror = () => {
+            console.warn("Failed to load background image for canvas");
+            resolve(null);
+          };
+        });
+      }
+
       const canvas = await html2canvas(cardRef.current, {
         scale: 2,
         useCORS: true,
@@ -327,10 +361,38 @@ const JoinMatch = () => {
         scrollY: -window.scrollY,
       });
 
-      const link = document.createElement('a');
-      link.download = `PlayArena-Registration-${match?.title.replace(/\s+/g, '-')}.png`;
-      link.href = canvas.toDataURL('image/png');
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob((blob) => resolve(blob), "image/png")
+      );
+
+      if (!blob) {
+        throw new Error("Failed to convert canvas to Blob");
+      }
+
+      const filename = `PlayArena-Registration-${match?.title.replace(/\s+/g, '-')}.png`;
+      const url = URL.createObjectURL(blob);
+
+      if (navigator.share && (navigator as any).canShare?.({ files: [new File([blob], filename, { type: "image/png" })] })) {
+        try {
+          await navigator.share({
+            files: [new File([blob], filename, { type: "image/png" })],
+            title: match?.title,
+            text: `I've registered for ${match?.title} at ${match?.venue?.name || 'unknown venue'}!`,
+          });
+          URL.revokeObjectURL(url);
+          return;
+        } catch (shareError) {
+          console.warn("Share API failed, falling back to download:", shareError);
+        }
+      }
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Error generating image:", error);
       toast({
@@ -338,8 +400,10 @@ const JoinMatch = () => {
         description: "Failed to download registration card. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsDownloading(false);
     }
-  }, [isImageLoaded, match, toast]);
+  }, [isImageLoaded, match, toast, backgroundOption]);
 
   const onSubmit = async (data: any) => {
     if (!match || !slug) return;
@@ -388,7 +452,6 @@ const JoinMatch = () => {
 
       if (playerError) throw playerError;
 
-      // Link player to user account if logged in
       if (userId) {
         const { error: joinError } = await supabase
           .from("user_joined_matches")
@@ -660,7 +723,8 @@ const JoinMatch = () => {
                               type={field === "phone" ? "tel" : "text"}
                               inputMode={field === "phone" ? "numeric" : "text"}
                               className="border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
-                              {...(field === "phone" && {
+                              disabled={userId && (field === "name" || field === "phone")}
+                              {...(field === "phone" && !userId && {
                                 pattern: "[0-9]*",
                                 maxLength: 11,
                                 onChange: (e) => {
