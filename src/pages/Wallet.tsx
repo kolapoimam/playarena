@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, User, Building, CreditCard } from "lucide-react";
 
 const Wallet = () => {
   const navigate = useNavigate();
@@ -69,6 +69,11 @@ const Wallet = () => {
 
       <div className="flex-grow overflow-y-auto">
         <div className="container mx-auto px-4 py-6 flex flex-col items-center">
+          <div className="w-full max-w-md text-center mb-6">
+            <span className="text-2xl font-bold text-red-500 animate-blink">
+              Wallet feature is coming soon
+            </span>
+          </div>
           <div className="relative w-full max-w-md rounded-lg shadow-lg bg-white p-6">
             <div className="flex justify-between items-center mb-4">
               <span className="text-sm text-gray-600">Available Balance</span>
@@ -86,7 +91,7 @@ const Wallet = () => {
                 </span>
               </div>
             </div>
-            <div className="text-4xl font-bold text-gray-900 mb-6 flex items-center">
+            <div className="text-4xl font-bold text-gray-900 mb-6 flex items-center justify-center">
               <span className="text-green-500 mr-2">₦</span>
               <span>15,584,834</span>
             </div>
@@ -104,12 +109,18 @@ const Wallet = () => {
             </div>
           </div>
 
-          <div className="mt-6 w-full max-w-md bg-white rounded-lg shadow-lg p-4 flex items-center">
-            <img src="/navbarlogo.png" alt="Logo" className="w-10 h-10 mr-4" />
-            <div>
-              <p className="text-lg font-semibold text-gray-900">1234567890</p>
-              <p className="text-sm text-gray-600">Sport Cliq</p>
-              <p className="text-sm text-gray-500">{nickname}</p>
+          <div className="mt-6 w-full max-w-md bg-white rounded-lg shadow-lg p-4 flex items-center justify-between">
+            <img src="/navlogo.png" alt="Logo" className="w-10 h-10" />
+            <div className="text-right">
+              <p className="text-lg font-semibold text-gray-900 flex items-center justify-end">
+                <CreditCard className="w-5 h-5 mr-2" /> 1234567890
+              </p>
+              <p className="text-sm text-gray-600 flex items-center justify-end">
+                <Building className="w-5 h-5 mr-2" /> Sport Cliq Bank
+              </p>
+              <p className="text-sm text-gray-500 flex items-center justify-end">
+                <User className="w-5 h-5 mr-2" /> {nickname}
+              </p>
             </div>
           </div>
         </div>
