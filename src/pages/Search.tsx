@@ -113,8 +113,8 @@ const SearchPage = () => {
 
       const venueIds = venuesWithDetails.map((venue) => venue.id);
 
-      // Search for matches by title OR by associated venue
-      const { data: matchData, error: matchError } = await supabase
+      // Search for matches by title
+      const { data: titleMatches, error: titleMatchError } = await supabase
         .from("matches")
         .select(`
           id,
@@ -129,12 +129,42 @@ const SearchPage = () => {
           venue:venues(id, slug, name, city, state),
           players(player_name, number_of_slots, cancellation_status)
         `)
-        .or(`title.ilike.%${query}%,venue_id.in.(${venueIds.length > 0 ? venueIds.join(",") : "''"})`);
+        .ilike("title", `%${query}%`);
 
-      if (matchError) throw matchError;
+      if (titleMatchError) throw titleMatchError;
+
+      // Search for matches by associated venue (if any venues were found)
+      let venueMatches: any[] = [];
+      if (venueIds.length > 0) {
+        const { data: venueMatchesData, error: venueMatchError } = await supabase
+          .from("matches")
+          .select(`
+            id,
+            slug,
+            title,
+            match_date,
+            match_time,
+            is_paid,
+            price,
+            total_slots,
+            status,
+            venue:venues(id, slug, name, city, state),
+            players(player_name, number_of_slots, cancellation_status)
+          `)
+          .in("venue_id", venueIds);
+
+        if (venueMatchError) throw venueMatchError;
+        venueMatches = venueMatchesData || [];
+      }
+
+      // Combine and deduplicate matches (by id)
+      const combinedMatches = [...(titleMatches || []), ...(venueMatches || [])];
+      const uniqueMatches = Array.from(
+        new Map(combinedMatches.map((match) => [match.id, match])).values()
+      );
 
       // Convert match data to proper Match type and sort by status (upcoming first)
-      const matchesWithDetails = matchData?.map((match: any) => ({
+      const matchesWithDetails = uniqueMatches.map((match: any) => ({
         id: match.id,
         slug: match.slug,
         title: match.title,
@@ -147,7 +177,7 @@ const SearchPage = () => {
         venue: match.venue,
         players: match.players,
         cancellation_status: match.players.some((p: any) => p.cancellation_status),
-      })) as Match[] || [];
+      })) as Match[];
 
       // Filter and sort matches: upcoming first, then past
       const now = DateTime.now();
@@ -195,7 +225,7 @@ const SearchPage = () => {
     const matchDate = DateTime.fromISO(match.match_date, { zone: "utc" }).setZone("Africa/Lagos");
     const now = DateTime.now().setZone("Africa/Lagos");
     const tomorrow = now.plus({ days: 1 }).startOf("day");
-    const startDateTime = DateTime.fromISO(`${matchDate.toISODate()}T${match.time}`, { zone: "utc" }).setZone("Africa/Lagos");
+    const startDateTime = DateTime.fromISO(`${matchDate.toISODate()}T${match.match_time}`, { zone: "utc" }).setZone("Africa/Lagos");
     const endDateTime = startDateTime.plus({ hours: 2 });
 
     let statusLabel = "";
