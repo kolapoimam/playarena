@@ -385,7 +385,7 @@ const MatchDetail = () => {
                 className="text-playarena-600 border-playarena-300 hover:bg-playarena-50"
               >
                 <CalendarPlus size={16} className="mr-1" />
-                Add to Calendar
+                Set Reminders
               </Button>
             </div>
             
