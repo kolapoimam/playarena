@@ -192,11 +192,12 @@ return (
           <span className="font-medium">Add Venue</span>
         </Button>
       </div>
-<div className="px-4 mb-8" style={{ overflow: 'hidden', borderRadius: '24px' }}>
+<div style={{ overflow: '100%', borderRadius: '32px' }}>
   <img
     src="/downolad now.jpg"
     alt="Download Now"
     className="w-full h-auto object-cover"
+    style={{ borderRadius: '32px' }}
   />
 </div>
 
