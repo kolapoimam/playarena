@@ -11,7 +11,7 @@ import {
   Users, 
   ArrowLeft, 
   ExternalLink,
-  CalendarPlus,
+  Bell,
   Lock
 } from "lucide-react";
 import {
@@ -377,17 +377,16 @@ const MatchDetail = () => {
         
         <div className="space-y-4">
           <div className="border rounded-lg p-4 bg-card shadow-md relative">
-            <div className="absolute top-4 right-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={addToCalendar}
-                className="text-playarena-600 border-playarena-300 hover:bg-playarena-50"
-              >
-                <CalendarPlus size={16} className="mr-1" />
-                Set Reminders
-              </Button>
-            </div>
+<div className="absolute top-4 right-4">
+  <Button
+    variant="outline"
+    size="sm"
+    onClick={addToCalendar}
+    className="text-playarena-600 border-playarena-300 hover:bg-playarena-50"
+  >
+    <Bell size={16} className="mr-1" />
+  </Button>
+</div>
             
             <h2 className="font-semibold mb-3">Match Details</h2>
             
