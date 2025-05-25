@@ -15,7 +15,7 @@ const VenueCreate = () => {
   return (
     <div className="min-h-screen pb-20 bg-gray-100 dark:bg-gray-900">
       <header className="sticky top-0 z-50 bg-gradient-to-r from-green-500 to-green-700 text-white shadow-lg">
-        <div className="p-4 flex items-center justify-between max-w-7xl mx-auto">
+        <div className="p-4 flex items-center justify-between max-w-md mx-auto">
           <Button 
             variant="ghost" 
             className="text-white hover:bg-green-600 transition-colors"
@@ -29,7 +29,7 @@ const VenueCreate = () => {
         </div>
       </header>
 
-      <div className="p-6 max-w-none mx-auto px-4">
+      <div className="p-6 max-w-md mx-auto px-4">
         <VenueForm onSuccess={handleSuccess} />
       </div>
 
