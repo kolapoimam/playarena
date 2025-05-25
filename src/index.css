@@ -1,5 +1,4 @@
-
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap'); /* Updated to Plus Jakarta Sans */
 
 @tailwind base;
 @tailwind components;
@@ -93,14 +92,13 @@
   }
 
   body {
-    @apply bg-background text-foreground font-nunito;
+    @apply bg-background text-foreground font-sans; /* Updated to font-sans for Plus Jakarta Sans */
   }
 }
 
 #root {
-  max-width: 100%;
-  margin: 0;
-  padding: 0;
-  text-align: left;
+  max-width: 448px; /* Adjusted to match max-w-md (448px) from Wallet, VenueForm, VenueCreate */
+  margin: 0 auto; /* Centered layout */
+  padding: 2rem; /* Restored padding to match Wallet design */
+  text-align: center; /* Restored text alignment to match Wallet design */
 }
-
