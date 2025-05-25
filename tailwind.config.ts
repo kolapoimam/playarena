@@ -19,7 +19,7 @@ export default {
     },
     extend: {
       fontFamily: {
-        nunito: ["Nunito", "sans-serif"],
+        sans: ["Plus Jakarta Sans", "sans-serif"], // Replace nunito with Plus Jakarta Sans as the default sans-serif font
       },
       colors: {
         border: "hsl(var(--border))",
