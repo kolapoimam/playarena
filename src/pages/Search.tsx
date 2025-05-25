@@ -74,26 +74,42 @@ const SearchPage = () => {
     setLoading(true);
     try {
       // Search for venues matching the query in name, city, or state
-      const { data: matchingVenues, error: venueError } = await supabase
+      const { data: venueData, error: venueError } = await supabase
         .from("venues")
-        .select("id, slug, name, city, state, is_verified, image_urls, aggregated_rating, matches:matches!venue_id (match_date)")
+        .select(`
+          id,
+          slug,
+          name,
+          city,
+          state,
+          is_verified,
+          image_urls,
+          aggregated_rating
+        `)
         .or(`name.ilike.%${query}%,city.ilike.%${query}%,state.ilike.%${query}%`);
 
       if (venueError) throw venueError;
 
-      // Convert venue data to proper Venue type
-      const venuesWithDetails = matchingVenues?.map((venue: any) => ({
-        id: venue.id,
-        slug: venue.slug,
-        name: venue.name,
-        city: venue.city,
-        state: venue.state,
-        is_verified: venue.is_verified,
-        image_urls: venue.image_urls,
-        aggregated_rating: venue.aggregated_rating,
-        match_count: venue.matches ? venue.matches.length : 0,
-        match_dates: venue.matches ? venue.matches.map((m: any) => m.match_date).filter((date: string) => date) : [],
-      })) as Venue[] || [];
+      // Convert venue data to proper Venue type and fetch match counts/dates separately
+      const venuesWithDetails = venueData?.map((venue: any) => {
+        const matchResponse = supabase
+          .from("matches")
+          .select("match_date")
+          .eq("venue_id", venue.id);
+        const { data: matchData } = matchResponse;
+        return {
+          id: venue.id,
+          slug: venue.slug,
+          name: venue.name,
+          city: venue.city,
+          state: venue.state,
+          is_verified: venue.is_verified,
+          image_urls: venue.image_urls,
+          aggregated_rating: venue.aggregated_rating,
+          match_count: matchData ? matchData.length : 0,
+          match_dates: matchData ? matchData.map((m: any) => m.match_date).filter((date: string) => date) : [],
+        };
+      }) as Venue[] || [];
 
       const venueIds = venuesWithDetails.map((venue) => venue.id);
 
@@ -110,13 +126,10 @@ const SearchPage = () => {
           price,
           total_slots,
           status,
-          venue:venues(slug, name, city, state),
+          venue:venues(id, slug, name, city, state),
           players(player_name, number_of_slots, cancellation_status)
         `)
-        .or(
-          `title.ilike.%${query}%,and(venue_id.in.(${venueIds.length > 0 ? venueIds.join(",") : "''"}))`,
-          { referencedTable: "matches" }
-        );
+        .or(`title.ilike.%${query}%,venue_id.in.(${venueIds.length > 0 ? venueIds.join(",") : "''"})`);
 
       if (matchError) throw matchError;
 
@@ -182,7 +195,7 @@ const SearchPage = () => {
     const matchDate = DateTime.fromISO(match.match_date, { zone: "utc" }).setZone("Africa/Lagos");
     const now = DateTime.now().setZone("Africa/Lagos");
     const tomorrow = now.plus({ days: 1 }).startOf("day");
-    const startDateTime = DateTime.fromISO(`${matchDate.toISODate()}T${match.match_time}`, { zone: "utc" }).setZone("Africa/Lagos");
+    const startDateTime = DateTime.fromISO(`${matchDate.toISODate()}T${match.time}`, { zone: "utc" }).setZone("Africa/Lagos");
     const endDateTime = startDateTime.plus({ hours: 2 });
 
     let statusLabel = "";
