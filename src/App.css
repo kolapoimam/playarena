@@ -1,8 +1,9 @@
 #root {
-  max-width: 1280px;
+  max-width: 448px; /* Adjusted to match max-w-md (448px) from Wallet, VenueForm, VenueCreate */
   margin: 0 auto;
   padding: 2rem;
   text-align: center;
+  font-family: "Plus Jakarta Sans", sans-serif; /* Added to enforce the new font globally */
 }
 
 .logo {
@@ -32,30 +33,7 @@
     animation: logo-spin infinite 20s linear;
   }
 }
-@keyframes slide-up {
-  0% { transform: translateY(48px); opacity: 0; }
-  100% { transform: translateY(0); opacity: 1; }
-}
 
-@keyframes fade-in {
-  0% { opacity: 0; }
-  100% { opacity: 1; }
-}
-
-.animate-slide-up {
-  animation: slide-up 1s ease-out forwards;
-}
-
-.animate-fade-in {
-  animation: fade-in 0.5s ease-out forwards;
-}
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
-}
 @keyframes slide-up {
   0% {
     transform: translateY(48px);
@@ -82,4 +60,12 @@
 
 .animate-fade-in {
   animation: fade-in 0.5s ease-out forwards;
+}
+
+.card {
+  padding: 2em;
+}
+
+.read-the-docs {
+  color: #888;
 }
