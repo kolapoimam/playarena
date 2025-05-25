@@ -138,7 +138,7 @@ const MatchPreferences = () => {
             Back
           </Button>
           <div className="text-center">
-            <h1 className="text-2xl font-bold">Match Preferences</h1>
+            <h1 className="text-2xl font-bold">Preferences</h1>
           </div>
           <div className="w-10"></div>
         </div>
