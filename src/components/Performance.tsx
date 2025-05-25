@@ -121,23 +121,23 @@ const Performance = ({ profile }: PerformanceProps) => {
   const getShareText = (badge: Badge) => {
     switch (badge.name) {
       case "First Kickoff":
-        return `I just earned a badge for First Kickoff: Scored my first match! 🏅 Join the action! #SportCliq Powered by Sport Cliq`;
+        return `I just earned a badge for First Kickoff: Scored my first match! 🏅 Join the action! #SportCliq Powered by @SportCliq`;
       case "Match Maestro":
-        return `I just earned a badge for Match Maestro: Organized my first match! 🎯 Who's next? 🏅 #SportCliq Powered by Sport Cliq`;
+        return `I just earned a badge for Match Maestro: Organized my first match! 🎯 Who's next? 🏅 #SportCliq Powered by @SportCliq`;
       case "Venue Visionary":
-        return `I just earned a badge for Venue Visionary: Set the stage with my first venue! 📍 🏅 #SportCliq Powered by Sport Cliq`;
+        return `I just earned a badge for Venue Visionary: Set the stage with my first venue! 📍 🏅 #SportCliq Powered by @SportCliq`;
       case "Deca-Paid Star":
-        return `I just earned a badge for Deca-Paid Star: Conquered 10 paid matches! 🌟 🏅 #SportCliq Powered by Sport Cliq`;
+        return `I just earned a badge for Deca-Paid Star: Conquered 10 paid matches! 🌟 🏅 #SportCliq Powered by @SportCliq`;
       case "Deca-Free Star":
-        return `I just earned a badge for Deca-Free Star: Played 10 free matches! ⚽ 🏅 #SportCliq Powered by Sport Cliq`;
+        return `I just earned a badge for Deca-Free Star: Played 10 free matches! ⚽ 🏅 #SportCliq Powered by @SportCliq`;
       case "Penta-Venue Legend":
-        return `I just earned a badge for Penta-Venue Legend: Listed 5 venues! 🗺️ 🏅 #SportCliq Powered by Sport Cliq`;
+        return `I just earned a badge for Penta-Venue Legend: Listed 5 venues! 🗺️ 🏅 #SportCliq Powered by @SportCliq`;
       case "Deca-Match Maestro":
-        return `I just earned a badge for Deca-Match Maestro: Mastered 10 matches! 🏆 🏅 #SportCliq Powered by Sport Cliq`;
+        return `I just earned a badge for Deca-Match Maestro: Mastered 10 matches! 🏆 🏅 #SportCliq Powered by @SportCliq`;
       case "Elite Investor":
-        return `I just earned a badge for Elite Investor: Invested big in matches! 💰 🏅 #SportCliq Powered by Sport Cliq`;
+        return `I just earned a badge for Elite Investor: Invested big in matches! 💰 🏅 #SportCliq Powered by @SportCliq`;
       default:
-        return `I just earned a badge for ${badge.name}: ${badge.description} 🏅 #SportCliq Powered by Sport Cliq`;
+        return `I just earned a badge for ${badge.name}: ${badge.description} 🏅 #SportCliq Powered by @SportCliq`;
     }
   };
 
@@ -272,7 +272,7 @@ const Performance = ({ profile }: PerformanceProps) => {
             <img
               src={document.documentElement.classList.contains("dark") ? "/playarenadark.png" : "/playarenalight.png"}
               alt="PlayArena Logo"
-              className="absolute bottom-2 w-20 h-20 object-contain"
+              className="absolute bottom-2 w-24 h-24 object-contain"
             />
           </div>
           <div className="flex gap-2 justify-center">
