@@ -192,6 +192,11 @@ return (
           <span className="font-medium">Add Venue</span>
         </Button>
       </div>
+    <img
+  src="/downolad now.jpg"
+  alt="Download Now"
+  className="w-full h-auto px-4 mb-8 rounded-lg object-cover"
+/>
 
       {loading ? (
         <div className="flex justify-center items-center h-32">
