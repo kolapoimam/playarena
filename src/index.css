@@ -97,8 +97,8 @@
 }
 
 #root {
-  max-width: 448px; /* Adjusted to match max-w-md (448px) from Wallet, VenueForm, VenueCreate */
-  margin: 0 auto; /* Centered layout */
-  padding: 2rem; /* Restored padding to match Wallet design */
-  text-align: center; /* Restored text alignment to match Wallet design */
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  text-align: left;
 }
