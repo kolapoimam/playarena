@@ -69,58 +69,48 @@ const Wallet = () => {
 
       <div className="flex-grow overflow-y-auto">
         <div className="container mx-auto px-4 py-6 flex flex-col items-center">
-          <div className="relative w-full max-w-md rounded-xl shadow-lg bg-gradient-to-r from-blue-500 via-indigo-600 to-purple-700 p-6 text-white">
-            <div className="flex justify-between items-center mb-6">
-              <img
-                src={document.documentElement.classList.contains("dark") ? "/playarenadark.png" : "/playarenalight.png"}
-                alt="PlayArena Logo"
-                className="w-32 h-32 object-contain"
-              />
-              <div className="text-right">
-                <p className="text-sm font-semibold">PlayArena Wallet</p>
-                <p className="text-xs opacity-75">Virtual Card</p>
-              </div>
-            </div>
-            <div className="mb-4">
-              <p className="text-2xl font-bold">₦12,345.67</p>
-              <p className="text-sm opacity-75">Available Balance</p>
-            </div>
+          <div className="relative w-full max-w-md rounded-lg shadow-lg bg-white p-6">
             <div className="flex justify-between items-center mb-4">
-              <div>
-                <p className="text-sm">Cardholder</p>
-                <p className="text-base font-semibold">{nickname}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-sm">Expiry</p>
-                <p className="text-base font-semibold">12/27</p>
+              <span className="text-sm text-gray-600">Available Balance</span>
+              <div className="flex space-x-2">
+                <button className="text-gray-500 hover:text-gray-700">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                </button>
+                <span className="text-green-500">
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/>
+                  </svg>
+                </span>
               </div>
             </div>
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-sm">Card Number</p>
-                <p className="text-base font-mono tracking-wider">**** **** **** 1234</p>
-              </div>
-              <div className="text-right">
-                <p className="text-sm">CVV</p>
-                <p className="text-base font-mono">***</p>
-              </div>
+            <div className="text-4xl font-bold text-gray-900 mb-6 flex items-center">
+              <span className="text-green-500 mr-2">₦</span>
+              <span>15,584,834</span>
+            </div>
+            <div className="flex justify-between space-x-4">
+              <Button
+                className="flex-1 bg-green-700 hover:bg-green-800 text-white font-medium rounded-lg px-4 py-2 text-sm flex items-center justify-center"
+              >
+                Top-up <span className="ml-2">💰</span>
+              </Button>
+              <Button
+                className="flex-1 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 text-sm flex items-center justify-center"
+              >
+                Withdraw <span className="ml-2">💸</span>
+              </Button>
             </div>
           </div>
-          <p className="text-lg font-semibold text-gray-600 dark:text-gray-400 mt-4">Coming Soon</p>
-          <div className="flex justify-center space-x-4 mt-6">
-            <Button
-              className="bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-6 py-2 text-sm"
-              disabled
-            >
-              Add Funds
-            </Button>
-            <Button
-              variant="outline"
-              className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg px-6 py-2 text-sm"
-              disabled
-            >
-              Withdraw
-            </Button>
+
+          <div className="mt-6 w-full max-w-md bg-white rounded-lg shadow-lg p-4 flex items-center">
+            <img src="/navbarlogo.png" alt="Logo" className="w-10 h-10 mr-4" />
+            <div>
+              <p className="text-lg font-semibold text-gray-900">1234567890</p>
+              <p className="text-sm text-gray-600">Sport Cliq</p>
+              <p className="text-sm text-gray-500">{nickname}</p>
+            </div>
           </div>
         </div>
       </div>
