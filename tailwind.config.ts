@@ -19,16 +19,26 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ["Plus Jakarta Sans", "sans-serif"], // Replace nunito with Plus Jakarta Sans as the default sans-serif font
+        sans: ["Plus Jakarta Sans", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
+        background: {
+          DEFAULT: "hsl(var(--background))",
+          light: "#F3F2F8",
+          dark: "#000000",
+        },
+        foreground: {
+          DEFAULT: "hsl(var(--foreground))",
+          light: "#000000",
+          dark: "#FFFFFF",
+        },
         primary: {
           DEFAULT: "hsl(var(--primary))",
+          light: "#1DB954",
+          dark: "#51DC80",
           foreground: "hsl(var(--primary-foreground))",
         },
         secondary: {
@@ -38,6 +48,9 @@ export default {
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
+          light: "#FAE9A3",
+          dark: "#FAE9A3",
+          text: "#E51515",
         },
         muted: {
           DEFAULT: "hsl(var(--muted))",
@@ -54,6 +67,11 @@ export default {
         card: {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
+        },
+        input: {
+          DEFAULT: "hsl(var(--input))",
+          light: "#FFFFFF",
+          dark: "#1C1C1E",
         },
         playarena: {
           50: "#e6f9ed",
