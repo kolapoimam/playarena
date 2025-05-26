@@ -61,20 +61,42 @@ const AppRoutes = () => {
 
   // OneSignal user tagging effect
   useEffect(() => {
+    // Wait for OneSignal to initialize
+    const waitForOneSignal = () => {
+      return new Promise((resolve) => {
+        const checkInterval = setInterval(() => {
+          if (window.OneSignal && window.OneSignal.initialized) {
+            clearInterval(checkInterval);
+            console.log("OneSignal fully initialized");
+            resolve(true);
+          }
+        }, 100);
+        setTimeout(() => {
+          clearInterval(checkInterval);
+          console.log("OneSignal initialization timeout after 10 seconds");
+          resolve(false);
+        }, 10000);
+      });
+    };
+
     // Listen for auth state changes to ensure we tag the user after login
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       const userId = session?.user?.id;
       if (userId && window.OneSignal) {
+        // Wait for OneSignal to be fully initialized
+        const isInitialized = await waitForOneSignal();
+        if (!isInitialized) {
+          console.log("OneSignal not initialized, skipping login and tagging");
+          return;
+        }
+
         console.log("Tagging OneSignal with user_id:", userId); // Debug log
         OneSignal.push(() => {
           OneSignal.login(userId); // No Promise, just call login
           console.log("OneSignal login triggered for user_id:", userId);
-          // Add tag after login
-          OneSignal.User.addTag("user_id", userId).then(() => {
-            console.log("Tag added to OneSignal: user_id =", userId); // Debug log
-          }).catch((error) => {
-            console.error("OneSignal addTag error:", error);
-          });
+          // Add tag after login, no Promise handling
+          OneSignal.User.addTag("user_id", userId);
+          console.log("Tag added to OneSignal: user_id =", userId); // Debug log
         });
       } else {
         console.log("No user session or OneSignal not loaded:", { userId, OneSignal: !!window.OneSignal });
