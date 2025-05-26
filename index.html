@@ -5,13 +5,16 @@
 <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
 <script>
   window.OneSignalDeferred = window.OneSignalDeferred || [];
-  OneSignalDeferred.push(function(OneSignal) {
-    OneSignal.init({
+  OneSignalDeferred.push(async function(OneSignal) {
+    await OneSignal.init({
       appId: "18fa7638-29ab-4dd5-9dca-0bdd150f647c",
-      allowLocalhostAsSecureOrigin: true,
+      safari_web_id: "web.onesignal.auto.38b1a4de-a361-440e-ae28-b71c05790af2",
+      notifyButton: {
+        enable: true,
+      },
     });
   });
-</script>  <!-- Other meta tags and scripts remain unchanged -->
+</script>
   <meta property="og:image" content="https://www.sportcliq.com/Sportcliq_Stadium_Banner.png" />
   <meta property="og:title" content="Sport Cliq - Discover & Organize Football Matches" />
   <meta property="og:description" content="Discover or organize football matches around you in Nigeria." />
