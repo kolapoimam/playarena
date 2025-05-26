@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, ChevronLeft, ChevronRight, Filter, Store, Star, CheckCircle } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Filter, Store, Star, CheckCircle, Heart } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -47,6 +47,8 @@ const VenueDirectory = () => {
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const venuesPerPage = 4;
 
   // Filter states
@@ -55,8 +57,15 @@ const VenueDirectory = () => {
   const [sortOrder, setSortOrder] = useState<string>("None");
 
   useEffect(() => {
-    const fetchVenues = async () => {
+    const fetchUserAndVenues = async () => {
       try {
+        // Get the logged-in user
+        const { data: session } = await supabase.auth.getSession();
+        if (session?.session) {
+          setUserId(session.session.user.id);
+        }
+
+        // Fetch venues
         const now = new Date().toLocaleString("en-US", { timeZone: "Africa/Lagos" });
         const currentDate = new Date(now);
         const currentDateString = currentDate.toISOString().split("T")[0];
@@ -87,6 +96,19 @@ const VenueDirectory = () => {
 
         setVenues(venuesWithDetails as Venue[]);
         setFilteredVenues(venuesWithDetails as Venue[]);
+
+        // Fetch user's favorites if logged in
+        if (session?.session) {
+          const { data: favData, error: favError } = await supabase
+            .from("user_venue_favourites")
+            .select("venue_id")
+            .eq("user_id", session.session.user.id);
+          if (favError) {
+            toast({ title: "Error", description: "Failed to load favorites.", variant: "destructive" });
+            return;
+          }
+          setFavorites(new Set(favData.map((fav) => fav.venue_id)));
+        }
       } catch (error) {
         console.error("Error fetching venues:", error);
         toast({
@@ -99,7 +121,7 @@ const VenueDirectory = () => {
       }
     };
 
-    fetchVenues();
+    fetchUserAndVenues();
   }, [toast]);
 
   useEffect(() => {
@@ -173,6 +195,46 @@ const VenueDirectory = () => {
     setActivityFilter("All");
     setSortOrder("None");
     setCurrentPage(1);
+  };
+
+  const toggleFavorite = async (venueId: string) => {
+    if (!userId) {
+      toast({
+        title: "Login Required",
+        description: "Please log in to favorite a venue.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const isFavorited = favorites.has(venueId);
+    if (isFavorited) {
+      const { error } = await supabase
+        .from("user_venue_favourites")
+        .delete()
+        .eq("user_id", userId)
+        .eq("venue_id", venueId);
+      if (error) {
+        toast({ title: "Error", description: "Failed to remove favorite.", variant: "destructive" });
+        return;
+      }
+      setFavorites((prev) => {
+        const newFavs = new Set(prev);
+        newFavs.delete(venueId);
+        return newFavs;
+      });
+      toast({ title: "Success", description: "Removed from favorites." });
+    } else {
+      const { error } = await supabase
+        .from("user_venue_favourites")
+        .insert([{ user_id: userId, venue_id: venueId }]);
+      if (error) {
+        toast({ title: "Error", description: "Failed to add favorite.", variant: "destructive" });
+        return;
+      }
+      setFavorites((prev) => new Set(prev).add(venueId));
+      toast({ title: "Success", description: "Added to favorites!" });
+    }
   };
 
   return (
@@ -295,7 +357,7 @@ const VenueDirectory = () => {
                 return (
                   <div
                     key={venue.id}
-                    className="border rounded-lg overflow-hidden shadow-sm bg-white dark:bg-gray-800 cursor-pointer"
+                    className="border rounded-lg overflow-hidden shadow-sm bg-white dark:bg-gray-800 cursor-pointer relative"
                     onClick={() => navigate(`/venue/${venue.slug}`)}
                   >
                     <img
@@ -303,6 +365,19 @@ const VenueDirectory = () => {
                       alt={venue.name}
                       className="w-full h-36 object-cover"
                     />
+                    <Button
+                      variant="ghost"
+                      className="absolute bottom-2 right-2 text-red-500 hover:text-red-700"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleFavorite(venue.id);
+                      }}
+                    >
+                      <Heart
+                        size={24}
+                        fill={favorites.has(venue.id) ? "red" : "none"}
+                      />
+                    </Button>
                     <div className="p-4">
                       <div className="flex items-center">
                         <h3 className="font-bold text-lg text-gray-800 dark:text-gray-200 mb-1">{venue.name}</h3>
