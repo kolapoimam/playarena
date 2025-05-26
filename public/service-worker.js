@@ -1,20 +1,15 @@
 // service-worker.js
-// Define the OneSignal SDK worker location using locally hosted files
-importScripts('/OneSignalSDKWorker.js');
-
-// Service Worker installation event
+// Custom PWA and OneSignal integration
 self.addEventListener('install', (event) => {
   console.log('[Service Worker] Installed');
-  self.skipWaiting(); // Activate this service worker immediately
+  self.skipWaiting();
 });
 
-// Service Worker activation event
 self.addEventListener('activate', (event) => {
   console.log('[Service Worker] Activated');
-  event.waitUntil(self.clients.claim()); // Take control of all clients immediately
+  event.waitUntil(self.clients.claim());
 });
 
-// Push event to handle incoming notifications
 self.addEventListener('push', (event) => {
   console.log('[Service Worker] Push Received:', event.data ? event.data.text() : 'No data');
   const data = event.data ? event.data.json() : {};
@@ -33,7 +28,6 @@ self.addEventListener('push', (event) => {
   );
 });
 
-// Notification click event to handle user interaction
 self.addEventListener('notificationclick', (event) => {
   console.log('[Service Worker] Notification Clicked');
   event.notification.close();
@@ -52,3 +46,5 @@ self.addEventListener('notificationclick', (event) => {
     })
   );
 });
+
+// Delegate to OneSignal workers if needed (handled by App.tsx init)
