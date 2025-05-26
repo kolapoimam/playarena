@@ -2,75 +2,15 @@
 <html lang="en">
 <head>
   <!-- OneSignal SDK with deferred initialization -->
-  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.js" async></script>
-  <script>
-    // Initialize OneSignal with deferred execution
-    window.OneSignalDeferred = window.OneSignalDeferred || [];
-    OneSignalDeferred.push(async function(OneSignal) {
-      try {
-        // Initialize OneSignal with app ID from environment variable
-        await OneSignal.init({
-          appId: import.meta.env.VITE_ONESIGNAL_APP_ID, // TODO: Ensure VITE_ONESIGNAL_APP_ID is set in your .env file
-          allowLocalhostAsSecureOrigin: true, // For local development testing
-          serviceWorkerPath: '/OneSignalSDKWorker.js', // Specify the path to the hosted service worker
-          serviceWorkerUpdaterPath: '/OneSignalSDKUpdaterWorker.js', // Specify the updater path
-        });
-
-        // Fetch user ID from Supabase using the session token
-        const fetchUserId = async () => {
-          try {
-            // Get the Supabase session token (assumes Supabase client is available globally or stored)
-            const { data: { session } } = await fetch('https://qxafigbrfpxdklwoqkxj.supabase.co/auth/v1/session', {
-              headers: {
-                'Authorization': `Bearer ${localStorage.getItem('supabase.auth.token') || ''}`, // TODO: Adjust based on how your app stores the token
-                'apikey': 'your-supabase-anon-key', // TODO: Replace with your Supabase anon key
-              }
-            }).then(res => res.json());
-
-            if (!session?.access_token) {
-              throw new Error("No session token found");
-            }
-
-            const response = await fetch("http://localhost:3001/api/get-user-id", {
-              headers: {
-                'Authorization': `Bearer ${session.access_token}`,
-              },
-            });
-
-            if (!response.ok) throw new Error("Failed to fetch user ID");
-            const data = await response.json();
-            return data.userId || null;
-          } catch (error) {
-            console.error("Error fetching user ID:", error);
-            return null;
-          }
-        };
-
-        const userId = await fetchUserId();
-        if (userId) {
-          console.log("Tagging OneSignal with user_id:", userId);
-          OneSignal.setExternalUserId(userId);
-          OneSignal.sendTag("user_id", userId, (tagsSent) => {
-            console.log("Tags sent to OneSignal:", tagsSent);
-          });
-        } else {
-          console.log("No user ID available for OneSignal tagging");
-        }
-
-        // Prompt for notification permission if not already granted
-        OneSignal.getNotificationPermission((permission) => {
-          if (permission !== "granted") {
-            console.log("Showing OneSignal slidedown prompt for permission");
-            OneSignal.showSlidedownPrompt();
-          } else {
-            console.log("Notification permission already granted:", permission);
-          }
-        });
-      } catch (error) {
-        console.error("OneSignal initialization error:", error);
-      }
+<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+<script>
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  OneSignalDeferred.push(async function(OneSignal) {
+    await OneSignal.init({
+      appId: "18fa7638-29ab-4dd5-9dca-0bdd150f647c",
     });
-  </script>
+  });
+</script>
 
   <!-- Open Graph meta tags -->
   <meta property="og:image" content="https://www.sportcliq.com/Sportcliq_Stadium_Banner.png" />
