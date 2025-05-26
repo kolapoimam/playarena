@@ -1,35 +1,63 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <!-- OneSignal SDK with deferred initialization -->
   <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.js" async></script>
-    <script>
-      window.OneSignalDeferred = window.OneSignalDeferred || [];
-      OneSignalDeferred.push(async function(OneSignal) {
+  <script>
+    // Initialize OneSignal with deferred execution
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    OneSignalDeferred.push(async function(OneSignal) {
+      try {
+        // Initialize OneSignal with app ID from environment variable
         await OneSignal.init({
-          appId: import.meta.env.VITE_ONESIGNAL_APP_ID, // Dynamically pulled from .env
-          allowLocalhostAsSecureOrigin: true, // For local development
+          appId: import.meta.env.VITE_ONESIGNAL_APP_ID, // TODO: Ensure VITE_ONESIGNAL_APP_ID is set in your .env file with your OneSignal App ID
+          allowLocalhostAsSecureOrigin: true, // For local development testing
+          // safari_web_id is optional; add it if supporting Safari push (e.g., "YOUR_SAFARI_WEB_ID")
         });
 
-        // Get the user ID from Supabase auth (or localStorage if stored after login)
+        // Fetch user ID from Supabase (adjust endpoint based on your API setup)
         const fetchUserId = async () => {
-          const response = await fetch("/api/get-user-id"); // Adjust based on your auth setup
-          const data = await response.json();
-          return data.userId;
+          try {
+            const response = await fetch("/api/get-user-id"); // TODO: Replace with your actual endpoint to get the user ID from Supabase auth
+            if (!response.ok) throw new Error("Failed to fetch user ID");
+            const data = await response.json();
+            return data.userId || null; // Ensure userId is returned, fallback to null if not found
+          } catch (error) {
+            console.error("Error fetching user ID:", error);
+            return null;
+          }
         };
 
         const userId = await fetchUserId();
         if (userId) {
+          console.log("Tagging OneSignal with user_id:", userId); // Debug log
           OneSignal.setExternalUserId(userId);
-          OneSignal.sendTag("user_id", userId);
+          OneSignal.sendTag("user_id", userId, (tagsSent) => {
+            console.log("Tags sent to OneSignal:", tagsSent); // Debug log for tag success
+          });
+        } else {
+          console.log("No user ID available for OneSignal tagging");
         }
 
-        // Prompt user to enable notifications
-        OneSignal.showSlidedownPrompt();
-      });
-    </script>
+        // Prompt for notification permission if not already granted
+        OneSignal.getNotificationPermission((permission) => {
+          if (permission !== "granted") {
+            console.log("Showing OneSignal slidedown prompt for permission");
+            OneSignal.showSlidedownPrompt(); // Triggers prompt if permission not granted
+          } else {
+            console.log("Notification permission already granted:", permission);
+          }
+        });
+      } catch (error) {
+        console.error("OneSignal initialization error:", error); // Log any initialization errors
+      }
+    });
+  </script>
+
+  <!-- Open Graph meta tags -->
   <meta property="og:image" content="https://www.sportcliq.com/Sportcliq_Stadium_Banner.png" />
-<meta property="og:title" content="Sport Cliq - Discover & Organize Football Matches" />
-<meta property="og:description" content="Discover or organize football matches around you in Nigeria." />
+  <meta property="og:title" content="Sport Cliq - Discover & Organize Football Matches" />
+  <meta property="og:description" content="Discover or organize football matches around you in Nigeria." />
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="manifest" href="/manifest.webmanifest" />
@@ -69,12 +97,12 @@
   <meta property="article:author" content="Sport Cliq" />
   <meta name="robots" content="index, follow" />
 </head>
-  <body style="margin: 0;">
-    <!-- Status bar background fix for iOS PWA -->
-    <div class="status-bar-bg"></div>
-    <div id="root"></div>
-    <!-- Scripts -->
-    <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<body style="margin: 0;">
+  <!-- Status bar background fix for iOS PWA -->
+  <div class="status-bar-bg"></div>
+  <div id="root"></div>
+  <!-- Scripts -->
+  <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
 </html>
