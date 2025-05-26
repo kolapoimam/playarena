@@ -19,6 +19,7 @@ import Search from "@/pages/Search";
 import Activities from "@/pages/Activities";
 import Matches from "@/pages/Matches";
 import Profile from "@/pages/Profile";
+import Notifications from "@/pages/Notifications";
 import ViewProfile from "@/pages/ViewProfile";
 import NotFound from "@/pages/NotFound";
 import Organize from "@/pages/Organize";
@@ -82,6 +83,7 @@ const AppRoutes = () => {
       <Route path="/guides" element={<Guides />} />
       <Route path="/profile" element={<Profile />} />
       <Route path="/profile/view-profile" element={<ViewProfile />} />
+      <Route path="/profile/notifications" element={<Notifications />} />
       <Route
         path="/profile/account-details"
         element={<AccountDetails profile={profile} setProfile={setProfile} />}
