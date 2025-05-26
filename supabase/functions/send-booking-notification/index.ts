@@ -1,21 +1,7 @@
 import { serve } from "https://deno.land/std@0.131.0/http/server.ts";
-import { config } from "https://deno.land/std@0.203.0/dotenv/mod.ts";
 import { Resend } from "https://esm.sh/resend";
 
-// Load .env configuration
-await config({ export: true });
-
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
-
-// Helper to convert 24-hour time to 12-hour format
-function formatTimeTo12Hour(time24: string): string {
-  const [hourStr, minuteStr] = time24.split(":");
-  let hour = parseInt(hourStr, 10);
-  const minute = parseInt(minuteStr, 10);
-  const ampm = hour >= 12 ? "PM" : "AM";
-  hour = hour % 12 || 12;
-  return `${hour}:${minute.toString().padStart(2, "0")} ${ampm}`;
-}
 
 serve(async (req: Request) => {
   try {
@@ -38,9 +24,6 @@ serve(async (req: Request) => {
         { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }
-
-    const formattedStart = formatTimeTo12Hour(start_time);
-    const formattedEnd = formatTimeTo12Hour(end_time);
 
     const emailHtml = `
 <!DOCTYPE html>
@@ -314,7 +297,7 @@ serve(async (req: Request) => {
         <div class="detail-row">
           <img class="detail-icon" src="https://img.icons8.com/ios-filled/16/17a34a/clock.png" alt="Time">
           <div class="detail-label">Time Slot:</div>
-          <div class="detail-value">${formattedStart} - ${formattedEnd}</div>
+          <div class="detail-value">${start_time} - ${end_time}</div>
         </div>
         <div class="detail-row">
           <img class="detail-icon" src="https://img.icons8.com/ios-filled/16/17a34a/user.png" alt="Booked By">
