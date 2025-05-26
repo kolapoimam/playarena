@@ -4,13 +4,14 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MantineProvider } from '@mantine/core';
 import { useState, useEffect } from 'react';
-//import MobileOnlyGuard from "@/components/MobileOnlyGuard";//
-
 import SplashScreen from "@/components/SplashScreen";
 import ScrollToTop from "@/components/ScrollToTop";
 import InstallPrompt from "@/components/InstallPrompt";
 import { useGoogleAnalytics } from "@/hooks/useGoogleAnalytics";
+import * as gtag from "@/lib/gtag";
+//import MobileOnlyGuard from "@/components/MobileOnlyGuard";//
 
+// Import all page components
 import Index from "@/pages/Index";
 import Search from "@/pages/Search";
 import Activities from "@/pages/Activities";
@@ -46,8 +47,6 @@ import MyMatches from "@/pages/MyMatches";
 import MatchPreferences from "@/pages/MatchPreferences";
 import Wallet from "@/pages/Wallet";
 
-import * as gtag from "@/lib/gtag";
-
 const queryClient = new QueryClient();
 
 const AppRoutes = () => {
@@ -60,8 +59,8 @@ const AppRoutes = () => {
   }, [location]);
 
   return (
-    //<MobileOnlyGuard>//
-      <Routes>
+    <Routes>
+      //<MobileOnlyGuard>//
       <Route path="/" element={<Index />} />
       <Route path="/search" element={<Search />} />
       <Route path="/activities" element={<Activities />} />
@@ -100,14 +99,12 @@ const AppRoutes = () => {
       <Route path="/venue/:slug/book" element={<VenueBookingForm />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
-      //</MobileOnlyGuard>//
+    //</MobileOnlyGuard>//
   );
 };
 
 const App = () => {
   useGoogleAnalytics();
-  
-  const App = () => {
   const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
