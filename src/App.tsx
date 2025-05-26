@@ -69,25 +69,27 @@ const AppRoutes = () => {
         return;
       }
 
-      // Wait for OneSignal to load
+      // Wait for OneSignal to load and be fully initialized
       const waitForOneSignal = () => {
         return new Promise((resolve) => {
           const checkInterval = setInterval(() => {
-            if (window.OneSignal) {
+            console.log("Checking for OneSignal...", window.OneSignal);
+            if (window.OneSignal && window.OneSignal.isInitialized) {
               clearInterval(checkInterval);
               resolve(true);
             }
           }, 100);
           setTimeout(() => {
             clearInterval(checkInterval);
+            console.log("OneSignal load timeout, window.OneSignal:", window.OneSignal);
             resolve(false);
-          }, 5000);
+          }, 10000); // 10-second timeout
         });
       };
 
       const isOneSignalLoaded = await waitForOneSignal();
       if (!isOneSignalLoaded || !window.OneSignal) {
-        console.log("OneSignal failed to load within 5 seconds");
+        console.log("OneSignal failed to load or initialize within 10 seconds");
         return;
       }
 
@@ -113,8 +115,24 @@ const AppRoutes = () => {
           console.log("OneSignal already initialized by another script");
         }
 
-        // Prompt for notification permission if not already granted
-        if (window.OneSignal && window.OneSignal.getNotificationPermission) {
+        // Wait for notification permission method to be available
+        const waitForPermissionMethod = () => {
+          return new Promise((resolve) => {
+            const checkInterval = setInterval(() => {
+              if (window.OneSignal && window.OneSignal.getNotificationPermission) {
+                clearInterval(checkInterval);
+                resolve(true);
+              }
+            }, 100);
+            setTimeout(() => {
+              clearInterval(checkInterval);
+              resolve(false);
+            }, 5000);
+          });
+        };
+
+        const isPermissionAvailable = await waitForPermissionMethod();
+        if (isPermissionAvailable && window.OneSignal.getNotificationPermission) {
           window.OneSignal.getNotificationPermission((permission) => {
             if (permission !== "granted") {
               console.log("Showing OneSignal slidedown prompt for permission");
@@ -124,7 +142,7 @@ const AppRoutes = () => {
             }
           });
         } else {
-          console.log("OneSignal.getNotificationPermission not available");
+          console.log("OneSignal.getNotificationPermission not available after 5 seconds");
         }
       } catch (error) {
         console.error("OneSignal setup error:", error);
@@ -141,14 +159,31 @@ const AppRoutes = () => {
           return;
         }
 
-        if (window.OneSignal && window.OneSignal.setExternalUserId) {
+        // Wait for setExternalUserId to be available
+        const waitForTaggingMethods = () => {
+          return new Promise((resolve) => {
+            const checkInterval = setInterval(() => {
+              if (window.OneSignal && window.OneSignal.setExternalUserId) {
+                clearInterval(checkInterval);
+                resolve(true);
+              }
+            }, 100);
+            setTimeout(() => {
+              clearInterval(checkInterval);
+              resolve(false);
+            }, 5000);
+          });
+        };
+
+        const isTaggingAvailable = await waitForTaggingMethods();
+        if (isTaggingAvailable && window.OneSignal.setExternalUserId) {
           console.log("Tagging OneSignal with user_id:", userId);
           window.OneSignal.setExternalUserId(userId);
           window.OneSignal.sendTag("user_id", userId, (tagsSent) => {
             console.log("Tags sent to OneSignal:", tagsSent);
           });
         } else {
-          console.log("OneSignal not fully initialized for tagging");
+          console.log("OneSignal not fully initialized for tagging after 5 seconds");
         }
       };
 
