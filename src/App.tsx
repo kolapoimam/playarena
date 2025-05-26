@@ -61,7 +61,7 @@ const AppRoutes = () => {
 
   // OneSignal initialization and user tagging effect
   useEffect(() => {
-    const initializeOneSignal = async () => {
+    const initializeAndTagOneSignal = async () => {
       // Wait for OneSignal to load
       const waitForOneSignal = () => {
         return new Promise((resolve) => {
@@ -84,15 +84,22 @@ const AppRoutes = () => {
         return;
       }
 
-      // Initialize OneSignal
+      // Initialize OneSignal and wait for completion
       try {
-        await window.OneSignal.init({
-          appId: import.meta.env.VITE_ONESIGNAL_APP_ID, // Ensure this is set in your .env file
-          allowLocalhostAsSecureOrigin: true,
-          serviceWorkerPath: '/OneSignalSDKWorker.js',
-          serviceWorkerUpdaterPath: '/OneSignalSDKUpdaterWorker.js',
+        await new Promise((resolve) => {
+          window.OneSignal.init({
+            appId: import.meta.env.VITE_ONESIGNAL_APP_ID, // Ensure this is set in your .env file
+            allowLocalhostAsSecureOrigin: true,
+            serviceWorkerPath: '/OneSignalSDKWorker.js',
+            serviceWorkerUpdaterPath: '/OneSignalSDKUpdaterWorker.js',
+          }).then(() => {
+            console.log("OneSignal initialized successfully");
+            resolve();
+          }).catch((error) => {
+            console.error("OneSignal initialization error:", error);
+            resolve();
+          });
         });
-        console.log("OneSignal initialized successfully");
 
         // Prompt for notification permission if not already granted
         window.OneSignal.getNotificationPermission((permission) => {
@@ -104,47 +111,47 @@ const AppRoutes = () => {
           }
         });
       } catch (error) {
-        console.error("OneSignal initialization error:", error);
-        return;
-      }
-    };
-
-    const tagUserWithOneSignal = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      const userId = session?.user?.id;
-
-      if (!userId) {
-        console.log("No user session available for OneSignal tagging");
+        console.error("OneSignal setup error:", error);
         return;
       }
 
-      if (window.OneSignal && window.OneSignal.setExternalUserId) {
-        console.log("Tagging OneSignal with user_id:", userId);
-        window.OneSignal.setExternalUserId(userId);
-        window.OneSignal.sendTag("user_id", userId, (tagsSent) => {
-          console.log("Tags sent to OneSignal:", tagsSent);
-        });
-      } else {
-        console.log("OneSignal not fully initialized for tagging");
-      }
+      // Tag user with OneSignal
+      const tagUserWithOneSignal = async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        const userId = session?.user?.id;
+
+        if (!userId) {
+          console.log("No user session available for OneSignal tagging");
+          return;
+        }
+
+        if (window.OneSignal && window.OneSignal.setExternalUserId) {
+          console.log("Tagging OneSignal with user_id:", userId);
+          window.OneSignal.setExternalUserId(userId);
+          window.OneSignal.sendTag("user_id", userId, (tagsSent) => {
+            console.log("Tags sent to OneSignal:", tagsSent);
+          });
+        } else {
+          console.log("OneSignal not fully initialized for tagging");
+        }
+      };
+
+      // Tag user when auth state changes
+      const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+        if (session?.user?.id) {
+          tagUserWithOneSignal();
+        }
+      });
+
+      // Initial tag attempt
+      tagUserWithOneSignal();
+
+      return () => {
+        authListener.subscription.unsubscribe();
+      };
     };
 
-    // Initialize OneSignal on mount
-    initializeOneSignal();
-
-    // Tag user when auth state changes
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session?.user?.id) {
-        tagUserWithOneSignal();
-      }
-    });
-
-    // Initial check for session
-    tagUserWithOneSignal();
-
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
+    initializeAndTagOneSignal();
   }, []);
 
   return (
