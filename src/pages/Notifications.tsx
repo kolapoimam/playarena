@@ -12,34 +12,53 @@ const Notifications = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [profile, setProfile] = React.useState(null);
+  const [isVenueOwner, setIsVenueOwner] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
-    const fetchProfile = async () => {
+    const fetchProfileAndVenueStatus = async () => {
       setLoading(true);
+
+      // Fetch user session
       const { data: session } = await supabase.auth.getSession();
       if (!session.session) {
         navigate("/login");
         return;
       }
 
-      const { data, error } = await supabase
+      // Fetch user profile
+      const { data: profileData, error: profileError } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", session.session.user.id)
         .single();
 
-      if (error) {
+      if (profileError) {
         toast({ title: "Error", description: "Failed to load profile.", variant: "destructive" });
         setLoading(false);
         return;
       }
 
-      setProfile(data);
+      setProfile(profileData);
+
+      // Check if user is a venue owner
+      const { data: venueData, error: venueError } = await supabase
+        .from("venues")
+        .select("id")
+        .eq("user_id", session.session.user.id)
+        .limit(1);
+
+      if (venueError) {
+        console.error("Error checking venue ownership:", venueError);
+        setIsVenueOwner(false);
+      } else {
+        setIsVenueOwner(venueData.length > 0);
+      }
+
       setLoading(false);
     };
 
-    fetchProfile();
+    fetchProfileAndVenueStatus();
   }, [navigate, toast]);
 
   if (loading) {
@@ -70,13 +89,16 @@ const Notifications = () => {
       </header>
 
       <div className="flex-grow overflow-y-auto">
-        <div className="container mx-auto px-4 py-6">
-          <Card className="bg-white dark:bg-gray-800 border-none shadow-lg rounded-xl">
-            <CardContent className="p-6">
-              <UserNotifications profile={profile} setShowNotifications={() => navigate("/profile")} />
-            </CardContent>
-          </Card>
-        </div>
+        <Card className="bg-white dark:bg-gray-800 border-none shadow-lg rounded-xl">
+          <CardContent className="p-6">
+            <UserNotifications
+              profile={profile}
+              setShowNotifications={() => navigate("/profile")}
+              singleArrow={true} // Prop to indicate single arrow for dropdown
+              isVenueOwner={isVenueOwner} // Pass venue owner status
+            />
+          </CardContent>
+        </Card>
       </div>
 
       <div className="pb-28">
