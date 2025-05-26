@@ -61,7 +61,6 @@ const AppRoutes = () => {
     gtag.pageview(location.pathname + location.search);
   }, [location]);
 
-  const App = () => {
   useEffect(() => {
     const tagUserWithOneSignal = async () => {
       const { data: session } = await supabase.auth.getSession();
