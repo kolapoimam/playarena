@@ -1,19 +1,23 @@
-// Define the OneSignal SDK worker location
-importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDKWorker.js');
+// service-worker.js
+// Define the OneSignal SDK worker location using locally hosted files
+importScripts('/OneSignalSDKWorker.js');
 
+// Service Worker installation event
 self.addEventListener('install', (event) => {
   console.log('[Service Worker] Installed');
-  self.skipWaiting();
+  self.skipWaiting(); // Activate this service worker immediately
 });
 
+// Service Worker activation event
 self.addEventListener('activate', (event) => {
   console.log('[Service Worker] Activated');
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(self.clients.claim()); // Take control of all clients immediately
 });
 
+// Push event to handle incoming notifications
 self.addEventListener('push', (event) => {
-  console.log('[Service Worker] Push Received:', event.data.text());
-  const data = event.data.json();
+  console.log('[Service Worker] Push Received:', event.data ? event.data.text() : 'No data');
+  const data = event.data ? event.data.json() : {};
   const { title, body, icon } = data;
 
   const options = {
@@ -29,6 +33,7 @@ self.addEventListener('push', (event) => {
   );
 });
 
+// Notification click event to handle user interaction
 self.addEventListener('notificationclick', (event) => {
   console.log('[Service Worker] Notification Clicked');
   event.notification.close();
