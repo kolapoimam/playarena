@@ -61,23 +61,52 @@ const AppRoutes = () => {
 
   // OneSignal user tagging effect
   useEffect(() => {
-    // Listen for auth state changes to ensure we tag the user after login
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+    const tagUserWithOneSignal = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
       const userId = session?.user?.id;
-      if (userId && window.OneSignal) {
-        console.log("Tagging OneSignal with user_id:", userId); // Debug log
-        OneSignal.push(() => {
-          OneSignal.setExternalUserId(userId);
-          OneSignal.sendTag("user_id", userId, (tagsSent) => {
-            console.log("Tags sent to OneSignal:", tagsSent); // Debug log
-          });
+
+      if (!userId) {
+        console.log("No user session available for OneSignal tagging");
+        return;
+      }
+
+      // Wait for OneSignal to load
+      const waitForOneSignal = () => {
+        return new Promise((resolve) => {
+          const checkInterval = setInterval(() => {
+            if (window.OneSignal) {
+              clearInterval(checkInterval);
+              resolve(true);
+            }
+          }, 100); // Check every 100ms
+          setTimeout(() => {
+            clearInterval(checkInterval);
+            resolve(false); // Timeout after 5 seconds
+          }, 5000);
+        });
+      };
+
+      const isOneSignalLoaded = await waitForOneSignal();
+      if (isOneSignalLoaded && window.OneSignal) {
+        console.log("Tagging OneSignal with user_id:", userId);
+        window.OneSignal.setExternalUserId(userId);
+        window.OneSignal.sendTag("user_id", userId, (tagsSent) => {
+          console.log("Tags sent to OneSignal:", tagsSent);
         });
       } else {
-        console.log("No user session or OneSignal not loaded:", { userId, OneSignal: !!window.OneSignal });
+        console.log("OneSignal failed to load within 5 seconds");
+      }
+    };
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user?.id) {
+        tagUserWithOneSignal();
       }
     });
 
-    // Cleanup listener on component unmount
+    // Initial check for session
+    tagUserWithOneSignal();
+
     return () => {
       authListener.subscription.unsubscribe();
     };
