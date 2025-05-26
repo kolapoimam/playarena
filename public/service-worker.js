@@ -1,5 +1,3 @@
-// service-worker.js
-// Custom PWA and OneSignal integration
 self.addEventListener('install', (event) => {
   console.log('[Service Worker] Installed');
   self.skipWaiting();
@@ -46,5 +44,3 @@ self.addEventListener('notificationclick', (event) => {
     })
   );
 });
-
-// Delegate to OneSignal workers if needed (handled by App.tsx init)
