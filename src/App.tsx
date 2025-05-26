@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MantineProvider } from '@mantine/core';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import SplashScreen from "@/components/SplashScreen";
 import ScrollToTop from "@/components/ScrollToTop";
 import InstallPrompt from "@/components/InstallPrompt";
@@ -53,6 +53,7 @@ const queryClient = new QueryClient();
 const AppRoutes = () => {
   const location = useLocation();
   const [profile, setProfile] = useState(null);
+  const oneSignalInitialized = useRef(false);
 
   useEffect(() => {
     console.log("Current path:", location.pathname);
@@ -62,6 +63,12 @@ const AppRoutes = () => {
   // OneSignal initialization and user tagging effect
   useEffect(() => {
     const initializeAndTagOneSignal = async () => {
+      // Prevent multiple initializations
+      if (oneSignalInitialized.current) {
+        console.log("OneSignal already initialized, skipping...");
+        return;
+      }
+
       // Wait for OneSignal to load
       const waitForOneSignal = () => {
         return new Promise((resolve) => {
@@ -84,32 +91,41 @@ const AppRoutes = () => {
         return;
       }
 
-      // Initialize OneSignal and wait for completion
+      // Initialize OneSignal only if not already initialized
       try {
-        await new Promise((resolve) => {
-          window.OneSignal.init({
-            appId: import.meta.env.VITE_ONESIGNAL_APP_ID, // Ensure this is set in your .env file
-            allowLocalhostAsSecureOrigin: true,
-            serviceWorkerPath: '/OneSignalSDKWorker.js',
-            serviceWorkerUpdaterPath: '/OneSignalSDKUpdaterWorker.js',
-          }).then(() => {
-            console.log("OneSignal initialized successfully");
-            resolve();
-          }).catch((error) => {
-            console.error("OneSignal initialization error:", error);
-            resolve();
+        if (!window.OneSignal.isInitialized) {
+          await new Promise((resolve) => {
+            window.OneSignal.init({
+              appId: import.meta.env.VITE_ONESIGNAL_APP_ID, // Ensure this is set in your .env file
+              allowLocalhostAsSecureOrigin: true,
+              serviceWorkerPath: '/OneSignalSDKWorker.js',
+              serviceWorkerUpdaterPath: '/OneSignalSDKUpdaterWorker.js',
+            }).then(() => {
+              console.log("OneSignal initialized successfully");
+              oneSignalInitialized.current = true;
+              resolve();
+            }).catch((error) => {
+              console.error("OneSignal initialization error:", error);
+              resolve();
+            });
           });
-        });
+        } else {
+          console.log("OneSignal already initialized by another script");
+        }
 
         // Prompt for notification permission if not already granted
-        window.OneSignal.getNotificationPermission((permission) => {
-          if (permission !== "granted") {
-            console.log("Showing OneSignal slidedown prompt for permission");
-            window.OneSignal.showSlidedownPrompt();
-          } else {
-            console.log("Notification permission already granted:", permission);
-          }
-        });
+        if (window.OneSignal && window.OneSignal.getNotificationPermission) {
+          window.OneSignal.getNotificationPermission((permission) => {
+            if (permission !== "granted") {
+              console.log("Showing OneSignal slidedown prompt for permission");
+              window.OneSignal.showSlidedownPrompt();
+            } else {
+              console.log("Notification permission already granted:", permission);
+            }
+          });
+        } else {
+          console.log("OneSignal.getNotificationPermission not available");
+        }
       } catch (error) {
         console.error("OneSignal setup error:", error);
         return;
