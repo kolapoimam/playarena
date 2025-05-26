@@ -1,36 +1,59 @@
 import { serve } from "https://deno.land/std@0.131.0/http/server.ts";
+import { config } from "https://deno.land/std@0.203.0/dotenv/mod.ts";
 import { Resend } from "https://esm.sh/resend";
+
+// Load .env configuration
+await config({ export: true });
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
+// Helper to convert 24-hour time to 12-hour format
+function formatTimeTo12Hour(time24: string): string {
+  const [hourStr, minuteStr] = time24.split(":");
+  let hour = parseInt(hourStr, 10);
+  const minute = parseInt(minuteStr, 10);
+  const ampm = hour >= 12 ? "PM" : "AM";
+  hour = hour % 12 || 12;
+  return `${hour}:${minute.toString().padStart(2, "0")} ${ampm}`;
+}
+
 serve(async (req: Request) => {
   try {
-    const { venue_email, venue_name, match_date, start_time, end_time, user_email, access_code } = await req.json();
+    const {
+      venue_email,
+      venue_name,
+      match_date,
+      start_time,
+      end_time,
+      user_email,
+      access_code,
+    } = await req.json();
 
     if (!venue_email || !venue_name || !match_date || !start_time || !end_time || !user_email) {
-      console.error("Missing required fields:", { venue_email, venue_name, match_date, start_time, end_time, user_email, access_code });
       return new Response(
-        JSON.stringify({ error: "Missing required fields", missing: { venue_email, venue_name, match_date, start_time, end_time, user_email } }),
+        JSON.stringify({
+          error: "Missing required fields",
+          missing: { venue_email, venue_name, match_date, start_time, end_time, user_email },
+        }),
         { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }
+
+    const formattedStart = formatTimeTo12Hour(start_time);
+    const formattedEnd = formatTimeTo12Hour(end_time);
 
     const emailHtml = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>New Booking Confirmation</title>
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: 'Nunito', sans-serif;
+      font-family: 'Plus Jakarta Sans', sans-serif;
       background-color: #f3f4f6;
       color: #1f2937;
       line-height: 1.6;
@@ -93,38 +116,23 @@ serve(async (req: Request) => {
       text-decoration: none;
     }
     @media (max-width: 600px) {
-      .container {
-        margin: 10px;
-        border-radius: 8px;
-      }
-      .header {
-        padding: 20px;
-      }
-      .content {
-        padding: 20px;
-      }
-      .content h2 {
-        font-size: 20px;
-      }
-      .detail-row {
-        flex-direction: column;
-      }
-      .detail-label {
-        width: 100%;
-        margin-bottom: 4px;
-      }
+      .container { margin: 10px; border-radius: 8px; }
+      .header { padding: 20px; }
+      .content { padding: 20px; }
+      .content h2 { font-size: 20px; }
+      .detail-row { flex-direction: column; }
+      .detail-label { width: 100%; margin-bottom: 4px; }
     }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <img src="https://playarenagames.vercel.app/playarenadark.png" alt="Sport Cliq Logo">
+      <img src="https://sportcliq.com/playarenadark.png" alt="Sport Cliq Logo" />
     </div>
     <div class="content">
       <h2>New Booking Confirmation! 🎉</h2>
       <p>Exciting news! You've received a new booking through Sport Cliq. Here are all the details:</p>
-      
       <div class="booking-details">
         <div class="detail-row">
           <div class="detail-label">Venue:</div>
@@ -136,14 +144,13 @@ serve(async (req: Request) => {
         </div>
         <div class="detail-row">
           <div class="detail-label">Time Slot:</div>
-          <div class="detail-value">${start_time} - ${end_time}</div>
+          <div class="detail-value">${formattedStart} - ${formattedEnd}</div>
         </div>
         <div class="detail-row">
           <div class="detail-label">Booked By:</div>
           <div class="detail-value">${user_email}</div>
         </div>
       </div>
-      
       <p>Everything is confirmed and ready to go! The player will receive their booking confirmation shortly.</p>
     </div>
     <div class="footer">
@@ -152,11 +159,10 @@ serve(async (req: Request) => {
     </div>
   </div>
 </body>
-</html>
-`;
+</html>`;
 
     const response = await resend.emails.send({
-      from: "hello@sportcliq.com",
+      from: "Kay from SportCliq <hello@sportcliq.com>",
       to: venue_email,
       subject: `⚽ New Booking for ${venue_name}!`,
       html: emailHtml,
