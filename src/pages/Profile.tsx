@@ -5,7 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { User, LogOut, Trophy, Wallet, Calendar, BookOpen, Mail, Key, MapPin, ChevronRight, FileText, ArrowLeft } from "lucide-react";
+import { User, LogOut, Trophy, Wallet, Calendar, BookOpen, Mail, Key, MapPin, ChevronRight, FileText, ArrowLeft, Bell } from "lucide-react";
 import Navbar from "@/components/Navbar";
 
 const Profile = () => {
@@ -93,7 +93,7 @@ const Profile = () => {
   }
 
   return (
-      <div className="min-h-screen flex flex-col bg-gray-100 dark:bg-gray-900">
+    <div className="min-h-screen flex flex-col bg-gray-100 dark:bg-gray-900">
       <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg">
         <div className="flex items-center justify-between max-w-7xl mx-auto">
           <Button
@@ -110,7 +110,7 @@ const Profile = () => {
           <div className="w-10"></div>
         </div>
       </header>
-        
+
       <div className="flex-grow overflow-y-auto">
         <div className="container mx-auto px-4 py-6">
           <div className="flex flex-col items-center mb-6">
@@ -158,6 +158,15 @@ const Profile = () => {
                   >
                     <Trophy className="w-5 h-5 mr-3 text-brand" />
                     <span>Match Preferences</span>
+                    <ChevronRight className="w-5 h-5 ml-auto text-gray-400" />
+                  </Link>
+                  <Link
+                    to="/profile/notifications"
+                    className="flex items-center p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300"
+                    onClick={() => console.log("Navigating to /profile/notifications")}
+                  >
+                    <Bell className="w-5 h-5 mr-3 text-brand" />
+                    <span>Notifications</span>
                     <ChevronRight className="w-5 h-5 ml-auto text-gray-400" />
                   </Link>
                   <Link
