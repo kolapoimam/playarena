@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.131.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import * as OneSignal from "https://esm.sh/@onesignal/node-onesignal@2.0.0-beta2";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
 const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -8,15 +7,6 @@ const oneSignalAppId = Deno.env.get("ONESIGNAL_APP_ID") ?? "";
 const oneSignalApiKey = Deno.env.get("ONESIGNAL_API_KEY") ?? "";
 
 const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
-const oneSignalClient = new OneSignal.DefaultApi(
-  new OneSignal.Configuration({
-    authMethods: {
-      app_key: {
-        token: oneSignalApiKey,
-      },
-    },
-  })
-);
 
 serve(async (req) => {
   try {
@@ -39,17 +29,27 @@ serve(async (req) => {
     }
 
     if (notificationSettings.notification_type === "push") {
-      const notification = new OneSignal.Notification();
-      notification.app_id = oneSignalAppId;
-      notification.contents = { en: message };
-      notification.filters = [
-        { field: "tag", key: "user_id", relation: "=", value: user_id },
-      ];
-      if (data?.match_id) {
-        notification.data = { match_id: data.match_id };
-      }
+      const oneSignalUrl = `https://onesignal.com/api/v1/notifications`;
+      const headers = {
+        "Content-Type": "application/json",
+        Authorization: `Basic ${oneSignalApiKey}`,
+      };
+      const body = {
+        app_id: oneSignalAppId,
+        contents: { en: message },
+        filters: [{ field: "tag", key: "user_id", relation: "=", value: user_id }],
+        data: data || {},
+      };
 
-      await oneSignalClient.createNotification(notification);
+      const response = await fetch(oneSignalUrl, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(body),
+      });
+
+      if (!response.ok) {
+        throw new Error(`OneSignal API error: ${await response.text()}`);
+      }
     }
 
     return new Response(
