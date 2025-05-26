@@ -59,7 +59,6 @@ const AppRoutes = () => {
   }, [location]);
 
   return (
-    {/* <MobileOnlyGuard> */}
     <Routes>
       <Route path="/" element={<Index />} />
       <Route path="/search" element={<Search />} />
@@ -99,7 +98,6 @@ const AppRoutes = () => {
       <Route path="/venue/:slug/book" element={<VenueBookingForm />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
-{/* </MobileOnlyGuard> */}
   );
 };
 
