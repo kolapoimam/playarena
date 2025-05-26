@@ -67,16 +67,13 @@ const AppRoutes = () => {
       if (userId && window.OneSignal) {
         console.log("Tagging OneSignal with user_id:", userId); // Debug log
         OneSignal.push(() => {
-          OneSignal.login(userId).then(() => {
-            console.log("OneSignal login successful for user_id:", userId);
-            // Use the new addTag method instead of sendTag
-            OneSignal.User.addTag("user_id", userId).then(() => {
-              console.log("Tag added to OneSignal: user_id =", userId); // Debug log
-            }).catch((error) => {
-              console.error("OneSignal addTag error:", error);
-            });
+          OneSignal.login(userId); // No Promise, just call login
+          console.log("OneSignal login triggered for user_id:", userId);
+          // Add tag after login
+          OneSignal.User.addTag("user_id", userId).then(() => {
+            console.log("Tag added to OneSignal: user_id =", userId); // Debug log
           }).catch((error) => {
-            console.error("OneSignal login error:", error);
+            console.error("OneSignal addTag error:", error);
           });
         });
       } else {
