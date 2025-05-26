@@ -59,8 +59,56 @@ const AppRoutes = () => {
     gtag.pageview(location.pathname + location.search);
   }, [location]);
 
-  // OneSignal user tagging effect
+  // OneSignal initialization and user tagging effect
   useEffect(() => {
+    const initializeOneSignal = async () => {
+      // Wait for OneSignal to load
+      const waitForOneSignal = () => {
+        return new Promise((resolve) => {
+          const checkInterval = setInterval(() => {
+            if (window.OneSignal) {
+              clearInterval(checkInterval);
+              resolve(true);
+            }
+          }, 100);
+          setTimeout(() => {
+            clearInterval(checkInterval);
+            resolve(false);
+          }, 5000);
+        });
+      };
+
+      const isOneSignalLoaded = await waitForOneSignal();
+      if (!isOneSignalLoaded || !window.OneSignal) {
+        console.log("OneSignal failed to load within 5 seconds");
+        return;
+      }
+
+      // Initialize OneSignal
+      try {
+        await window.OneSignal.init({
+          appId: import.meta.env.VITE_ONESIGNAL_APP_ID, // Ensure this is set in your .env file
+          allowLocalhostAsSecureOrigin: true,
+          serviceWorkerPath: '/OneSignalSDKWorker.js',
+          serviceWorkerUpdaterPath: '/OneSignalSDKUpdaterWorker.js',
+        });
+        console.log("OneSignal initialized successfully");
+
+        // Prompt for notification permission if not already granted
+        window.OneSignal.getNotificationPermission((permission) => {
+          if (permission !== "granted") {
+            console.log("Showing OneSignal slidedown prompt for permission");
+            window.OneSignal.showSlidedownPrompt();
+          } else {
+            console.log("Notification permission already granted:", permission);
+          }
+        });
+      } catch (error) {
+        console.error("OneSignal initialization error:", error);
+        return;
+      }
+    };
+
     const tagUserWithOneSignal = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       const userId = session?.user?.id;
@@ -70,34 +118,21 @@ const AppRoutes = () => {
         return;
       }
 
-      // Wait for OneSignal to load
-      const waitForOneSignal = () => {
-        return new Promise((resolve) => {
-          const checkInterval = setInterval(() => {
-            if (window.OneSignal) {
-              clearInterval(checkInterval);
-              resolve(true);
-            }
-          }, 100); // Check every 100ms
-          setTimeout(() => {
-            clearInterval(checkInterval);
-            resolve(false); // Timeout after 5 seconds
-          }, 5000);
-        });
-      };
-
-      const isOneSignalLoaded = await waitForOneSignal();
-      if (isOneSignalLoaded && window.OneSignal) {
+      if (window.OneSignal && window.OneSignal.setExternalUserId) {
         console.log("Tagging OneSignal with user_id:", userId);
         window.OneSignal.setExternalUserId(userId);
         window.OneSignal.sendTag("user_id", userId, (tagsSent) => {
           console.log("Tags sent to OneSignal:", tagsSent);
         });
       } else {
-        console.log("OneSignal failed to load within 5 seconds");
+        console.log("OneSignal not fully initialized for tagging");
       }
     };
 
+    // Initialize OneSignal on mount
+    initializeOneSignal();
+
+    // Tag user when auth state changes
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user?.id) {
         tagUserWithOneSignal();
