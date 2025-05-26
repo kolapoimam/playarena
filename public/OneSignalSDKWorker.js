@@ -1,8 +1,5 @@
 // OneSignalSDKWorker.js
-// This file is the main service worker for OneSignal push notifications.
-
-// Import OneSignal's service worker logic from their CDN
-importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDKWorker.js');
-
-// Optional: Add custom service worker logic here if needed (e.g., for caching or other PWA features)
-// For now, we only need OneSignal's logic, so this file is minimal.
+// This file delegates to OneSignal's SDK for service worker logic
+// No additional imports needed; OneSignal handles this internally via init
+self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', () => self.clients.claim());
