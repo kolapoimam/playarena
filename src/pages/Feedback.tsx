@@ -532,15 +532,6 @@ ${summary.action_items.map((item, i) => `${i + 1}. ${item}`).join("\n")}
         </div>
       </header>
 
-      <div className="max-w-4xl mx-auto p-6">
-        <Button
-          variant="ghost"
-          onClick={() => navigate("/matches")}
-          className="text-green-500 mb-4 hover:text-green-600"
-        >
-          <ArrowLeft size={18} className="mr-2" />
-          Back to Matches
-        </Button>
 
         {match && !isOrganizer && !hasSubmitted && (
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700">
