@@ -9,6 +9,7 @@ import { useState, useEffect } from 'react';
 import SplashScreen from "@/components/SplashScreen";
 import ScrollToTop from "@/components/ScrollToTop";
 import InstallPrompt from "@/components/InstallPrompt";
+import { useGoogleAnalytics } from "@/hooks/useGoogleAnalytics";
 
 import Index from "@/pages/Index";
 import Search from "@/pages/Search";
@@ -104,6 +105,9 @@ const AppRoutes = () => {
 };
 
 const App = () => {
+  useGoogleAnalytics();
+  
+  const App = () => {
   const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
