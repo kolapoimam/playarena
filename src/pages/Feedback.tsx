@@ -759,8 +759,8 @@ ${summary.action_items.map((item, i) => `${i + 1}. ${item}`).join("\n")}
             </DialogTitle>
             <DialogDescription className="text-gray-600 dark:text-gray-400 text-center mt-2 text-sm">
               {isOrganizer
-                ? "Enter your organizer super code to review feedback."
-                : "Enter your 6-digit player confirmation code to proceed."}
+                ? "Enter your code to proceed."
+                : "Enter your code to proceed."}
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
