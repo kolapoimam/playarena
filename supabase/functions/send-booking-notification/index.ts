@@ -174,7 +174,7 @@ serve(async (req: Request) => {
         background: linear-gradient(135deg, #17a34a 0%, #138a3e 100%);
       }
       .header img {
-        content: url('https://playarenagames.vercel.app/playarenadark.png');
+        content: url('https://sportcliq.com/playarenadark.png');
       }
       .content h2 {
         color: #17a34a;
@@ -278,7 +278,7 @@ serve(async (req: Request) => {
 <body>
   <div class="container">
     <div class="header">
-      <img src="https://playarenagames.vercel.app/playarenadark.png" alt="SportCliq Logo">
+      <img src="https://sportcliq.com/playarenadark.png" alt="SportCliq Logo">
     </div>
     <div class="content">
       <h2>Score! New Booking Alert! 💰</h2>
