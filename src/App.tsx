@@ -77,28 +77,31 @@ const AppRoutes = () => {
             if (window.OneSignal && window.OneSignal.isInitialized) {
               clearInterval(checkInterval);
               resolve(true);
+            } else if (window.OneSignal) {
+              console.log("OneSignal loaded but not initialized:", window.OneSignal);
             }
           }, 100);
           setTimeout(() => {
             clearInterval(checkInterval);
             console.log("OneSignal load timeout, window.OneSignal:", window.OneSignal);
             resolve(false);
-          }, 10000); // 10-second timeout
+          }, 15000); // Increased to 15 seconds
         });
       };
 
       const isOneSignalLoaded = await waitForOneSignal();
       if (!isOneSignalLoaded || !window.OneSignal) {
-        console.log("OneSignal failed to load or initialize within 10 seconds");
+        console.log("OneSignal failed to load or initialize within 15 seconds");
         return;
       }
 
       // Initialize OneSignal only if not already initialized
       try {
         if (!window.OneSignal.isInitialized) {
-          await new Promise((resolve) => {
+          console.log("Attempting to initialize OneSignal with appId:", import.meta.env.VITE_ONESIGNAL_APP_ID);
+          await new Promise((resolve, reject) => {
             window.OneSignal.init({
-              appId: import.meta.env.VITE_ONESIGNAL_APP_ID, // Ensure this is set in your .env file
+              appId: import.meta.env.VITE_ONESIGNAL_APP_ID,
               allowLocalhostAsSecureOrigin: true,
               serviceWorkerPath: '/OneSignalSDKWorker.js',
               serviceWorkerUpdaterPath: '/OneSignalSDKUpdaterWorker.js',
@@ -108,7 +111,7 @@ const AppRoutes = () => {
               resolve();
             }).catch((error) => {
               console.error("OneSignal initialization error:", error);
-              resolve();
+              reject(error);
             });
           });
         } else {
@@ -126,6 +129,7 @@ const AppRoutes = () => {
             }, 100);
             setTimeout(() => {
               clearInterval(checkInterval);
+              console.log("getNotificationPermission not available after 5 seconds");
               resolve(false);
             }, 5000);
           });
@@ -141,25 +145,9 @@ const AppRoutes = () => {
               console.log("Notification permission already granted:", permission);
             }
           });
-        } else {
-          console.log("OneSignal.getNotificationPermission not available after 5 seconds");
-        }
-      } catch (error) {
-        console.error("OneSignal setup error:", error);
-        return;
-      }
-
-      // Tag user with OneSignal
-      const tagUserWithOneSignal = async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        const userId = session?.user?.id;
-
-        if (!userId) {
-          console.log("No user session available for OneSignal tagging");
-          return;
         }
 
-        // Wait for setExternalUserId to be available
+        // Wait for tagging methods to be available
         const waitForTaggingMethods = () => {
           return new Promise((resolve) => {
             const checkInterval = setInterval(() => {
@@ -170,6 +158,7 @@ const AppRoutes = () => {
             }, 100);
             setTimeout(() => {
               clearInterval(checkInterval);
+              console.log("setExternalUserId not available after 5 seconds");
               resolve(false);
             }, 5000);
           });
@@ -177,29 +166,41 @@ const AppRoutes = () => {
 
         const isTaggingAvailable = await waitForTaggingMethods();
         if (isTaggingAvailable && window.OneSignal.setExternalUserId) {
-          console.log("Tagging OneSignal with user_id:", userId);
-          window.OneSignal.setExternalUserId(userId);
-          window.OneSignal.sendTag("user_id", userId, (tagsSent) => {
-            console.log("Tags sent to OneSignal:", tagsSent);
+          const tagUserWithOneSignal = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            const userId = session?.user?.id;
+
+            if (!userId) {
+              console.log("No user session available for OneSignal tagging");
+              return;
+            }
+
+            console.log("Tagging OneSignal with user_id:", userId);
+            window.OneSignal.setExternalUserId(userId);
+            window.OneSignal.sendTag("user_id", userId, (tagsSent) => {
+              console.log("Tags sent to OneSignal:", tagsSent);
+            });
+          };
+
+          // Tag user when auth state changes
+          const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+            if (session?.user?.id) {
+              tagUserWithOneSignal();
+            }
           });
+
+          // Initial tag attempt
+          tagUserWithOneSignal();
+
+          return () => {
+            authListener.subscription.unsubscribe();
+          };
         } else {
           console.log("OneSignal not fully initialized for tagging after 5 seconds");
         }
-      };
-
-      // Tag user when auth state changes
-      const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-        if (session?.user?.id) {
-          tagUserWithOneSignal();
-        }
-      });
-
-      // Initial tag attempt
-      tagUserWithOneSignal();
-
-      return () => {
-        authListener.subscription.unsubscribe();
-      };
+      } catch (error) {
+        console.error("OneSignal setup error:", error);
+      }
     };
 
     initializeAndTagOneSignal();
