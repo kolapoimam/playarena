@@ -9,9 +9,7 @@ import ScrollToTop from "@/components/ScrollToTop";
 import InstallPrompt from "@/components/InstallPrompt";
 import { useGoogleAnalytics } from "@/hooks/useGoogleAnalytics";
 import * as gtag from "@/lib/gtag";
-import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-//import MobileOnlyGuard from "@/components/MobileOnlyGuard";//
 
 // Import all page components
 import Index from "@/pages/Index";
@@ -61,16 +59,28 @@ const AppRoutes = () => {
     gtag.pageview(location.pathname + location.search);
   }, [location]);
 
+  // OneSignal user tagging effect
   useEffect(() => {
-    const tagUserWithOneSignal = async () => {
-      const { data: session } = await supabase.auth.getSession();
-      const userId = session?.session?.user?.id;
+    // Listen for auth state changes to ensure we tag the user after login
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      const userId = session?.user?.id;
       if (userId && window.OneSignal) {
-        window.OneSignal.setExternalUserId(userId);
-        window.OneSignal.sendTag("user_id", userId);
+        console.log("Tagging OneSignal with user_id:", userId); // Debug log
+        OneSignal.push(() => {
+          OneSignal.setExternalUserId(userId);
+          OneSignal.sendTag("user_id", userId, (tagsSent) => {
+            console.log("Tags sent to OneSignal:", tagsSent); // Debug log
+          });
+        });
+      } else {
+        console.log("No user session or OneSignal not loaded:", { userId, OneSignal: !!window.OneSignal });
       }
+    });
+
+    // Cleanup listener on component unmount
+    return () => {
+      authListener.subscription.unsubscribe();
     };
-    tagUserWithOneSignal();
   }, []);
 
   return (
