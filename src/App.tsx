@@ -67,9 +67,13 @@ const AppRoutes = () => {
       if (userId && window.OneSignal) {
         console.log("Tagging OneSignal with user_id:", userId); // Debug log
         OneSignal.push(() => {
-          OneSignal.setExternalUserId(userId);
-          OneSignal.sendTag("user_id", userId, (tagsSent) => {
-            console.log("Tags sent to OneSignal:", tagsSent); // Debug log
+          OneSignal.login(userId).then(() => {
+            console.log("OneSignal login successful for user_id:", userId);
+            OneSignal.sendTag("user_id", userId, (tagsSent) => {
+              console.log("Tags sent to OneSignal:", tagsSent); // Debug log
+            });
+          }).catch((error) => {
+            console.error("OneSignal login error:", error);
           });
         });
       } else {
