@@ -9,6 +9,8 @@ import ScrollToTop from "@/components/ScrollToTop";
 import InstallPrompt from "@/components/InstallPrompt";
 import { useGoogleAnalytics } from "@/hooks/useGoogleAnalytics";
 import * as gtag from "@/lib/gtag";
+import { useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 //import MobileOnlyGuard from "@/components/MobileOnlyGuard";//
 
 // Import all page components
@@ -57,6 +59,19 @@ const AppRoutes = () => {
     console.log("Current path:", location.pathname);
     gtag.pageview(location.pathname + location.search);
   }, [location]);
+
+  const App = () => {
+  useEffect(() => {
+    const tagUserWithOneSignal = async () => {
+      const { data: session } = await supabase.auth.getSession();
+      const userId = session?.session?.user?.id;
+      if (userId && window.OneSignal) {
+        window.OneSignal.setExternalUserId(userId);
+        window.OneSignal.sendTag("user_id", userId);
+      }
+    };
+    tagUserWithOneSignal();
+  }, []);
 
   return (
     <Routes>
