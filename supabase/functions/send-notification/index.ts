@@ -10,8 +10,32 @@ const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
 serve(async (req) => {
   try {
-    const { record } = await req.json();
-    const { event_type, user_id, message, data } = record;
+    const payload = await req.json();
+    const { type, record, old_record } = payload;
+
+    // Map the Supabase webhook payload to the expected format
+    let event_type = "match_playing_time"; // Default event type
+    let user_id = record?.user_id || old_record?.user_id;
+    let message = "A match event occurred!";
+    let data = { match_id: record?.id || old_record?.id };
+
+    if (type === "INSERT") {
+      event_type = "match_playing_time";
+      message = "New match created!";
+    } else if (type === "UPDATE") {
+      event_type = "match_organizing_slot_filled";
+      message = "Match slot updated!";
+    } else if (type === "DELETE") {
+      event_type = "match_organizing_slot_filled";
+      message = "Match deleted!";
+    }
+
+    if (!user_id) {
+      return new Response(
+        JSON.stringify({ message: "No user_id found in the record" }),
+        { status: 400 }
+      );
+    }
 
     const { data: notificationSettings, error: settingsError } = await supabase
       .from("user_notifications")
