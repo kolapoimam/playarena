@@ -272,7 +272,7 @@ const Performance = ({ profile }: PerformanceProps) => {
             <img
               src={document.documentElement.classList.contains("dark") ? "/playarenadark.png" : "/playarenalight.png"}
               alt="PlayArena Logo"
-              className="absolute bottom-2 w-20 h-20 object-contain"
+              className="absolute bottom-2 w-18 h-18 object-contain"
             />
           </div>
           <div className="flex gap-2 justify-center">
