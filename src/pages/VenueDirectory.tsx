@@ -364,7 +364,7 @@ const VenueDirectory = () => {
                     />
                     <Button
                       variant="ghost"
-                      className="absolute bottom-[-2rem] right-2 text-red-500 hover:text-red-700 bg-white dark:bg-gray-800/80 rounded-full p-1 z-10"
+                      className="absolute bottom-2 right-2 text-red-500 hover:text-red-700 bg-white dark:bg-gray-800/80 rounded-full p-1 z-10"
                       onClick={(e) => {
                         e.stopPropagation();
                         toggleFavorite(venue.id);
