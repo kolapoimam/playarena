@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Trophy, Clock, MapPin } from "lucide-react";
+import { Trophy, Clock, MapPin, Shirt } from "lucide-react";
 import { isPast, format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useDrag, useDrop } from "react-dnd";
@@ -19,11 +19,98 @@ type Team = {
 };
 type Match = { id: string; slug: string; super_code: string; title: string; match_date: string; match_time: string; venue: string };
 
-// Utility function for generating a random emoji
-const getRandomAvatar = (playerId: string) => {
-  const emojis = ["🎽", "👕"];
-  const seed = playerId.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
-  return emojis[seed % emojis.length];
+// Utility function for getting team colors
+const getTeamColorScheme = (teamName: string) => {
+  const colorSchemes = {
+    'Team 1': {
+      jersey: 'text-blue-600 dark:text-blue-300',
+      background: 'bg-blue-50 dark:bg-blue-900/30',
+      border: 'border-blue-300 dark:border-blue-500',
+      hover: 'hover:bg-blue-100 dark:hover:bg-blue-800/40'
+    },
+    'Team 2': {
+      jersey: 'text-red-600 dark:text-red-300',
+      background: 'bg-red-50 dark:bg-red-900/30',
+      border: 'border-red-300 dark:border-red-500',
+      hover: 'hover:bg-red-100 dark:hover:bg-red-800/40'
+    },
+    'Team 3': {
+      jersey: 'text-green-600 dark:text-green-300',
+      background: 'bg-green-50 dark:bg-green-900/30',
+      border: 'border-green-300 dark:border-green-500',
+      hover: 'hover:bg-green-100 dark:hover:bg-green-800/40'
+    },
+    'Team 4': {
+      jersey: 'text-yellow-600 dark:text-yellow-300',
+      background: 'bg-yellow-50 dark:bg-yellow-900/30',
+      border: 'border-yellow-300 dark:border-yellow-500',
+      hover: 'hover:bg-yellow-100 dark:hover:bg-yellow-800/40'
+    },
+    'Team 5': {
+      jersey: 'text-purple-600 dark:text-purple-300',
+      background: 'bg-purple-50 dark:bg-purple-900/30',
+      border: 'border-purple-300 dark:border-purple-500',
+      hover: 'hover:bg-purple-100 dark:hover:bg-purple-800/40'
+    },
+    'Team 6': {
+      jersey: 'text-pink-600 dark:text-pink-300',
+      background: 'bg-pink-50 dark:bg-pink-900/30',
+      border: 'border-pink-300 dark:border-pink-500',
+      hover: 'hover:bg-pink-100 dark:hover:bg-pink-800/40'
+    },
+    'Team 7': {
+      jersey: 'text-orange-600 dark:text-orange-300',
+      background: 'bg-orange-50 dark:bg-orange-900/30',
+      border: 'border-orange-300 dark:border-orange-500',
+      hover: 'hover:bg-orange-100 dark:hover:bg-orange-800/40'
+    },
+    'Team 8': {
+      jersey: 'text-cyan-600 dark:text-cyan-300',
+      background: 'bg-cyan-50 dark:bg-cyan-900/30',
+      border: 'border-cyan-300 dark:border-cyan-500',
+      hover: 'hover:bg-cyan-100 dark:hover:bg-cyan-800/40'
+    },
+    'Team 9': {
+      jersey: 'text-amber-600 dark:text-amber-300',
+      background: 'bg-amber-50 dark:bg-amber-900/30',
+      border: 'border-amber-300 dark:border-amber-500',
+      hover: 'hover:bg-amber-100 dark:hover:bg-amber-800/40'
+    },
+    'Team 10': {
+      jersey: 'text-lime-600 dark:text-lime-300',
+      background: 'bg-lime-50 dark:bg-lime-900/30',
+      border: 'border-lime-300 dark:border-lime-500',
+      hover: 'hover:bg-lime-100 dark:hover:bg-lime-800/40'
+    }
+  };
+
+  // Generate colors for additional teams
+  const generateColor = (index: number) => {
+    const hue = (index * 36) % 360; // 36 degree spacing for distinct colors
+    const saturation = 75;
+    const lightness = 50;
+    const hsl = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+    return {
+      jersey: `text-[${hsl}] dark:text-[${hsl}]`,
+      background: `bg-[${hsl}]/10 dark:bg-[${hsl}]/50`,
+      border: `border-[${hsl}]/20 dark:border-[${hsl}]/70`,
+      hover: `hover:bg-[${hsl}]/20 dark:hover:bg-[${hsl}]/70`
+    };
+  };
+
+  // Extract team number from name (e.g., Team 11 -> 11)
+  const teamNumber = parseInt(teamName.replace(/[^\d]/g, ''));
+  if (teamNumber > 10) {
+    return generateColor(teamNumber);
+  }
+
+  // Default to gray for unknown teams
+  return colorSchemes[teamName] || {
+    jersey: 'text-gray-500 dark:text-gray-400',
+    background: 'bg-gray-50 dark:bg-gray-900/50',
+    border: 'border-gray-200 dark:border-gray-700',
+    hover: 'hover:bg-gray-100 dark:hover:bg-gray-800/50'
+  };
 };
 
 // Player Card Component
@@ -38,11 +125,11 @@ const PlayerCard = ({ playerId, teamName, players }: { playerId: string; teamNam
   return (
     <div
       ref={drag}
-      className={`p-3 mb-2 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center space-x-3 shadow-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-opacity ${isDragging ? "opacity-50" : "opacity-100"}`}
+      className={`p-3 mb-2 rounded-lg flex items-center space-x-3 shadow-sm transition-opacity ${isDragging ? "opacity-50" : "opacity-100"}`}
     >
-      <span className="text-2xl">{getRandomAvatar(player.id)}</span>
+      <Shirt className={`w-6 h-6 ${getTeamColorScheme(teamName).jersey}`} />
       <div className="flex-1">
-        <p className="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100">{player.player_name}</p>
+        <p className="text-xs sm:text-sm font-medium">{player.player_name}</p>
       </div>
     </div>
   );
