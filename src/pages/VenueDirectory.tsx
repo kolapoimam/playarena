@@ -349,36 +349,36 @@ const VenueDirectory = () => {
           </div>
         ) : filteredVenues.length > 0 ? (
           <>
-            <div className="space-y-4">
-              {currentVenues.map((venue) => {
-                const defaultImage = "https://dailytrust.com/wp-content/uploads/2023/12/football-488714_1280.jpg";
-                const venueImage = venue.image_urls && venue.image_urls.length > 0 ? venue.image_urls[0] : defaultImage;
+<div className="space-y-4">
+  {currentVenues.map((venue) => {
+    const defaultImage = "https://dailytrust.com/wp-content/uploads/2023/12/football-488714_1280.jpg";
+    const venueImage = venue.image_urls && venue.image_urls.length > 0 ? venue.image_urls[0] : defaultImage;
 
-                return (
-<div
-  key={venue.id}
-  className="border rounded-lg overflow-hidden shadow-sm bg-white dark:bg-gray-800 cursor-pointer"
-  onClick={() => navigate(`/venue/${venue.slug}`)}
->
-  <div className="relative">
-    <img
-      src={venueImage}
-      alt={venue.name}
-      className="w-full h-36 object-cover"
-    />
-    <Button
-      variant="ghost"
-      className="absolute bottom-2 right-2 text-red-500 hover:text-red-700 bg-white dark:bg-gray-800/80 rounded-full p-1"
-      onClick={(e) => {
-        e.stopPropagation();
-        toggleFavorite(venue.id);
-      }}
-    >
-      <Heart
-        size={20}
-        fill={favorites.has(venue.id) ? "red" : "none"}
-      />
-    </Button>
+    return (
+      <div
+        key={venue.id}
+        className="border rounded-lg overflow-hidden shadow-sm bg-white dark:bg-gray-800 cursor-pointer"
+        onClick={() => navigate(`/venue/${venue.slug}`)}
+      >
+        <div className="relative">
+          <img
+            src={venueImage}
+            alt={venue.name}
+            className="w-full h-36 object-cover"
+          />
+          <Button
+            variant="ghost"
+            className="absolute bottom-2 right-2 text-red-500 hover:text-red-700 bg-white dark:bg-gray-800/80 rounded-full p-1"
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleFavorite(venue.id);
+            }}
+          >
+            <Heart
+              size={20}
+              fill={favorites.has(venue.id) ? "red" : "none"}
+            />
+          </Button>
                     <div className="p-4">
                       <div className="flex items-center">
                         <h3 className="font-bold text-lg text-gray-800 dark:text-gray-200 mb-1">{venue.name}</h3>
