@@ -96,8 +96,6 @@ const TicketReceipt = () => {
         pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
         pdf.save(`PlayArena-Ticket-${ticket?.match.title.replace(/\s+/g, '-')}.pdf`);
       }
-    } ticket?.match.title.replace(/\s+/g, '-')}.pdf`);
-      }
     } catch (error) {
       console.error("Error generating ticket:", error);
       toast({
