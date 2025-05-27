@@ -30,7 +30,7 @@ const UserDashboard = ({ profile }: UserDashboardProps) => {
     total_cashout: 0,
     total_venues: 0,
   });
-  const [analyticsFilter, setAnalyticsFilter] = useState<"all" | "month" | "week">("all");
+  const [analyticsFilter, setAnalyticsFilter] = useState<"all" | "this_month" | "last_month" | "this_week" | "last_week">("all");
 
   useEffect(() => {
     if (profile) {
@@ -47,21 +47,30 @@ const UserDashboard = ({ profile }: UserDashboardProps) => {
       .select("amount, transaction_type, created_at")
       .eq("user_id", session.session.user.id);
 
-    if (analyticsFilter === "month") {
+    const now = new Date();
+    if (analyticsFilter === "this_month") {
       query = query.gte(
         "created_at",
-        new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString()
+        new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
       );
-    } else if (analyticsFilter === "week") {
-      query = query.gte(
-        "created_at",
-        new Date(new Date().setDate(new Date().getDate() - 7)).toISOString()
-      );
-          } else if (analyticsFilter === "last week") {
-      query = query.gte(
-        "created_at",
-        new Date(new Date().setDate(new Date().getDate() + 7)).toISOString()
-      );
+    } else if (analyticsFilter === "last_month") {
+      const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+      query = query
+        .gte("created_at", lastMonthStart.toISOString())
+        .lte("created_at", lastMonthEnd.toISOString());
+    } else if (analyticsFilter === "this_week") {
+      const weekStart = new Date(now.setDate(now.getDate() - now.getDay()));
+      weekStart.setHours(0, 0, 0, 0);
+      query = query.gte("created_at", weekStart.toISOString());
+    } else if (analyticsFilter === "last_week") {
+      const lastWeekStart = new Date(now.setDate(now.getDate() - now.getDay() - 7));
+      lastWeekStart.setHours(0, 0, 0, 0);
+      const lastWeekEnd = new Date(now.setDate(now.getDate() - now.getDay() - 1));
+      lastWeekEnd.setHours(23, 59, 59, 999);
+      query = query
+        .gte("created_at", lastWeekStart.toISOString())
+        .lte("created_at", lastWeekEnd.toISOString());
     }
 
     const { data: transactions, error: transError } = await query;
@@ -106,7 +115,7 @@ const UserDashboard = ({ profile }: UserDashboardProps) => {
         </CardTitle>
         <Select
           value={analyticsFilter}
-          onValueChange={(value) => setAnalyticsFilter(value as "all" | "month" | "week")}
+          onValueChange={(value) => setAnalyticsFilter(value as "all" | "this_month" | "last_month" | "this_week" | "last_week")}
           className="w-[180px]"
         >
           <SelectTrigger className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100">
@@ -116,13 +125,16 @@ const UserDashboard = ({ profile }: UserDashboardProps) => {
             <SelectItem value="all" className="text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
               All Time
             </SelectItem>
-            <SelectItem value="month" className="text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+            <SelectItem value="this_month" className="text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
               This Month
             </SelectItem>
-            <SelectItem value="week" className="text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+            <SelectItem value="last_month" className="text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+              Last Month
+            </SelectItem>
+            <SelectItem value="this_week" className="text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
               This Week
             </SelectItem>
-<SelectItem value="last week" className="text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+            <SelectItem value="last_week" className="text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
               Last Week
             </SelectItem>
           </SelectContent>
