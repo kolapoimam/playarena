@@ -32,10 +32,10 @@ type Venue = {
 
 // List of Nigerian states
 const nigerianStates = [
-  "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", "Borno", 
-  "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu", "Gombe", "Imo", 
-  "Jigawa", "Kaduna", "Kano", "Katsina", "Kebbi", "Kogi", "Kwara", "Lagos", 
-  "Nasarawa", "Niger", "Ogun", "Ondo", "Osun", "Oyo", "Plateau", "Rivers", 
+  "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", "Borno",
+  "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu", "Gombe", "Imo",
+  "Jigawa", "Kaduna", "Kano", "Katsina", "Kebbi", "Kogi", "Kwara", "Lagos",
+  "Nasarawa", "Niger", "Ogun", "Ondo", "Osun", "Oyo", "Plateau", "Rivers",
   "Sokoto", "Taraba", "Yobe", "Zamfara", "FCT"
 ];
 
@@ -241,9 +241,9 @@ const VenueDirectory = () => {
     <div className="min-h-screen pb-24 bg-gray-100 dark:bg-gray-900">
       <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg">
         <div className="flex items-center justify-between max-w-7xl mx-auto">
-          <Button 
-            variant="ghost" 
-            onClick={() => navigate(-1)} 
+          <Button
+            variant="ghost"
+            onClick={() => navigate(-1)}
             className="text-white hover:bg-green-600"
           >
             <ArrowLeft size={18} className="mr-2" />
@@ -349,43 +349,39 @@ const VenueDirectory = () => {
           </div>
         ) : filteredVenues.length > 0 ? (
           <>
-<div className="space-y-4">
-  {currentVenues.map((venue) => {
-    const defaultImage = "https://dailytrust.com/wp-content/uploads/2023/12/football-488714_1280.jpg";
-    const venueImage = venue.image_urls && venue.image_urls.length > 0 ? venue.image_urls[0] : defaultImage;
-
-    return (
-      <div
-        key={venue.id}
-        className="border rounded-lg overflow-hidden shadow-sm bg-white dark:bg-gray-800 cursor-pointer"
-        onClick={() => navigate(`/venue/${venue.slug}`)}
-      >
-        <div className="relative">
-          <img
-            src={venueImage}
-            alt={venue.name}
-            className="w-full h-36 object-cover"
-          />
-          <Button
-            variant="ghost"
-            className="absolute bottom-2 right-2 text-red-500 hover:text-red-700 bg-white dark:bg-gray-800/80 rounded-full p-1"
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleFavorite(venue.id);
-            }}
-          >
-            <Heart
-              size={20}
-              fill={favorites.has(venue.id) ? "red" : "none"}
-            />
-          </Button>
+            <div className="space-y-4">
+              {currentVenues.map((venue) => (
+                <div
+                  key={venue.id}
+                  className="border rounded-lg overflow-hidden shadow-sm bg-white dark:bg-gray-800 cursor-pointer"
+                  onClick={() => navigate(`/venue/${venue.slug}`)}
+                >
+                  <div className="relative">
+                    <img
+                      src={venue.image_urls && venue.image_urls.length > 0 ? venue.image_urls[0] : "https://dailytrust.com/wp-content/uploads/2023/12/football-488714_1280.jpg"}
+                      alt={venue.name}
+                      className="w-full h-36 object-cover"
+                    />
+                    <Button
+                      variant="ghost"
+                      className="absolute bottom-2 right-2 text-red-500 hover:text-red-700 bg-white dark:bg-gray-800/80 rounded-full p-1"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleFavorite(venue.id);
+                      }}
+                    >
+                      <Heart
+                        size={20}
+                        fill={favorites.has(venue.id) ? "red" : "none"}
+                      />
+                    </Button>
                     <div className="p-4">
                       <div className="flex items-center">
                         <h3 className="font-bold text-lg text-gray-800 dark:text-gray-200 mb-1">{venue.name}</h3>
                         {venue.is_verified && (
-                          <img 
-                            src="/green-verified.png" 
-                            alt="Verified" 
+                          <img
+                            src="/green-verified.png"
+                            alt="Verified"
                             className="ml-1 w-4 h-4 object-contain"
                           />
                         )}
@@ -418,8 +414,8 @@ const VenueDirectory = () => {
                       )}
                     </div>
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
 
             <div className="flex justify-between items-center mt-4">
