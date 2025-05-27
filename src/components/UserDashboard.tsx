@@ -57,6 +57,11 @@ const UserDashboard = ({ profile }: UserDashboardProps) => {
         "created_at",
         new Date(new Date().setDate(new Date().getDate() - 7)).toISOString()
       );
+          } else if (analyticsFilter === "last week") {
+      query = query.gte(
+        "created_at",
+        new Date(new Date().setDate(new Date().getDate() + 7)).toISOString()
+      );
     }
 
     const { data: transactions, error: transError } = await query;
@@ -116,6 +121,9 @@ const UserDashboard = ({ profile }: UserDashboardProps) => {
             </SelectItem>
             <SelectItem value="week" className="text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
               This Week
+            </SelectItem>
+<SelectItem value="last week" className="text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+              Last Week
             </SelectItem>
           </SelectContent>
         </Select>
