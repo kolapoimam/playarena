@@ -137,7 +137,7 @@ const Ticketing = () => {
 
       // Check if tickets can still be purchased
       const matchDateTime = new Date(`${matchData.match_date}T${matchData.match_time}`);
-      const now = new Date("2025-05-15T18:15:00+01:00"); // 06:15 PM WAT, May 15, 2025
+      const now = new Date(); // Current date and time: 05:14 PM WAT, May 27, 2025
       const thirtyMinutesAfter = new Date(matchDateTime.getTime() + 30 * 60 * 1000);
 
       if (now > thirtyMinutesAfter) {
@@ -196,6 +196,8 @@ const Ticketing = () => {
     try {
       setSubmitting(true);
 
+      // totalPrice is in naira (e.g., 5000 for one ticket at ₦5000)
+      // Convert to kobo for Paystack (5000 * 100 = 500000 kobo)
       const response = await supabase.functions.invoke("initialize-paystack-transaction", {
         body: {
           email: defaultEmail,
@@ -234,14 +236,14 @@ const Ticketing = () => {
             // Generate unique 6-digit ticket code
             const ticketCode = Math.floor(100000 + Math.random() * 900000).toString();
 
-            // Insert ticket purchase
+            // Insert ticket purchase, storing total_price in naira
             const { error } = await supabase.from("tickets").insert({
               match_id: match.id,
               buyer_name: data.buyer_name,
               buyer_phone: data.buyer_phone,
               number_of_tickets: data.number_of_tickets,
               ticket_code: ticketCode,
-              total_price: totalPrice,
+              total_price: totalPrice, // Store in naira (e.g., 5000)
               purchase_date: new Date().toISOString(),
             });
 
@@ -252,7 +254,7 @@ const Ticketing = () => {
               description: "Your tickets have been purchased.",
             });
 
-            // Redirect to receipt page (relative path)
+            // Redirect to receipt page
             navigate(`ticket-receipt/${ticketCode}`);
           } catch (error) {
             console.error("Error completing purchase:", error);
@@ -324,7 +326,7 @@ const Ticketing = () => {
       return;
     }
 
-    // Calculate total price (in naira)
+    // Calculate total price in naira (e.g., 1 ticket * ₦5000 = ₦5000)
     const totalPrice = data.number_of_tickets * (match.ticket_price || 0);
 
     if (!match.ticket_price || totalPrice === 0) {
@@ -348,7 +350,7 @@ const Ticketing = () => {
           description: "Your tickets have been purchased.",
         });
 
-        // Redirect to receipt page (relative path)
+        // Redirect to receipt page
         navigate(`ticket-receipt/${ticketCode}`);
       } catch (error) {
         console.error("Error purchasing tickets:", error);
