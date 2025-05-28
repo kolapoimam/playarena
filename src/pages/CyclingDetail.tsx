@@ -6,14 +6,48 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, ExternalLink, Bicycle } from "lucide-react";
 import CyclingDetailsDialogue from "@/components/CyclingDetailsDialogue";
-import Navbar from "@/components";
+import Navbar from "@/components/Navbar";
+
+type Landmark = {
+  name: string;
+  state: string;
+  description: string;
+  map_link: string;
+};
+
+type Attendee = {
+  id: string;
+  attendee_name: string;
+  attendee_phone: string;
+  attendee_status: string;
+  cycling_event_id: string;
+};
+
+type CyclingEvent = {
+  id: string;
+  slug: string;
+  title: string;
+  event_date: string;
+  start_time: string;
+  duration_value: number;
+  duration_type: string;
+  max_attendees: number;
+  is_free: boolean;
+  host_name: string;
+  host_phone: string;
+  notes?: string;
+  is_own_bike: boolean;
+  is_rental_available: boolean;
+  start_landmark: Landmark;
+  end_landmark?: Landmark;
+};
 
 const CyclingDetail = () => {
-  const { slug } = useParams();
+  const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [event, setEvent] = useState(null);
-  const [attendees, setAttendees] = useState([]);
+  const [event, setEvent] = useState<CyclingEvent | null>(null);
+  const [attendees, setAttendees] = useState<Attendee[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -40,11 +74,16 @@ const CyclingDetail = () => {
         if (!attendeesError) setAttendees(attendeesData || []);
 
         setLoading(false);
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error fetching event:", error);
-        toast({ title: "Error", description: "Failed to load event details.", variant: "destructive" });
+        toast({
+          title: "Error",
+          description: "Failed to load event details.",
+          variant: "destructive",
+        });
         navigate("/cycling");
-      } } );
+      }
+    };
     fetchEvent();
   }, [slug, navigate, toast]);
 
@@ -63,16 +102,23 @@ const CyclingDetail = () => {
   };
 
   const handleShare = () => {
-    const url = `${window.location.origin}/cycling/${slug}`;
+    const url = `${window.location.origin}/cycling-event/${slug}`;
     if (navigator.share) {
-      navigator.share({
-        title: event.title,
-        text: `Join my cycling event: ${event.title} at ${event.start_landmark.name}!`,
-        url,
-      }).catch(() => toast({ title: "Error", description: "Failed to share event." }));
+      navigator
+        .share({
+          title: event?.title,
+          text: `Join my cycling event: ${event?.title} at ${event?.start_landmark.name}!`,
+          url,
+        })
+        .catch(() =>
+          toast({ title: "Error", description: "Failed to share event." })
+        );
     } else {
       navigator.clipboard.writeText(url);
-      toast({ title: "Link Copied", description: "Event link copied to clipboard." });
+      toast({
+        title: "Link Copied",
+        description: "Event link copied to clipboard.",
+      });
     }
   };
 
@@ -90,10 +136,12 @@ const CyclingDetail = () => {
         <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4">
           <ArrowLeft size={18} className="mr-2" />
           Back
-        </div>
+        </Button>
         <div className="text-center py-8">
           <h2 className="text-xl font-semibold mb-2">Event Not Found</h2>
-          <p className="text-gray-500 dark:text-gray-400">The event doesn't exist or has been removed.</p>
+          <p className="text-gray-500 dark:text-gray-400">
+            The event doesn't exist or has been removed.
+          </p>
         </div>
       </div>
     );
@@ -106,15 +154,18 @@ const CyclingDetail = () => {
     <div className="min-h-screen pb-20">
       <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg">
         <div className="flex items-center justify-between">
-          <Button variant="ghost" onClick={() => navigate(-1)} className="text-white hover:bg-green-600">
+          <Button
+            variant="ghost"
+            onClick={() => navigate(-1)}
+            className="text-white hover:bg-green-600"
+          >
             <ArrowLeft size={18} className="mr-2" />
             Back
           </Button>
-            <h1 className="text-xl font-bold">Event Details</h1>
+          <h1 className="text-xl font-bold">Event Details</h1>
           <div className="w-10"></div>
         </div>
       </header>
-    </div>
       <div className="p-4">
         <Card>
           <CardHeader>
@@ -122,31 +173,81 @@ const CyclingDetail = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              <p><strong>Status:</strong> {status.charAt(0).toUpperCase() + status.slice(1></p>
-              <p><strong>Date:</strong> {new Date(event.event_date).toLocaleStringDateString("en-US", { weekday: "short", day: "numeric", month: "short", year: "numeric" })}</p>
-              <p><strong>Time:</strong> {event.start_time}</p>
               <p>
-                <strong>Start:</strong> {event.start_landmark.name}, {event.start_landmark.state}
+                <strong>Status:</strong>{" "}
+                {status.charAt(0).toUpperCase() + status.slice(1)}
+              </p>
+              <p>
+                <strong>Date:</strong>{" "}
+                {new Date(event.event_date).toLocaleDateString("en-US", {
+                  weekday: "short",
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                })}
+              </p>
+              <p>
+                <strong>Time:</strong> {event.start_time}
+              </p>
+              <p>
+                <strong>Start:</strong> {event.start_landmark.name},{" "}
+                {event.start_landmark.state}
                 {event.start_landmark.map_link && (
-                  <a href={event.start_landmark.hrefmap_link} target="_blank" rel="noopener noreferrer" className="ml-2 text-blue-600 hover:underline">
+                  <a
+                    href={event.start_landmark.map_link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="ml-2 text-blue-600 hover:underline"
+                  >
                     <ExternalLink size={12} className="inline" /> Map
                   </a>
                 )}
               </p>
               {event.end_landmark && (
-                <p><strong>End:</strong> {event.end_landmark.name}, {event.end_landmark.state}</p>
+                <p>
+                  <strong>End:</strong> {event.end_landmark.name},{" "}
+                  {event.end_landmark.state}
+                </p>
               )}
-              <p><strong>Duration:</strong> {event.duration_value} {event.duration_type}</p>
-              <p><strong>Attendees:</strong> {attendees.length}/{event.max_attendees}</p>
-              <p><strong>Cost:</strong> {event.is_free ? "Free" : "Paid"}</p>
-              <p><strong>Bike Options:</strong> {event.is_own_bike && "Own Bike"} {event.is_rental_available && "Rentals Available"}</p>
-              {event.notes && <p><strong>Notes:</strong> {event.notes}</p>}
-              <p><strong>Host:</strong> {event.host_name} ({event.host_phone})</p>
+              <p>
+                <strong>Duration:</strong> {event.duration_value}{" "}
+                {event.duration_type}
+              </p>
+              <p>
+                <strong>Attendees:</strong> {attendees.length}/
+                {event.max_attendees}
+              </p>
+              <p>
+                <strong>Cost:</strong> {event.is_free ? "Free" : "Paid"}
+              </p>
+              <p>
+                <strong>Bike Options:</strong>{" "}
+                {event.is_own_bike && "Own Bike"}{" "}
+                {event.is_rental_available && "Rentals Available"}
+              </p>
+              {event.notes && (
+                <p>
+                  <strong>Notes:</strong> {event.notes}
+                </p>
+              )}
+              <p>
+                <strong>Host:</strong> {event.host_name} ({event.host_phone})
+              </p>
             </div>
             <div className="flex space-x-2 mt-4">
-              <Button onClick={handleShare} className="bg-green-500 hover:bg-green-600 text-white">Share</Button>
+              <Button
+                onClick={handleShare}
+                className="bg-green-500 hover:bg-green-600 text-white"
+              >
+                Share
+              </Button>
               {!isPast && attendees.length < event.max_attendees && (
-                <Button onClick={() => navigate(`/join-cycling/${event.slug}`)} className="bg-green-500 hover:bg-green-600 text-white">Join Event</Button>
+                <Button
+                  onClick={() => navigate(`/join-cycling/${event.slug}`)}
+                  className="bg-green-500 hover:bg-green-600 text-white"
+                >
+                  Join Event
+                </Button>
               )}
             </div>
           </CardContent>
@@ -171,8 +272,10 @@ const CyclingDetail = () => {
                   {attendees.map((attendee) => (
                     <tr key={attendee.id}>
                       <td>{attendee.attendee_name}</td>
-                      <td>{attendees.attendee_phone}</td>
-                      <td>{attendee.attendee_status.replace("_", " ").toUpperCase()}</td>
+                      <td>{attendee.attendee_phone}</td>
+                      <td>
+                        {attendee.attendee_status.replace("_", " ").toUpperCase()}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
