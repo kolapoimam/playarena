@@ -125,71 +125,82 @@ const HostCycling = () => {
     fetchLandmarks();
   }, []);
 
-  const onSubmit = async (data: FormValues) => {
-    setLoading(true);
-    try {
-      let startLandmarkId = data.start_landmark_id;
-      let endLandmarkId = data.end_landmark_id;
+const onSubmit = async (data: FormValues) => {
+  setLoading(true);
+  try {
+    let startLandmarkId = data.start_landmark_id;
+    let endLandmarkId = data.end_landmark_id;
 
-      // Create new landmark if specified
-      if (createLandmark && data.new_landmark_name && data.new_landmark_state) {
-        const { data: newLandmark, error: landmarkError } = await supabase
-          .from('landmarks')
-          .insert({
-            name: data.new_landmark_name,
-            state: data.new_landmark_state,
-            description: data.new_landmark_description || null,
-            map_link: data.new_landmark_map_link || null,
-            slug: await supabase.rpc('generate_unique_slug', { title: data.new_landmark_name }).then((res) => res.data),
-          })
-          .select('id')
-          .single();
-        if (landmarkError) throw landmarkError;
-        startLandmarkId = newLandmark.id;
-        setLandmarks([...landmarks, { id: newLandmark.id, name: data.new_landmark_name, state: data.new_landmark_state }]);
-      }
-
-      // Generate supercode and slug
-      const { data: supercodeData, error: codeError } = await supabase.rpc('generate_unique_code', { length: 8 });
-      if (codeError) throw codeError;
-
-      const { data: slugData, error: slugError } = await supabase.rpc('generate_unique_slug', { title: data.title });
-      if (slugError) throw slugError;
-
-      const { data: eventData, error } = await supabase
-        .from('cycling_events')
+    // Create new landmark if specified
+    if (createLandmark && data.new_landmark_name && data.new_landmark_state) {
+      const { data: newLandmark, error: landmarkError } = await supabase
+        .from('landmarks')
         .insert({
-          title: data.title,
-          slug: slugData,
-          notes: data.notes || null,
-          event_date: format(data.event_date, 'yyyy-MM-dd'),
-          start_time: data.start_time,
-          duration_type: data.duration_type,
-          duration_value: data.duration_value,
-          start_landmark_id: startLandmarkId,
-          end_landmark_id: endLandmarkId || null,
-          max_attendees: data.max_attendees,
-          is_free: data.is_free,
-          is_own_bike: data.is_own_bike,
-          is_rental_available: data.is_rental_available,
-          registration_deadline: data.registration_deadline ? format(data.registration_deadline, 'yyyy-MM-dd') : null,
-          host_name: data.host_name,
-          host_phone: data.host_phone,
-          supercode: supercodeData,
+          name: data.new_landmark_name,
+          state: data.new_landmark_state,
+          description: data.new_landmark_description || null,
+          map_link: data.new_landmark_map_link || null,
+          slug: await supabase.rpc('generate_unique_slug', { title: data.new_landmark_name }).then((res) => res.data),
         })
-        .select('id, slug')
+        .select('id')
         .single();
+      if (landmarkError) throw landmarkError;
+      startLandmarkId = newLandmark.id;
+      setLandmarks([...landmarks, { id: newLandmark.id, name: data.new_landmark_name, state: data.new_landmark_state }]);
+    }
 
-      if (error) throw error;
+    // Generate supercode and slug
+    const { data: supercodeData, error: codeError } = await supabase.rpc('generate_unique_code', { length: 8 });
+    if (codeError) throw codeError;
 
-      setSupercode(supercodeData);
-      setEventSlug(slugData);
-      setSuccessDialogOpen(true);
-    } catch (error) {
-      console.error('Error creating event:', error);
-      toast({ title: 'Error', description: 'Failed to create event. Please try again.', variant: 'destructive' });
-    } finally {
-      setLoading(false);
+    const { data: slugData, error: slugError } = await supabase.rpc('generate_unique_slug', { title: data.title });
+    if (slugError) throw slugError;
+
+    const { data: eventData, error } = await supabase
+      .from('cycling_events')
+      .insert({
+        title: data.title,
+        slug: slugData,
+        notes: data.notes || null,
+        event_date: format(data.event_date, 'yyyy-MM-dd'),
+        start_time: data.start_time,
+        duration_type: data.duration_type,
+        duration_value: data.duration_value,
+        start_landmark_id: startLandmarkId,
+        end_landmark_id: endLandmarkId || null,
+        max_attendees: data.max_attendees,
+        is_free: data.is_free,
+        is_own_bike: data.is_own_bike,
+        is_rental_available: data.is_rental_available,
+        registration_deadline: data.registration_deadline ? format(data.registration_deadline, 'yyyy-MM-dd') : null,
+        host_name: data.host_name,
+        host_phone: data.host_phone,
+        supercode: supercodeData,
+      })
+      .select('id, slug')
+      .single();
+
+    if (error) throw error;
+
+    // Ensure all required data is available before opening dialog
+    const selectedLandmark = landmarks.find((l) => l.id === startLandmarkId) || {
+      id: startLandmarkId,
+      name: data.new_landmark_name || 'Unknown',
+      state: data.new_landmark_state || 'Unknown',
+    };
+
+    if (!supercodeData || !slugData || !selectedLandmark) {
+      throw new Error('Required data missing for dialog');
+    }
+
+    setSupercode(supercodeData);
+    setEventSlug(slugData);
+    setSuccessDialogOpen(true);
+  } catch (error) {
+    console.error('Error creating event:', error);
+    toast({ title: 'Error', description: 'Failed to create event. Please try again.', variant: 'destructive' });
+  } finally {
+    setLoading(false);
     }
   };
 
