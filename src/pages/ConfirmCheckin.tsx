@@ -121,7 +121,7 @@ const [checkinCodeErrors, setCheckinCodeErrors] = useState<{ [key: string]: stri
 
   useEffect(() => {
     const fetchUserId = async () => {
-      const { data session } = await supabase.auth.getSession();
+const { data: session } = await supabase.auth.getSession();
       if (session.session) {
         setUserId(session.session.user.id);
       } else {
