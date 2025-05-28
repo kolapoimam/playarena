@@ -47,6 +47,10 @@ import AccountDetails from "@/pages/AccountDetails";
 import MyMatches from "@/pages/MyMatches";
 import MatchPreferences from "@/pages/MatchPreferences";
 import Wallet from "@/pages/Wallet";
+// New cycling event pages (placeholders)
+import CyclingEvents from "@/pages/CyclingEvents";
+import CyclingEventDetail from "@/pages/CyclingEventDetail";
+import JoinCyclingEvent from "@/pages/JoinCyclingEvent";
 
 const queryClient = new QueryClient();
 
@@ -90,13 +94,12 @@ const AppRoutes = () => {
           return;
         }
 
-        console.log("Tagging OneSignal with user_id:", userId); // Debug log
+        console.log("Tagging OneSignal with user_id:", userId);
         OneSignal.push(() => {
-          OneSignal.login(userId); // No Promise, just call login
+          OneSignal.login(userId);
           console.log("OneSignal login triggered for user_id:", userId);
-          // Add tag after login, no Promise handling
           OneSignal.User.addTag("user_id", userId);
-          console.log("Tag added to OneSignal: user_id =", userId); // Debug log
+          console.log("Tag added to OneSignal: user_id =", userId);
         });
       } else {
         console.log("No user session or OneSignal not loaded:", { userId, OneSignal: !!window.OneSignal });
@@ -115,13 +118,14 @@ const AppRoutes = () => {
       <Route path="/search" element={<Search />} />
       <Route path="/activities" element={<Activities />} />
       <Route path="/matches" element={<Matches />} />
+      <Route path="/cycling-events" element={<CyclingEvents />} /> {/* New route */}
       <Route path="/guides" element={<Guides />} />
       <Route path="/profile" element={<Profile />} />
       <Route path="/profile/view-profile" element={<ViewProfile />} />
       <Route path="/profile/notifications" element={<Notifications />} />
       <Route
         path="/profile/account-details"
-        element={<AccountDetails profile={profile} setProfile={setProfile} />}
+        element={<AccountDetails />}
       />
       <Route path="/profile/my-matches" element={<MyMatches profile={profile} />} />
       <Route path="/profile/match-preferences" element={<MatchPreferences />} />
@@ -140,6 +144,8 @@ const AppRoutes = () => {
       <Route path="/terms-privacy" element={<TermsAndPrivacy />} />
       <Route path="/match/:slug" element={<MatchDetail />} />
       <Route path="/join/:slug" element={<JoinMatch />} />
+      <Route path="/cycling-event/:slug" element={<CyclingEventDetail />} /> {/* New route */}
+      <Route path="/join-cycling/:slug" element={<JoinCyclingEvent />} /> {/* New route */}
       <Route path="/venue/:slug" element={<VenueDetail />} />
       <Route path="/match/:slug/team-management" element={<TeamManagement />} />
       <Route path="/highlights/:slug" element={<MatchHighlights />} />
@@ -195,7 +201,7 @@ const App = () => {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <MantineProvider withGlobalStyles withNormalizeCSS>
+      <MantineProvider>
         <TooltipProvider>
           <Toaster />
           <Router>
