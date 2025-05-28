@@ -24,8 +24,8 @@ type Match = {
   title: string;
   match_date: string;
   match_time: string;
-  match_start_time?: string | null; // Fixed syntax
-  match_end_time?: string | null; // Fixed syntax
+  match_start_time?: string | null;
+  match_end_time?: string | null;
   total_slots: number;
   organizer_name: string;
   super_code: string;
@@ -53,8 +53,8 @@ type CyclingEvent = {
   title: string;
   event_date: string;
   event_time: string;
-  event_start_time?: string | null; // Ensure correct syntax
-  event_end_time?: string | null; // Ensure correct syntax
+  event_start_time?: string | null;
+  event_end_time?: string | null;
   total_slots: number;
   host_name: string;
   super_code: string;
@@ -84,20 +84,9 @@ type Cashout = {
   bank_account_number: string;
   bank_name: string;
   account_name: string;
-  status: 'Review' | 'Processed' | 'Failed' | 'Successful'; // Fixed syntax
-  temp_identifier?: string; // Fixed syntax
+  status: 'Review' | 'Processed' | 'Failed' | 'Successful'; // Fixed union type syntax
+  temp_identifier?: string; // Fixed optional property syntax
   created_at: string;
-};
-
-type Cashout = {
-  id string;
-  match_id string;
-  super_code string;
-  bank_account_number string;
-  bank_name string;
-  account_name string;
-  status "Review" | "Processed" | "Failed" | "Successful";
-  temp_identifier? string;
 };
 
 const codeSchema = z
