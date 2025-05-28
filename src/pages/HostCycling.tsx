@@ -164,7 +164,7 @@ const HostCycling = () => {
     new_landmark_map_link?: string | null;
   }) => {
     try {
-      const { data: slugData, error: slugError } = await supabase.rpc('generate_unique_slug', { title: data.new_landmark_name });
+      const { data: slugData, error: slugError } = await supabase.rpc('generate_unique_landmark_slug', { title: data.new_landmark_name });
       if (slugError || !slugData) throw new Error(`Failed to generate landmark slug: ${slugError?.message || 'No slug returned'}`);
 
       const { data: newLandmark, error: landmarkError } = await supabase
@@ -218,6 +218,7 @@ const HostCycling = () => {
       const { data: eventData, error: eventError } = await supabase
         .from('cycling_events')
         .insert({
+          id: gen_random_uuid(), // Generate a new UUID for the event
           title: data.title,
           slug: slugData,
           notes: data.notes || null,
@@ -236,13 +237,13 @@ const HostCycling = () => {
           host_name: data.host_name,
           host_phone: data.host_phone,
           supercode: supercodeData,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
         })
         .select('id, slug')
         .single();
 
-      if (eventError || !eventData) {
-        throw new Error(`Failed to create event: ${eventError?.message || 'No event data returned'}`);
-      }
+      if (eventError) throw new Error(`Failed to create event: ${eventError.message || 'No event data returned'}`);
 
       setSupercode(supercodeData);
       setEventSlug(slugData);
