@@ -104,7 +104,9 @@ const ConfirmCheckin = () => {
   const [cashout, setCashout] = useState<Cashout | null>(null);
   const [matchNotFound, setMatchNotFound] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [playerStatuses, setPlayerStatuses] = useState<
+const [playerStatuses, setPlayerStatuses] = useState<
+  { id: string; status: string; checkinCode: string }[]
+>([]);
 const [players, setPlayers] = useState<
   { id: string; status: string; checkinCode: string }[]
 >([]);
