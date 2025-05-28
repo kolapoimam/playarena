@@ -355,7 +355,7 @@ const HostCycling = () => {
                                   </SelectItem>
                                 ))
                               ) : (
-                                <SelectItem value="" disabled>
+                                <SelectItem value="no-landmarks" disabled>
                                   No landmarks available
                                 </SelectItem>
                               )}
@@ -372,8 +372,8 @@ const HostCycling = () => {
                         <FormItem>
                           <FormLabel>Ending Landmark (Optional)</FormLabel>
                           <Select
-                            onValueChange={(value) => field.onChange(value === '' ? null : value)}
-                            value={field.value || ''}
+                            onValueChange={(value) => field.onChange(value === 'none' ? null : value)}
+                            value={field.value || 'none'}
                           >
                             <FormControl>
                               <SelectTrigger>
@@ -381,7 +381,7 @@ const HostCycling = () => {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="">None</SelectItem>
+                              <SelectItem value="none">None</SelectItem>
                               {landmarks.map((landmark) => (
                                 <SelectItem key={landmark.id} value={landmark.id}>
                                   {landmark.name}, {landmark.state}
