@@ -34,7 +34,7 @@ type LandmarkFormValues = z.infer<typeof landmarkSchema>;
 interface CreateLandmarkDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (landmark: { id: string; name: string; state: string }) => void;
+  onSave: (data: LandmarkFormValues) => void;
 }
 
 const CreateLandmarkDialog = ({ open, onOpenChange, onSave }: CreateLandmarkDialogProps) => {
@@ -50,13 +50,7 @@ const CreateLandmarkDialog = ({ open, onOpenChange, onSave }: CreateLandmarkDial
 
   const onSubmit = async (data: LandmarkFormValues) => {
     try {
-      // Simulate saving to Supabase (this will be handled in the parent component)
-      const newLandmark = {
-        id: crypto.randomUUID(), // Temporary ID until Supabase provides one
-        name: data.new_landmark_name,
-        state: data.new_landmark_state,
-      };
-      onSave(newLandmark);
+      onSave(data);
       onOpenChange(false);
       form.reset();
     } catch (error: any) {
