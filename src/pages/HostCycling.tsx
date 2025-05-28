@@ -249,13 +249,18 @@ const HostCycling = () => {
         .select('id_uuid:id,slug')
         .single();
 
-      if (eventError) throw new Error(`Failed to create event: ${eventError.message || 'No event data returned'}`);
+      if (eventError) {
+        console.error('Supabase insert error:', eventError);
+        throw new Error(`Failed to create event: ${eventError.message || 'No event data returned'}`);
+      }
+
+      console.log('Event created:', eventData);
 
       setSupercode(supercodeData);
       setEventSlug(slugData);
       setSuccessDialogOpen(true);
     } catch (error: any) {
-      console.error('Error creating event:', error.message);
+      console.error('Error in onSubmit:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to create event. Please try again.',
@@ -267,10 +272,19 @@ const HostCycling = () => {
   };
 
   const handleNavigate = (slug: string) => {
-    if (slug) {
-      navigate(`/cycling/${slug}`);
-    } else {
-      navigate('/events');
+    try {
+      if (slug) {
+        navigate(`/cycling/${slug}`);
+      } else {
+        navigate('/events');
+      }
+    } catch (error) {
+      console.error('Navigation error:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to navigate. Please try again.',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -752,13 +766,13 @@ const HostCycling = () => {
         open={successDialogOpen}
         onOpenChange={setSuccessDialogOpen}
         formValues={{
-          title: form.getValues('title'),
+          title: form.getValues('title') || '',
           event_date: form.getValues('event_date') || undefined,
-          start_time: form.getValues('start_time'),
-          host_name: form.getValues('host_name'),
+          start_time: form.getValues('start_time') || '',
+          host_name: form.getValues('host_name') || '',
         }}
-        selectedLandmark={landmarks.find((l) => l.id_uuid === form.getValues('start_landmark_id')) || undefined}
-        supercode={supercode}
+        selectedLandmark={landmarks.find((l) => l.id_uuid === form.getValues('start_landmark_id')) || { id_uuid: '', name: 'Unknown', state: '' }}
+        supercode={supercode || ''}
         eventSlug={eventSlug || ''}
         onNavigate={() => handleNavigate(eventSlug || '')}
       />
