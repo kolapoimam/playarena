@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -105,6 +105,7 @@ const HostCycling = () => {
   const [isRegistrationOpen, setIsRegistrationOpen] = useState(false);
   const [isHostDetailsOpen, setIsHostDetailsOpen] = useState(false);
   const [isCreateLandmarkOpen, setIsCreateLandmarkOpen] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -150,17 +151,23 @@ const HostCycling = () => {
     fetchLandmarks();
   }, [toast]);
 
-  const handleCreateLandmark = async (landmark: { id: string; name: string; state: string }) => {
+  const handleCreateLandmark = async (data: {
+    new_landmark_name: string;
+    new_landmark_state: string;
+    new_landmark_description?: string;
+    new_landmark_map_link?: string | null;
+  }) => {
     try {
-      const { data: slugData, error: slugError } = await supabase.rpc('generate_unique_slug', { title: landmark.name });
+      const { data: slugData, error: slugError } = await supabase.rpc('generate_unique_slug', { title: data.new_landmark_name });
       if (slugError || !slugData) throw new Error(`Failed to generate landmark slug: ${slugError?.message || 'No slug returned'}`);
 
       const { data: newLandmark, error: landmarkError } = await supabase
         .from('landmarks')
         .insert({
-          id: landmark.id,
-          name: landmark.name,
-          state: landmark.state,
+          name: data.new_landmark_name,
+          state: data.new_landmark_state,
+          description: data.new_landmark_description || null,
+          map_link: data.new_landmark_map_link || null,
           slug: slugData,
         })
         .select('id, name, state')
@@ -246,8 +253,24 @@ const HostCycling = () => {
     }
   };
 
+  const handleSectionToggle = (setter: (value: boolean) => void, newValue: boolean) => {
+    setter(newValue);
+    setTimeout(() => {
+      if (formRef.current) {
+        const formBottom = formRef.current.getBoundingClientRect().bottom;
+        const viewportHeight = window.innerHeight;
+        if (formBottom > viewportHeight) {
+          window.scrollTo({
+            top: window.scrollY + (formBottom - viewportHeight + 100),
+            behavior: 'smooth',
+          });
+        }
+      }
+    }, 100);
+  };
+
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 pb-20">
       <header className="sticky top-0 z-50 bg-gradient-to-r from-green-500 to-green-700 text-white shadow-lg">
         <div className="p-4 flex items-center justify-between max-w-7xl mx-auto">
           <Button
@@ -267,9 +290,9 @@ const HostCycling = () => {
       ) : (
         <div className="p-6 max-w-3xl mx-auto">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+            <form ref={formRef} onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
-                <div className="flex justify-between items-center cursor-pointer" onClick={() => setIsRouteDetailsOpen(!isRouteDetailsOpen)}>
+                <div className="flex justify-between items-center cursor-pointer" onClick={() => handleSectionToggle(setIsRouteDetailsOpen, !isRouteDetailsOpen)}>
                   <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Route Details</h2>
                   <span>{isRouteDetailsOpen ? '-' : '+'}</span>
                 </div>
@@ -356,7 +379,7 @@ const HostCycling = () => {
                 )}
               </div>
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
-                <div className="flex justify-between items-center cursor-pointer" onClick={() => setIsEventDetailsOpen(!isEventDetailsOpen)}>
+                <div className="flex justify-between items-center cursor-pointer" onClick={() => handleSectionToggle(setIsEventDetailsOpen, !isEventDetailsOpen)}>
                   <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Event Details</h2>
                   <span>{isEventDetailsOpen ? '-' : '+'}</span>
                 </div>
@@ -489,7 +512,7 @@ const HostCycling = () => {
                 )}
               </div>
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
-                <div className="flex justify-between items-center cursor-pointer" onClick={() => setIsPreferencesOpen(!isPreferencesOpen)}>
+                <div className="flex justify-between items-center cursor-pointer" onClick={() => handleSectionToggle(setIsPreferencesOpen, !isPreferencesOpen)}>
                   <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Event Preferences</h2>
                   <span>{isPreferencesOpen ? '-' : '+'}</span>
                 </div>
@@ -582,7 +605,7 @@ const HostCycling = () => {
                 )}
               </div>
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
-                <div className="flex justify-between items-center cursor-pointer" onClick={() => setIsRegistrationOpen(!isRegistrationOpen)}>
+                <div className="flex justify-between items-center cursor-pointer" onClick={() => handleSectionToggle(setIsRegistrationOpen, !isRegistrationOpen)}>
                   <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Registration Details</h2>
                   <span>{isRegistrationOpen ? '-' : '+'}</span>
                 </div>
@@ -625,7 +648,7 @@ const HostCycling = () => {
                 )}
               </div>
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
-                <div className="flex justify-between items-center cursor-pointer" onClick={() => setIsHostDetailsOpen(!isHostDetailsOpen)}>
+                <div className="flex justify-between items-center cursor-pointer" onClick={() => handleSectionToggle(setIsHostDetailsOpen, !isHostDetailsOpen)}>
                   <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Host Details</h2>
                   <span>{isHostDetailsOpen ? '-' : '+'}</span>
                 </div>
@@ -669,14 +692,18 @@ const HostCycling = () => {
                   </>
                 )}
               </div>
+            </form>
+            <div className="fixed bottom-16 left-0 right-0 max-w-3xl mx-auto p-4 bg-white dark:bg-gray-800 shadow-lg border-t border-gray-200 dark:border-gray-700">
               <Button
                 type="submit"
-                className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-3 text-lg shadow-md transition-colors mt-6"
+                form={formRef.current?.id}
+                className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-3 text-lg transition-colors"
                 disabled={loading || loadingLandmarks || !!landmarksError}
+                onClick={() => form.handleSubmit(onSubmit)()}
               >
                 {loading ? 'Creating...' : 'Create Event'}
               </Button>
-            </form>
+            </div>
           </Form>
         </div>
       )}
