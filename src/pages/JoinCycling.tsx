@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useForm } from "@/hooks/use-form-hook";
+import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,7 +14,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@components/ui/form";
+} from "@/components/ui/form";
 import { ArrowLeft, Calendar, Clock, MapPin, Users, DollarSign, Loader2 } from "lucide-react";
 import { PaystackButton } from "react-paystack";
 import CyclingSuccessDialog from "@/components/CyclingSuccessDialog";
@@ -360,7 +360,7 @@ const JoinCycling = () => {
           onOpenChange={setSuccessDialogOpen}
           formValues={{
             title: event?.title || "",
-            event_date: event ? new Date(event.event_date) : new Date(),
+            event_date: event ? new Date(event.event_date) : null,
             start_time: event?.start_time || "",
             host_name: event?.host_name || "",
           }}
