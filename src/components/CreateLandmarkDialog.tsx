@@ -61,10 +61,13 @@ const CreateLandmarkDialog = ({ open, onOpenChange, onSave }: CreateLandmarkDial
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px] rounded-lg">
+      <DialogContent className="sm:max-w-[425px] rounded-lg" aria-describedby="landmark-dialog-description">
         <DialogHeader>
           <DialogTitle>Create New Landmark</DialogTitle>
         </DialogHeader>
+        <div id="landmark-dialog-description" className="sr-only">
+          A dialog to create a new landmark with fields for name, state, description, and optional map link.
+        </div>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
