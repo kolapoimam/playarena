@@ -8,15 +8,15 @@ import { useToast } from "@/hooks/use-toast";
 
 type FormValues = {
   title: string;
-  event_date: Date;
+  event_date?: Date | string | null;
   start_time: string;
   host_name: string;
 };
 
 type Landmark = {
-  id: string;
-  name: string;
-  state: string;
+  id?: string;
+  name?: string;
+  state?: string;
 };
 
 type CyclingSuccessDialogProps = {
@@ -26,8 +26,8 @@ type CyclingSuccessDialogProps = {
   selectedLandmark: Landmark;
   supercode?: string | null;
   confirmationCode?: string | null;
-  eventSlug: string;
-  onNavigate: () => void;
+  eventSlug?: string;
+  onNavigate?: () => void;
 };
 
 const CyclingSuccessDialog = ({
@@ -46,30 +46,36 @@ const CyclingSuccessDialog = ({
 
   const code = supercode || confirmationCode;
 
-  // Validate all required props
-  if (
-    !open ||
-    !code ||
-    !formValues?.title ||
-    !formValues?.event_date ||
-    !formValues?.start_time ||
-    !formValues?.host_name ||
-    !selectedLandmark?.id ||
-    !selectedLandmark?.name ||
-    !selectedLandmark?.state ||
-    !eventSlug ||
-    typeof onNavigate !== "function"
-  ) {
-    if (open) {
-      toast({
-        title: "Error",
-        description: "Missing or invalid event information. Please try again.",
-        variant: "destructive",
-      });
-      onOpenChange(false);
-    }
+  // Log props for debugging
+  console.log('CyclingSuccessDialog props:', {
+    open,
+    code,
+    formValues,
+    selectedLandmark,
+    eventSlug,
+    onNavigate,
+  });
+
+  // Relaxed prop validation with fallbacks
+  const isValid = open && code && formValues?.title && formValues?.start_time && formValues?.host_name && selectedLandmark?.name && eventSlug;
+  if (!isValid && open) {
+    console.error('Invalid props in CyclingSuccessDialog, closing dialog');
+    toast({
+      title: "Error",
+      description: "Some event information is missing. Event was created successfully.",
+      variant: "destructive",
+    });
+    onOpenChange(false);
     return null;
   }
+
+  const formattedDate = formValues.event_date
+    ? (formValues.event_date instanceof Date
+        ? format(formValues.event_date, "PPP")
+        : typeof formValues.event_date === 'string'
+          ? formValues.event_date
+          : 'Unknown Date')
+    : 'Unknown Date';
 
   const handleDownload = async () => {
     if (!cardRef.current) {
@@ -103,9 +109,7 @@ const CyclingSuccessDialog = ({
 
       if (!blob) throw new Error("Failed to convert canvas to Blob");
 
-      const filename = `SportCliq-${
-        supercode ? "Supercode" : "ConfirmationCode"
-      }-${formValues.title.replace(/\s+/g, "-")}.png`;
+      const filename = `SportCliq-${supercode ? "Supercode" : "ConfirmationCode"}-${formValues.title.replace(/\s+/g, "-")}.png`;
       const url = URL.createObjectURL(blob);
 
       if (
@@ -149,11 +153,11 @@ const CyclingSuccessDialog = ({
   return (
     <Dialog
       open={open}
-      onOpenChange={(open) => {
-        if (!open) {
-          onNavigate();
+      onOpenChange={(newOpen) => {
+        if (!newOpen && !isDownloading) {
+          onNavigate?.();
         }
-        onOpenChange(open);
+        onOpenChange(newOpen);
       }}
     >
       <DialogContent className="sm:max-w-[375px] rounded-2xl">
@@ -178,25 +182,25 @@ const CyclingSuccessDialog = ({
               />
               <Bike className="h-6 w-6" />
             </div>
-            <h2 className="text-xl font-bold mb-2">{formValues.title}</h2>
+            <h2 className="text-xl font-bold mb-2">{formValues.title || 'Untitled Event'}</h2>
             <div className="space-y-2 mb-4 text-sm leading-tight">
               <div className="flex items-center">
                 <MapPin className="h-4 w-4 mr-2" />
                 <span>
-                  {selectedLandmark.name}, {selectedLandmark.state}
+                  {selectedLandmark.name || 'Unknown Location'}, {selectedLandmark.state || 'Unknown State'}
                 </span>
               </div>
               <div className="flex items-center">
                 <CalendarIcon className="h-4 w-4 mr-2" />
-                <span>{format(formValues.event_date, "PPP")}</span>
+                <span>{formattedDate}</span>
               </div>
               <div className="flex items-center">
                 <Clock className="h-4 w-4 mr-2" />
-                <span>{formValues.start_time}</span>
+                <span>{formValues.start_time || 'Unknown Time'}</span>
               </div>
               <div className="flex items-center">
                 <User className="h-4 w-4 mr-2" />
-                <span>Hosted by {formValues.host_name}</span>
+                <span>Hosted by {formValues.host_name || 'Unknown Host'}</span>
               </div>
             </div>
             <div className="bg-white text-green-500 rounded-md p-4 text-center shadow-inner">
@@ -207,8 +211,7 @@ const CyclingSuccessDialog = ({
             </div>
           </div>
           <p className="text-sm text-gray-500 dark:text-gray-400 my-4">
-            <strong>Note:</strong> Save or download this code for check-in on event
-            day.
+            <strong>Note:</strong> Save or download this code for check-in on event day.
           </p>
           <div className="flex flex-col sm:flex-row gap-3">
             <Button
@@ -223,7 +226,7 @@ const CyclingSuccessDialog = ({
               onClick={() => {
                 if (!isDownloading) {
                   onOpenChange(false);
-                  onNavigate();
+                  onNavigate?.();
                 }
               }}
               disabled={isDownloading}
