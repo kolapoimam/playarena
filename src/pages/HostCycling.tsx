@@ -106,6 +106,7 @@ const HostCycling = () => {
   const [isHostDetailsOpen, setIsHostDetailsOpen] = useState(false);
   const [isCreateLandmarkOpen, setIsCreateLandmarkOpen] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
+  const createButtonRef = useRef<HTMLButtonElement>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -256,21 +257,24 @@ const HostCycling = () => {
   const handleSectionToggle = (setter: (value: boolean) => void, newValue: boolean) => {
     setter(newValue);
     setTimeout(() => {
-      if (formRef.current) {
-        const formBottom = formRef.current.getBoundingClientRect().bottom;
+      if (createButtonRef.current) {
+        const buttonRect = createButtonRef.current.getBoundingClientRect();
         const viewportHeight = window.innerHeight;
-        if (formBottom > viewportHeight) {
-          window.scrollTo({
-            top: window.scrollY + (formBottom - viewportHeight + 100),
+        // Check if the button is below the viewport
+        if (buttonRect.bottom > viewportHeight) {
+          createButtonRef.current.scrollIntoView({
             behavior: 'smooth',
+            block: 'end',
           });
+          // Adjust scroll position to account for the navbar at the bottom
+          window.scrollBy(0, -100); // Adjust this value based on your navbar height
         }
       }
     }, 100);
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 pb-20">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
       <header className="sticky top-0 z-50 bg-gradient-to-r from-green-500 to-green-700 text-white shadow-lg">
         <div className="p-4 flex items-center justify-between max-w-7xl mx-auto">
           <Button
@@ -692,18 +696,15 @@ const HostCycling = () => {
                   </>
                 )}
               </div>
-            </form>
-            <div className="fixed bottom-16 left-0 right-0 max-w-3xl mx-auto p-4 bg-white dark:bg-gray-800 shadow-lg border-t border-gray-200 dark:border-gray-700">
               <Button
+                ref={createButtonRef}
                 type="submit"
-                form={formRef.current?.id}
-                className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-3 text-lg transition-colors"
+                className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-3 text-lg shadow-md transition-colors mt-6"
                 disabled={loading || loadingLandmarks || !!landmarksError}
-                onClick={() => form.handleSubmit(onSubmit)()}
               >
                 {loading ? 'Creating...' : 'Create Event'}
               </Button>
-            </div>
+            </form>
           </Form>
         </div>
       )}
