@@ -246,7 +246,7 @@ const HostCycling = () => {
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         })
-        .select('id_uuid AS id, slug')
+        .select('id_uuid:id,slug')
         .single();
 
       if (eventError) throw new Error(`Failed to create event: ${eventError.message || 'No event data returned'}`);
