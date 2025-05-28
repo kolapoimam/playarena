@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon, Bicycle, MapPin } from "lucide-react";
+import { CalendarIcon, Bicycle, ArrowLeft, MapPin } from "lucide-react";
 import { format } from "date-fns";
 import TimeInput from "@/components/TimeInput";
 import { cn } from "@/lib/utils";
