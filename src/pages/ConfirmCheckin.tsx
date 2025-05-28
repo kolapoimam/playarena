@@ -172,11 +172,11 @@ const { data: session } = await supabase.auth.getSession();
         if (!data) {
           setMatchNotFound(true);
           resetState();
-          toast({
-title: "Event Not Found",
-            description `No cycling event found with super code ${superCode}. Please check the code and try again.`,
-            variant "destructive",
-          });
+toast({
+  title: "Event Not Found",
+  description: `No cycling event found with super code ${superCode}. Please check the code and try again.`,
+  variant: "destructive",
+});
           return;
         }
 
