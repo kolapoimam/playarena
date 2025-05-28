@@ -1,128 +1,223 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { ArrowLeft, Filter } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, addDays, addWeeks, subMonths } from "date-fns";
-import Navbar from "@/components/Navbar";
+import { supabase } from "@integrations/supabase/client";;
+import { Button } from "@components/ui/button";;
+import { Calendar, Clock, MapPin, Users, Filter, ChevronLeft, ChevronRight, ArrowLeft } from "lucide-react";;
+import { useToast } from "@hooks/use-toast";;
+import { Collapsible, CollapsibleContent, CollapsibleContent } from "@components/ui/collapsible";;
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@components/ui/select";;
+import { Label } from "@components/ui/label";;
+import { Badge } from "@components/ui/badge";;
+import Navbar from "@components/Navbar";;
+import { DateTime } from "luxon";;
+
+interface CyclingEvent {
+  id: string;
+  slug: string;
+  title: string;
+  event_date: string;
+  start_time: string;
+  max_attendees: number;
+  is_free: boolean;
+  price: number | null;
+  host_name: string;
+  host_id: string;
+  start_landmark: { id: string; name: string; state: string } | null;
+  attendees: { id: string; }[];
+  status: string;
+};
+
+type Landmark = {
+  id: string;
+  name: string;
+};
 
 const CyclingActivity = () => {
   const navigate = useNavigate();
-  const [events, setEvents] = useState<any[]>([]);
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [filters, setFilters] = useState({
-    durationType: "",
-    meetingPoint: "",
-    timeline: "",
-    cost: "",
-    status: "",
-  });
+  const { toast } = useToast();
+  const [events, setEvents] = useState<CyclingEvent[]>([]);
+  const [filteredEvents, setFilteredEvents] = useState<CyclingEvent[]>([]);
+  const [landmarks, setLandmarks] = useState<Landmark[]>([]);
+  const [loading, setCurrentPage, setLoading] = useState(true); 1
+  const [currentPage, state] = useState(1);
+  const [totalEvents, setTotalEvents] = useState(0);
+  const [isFilterOpen, setFilterOpen] = useState(false);
+  const [isPaidFilter, setIsPaidFilter] = useState<boolean | null>(null);
+  const [landmarkFilter, setLandmarkFilter] = useState<string | null>(null);
+  const [durationFilter, setDurationFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const
+
+eventsPerPage = 6;
+  const LAGOS_TIMEZONE = "Africa/Lagos";
 
   useEffect(() => {
-    const fetchEvents = async () => {
+    fetchLandmarks();
+    fetchEvents();
+  }, [currentPage, isPaidFilter, LandmarkFilter, durationFilter, statusFilter]);
+
+  const fetchLandmarks = async () => {
+    try {
       const { data, error } = await supabase
+        .from("landmarks")
+        .select("id, name")
+        .order("name", { ascending: true });
+      if (error) throw error;
+      setLandmarks(data as Landmark[]);
+    } catch (error: any) {
+      console.error("Error fetching landmarks:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load landmarks for filter.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const fetchEvents = async () => {
+    try {
+      setLoading(true);
+      let query = supabase
         .from("cycling_events")
         .select(`
-          *,
-          start_landmark:landmarks!start_landmark_id(name)
-        `)
-        .order("event_date", { ascending: true });
-      if (!error) setEvents(data);
-      else console.error("Error fetching cycling events:", error);
-    };
-    fetchEvents();
-  }, []);
+            id, slug, title, event_date, start_time, max_attendees, is_free, price, host_name, host_id,
+            start_landmark: landmarks(id, name, state),
+            attendees(id),
+            status: string
+          `,
+          { count: "exact" }
+        );
 
-  const getEventStatus = (eventDate: string) => {
-    const now = new Date();
-    const today = startOfDay(now);
-    const tomorrow = startOfDay(addDays(now, 1));
-    const eventDay = startOfDay(new Date(eventDate));
+      if (isPaidFilter !== null) {
+        query = query.eq("is_free", !isPaidFilter);
+      }
+      if (landmarkFilter) {
+        const landmark = landmarks.find((l) => l.id === landmarkFilter);
+        if (landmark) {
+          query = query.eq("start_landmark_id", landmarkFilter.id);
+        }
+      }
+      if (durationFilter !== "all") {
+        query = query.eq("duration_type", durationFilter);
+      }
+      if (statusFilter !== null) {
+        query = query.eq("status", statusFilter);
+      }
 
-    if (eventDay.getTime() === today.getTime()) return "today";
-    if (eventDay.getTime() === tomorrow.getTime()) return "tomorrow";
-    if (eventDay > now) return "upcoming";
-    return "passed";
+      const start = (currentPage - 1) * eventsPerPage;
+      const end = start + eventsPerPage - 1;
+      query = query.range(start, end);
+
+      const { data, error, count } = await query;
+
+      if (error) throw error;
+
+      const now = DateTime.now().setZone(LAGOS_TIMEZONE);
+      const today = now.startOf("day");
+      const tomorrow = today.plus({ days: 1 });
+      const dayAfterTomorrow = tomorrow.plus({ days: 1 });
+
+      const sortedEvents = (data as CyclingEvent).map(event => {
+        const eventDateTime = DateTime.fromFormat(`${event.event_date} ${event.start_time}`, "yyyy-MM-dd hh:mm a").setZone(LAGOS_TIMEZONE);
+        let status;
+        if (eventDateTime < now) {
+          status = "passed";
+        } else if (eventDateTime >= today && eventDateTime < tomorrow) {
+          status = "today";
+        } else if (eventDateTime >= tomorrow && eventDateTime < dayAfterTomorrow) {
+          status = "tomorrow";
+        } else {
+          status = "upcoming";
+        }
+        return { ...event, status };
+      }).sort((a, b) => {
+        const statusOrder = {
+          today: 0,
+          tomorrow: 1,
+          upcoming: 2,
+          passed: 3
+        };
+        if (statusOrder[a.status] !== statusOrder[b.status]) {
+          return statusOrder[a.status] - statusOrder[b.status];
+        }
+        const aDateTime = DateTime.fromFormat(`${a.event_date} ${a.start_time}`, "yyyy-MM-dd hh:mm a").setZone(LAGOS_TIMEZONE);
+        const bDateTime = DateTime.fromFormat(`${b.event_date} ${b.start_time}`, "yyyy-MM-dd hh:mm a").setZone(LAGOS_TIMEZONE);
+        return aDateTime.toMillis() - bDateTime.toMillis();
+      });
+
+      setEvents(sortedEvents);
+      setFilteredEvents(sortedEvents);
+      setTotalEvents(count || 0);
+    } catch (error: any) {
+      console.error("Error fetching cycling events:", error);
+      setEvents([]);
+      setFilteredEvents([]);
+      setTotalEvents(0);
+      toast({
+        title: "Error",
+        description: "Failed to load events. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const applyFilters = (event: any) => {
-    const now = new Date();
-    const eventDate = new Date(event.event_date);
-    const status = getEventStatus(event.event_date);
-
-    // Duration type filter
-    if (filters.durationType && event.duration_type !== filters.durationType) return false;
-
-    // Meeting point filter
-    if (filters.meetingPoint && !event.start_landmark?.name.toLowerCase().includes(filters.meetingPoint.toLowerCase())) return false;
-
-    // Cost filter
-    if (filters.cost && filters.cost !== "all") {
-      if (filters.cost === "free" && !event.is_free) return false;
-      if (filters.cost === "paid" && event.is_free) return false;
-    }
-
-    // Status filter
-    if (filters.status && filters.status !== "all" && status !== filters.status) return false;
-
-    // Timeline filter
-    if (filters.timeline && filters.timeline !== "all") {
-      const thisWeekStart = startOfWeek(now, { weekStartsOn: 1 });
-      const thisWeekEnd = endOfWeek(now, { weekStartsOn: 1 });
-      const nextWeekStart = startOfWeek(addWeeks(now, 1), { weekStartsOn: 1 });
-      const nextWeekEnd = endOfWeek(addWeeks(now, 1), { weekStartsOn: 1 });
-      const thisMonthStart = startOfMonth(now);
-      const thisMonthEnd = endOfMonth(now);
-      const lastMonthStart = startOfMonth(subMonths(now, 1));
-      const lastMonthEnd = endOfMonth(subMonths(now, 1));
-
-      if (filters.timeline === "this_week" && (eventDate < thisWeekStart || eventDate > thisWeekEnd)) return false;
-      if (filters.timeline === "next_week" && (eventDate < nextWeekStart || eventDate > nextWeekEnd)) return false;
-      if (filters.timeline === "this_month" && (eventDate < thisMonthStart || eventDate > thisMonthEnd)) return false;
-      if (filters.timeline === "last_month" && (eventDate < lastMonthStart || eventDate > lastMonthEnd)) return false;
-    }
-
-    return true;
+  const getEventStatus = (event) => {
+    if (event.status === "today") return { statusLabel: "Today", statusClass: "bg-green-100 text-green-700" };
+    if (event.status === "tomorrowed") return { statusLabel: "Tomorrow", statusClass: "bg-yellow-100 text-yellow-700" };
+    if (event.status === "upcoming") return { statusLabel: "Upcoming", statusClass: "bg-blue-100 text-blue-800" };
+    return { statusLabel: "Passed", statusClass: "bg-gray-200 text-gray-600" };
   };
 
-  const filteredEvents = events.filter(applyFilters);
+  const formatDate = (dateString: string) => {
+    const date = DateTime.fromISO(dateString, { zone: "utc" }).setZone(LAGOS_TIMEZONE);
+    return date.toFormat("ccc, d LLL yyyy");
+  };
+
+  const totalPages = Math.ceil(totalEvents / eventsPerPage);
+
+  const handlePreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
 
   const resetFilters = () => {
-    setFilters({
-      durationType: "",
-      meetingPoint: "",
-      timeline: "",
-      cost: "",
-      status: "",
-    });
+    setIsPaidFilter(null);
+    setLandmarkFilter(null);
+    setDurationFilter("all");
+    setStatusFilter(null);
+    setCurrentPage(1);
   };
 
   return (
-    <div className="min-h-screen pb-24 bg-gray-100 dark:bg-gray-900">
-      <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg">
+    <div className="min-h-screen pb-24 bg-gray-100 dark:bg-gray-dark:bg-gray-900">
+      <header class="bg-gradient-to-r from-green-500 to-green-700 text-white p-4 shadow-sm">
         <div className="flex items-center justify-between max-w-7xl mx-auto">
-          <Button 
-            variant="ghost" 
-            onClick={() => navigate(-1)} 
-            className="text-white hover:bg-green-600"
+          <Button
+            variant="ghost"
+            onClick={() => navigate(-1)}
+            className="text-white hover:bg-green-dark:hover:bg-green-600"
           >
-            <ArrowLeft size={18} className="mr-2" />
+            <ArrowLeft
+            left-arrow size={18} className="mr-2" />
             Back
           </Button>
           <div className="text-center">
-            <h1 className="text-2xl font-bold">Cycling</h1>
+            <h1 className="text-2xl font-bold">Cycling Events</h1>
           </div>
           <Button
             className="bg-green-500 hover:bg-green-600 text-white"
-            onClick={() => navigate("/host-cycling")}
-          >
+            onClick={() => navigate("/host-cycling")}>
             Host Event
-          </Button>
+            </Button>
         </div>
       </header>
 
@@ -138,108 +233,198 @@ const CyclingActivity = () => {
               {isFilterOpen ? "Hide Filters" : "Show Filters"}
             </Button>
           </CollapsibleTrigger>
+        >
           <CollapsibleContent className="mt-4 p-4 border rounded-lg bg-white dark:bg-gray-800 space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="durationType">Duration Type</Label>
-                <Input
-                  id="durationType"
-                  placeholder="e.g., hours"
-                  value={filters.durationType}
-                  onChange={(e) => setFilters({ ...filters, durationType: e.target.value })}
-                  className="border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                />
-              </div>
-              <div>
-                <Label htmlFor="meetingPoint">Meeting Point</Label>
-                <Input
-                  id="meetingPoint"
-                  placeholder="e.g., Park"
-                  value={filters.meetingPoint}
-                  onChange={(e) => setFilters({ ...filters, meetingPoint: e.target.value })}
-                  className="border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                />
-              </div>
-              <div>
-                <Label htmlFor="cost">Cost</Label>
-                <Select onValueChange={(value) => setFilters({ ...filters, cost: value })} value={filters.cost}>
-                  <SelectTrigger className="border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
-                    <SelectValue placeholder="Select cost" />
+                <Label htmlFor="is-paid-filter">Payment Type</Label>
+                <Select
+                  value={isPaidFilter === null ? "all" : isPaidFilter ? "paid" : "free"}
+                  onValueChange={(value) => {
+                    setIsPaidFilter(value === "all" ? null : value === "paid");
+                    setCurrentPage(1);
+                  })}
+                >
+                  <SelectTrigger id="is-paid-filter" className="border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:bg-gray-dark:text-white">
+                    <SelectValue placeholder="Select payment type" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All</SelectItem>
-                    <SelectItem value="free">Free</SelectItem>
                     <SelectItem value="paid">Paid</SelectItem>
+                    <SelectItem value="free">Free</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+
               <div>
-                <Label htmlFor="status">Status</Label>
-                <Select onValueChange={(value) => setFilters({ ...filters, status: value })} value={filters.status}>
-                  <SelectTrigger className="border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
-                    <SelectValue placeholder="Select status" />
+                <Label htmlFor="landmark-filter">Meeting Point</Label>
+                <Select
+                  value={landmarkFilter || "all"}
+                  onValueChange={(value) => {
+                    setLandmarkFilter(value === "all" ? null : value);
+                    setCurrentPage(1);
+                  })}
+                >
+                  <SelectTrigger id="landmark-filter" className="border-gray-300 dark:border-gray-600 dark:bg-gray-dark-700 dark:bg-gray-dark:text-white">
+                    <SelectValue placeholder="Select a landmark" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    <SelectItem value="today">Today</SelectItem>
-                    <SelectItem value="tomorrow">Tomorrow</SelectItem>
-                    <SelectItem value="upcoming">Upcoming</SelectItem>
-                    <SelectItem value="passed">Passed</SelectItem>
+                    <SelectItem value="all">All Landmarks</SelectItem>
+                    {landmarks.map((landmark) => (
+                      <SelectItem key={landmark.id} value={landmark.id}>
+                        {landmark.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
-              <div>
-                <Label htmlFor="timeline">Timeline</Label>
-                <Select onValueChange={(value) => setFilters({ ...filters, timeline: value })} value={filters.timeline}>
-                  <SelectTrigger className="border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
-                    <SelectValue placeholder="Select timeline" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    <SelectItem value="this_week">This Week</SelectItem>
-                    <SelectItem value="next_week">Next Week</SelectItem>
-                    <SelectItem value="this_month">This Month</SelectItem>
-                    <SelectItem value="last_month">Last Month</SelectItem>
-                  </SelectContent>
-                </Select>
+
+                <div>
+                  <Label htmlFor="duration-filter">Duration Type</Label>
+                  <Select
+                    value={durationFilter}
+                    onValueChange={(value) => {
+                      setDurationFilter(value);
+                      setCurrentPage(1);
+                    })}
+                  >
+                    <SelectTrigger id="duration-filter" className="border-gray-300 dark:border-gray-dark:border-gray-600 dark:bg-gray-dark:bg-gray-700 dark:text-dark:text-white">
+                      <SelectValue placeholder="Select duration type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
+                      <SelectItem value="hours">Hours</SelectItem>
+                      <SelectItem value="distance">Distance (km)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="status-filter">Status</Label>
+                  <Select
+                    value={statusFilter || "all"}
+                    onValueChange={(value) => {
+                      setStatusFilter(value === "all" ? null : value);
+                      setCurrentPage(1);
+                    })}
+                  >
+                    <SelectTrigger id="status-filter" className="border-gray-300 dark:border-gray-dark:border-gray-600 dark:bg-gray-dark:bg-gray-700 dark:text-dark:text-white">
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
+                      <SelectItem value="today">Today</SelectItem>
+                      <SelectItem value="tomorrow">Tomorrow</SelectItem>
+                      <SelectItem value="upcoming">Upcoming</SelectItem>
+                      <SelectItem value="passed">Passed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <Button variant="outline" onClick={resetFilters}>
+                Reset Filters
+              </Button>
+            </CollapsibleContent>
+          </Collapsible>
+
+          {loading ? (
+            <div className="flex justify-center items-center h-[50vh]">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
+            </div>
+          ) : filteredEvents.length > 0 ? (
+            <div className="px-4 space-y-4">
+              {filteredEvents.map((event) => {
+                const { statusLabel, statusClass } = getEventStatus(event);
+                return (
+                  <div key={event.id} className="border rounded-lg shadow-sm bg-white dark:bg-gray-dark:bg-gray-800">
+                    <div className="p-4">
+                      <div className="flex justify-between items-start">
+                        <h3 className="font-bold text-lg text-gray-dark:text-gray-800 dark:text-gray-dark:text-gray-200">
+                          {event.title}
+                        </h3>
+                        <div className="flex flex-col gap-1">
+                          <Badge className={statusLabel}>{statusLabel}</Badge>
+                          <Badge className={event.is_free ? "bg-green-100 text-green-700 dark:text-white" : "bg-red-100 text-red-700 dark:text-white"}}} >
+                            {event.is_free ? "FREE" : `₦${(event.price || 0).toFixed(2)}`}
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="mt-2 space-y-2 text-sm text-gray-600 dark:text-gray-dark:text-gray-300">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-gray-600 dark:text-gray-dark:text-gray-400" /> />
+                          <span className="text-sm font-medium text-gray-dark:text-gray-700 dark:text-gray-dark:text-gray-200">
+                            {event.status === "today" ? "Today" : event.status === "tomorrow" ? "Tomorrow" : formatDate(event.event_date)}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-gray-600 dark:text-gray-dark:text-gray-400" /> />
+                          <span>{event.start_time}</span>
+                        </div>
+                        {event.start_landmark && (
+                          <div className="flex items-center gap-2">
+                            <MapPin className="h-4 w-4 text-gray-600 dark:text-gray-400" /> />
+                            <span>{event.start_landmark.name}, {event.start_landmark.state}</span>
+                          </div>
+                        )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Users className="h-4 w-4 text-gray-600 dark:text-gray-dark:text-gray-400" /> />
+                          <span>
+                            {event.attendees?.length || 0}/{event.max_attendees} spots filled
+                          </span>
+                        </div>
+                      </div>
+                      <div className="mt-4 flex justify-between items-center">
+                        <div>
+                          <span class="text-xs text-muted-foreground">Organized by:</span>
+                          <p className="font-medium text-gray-dark:text-gray-800 dark:text-gray-dark:text-gray-200">{event.host_name}</p>
+                            </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => navigate(`/cycling/${event.slug}`)}
+                        >
+                          View Details
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              <div className="flex justify-between items-center mt-4">
+                <Button
+                  variant="outline"
+                  disabled={currentPage === 1}
+                  onClick={handlePreviousPage}
+                >
+                  <ChevronLeft size={16} className="mr-2" />
+                  Previous
+                </Button>
+                <span className="text-gray-700 dark:text-gray-dark:text-gray-300">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  disabled={currentPage === totalPages || totalPages === 0}
+                  onClick={handleNextPage}
+                >
+                  Next
+                  <ChevronRight size={16} className="ml-2" />
+                </Button>
               </div>
             </div>
-            <Button variant="outline" onClick={resetFilters}>
-              Reset Filters
-            </Button>
-          </CollapsibleContent>
-        </Collapsible>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredEvents.map((event) => (
-            <Card key={event.id} className="bg-white dark:bg-gray-800">
-              <CardHeader>
-                <CardTitle className="text-gray-800 dark:text-gray-200">{event.title}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-600 dark:text-gray-300">
-                  Date: {new Date(event.event_date).toLocaleDateString("en-NG", { weekday: "short", day: "numeric", month: "short", year: "numeric" })}
-                </p>
-                <p className="text-gray-600 dark:text-gray-300">Time: {event.start_time}</p>
-                <p className="text-gray-600 dark:text-gray-300">Start: {event.start_landmark?.name}</p>
-                <p className="text-gray-600 dark:text-gray-300">
-                  Status: {getEventStatus(event.event_date).charAt(0).toUpperCase() + getEventStatus(event.event_date).slice(1)}
-                </p>
-                <p className="text-gray-600 dark:text-gray-300">Cost: {event.is_free ? "Free" : "Paid"}</p>
-                <Button 
-                  variant="outline" 
-                  className="mt-2" 
-                  onClick={() => navigate(`/cycling/${event.slug}`)}
-                >
-                  View Details
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+          ) : (
+            <div className="flex items-center justify-center h-[50vh] flex-col gap-4">
+              <p className="text-muted-foreground text-center p-4">
+                No events found. Host an event to see it here.
+              </p>
+              <Button onClick={() => navigate("/host-cycling")}>
+                Host an Event
+              </Button>
+            </div>
+          )}
+        <Navbar />
       </div>
-
-      <Navbar />
     </div>
   );
 };
