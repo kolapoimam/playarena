@@ -197,7 +197,7 @@ const AttendeesManagement = ({
             toast({
               title: "Warning",
               description: "Attendee checked in, but failed to update wallet balance.",
-              variant: "destructive',
+variant: "destructive",
             });
           }
         }
