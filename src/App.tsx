@@ -47,10 +47,9 @@ import AccountDetails from "@/pages/AccountDetails";
 import MyMatches from "@/pages/MyMatches";
 import MatchPreferences from "@/pages/MatchPreferences";
 import Wallet from "@/pages/Wallet";
-// New cycling event pages (placeholders)
-import CyclingEvents from "@/pages/CyclingEvents";
-import CyclingEventDetail from "@/pages/CyclingEventDetail";
-import JoinCyclingEvent from "@/pages/JoinCyclingEvent";
+import CyclingActivity from "@/pages/CyclingActivity";
+import CyclingDetail from "@/pages/CyclingDetail";
+import JoinCycling from "@/pages/JoinCycling";
 
 const queryClient = new QueryClient();
 
@@ -118,14 +117,14 @@ const AppRoutes = () => {
       <Route path="/search" element={<Search />} />
       <Route path="/activities" element={<Activities />} />
       <Route path="/matches" element={<Matches />} />
-      <Route path="/cycling-events" element={<CyclingEvents />} /> {/* New route */}
+      <Route path="/cycling-activities" element={<CyclingActivity />} />
       <Route path="/guides" element={<Guides />} />
       <Route path="/profile" element={<Profile />} />
       <Route path="/profile/view-profile" element={<ViewProfile />} />
       <Route path="/profile/notifications" element={<Notifications />} />
       <Route
         path="/profile/account-details"
-        element={<AccountDetails />}
+        element={<AccountDetails profile={profile} setProfile={setProfile} />}
       />
       <Route path="/profile/my-matches" element={<MyMatches profile={profile} />} />
       <Route path="/profile/match-preferences" element={<MatchPreferences />} />
@@ -144,8 +143,8 @@ const AppRoutes = () => {
       <Route path="/terms-privacy" element={<TermsAndPrivacy />} />
       <Route path="/match/:slug" element={<MatchDetail />} />
       <Route path="/join/:slug" element={<JoinMatch />} />
-      <Route path="/cycling-event/:slug" element={<CyclingEventDetail />} /> {/* New route */}
-      <Route path="/join-cycling/:slug" element={<JoinCyclingEvent />} /> {/* New route */}
+      <Route path="/cycling-event/:slug" element={<CyclingDetail />} />
+      <Route path="/join-cycling/:slug" element={<JoinCycling />} />
       <Route path="/venue/:slug" element={<VenueDetail />} />
       <Route path="/match/:slug/team-management" element={<TeamManagement />} />
       <Route path="/highlights/:slug" element={<MatchHighlights />} />
