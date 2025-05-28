@@ -15,7 +15,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/menu";
+} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -36,7 +36,7 @@ type Landmark = {
 type Attendee = {
   id: string;
   attendee_name: string;
-  attendee_status: string;
+  status: string;
 };
 
 type Event = {
@@ -47,23 +47,26 @@ type Event = {
   start_time: string;
   max_attendees: number;
   is_free: boolean;
-  duration_type: string;
-  duration_value: number;
+  price?: number;
   start_landmark: Landmark;
   host_name: string;
+  host_phone: string;
 };
 
-interface CyclingDetailsDialogueProps {
+interface CyclingDetailsDialogProps {
   event: Event;
   attendees: Attendee[];
 }
 
-const CyclingDetailsDialogue: React.FC<CyclingDetailsDialogueProps> = ({ event, attendees }) => {
+const CyclingDetailsDialog: React.FC<CyclingDetailsDialogProps> = ({
+  event,
+  attendees,
+}) => {
   const { toast } = useToast();
   const [downloadDialogOpen, setDownloadDialogOpen] = useState(false);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
-  const [backgroundOption, setBackgroundOption] = useState("cycle");
+  const [backgroundOption, setBackgroundOption] = useState<"cycle" | "white" | "green">("cycle");
   const cardRef = useRef<HTMLDivElement>(null);
 
   const formatDate = (dateString: string) => {
@@ -79,7 +82,7 @@ const CyclingDetailsDialogue: React.FC<CyclingDetailsDialogueProps> = ({ event, 
   const shareEvent = async () => {
     const url = `${window.location.origin}/cycling/${event.slug}`;
     const shareText = `Join my cycling event: ${event.title} at ${event.start_landmark.name}, ${event.start_landmark.state} on ${formatDate(event.event_date)} at ${event.start_time}. ${attendees.length}/${event.max_attendees} spots taken. Powered by SportCliq. ${url}`;
-    
+
     if (navigator.share) {
       try {
         await navigator.share({
@@ -111,21 +114,21 @@ const CyclingDetailsDialogue: React.FC<CyclingDetailsDialogueProps> = ({ event, 
     const url = `${window.location.origin}/cycling/${event.slug}`;
     const shareText = `Join my cycling event: ${event.title} at ${event.start_landmark.name}, ${event.start_landmark.state} on ${formatDate(event.event_date)} at ${event.start_time}. ${attendees.length}/${event.max_attendees} spots. Powered by SportCliq. ${url}`;
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
-    window.open(whatsappUrl, '_blank');
+    window.open(whatsappUrl, "_blank");
   };
 
   const shareToTwitter = () => {
     const url = `${window.location.origin}/cycling/${event.slug}`;
     const shareText = `Join my cycling event: ${event.title} at ${event.start_landmark.name}, ${event.start_landmark.state} on ${formatDate(event.event_date)} at ${event.start_time}. ${attendees.length}/${event.max_attendees} spots. Powered by SportCliq. ${url}`;
     const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
-    window.open(twitterUrl, '_blank');
+    window.open(twitterUrl, "_blank");
   };
 
   const shareToFacebook = () => {
     const url = `${window.location.origin}/cycling/${event.slug}`;
     const shareText = `Join my cycling event: ${event.title} at ${event.start_landmark.name}, ${event.start_landmark.state} on ${formatDate(event.event_date)} at ${event.start_time}. ${attendees.length}/${event.max_attendees} spots taken. Powered by SportCliq.`;
     const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(shareText)}`;
-    window.open(facebookUrl, '_blank');
+    window.open(facebookUrl, "_blank");
   };
 
   const handleImageLoad = () => {
@@ -148,24 +151,24 @@ const CyclingDetailsDialogue: React.FC<CyclingDetailsDialogueProps> = ({ event, 
       const img = new Image();
       img.crossOrigin = "anonymous";
       img.src = logoSrc;
-      await new Promise((resolve) => {
-        img.onload = resolve;
+      await new Promise<void>((resolve) => {
+        img.onload = () => resolve();
         img.onerror = () => {
-  console.warn("Failed to load logo");
-  resolve(null);
-})();
+          console.warn("Failed to load logo");
+          resolve();
+        };
       });
 
       if (backgroundOption === "cycle") {
         const bgImg = new Image();
         bgImg.crossOrigin = "anonymous";
-        bgImg.src = "/cycling-bg.jpg"; // Adjust to your cycling-themed image
-        await new Promise((resolve) => {
-          bgImg.onload = resolve;
+        bgImg.src = "/cycling-bg.jpg";
+        await new Promise<void>((resolve) => {
+          bgImg.onload = () => resolve();
           bgImg.onerror = () => {
             console.warn("Failed to load background");
-            resolve(null);
-          }();
+            resolve();
+          };
         });
       }
 
@@ -175,16 +178,21 @@ const CyclingDetailsDialogue: React.FC<CyclingDetailsDialogueProps> = ({ event, 
         logging: false,
       });
 
-      const blob = await new Promise<Blob>((resolve) =>
+      const blob = await new Promise<Blob | null>((resolve) =>
         canvas.toBlob((blob) => resolve(blob), "image/png")
       );
 
       if (!blob) throw new Error("Failed to convert canvas to Blob");
 
-      const filename = `SportCliq-Cycling-${event.title.replace(/\s+/g, '-')}.png`;
+      const filename = `SportCliq-Cycling-${event.title.replace(/\s+/g, "-")}.png`;
       const url = URL.createObjectURL(blob);
 
-      if (navigator.share && (navigator as any).canShare?.({ blob: [new File([blob], filename, { type: "image/png" }) }) ])) {
+      if (
+        navigator.share &&
+        navigator.canShare({
+          files: [new File([blob], filename, { type: "image/png" })],
+        })
+      ) {
         try {
           await navigator.share({
             files: [new File([blob], filename, { type: "image/png" })],
@@ -203,9 +211,13 @@ const CyclingDetailsDialogue: React.FC<CyclingDetailsDialogueProps> = ({ event, 
       link.download = filename;
       link.click();
       URL.revokeObjectURL(url);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error generating image:", error);
-      toast({ title: "Error", description: "Failed to download card.", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: "Failed to download card.",
+        variant: "destructive",
+      });
     } finally {
       setIsDownloading(false);
     }
@@ -223,22 +235,38 @@ const CyclingDetailsDialogue: React.FC<CyclingDetailsDialogueProps> = ({ event, 
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={shareToWhatsApp}>Share to WhatsApp</DropdownMenuItem>
-            <DropdownMenuItem onClick={shareToTwitter}>Share to Twitter</DropdownMenuItem>
-            <DropdownMenuItem onClick={shareToFacebook}>Share to Facebook</DropdownMenuItem>
-            <DropdownMenuItem onClick={shareEvent}>Share via Device</DropdownMenuItem>
+            <DropdownMenuItem onClick={shareToWhatsApp}>
+              Share to WhatsApp
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={shareToTwitter}>
+              Share to Twitter
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={shareToFacebook}>
+              Share to Facebook
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={shareEvent}>
+              Share via Device
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-        <Button variant="outline" className="flex-1" onClick={() => setDownloadDialogOpen(true)} disabled={isDownloading}>
+        <Button
+          variant="outline"
+          className="flex-1"
+          onClick={() => setDownloadDialogOpen(true)}
+          disabled={isDownloading}
+        >
           <Download className="mr-2 h-4 w-4" />
           {isDownloading ? "Downloading..." : "Download"}
         </Button>
       </div>
-      <Dialog open={downloadDialogOpen} onOpenChange={(open) => {
-        setDownloadDialogOpen(open);
-        setIsImageLoaded(false);
-        if (!open) setBackgroundOption("cycle");
-      }}>
+      <Dialog
+        open={downloadDialogOpen}
+        onOpenChange={(open) => {
+          setDownloadDialogOpen(open);
+          setIsImageLoaded(false);
+          if (!open) setBackgroundOption("cycle");
+        }}
+      >
         <DialogContent className="sm:max-w-[425px] rounded-lg">
           <DialogTitle>Event Details</DialogTitle>
           <DialogDescription>
@@ -282,10 +310,14 @@ const CyclingDetailsDialogue: React.FC<CyclingDetailsDialogueProps> = ({ event, 
             </div>
             <div
               ref={cardRef}
-              className={`rounded-lg p-6 shadow-lg ${backgroundOption === "cycle" ? "bg-cover bg-center" : ""}`}
+              className={`rounded-lg p-6 shadow-lg ${
+                backgroundOption === "cycle" ? "bg-cover bg-center" : ""
+              }`}
               style={{
-                backgroundImage: backgroundOption === "cycle" ? "url(/cycling-bg.jpg)" : "",
-                backgroundColor: backgroundOption !== "cycle" ? backgroundOption : "transparent",
+                backgroundImage:
+                  backgroundOption === "cycle" ? "url(/cycling-bg.jpg)" : "",
+                backgroundColor:
+                  backgroundOption !== "cycle" ? backgroundOption : "transparent",
                 ...(backgroundOption === "cycle" && {
                   backgroundBlendMode: "overlay",
                   backgroundColor: "rgba(0, 0, 0, 0.5)",
@@ -295,35 +327,89 @@ const CyclingDetailsDialogue: React.FC<CyclingDetailsDialogueProps> = ({ event, 
               <div className="relative">
                 <div className="flex items-center justify-between mb-4">
                   <img
-                    src={backgroundOption === "white" ? "/playarenalight.png" : "/playarenadark.png"}
+                    src={
+                      backgroundOption === "white"
+                        ? "/playarenalight.png"
+                        : "/playarenadark.png"
+                    }
                     alt="SportCliq Logo"
                     className="h-8 w-auto"
                     crossOrigin="anonymous"
                     onLoad={handleImageLoad}
                     onError={() => {
-                      toast({ title: "Error", description: "Failed to load logo.", variant: "destructive" });
+                      toast({
+                        title: "Error",
+                        description: "Failed to load logo.",
+                        variant: "destructive",
+                      });
                       setIsImageLoaded(true);
                     }}
                   />
-                  <Bicycle className={`h-6 w-6 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
+                  <Bicycle
+                    className={`h-6 w-6 ${
+                      backgroundOption === "white" ? "text-black" : "text-white"
+                    }`}
+                  />
                 </div>
-                <h2 className={`text-xl font-bold ${backgroundOption === "white" ? "text-black" : "text-white"}`}>{event.title}</h2>
+                <h2
+                  className={`text-xl font-bold ${
+                    backgroundOption === "white" ? "text-black" : "text-white"
+                  }`}
+                >
+                  {event.title}
+                </h2>
                 <div className="space-y-2 mt-2">
                   <div className="flex items-center">
-                    <MapPin className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-                    <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{event.start_landmark.name}, {event.start_landmark.state}</span>
+                    <MapPin
+                      className={`h-4 w-4 mr-2 ${
+                        backgroundOption === "white" ? "text-black" : "text-white"
+                      }`}
+                    />
+                    <span
+                      className={backgroundOption === "white" ? "text-black" : "text-white"}
+                    >
+                      {event.start_landmark.name}, {event.start_landmark.state}
+                    </span>
                   </div>
                   <div className="flex items-center">
-                    <Calendar className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-                    <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{formatDate(event.event_date)} at {event.start_time}</span>
+                    <Calendar
+                      className={`h-4 w-4 mr-2 ${
+                        backgroundOption === "white" ? "text-black" : "text-white"
+                      }`}
+                    />
+                    <span
+                      className={backgroundOption === "white" ? "text-black" : "text-white"}
+                    >
+                      {formatDate(event.event_date)} at {event.start_time}
+                    </span>
                   </div>
                   <div className="flex items-center">
-                    <DollarSignIcon className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-                    <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{event.is_free ? "Free" : "Paid (₦500)"}</span>
+                    <DollarSignIcon
+                      className={`h-4 w-4 mr-2 ${
+                        backgroundOption === "white" ? "text-black" : "text-white"
+                      }`}
+                    />
+                    <span
+                      className={backgroundOption === "white" ? "text-black" : "text-white"}
+                    >
+                      {event.is_free
+                        ? "Free"
+                        : event.price
+                        ? `₦${event.price.toLocaleString("en-NG")}`
+                        : "Paid"}
+                    </span>
                   </div>
                   <div className="flex items-center">
-                    <Users className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-                    <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{attendees.length}/{event.max_attendees} spots booked</span>
+                    <Users
+                      className={`h-4 w-4 mr-2 ${
+                        backgroundOption === "white" ? "text-black" : "text-white"
+                      }`}
+                    />
+                    <span
+                      className={backgroundOption === "white" ? "text-black" : "text-white"}
+                    >
+                      {attendees.length}/{event.max_attendees} spots booked
+                    </span>
                   </div>
                 </div>
               </div>
