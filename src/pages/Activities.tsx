@@ -11,6 +11,12 @@ const sports = [
     route: "/matches",
   },
   {
+    name: "Cycling",
+    emoji: "🚴",
+    active: true,
+    route: "/cycling-activities",
+  },
+  {
     name: "Basketball",
     emoji: "🏀",
     active: false,
@@ -23,11 +29,6 @@ const sports = [
   {
     name: "Tennis",
     emoji: "🎾",
-    active: false,
-  },
-  {
-    name: "Cycling",
-    emoji: "🚴",
     active: false,
   },
   {
