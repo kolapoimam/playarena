@@ -58,14 +58,16 @@ const CyclingActivity = () => {
     if (filters.meetingPoint && !event.start_landmark?.name.toLowerCase().includes(filters.meetingPoint.toLowerCase())) return false;
 
     // Cost filter
-    if (filters.cost === "free" && !event.is_free) return false;
-    if (filters.cost === "paid" && event.is_free) return false;
+    if (filters.cost && filters.cost !== "all") {
+      if (filters.cost === "free" && !event.is_free) return false;
+      if (filters.cost === "paid" && event.is_free) return false;
+    }
 
     // Status filter
-    if (filters.status && status !== filters.status) return false;
+    if (filters.status && filters.status !== "all" && status !== filters.status) return false;
 
     // Timeline filter
-    if (filters.timeline) {
+    if (filters.timeline && filters.timeline !== "all") {
       const thisWeekStart = startOfWeek(now, { weekStartsOn: 1 });
       const thisWeekEnd = endOfWeek(now, { weekStartsOn: 1 });
       const nextWeekStart = startOfWeek(addWeeks(now, 1), { weekStartsOn: 1 });
@@ -125,7 +127,7 @@ const CyclingActivity = () => {
                 <SelectValue placeholder="Select cost" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All</SelectItem>
+                <SelectItem value="all">All</SelectItem>
                 <SelectItem value="free">Free</SelectItem>
                 <SelectItem value="paid">Paid</SelectItem>
               </SelectContent>
@@ -138,7 +140,7 @@ const CyclingActivity = () => {
                 <SelectValue placeholder="Select status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All</SelectItem>
+                <SelectItem value="all">All</SelectItem>
                 <SelectItem value="today">Today</SelectItem>
                 <SelectItem value="tomorrow">Tomorrow</SelectItem>
                 <SelectItem value="upcoming">Upcoming</SelectItem>
@@ -153,7 +155,7 @@ const CyclingActivity = () => {
                 <SelectValue placeholder="Select timeline" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All</SelectItem>
+                <SelectItem value="all">All</SelectItem>
                 <SelectItem value="this_week">This Week</SelectItem>
                 <SelectItem value="next_week">Next Week</SelectItem>
                 <SelectItem value="this_month">This Month</SelectItem>
