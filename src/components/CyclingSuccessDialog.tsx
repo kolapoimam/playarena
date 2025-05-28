@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 
 type FormValues = {
   title: string;
-  event_date: Date | null;
+  event_date: Date;
   start_time: string;
   host_name: string;
 };
@@ -23,7 +23,7 @@ type CyclingSuccessDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   formValues: FormValues;
-  selectedLandmark: Landmark | undefined;
+  selectedLandmark: Landmark;
   supercode?: string | null;
   confirmationCode?: string | null;
   eventSlug: string;
@@ -46,14 +46,29 @@ const CyclingSuccessDialog = ({
 
   const code = supercode || confirmationCode;
 
-  // Validate required props
-  if (!code || !formValues?.title || !formValues?.event_date || !formValues?.start_time || !formValues?.host_name || !selectedLandmark || !eventSlug) {
-    toast({
-      title: "Error",
-      description: "Missing required event information.",
-      variant: "destructive",
-    });
-    return null; // Return null to prevent rendering invalid dialog
+  // Validate all required props
+  if (
+    !open ||
+    !code ||
+    !formValues?.title ||
+    !formValues?.event_date ||
+    !formValues?.start_time ||
+    !formValues?.host_name ||
+    !selectedLandmark?.id ||
+    !selectedLandmark?.name ||
+    !selectedLandmark?.state ||
+    !eventSlug ||
+    typeof onNavigate !== "function"
+  ) {
+    if (open) {
+      toast({
+        title: "Error",
+        description: "Missing or invalid event information. Please try again.",
+        variant: "destructive",
+      });
+      onOpenChange(false);
+    }
+    return null;
   }
 
   const handleDownload = async () => {
@@ -163,32 +178,25 @@ const CyclingSuccessDialog = ({
               />
               <Bike className="h-6 w-6" />
             </div>
-            <h2 className="text-xl font-bold mb-2">
-              {formValues.title || "Cycling Event"}
-            </h2>
+            <h2 className="text-xl font-bold mb-2">{formValues.title}</h2>
             <div className="space-y-2 mb-4 text-sm leading-tight">
               <div className="flex items-center">
                 <MapPin className="h-4 w-4 mr-2" />
                 <span>
-                  {selectedLandmark?.name || "Landmark"},{" "}
-                  {selectedLandmark?.state || ""}
+                  {selectedLandmark.name}, {selectedLandmark.state}
                 </span>
               </div>
               <div className="flex items-center">
                 <CalendarIcon className="h-4 w-4 mr-2" />
-                <span>
-                  {formValues.event_date
-                    ? format(formValues.event_date, "PPP")
-                    : "Date"}
-                </span>
+                <span>{format(formValues.event_date, "PPP")}</span>
               </div>
               <div className="flex items-center">
                 <Clock className="h-4 w-4 mr-2" />
-                <span>{formValues.start_time || "Start Time"}</span>
+                <span>{formValues.start_time}</span>
               </div>
               <div className="flex items-center">
                 <User className="h-4 w-4 mr-2" />
-                <span>Hosted by {formValues.host_name || "Host"}</span>
+                <span>Hosted by {formValues.host_name}</span>
               </div>
             </div>
             <div className="bg-white text-green-500 rounded-md p-4 text-center shadow-inner">
