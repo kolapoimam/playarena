@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { MapPin, CalendarIcon, Clock, User, Bicycle } from "lucide-react";
+import { MapPin, CalendarIcon, Clock, User, Bike } from "lucide-react";
 import { format } from "date-fns";
 import html2canvas from "html2canvas";
 import { useToast } from "@/hooks/use-toast";
@@ -159,7 +159,7 @@ const CyclingSuccessDialog = ({
                 alt="SportCliq Logo"
                 className="h-8 w-auto"
               />
-              <Bicycle className="h-6 w-6" />
+              <Bike className="h-6 w-6" />
             </div>
             <h2 className="text-xl font-bold mb-2">
               {formValues.title || "Cycling Event"}
