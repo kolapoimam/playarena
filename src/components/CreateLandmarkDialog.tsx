@@ -20,7 +20,7 @@ const landmarkSchema = z.object({
   new_landmark_name: z.string().min(3, 'Landmark name must be at least 3 characters').max(100, 'Landmark name cannot exceed 100 characters'),
   new_landmark_state: z.string({ required_error: 'State is required' }),
   new_landmark_description: z.string().max(200, 'Description cannot exceed 200 characters').optional(),
-  new_landmark_map_link: z.string().url('Enter a valid URL').optional().nullable(),
+  new_landmark_map_link: z.string().url('Enter a valid URL').optional().or(z.literal('')).transform(val => val === '' ? null : val),
 }).refine(
   (data) => data.new_landmark_name && data.new_landmark_state,
   {
