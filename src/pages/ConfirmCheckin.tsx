@@ -105,10 +105,11 @@ const ConfirmCheckin = () => {
   const [matchNotFound, setMatchNotFound] = useState(false);
   const [loading, setLoading] = useState(false);
   const [playerStatuses, setPlayerStatuses] = useState<
-    { id string; status string; checkinCode string }[]
-  >([]);
-  const [checkinCodes, setCheckinCodes] = useState<{ [key string] string }>({});
-  const [checkinCodeErrors, setCheckinCodeErrors] = useState<{ [key string] string | null }>({});
+const [players, setPlayers] = useState<
+  { id: string; status: string; checkinCode: string }[]
+>([]);
+const [checkinCodes, setCheckinCodes] = useState<{ [key: string]: string }>({});
+const [checkinCodeErrors, setCheckinCodeErrors] = useState<{ [key: string]: string | null }>({});
   const [tempIdentifier] = useState(uuidv4());
   const [error, setError] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
