@@ -225,7 +225,6 @@ const HostCycling = () => {
       const { data: eventData, error: eventError } = await supabase
         .from('cycling_events')
         .insert({
-          id_uuid: gen_random_uuid(),
           title: data.title,
           slug: slugData,
           notes: data.notes || null,
