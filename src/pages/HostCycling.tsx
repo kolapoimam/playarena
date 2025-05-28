@@ -20,6 +20,7 @@ import Navbar from '@/components/Navbar';
 import CyclingSuccessDialog from '@/components/CyclingSuccessDialog';
 import TimeInput from '@/components/TimeInput';
 import CreateLandmarkDialog from '@/components/CreateLandmarkDialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 // Error Boundary Component
 class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
@@ -35,7 +36,7 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
 
   render() {
     if (this.state.hasError) {
-      return <div>Something went wrong. Please try again.</div>;
+      return <div>Error rendering dialog. Event created successfully.</div>;
     }
     return this.props.children;
   }
@@ -156,15 +157,14 @@ const HostCycling = () => {
         setLoadingLandmarks(true);
         const { data, error } = await supabase.from('landmarks').select('id_uuid, name, state').order('name', { ascending: true });
         if (error) throw new Error(`Failed to fetch landmarks: ${error.message}`);
-        
-        // Filter out duplicates by id_uuid and ensure valid data
+
         const uniqueLandmarks = data
           ? Array.from(new Map(data.map(item => [item.id_uuid, item])).values())
               .filter(item => item.id_uuid && item.name && item.state)
           : [];
-        
+
         setLandmarks(uniqueLandmarks);
-        if (!uniqueLandmarks || uniqueLandmarks.length === 0) {
+        if (!uniqueLandmarks.length) {
           setLandmarksError('No landmarks available. Please create a new landmark.');
         } else {
           setLandmarksError(null);
@@ -269,16 +269,16 @@ const HostCycling = () => {
         .select('id_uuid')
         .single();
 
-      if (eventError) {
+      if (eventError || !eventData) {
         console.error('Supabase insert error:', eventError);
-        throw new Error(`Failed to create event: ${eventError.message || 'No event data'}`);
+        throw new Error(`Failed to create event: ${eventError?.message || 'No event data'}`);
       }
 
-      // Query the cycling_events_api view to get the correct response format
+      // Query cycling_events_api to get correct response format
       const { data: apiData, error: apiError } = await supabase
         .from('cycling_events_api')
-        .select('id', 'slug')
-        .eq('id', 'eventData.id_uuid')
+        .select('id, slug')
+        .eq('id', eventData.id_uuid)
         .single();
 
       if (apiError || !apiData) {
@@ -286,17 +286,21 @@ const HostCycling = () => {
         throw new Error(`Failed to fetch API view data: ${apiError?.message || 'No API data'}`);
       }
 
-      console.log('Event created successfully:', apiData);
+      console.log('Event created:', apiData);
+
+      // Validate response
+      if (!apiData.id || !apiData.slug || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(apiData.id)) {
+        throw new Error('Invalid event data: ID must be a UUID and slug must be valid');
+      }
 
       setSupercode(supercodeData);
       setEventSlug(apiData.slug);
-      setSuccessDialog(true);
-    } catch (err) {
-      const error = err as Error;
-      console.error('Error in onSubmit:', error);
+      setSuccessDialogOpen(true);
+    } catch (err: any) {
+      console.error('Error in onSubmit:', err);
       toast({
         title: 'Error',
-        description: error.message || 'Failed to create event. Try again.',
+        description: err.message || 'Failed to create event. Please try again.',
         variant: 'error',
       });
     } finally {
@@ -304,20 +308,16 @@ const HostCycling = () => {
     }
   };
 
-  const handleNavigate = async (slug: string) => {
+  const handleNavigate = (slug: string | null) => {
     try {
-      if (slug) {
-        navigate(`/cycling/${slug}`);
-      } else {
-        navigate('/events');
-      }
+      navigate(slug ? `/cycling/${slug}` : '/events');
     } catch (error) {
-        console.error('Navigation error:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to navigate. Try again.',
-          variant: 'error',
-        });
+      console.error('Navigation error:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to navigate.',
+        variant: 'error',
+      });
     }
   };
 
@@ -327,11 +327,11 @@ const HostCycling = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 overflow-y-auto">
-      <header className="sticky top-0 z-50 bg-gradient-to-r from-green-500 to-dark-green-600 text-white shadow-sm">
+      <header className="sticky top-0 z-50 bg-gradient-to-r from-green-600 to-dark-green-700 text-white shadow-sm">
         <div className="p-4 flex items-center justify-between max-w-7xl mx-auto">
           <Button
             variant="ghost"
-            className="text-white hover:bg-dark-green-600 transition-colors"
+            className="text-white hover:bg-green-700 transition-colors"
             onClick={() => navigate(-1)}
           >
             <ArrowLeft size={18} className="mr-2" />
@@ -348,7 +348,7 @@ const HostCycling = () => {
           {landmarksError && (
             <p className="text-red-400 text-center mt-4">{landmarksError}</p>
           )}
-          <Form {...}>
+          <Form {...form}>
             <form
               ref={formRef}
               onSubmit={form.handleSubmit(onSubmit)}
@@ -357,68 +357,67 @@ const HostCycling = () => {
               <style>
                 {`
                   .no-scrollbar::-webkit-scrollbar {
-                    display: auto;
+                    display: none;
                   }
                   .no-scrollbar {
-                    -ms-overflow-style: auto;
+                    -ms-overflow-style: none;
                     scrollbar-width: none;
-                    -webkit-text: auto;
                   }
                 `}
               </style>
-              <div className="bg-white dark:bg-dark-gray-800 rounded-lg shadow-md p-6">
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
                 <button
                   type="button"
                   className="flex justify-between items-center w-full text-left"
                   onClick={() => handleSectionToggle(setIsRouteDetailsOpen, isRouteDetailsOpen)}
                 >
-                  <h2 className="text-lg">Route Details</h2>
+                  <h2 className="text-lg font-semibold">Route Details</h2>
                   <span>{isRouteDetailsOpen ? '-' : '+'}</span>
                 </button>
                 {isRouteDetailsOpen && (
-                  <div className="space-y-4">
+                  <>
                     <Button
                       type="button"
                       variant="outline"
-                      className="flex items-center justify-between space-x-2"
+                      className="flex items-center justify-between space-x-2 mb-4"
                       onClick={() => setIsCreateLandmarkOpen(true)}
                     >
                       <Plus size={16} />
                       <span>Create New Landmark</span>
                     </Button>
                     <FormField
-                      control={form.controlField}
+                      control={form.control}
                       name="start_landmark_id"
                       render={({ field }) => (
                         <FormItem>
-                          <Label>Starting Landmark</Label>
+                          <FormLabel>Starting Landmark</FormLabel>
                           <Select
-                            onValueChange={field.onValueChange}
-                            value={field.value || ''}}
+                            onValueChange={field.onChange}
+                            value={field.value}
                           >
-                            <FormControl value>
+                            <FormControl>
                               <SelectTrigger>
-                                <SelectValue name="placeholder" placeholder="Select a landmark" />
+                                <SelectValue placeholder="Select a landmark" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
                               {landmarks.length > 0 ? (
-                                {landmarks.map((landmark, index) => (
+                                landmarks.map((landmark) => (
                                   <SelectItem key={landmark.id_uuid} value={landmark.id_uuid}>
                                     {landmark.name}, {landmark.state}
                                   </SelectItem>
-                                ))}
+                                ))
                               ) : (
                                 <SelectItem value="no-landmarks" disabled>
                                   No landmarks available
                                 </SelectItem>
-                              ))}
+                              )}
                             </SelectContent>
                           </Select>
                           <FormMessage />
-                            </FormItem>
+                        </FormItem>
                       )}
-                        />
+                    />
                     <FormField
                       control={form.control}
                       name="end_landmark_id"
@@ -426,7 +425,6 @@ const HostCycling = () => {
                         <FormItem>
                           <FormLabel>Ending Landmark (Optional)</FormLabel>
                           <Select
-                            control={form.handleValueChange}
                             onValueChange={(value) => field.onChange(value === 'none' ? null : value)}
                             value={field.value || 'none'}
                           >
@@ -445,43 +443,41 @@ const HostCycling = () => {
                             </SelectContent>
                           </Select>
                           <FormDescription>
-                            Select an ending landmark if different from the starting landmark (optional)
+                            Select an ending landmark if different from the starting landmark.
                           </FormDescription>
                           <FormMessage />
-                            </Select>
-                          )}
                         </FormItem>
                       )}
-                    </div>
-                  )}
-                </div>
-              <div className="bg-white dark:bg-dark-gray-800 rounded-lg shadow-md p-6">
+                    />
+                  </>
+                )}
+              </div>
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
                 <button
                   type="button"
                   className="flex justify-between items-center w-full text-left"
                   onClick={() => handleSectionToggle(setIsEventDetailsOpen, isEventDetailsOpen)}
                 >
-                  <h>
-                  <h2 className="text-lg">Event Details</h2>
+                  <h2 className="text">Event Details</h2>
                   <span>{isEventDetailsOpen ? '-' : '+'}</span>
                 </button>
                 {isEventDetailsOpen && (
                   <>
                     <FormField
-                      control={form.controlField}
+                      control={form.control}
                       name="title"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Event Title</FormLabel>
                           <FormControl>
-                            <Input type="text" placeholder="E.g., Example Coastal Ride" {...field} />
+                            <Input placeholder="E.g., Sunday Social Ride" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
                     <FormField
-                      control={form.controlField}
+                      control={form.control}
                       name="notes"
                       render={({ field }) => (
                         <FormItem>
@@ -491,22 +487,22 @@ const HostCycling = () => {
                           </FormControl>
                           <FormMessage />
                         </FormItem>
-                      )}
+                      ))}
                     />
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <FormField
-                        control={form.controlField}
+                        control="form.control
                         name="event_date"
                         render={({ field }) => (
                           <FormItem>
                             <div className="flex flex-col">
-                            <FormLabel>Date</FormLabel>
+                              <FormLabel>Date</FormLabel>
                               <Popover>
                                 <PopoverTrigger asChild>
                                   <FormControl>
                                     <Button
-                                      variant="control"
-                                      controlClassName={cn(
+                                      variant="outline"
+                                      className={cn(
                                         'p-3 text-left font-normal',
                                         !field.value && 'text-muted-foreground'
                                       )}
@@ -520,7 +516,7 @@ const HostCycling = () => {
                                   <Calendar
                                     mode="single"
                                     selected={field.value}
-                                    onSelect={field.onSelect}
+                                    onSelect={field.onChange}
                                     disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                                     initialFocus
                                   />
@@ -529,30 +525,28 @@ const HostCycling = () => {
                             </div>
                             <FormMessage />
                           </FormItem>
-                        )}
-                      </Control>
-                    />
-                    <FormField
-                      control={form.controlField}
-                      name="start_time"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Start Time</FormLabel>
-                          <FormControl>
+                        ))}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="start_time"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Start Time</FormLabel>
                             <FormControl>
                               <TimeInput
-                                value={field.value || ""}
+                                value={field.value}
                                 onChange={field.onChange}
                                 placeholder="e.g., 08:00 AM"
                               />
                             </FormControl>
                             <FormDescription>
-                              Event start time (12-hour clock, e.g., 08:00, AM)
+                              Event start time (12-hour clock, e.g., 08:00 AM)
                             </FormDescription>
                             <FormMessage />
                           </FormItem>
-                        )}
-                        />
+                        ))}
+                      />
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <FormField
@@ -564,7 +558,7 @@ const HostCycling = () => {
                             <Select onValueChange={field.onChange} value={field.value}>
                               <FormControl>
                                 <SelectTrigger>
-                                  <SelectValue placeholder="Select duration field type" />
+                                  <SelectValue placeholder="Select duration type" />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
@@ -575,44 +569,44 @@ const HostCycling = () => {
                             </Select>
                             <FormMessage />
                           </FormItem>
-                        )}
-                      </FormField>
-                    />
-                    <FormField
-                      control={form.controlField}
-                      name="duration_value"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Duration Value</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              min={1}
-                              max={1000}
-                              {...field}
-                              onChange={(e) => field.onChange(parseInt(e.target.value))}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+                        ))}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="duration_value"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Duration Value</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                min={1}
+                                max={1000}
+                                {...field}
+                                onChange={(e) => field.onChange(parseInt(e.target.value))}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        ))}
+                      />
+                    </div>
+                  </>
                 )}
               </div>
-              <div className="bg-white dark:bg-dark-gray-800 rounded-lg shadow-md p-6">
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
                 <button
                   type="button"
                   className="flex justify-between items-center w-full text-left"
                   onClick={() => handleSectionToggle(setIsPreferencesOpen, isPreferencesOpen)}
                 >
-                  <h2 className="text-lg">Event Preferences</h2>
+                  <h2 className="text-lg font-semibold">Event Preferences</h2>
                   <span>{isPreferencesOpen ? '-' : '+'}</span>
                 </button>
                 {isPreferencesOpen && (
                   <>
                     <FormField
-                      control={form.controlField}
+                      control={form.control}
                       name="max_attendees"
                       render={({ field }) => (
                         <FormItem>
@@ -632,94 +626,93 @@ const HostCycling = () => {
                     />
                     <div className="flex flex-col space-y-4">
                       <FormField
-                        control={form.controlField}
+                        control={form.control}
                         name="is_free"
                         render={({ field }) => (
                           <FormItem className="flex items-center space-x-2">
                             <FormControl>
-                              <Checkbox checked={field.checked} onCheckedChange={field.onCheckedChange} />
+                              <Checkbox checked={field.value} onCheckedChange={field.onChange} />
                             </FormControl>
                             <label className="text-sm font-medium">Free Event</label>
                           </FormItem>
                         )}
-                      </FormField>
-                    />
-                    {!form.watch("is_free") && (
+                      />
+                      {!form.watch('is_free') && (
+                        <FormField
+                          control={form.control}
+                          name="price"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Event Price (₦)</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  placeholder="Enter price (minimum ₦1000)"
+                                  min={1000}
+                                  {...field}
+                                  value={field.value ?? ''}
+                                  onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
                       <FormField
-                        control={form.controlField}
-                        name="price"
+                        control={form.control}
+                        name="is_own_bike"
                         render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Event Price (₦)</FormLabel>
+                          <FormItem className="flex items-center space-x-2">
                             <FormControl>
-                              <Input
-                                type="number"
-                                placeholder="Enter price (minimum ₦1000)"
-                                min={1000}
-                                className="text-base border-gray-300 dark:border-dark-gray-600 focus:ring-green-500 dark:bg-dark-gray-700 dark:text-white"
-                                {...field}
-                                value={field.value ?? ""}
-                                onChange={(e) => {
-                                  const value = e.target.value;
-                                  field.onChange(value === "" ? null : parseInt(value, 10));
-                                }}
-                              />
+                              <Checkbox checked={field.value} onCheckedChange={field.onChange} />
                             </FormControl>
-                            <FormMessage />
+                            <label className="text-sm font-medium">Bring Own Bike</label>
                           </FormItem>
                         )}
-                      </FormField>
-                    )}
-                    <FormField
-                      control={form.controlField}
-                      name="is_own_bike"
-                      render={({ field }) => (
-                        <FormItem className="flex items-center space-x-2">
-                          <FormControl>
-                            <Checkbox checked={field.checked} onCheckedChange={field.onCheckedChange} />
-                          </FormControl>
-                          <label className="text-sm font-medium">Bring Own Bike</label>
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.controlField}
-                      name="is_rental_available"
-                      render={({ field }) => (
-                        <FormItem className="flex items-center space-x-2">
-                          <FormControl>
-                            <Checkbox checked={field.checked} onCheckedChange={field.onCheckedChange} />
-                          </FormControl>
-                          <label className="text-sm font-medium">Rentals Available</label>
-                        </FormItem>
-                      )}
-                    </FormField>
-                  </div>
+                      />
+                      <FormField
+                        control={form.control}
+                        name="is_rental_available"
+                        render={({ field }) => (
+                          <FormItem className="flex items-center space-x-2">
+                            <FormControl>
+                              <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                            </FormControl>
+                            <label className="text-sm font-medium">Rentals Available</label>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </>
                 )}
               </div>
-              <div className="bg-white dark:bg-dark-gray-800 rounded-lg shadow-md p-6">
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
                 <button
                   type="button"
                   className="flex justify-between items-center w-full text-left"
                   onClick={() => handleSectionToggle(setIsRegistrationOpen, isRegistrationOpen)}
                 >
-                  <h2 className="text-lg">Registration Details</h2>
+                  <h2 className="text-lg font-semibold">Registration Details</h2>
                   <span>{isRegistrationOpen ? '-' : '+'}</span>
                 </button>
                 {isRegistrationOpen && (
                   <FormField
-                    control={form.controlField}
+                    control={form.control}
                     name="registration_deadline"
                     render={({ field }) => (
                       <FormItem>
                         <div className="flex flex-col">
-                        <FormLabel>Registration Deadline (Optional)</FormLabel>
+                          <FormLabel>Registration Deadline (Optional)</FormLabel>
                           <Popover>
                             <PopoverTrigger asChild>
                               <FormControl>
                                 <Button
                                   variant="outline"
-                                  className={cn('p-3 text-left font-normal', !field.value && 'text-muted-foreground')}
+                                  className={cn(
+                                    'p-3 text-left font-normal',
+                                    !field.value && 'text-muted-foreground'
+                                  )}
                                 >
                                   {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
                                   <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
@@ -729,8 +722,8 @@ const HostCycling = () => {
                             <PopoverContent className="w-auto p-0" align="start">
                               <Calendar
                                 mode="single"
-                                selected={field.selected}
-                                onSelect={field.onSelect}
+                                selected={field.value}
+                                onSelect={field.onChange}
                                 disabled={(date) =>
                                   date < new Date(new Date().setHours(0, 0, 0, 0)) ||
                                   (form.watch('event_date') && date > form.watch('event_date'))
@@ -743,22 +736,22 @@ const HostCycling = () => {
                         <FormMessage />
                       </FormItem>
                     )}
-                  </FormField>
+                  />
                 )}
               </div>
-              <div className="bg-white dark:bg-dark-gray-800 rounded-lg shadow-md p-6">
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
                 <button
                   type="button"
                   className="flex justify-between items-center w-full text-left"
                   onClick={() => handleSectionToggle(setIsHostDetailsOpen, isHostDetailsOpen)}
                 >
-                  <h2 className="text-lg">Host Details</h2>
+                  <h2 className="text-lg font-semibold">Host Details</h2>
                   <span>{isHostDetailsOpen ? '-' : '+'}</span>
                 </button>
                 {isHostDetailsOpen && (
                   <>
                     <FormField
-                      control={form.controlField}
+                      control={form.control}
                       name="host_name"
                       render={({ field }) => (
                         <FormItem>
@@ -769,9 +762,9 @@ const HostCycling = () => {
                           <FormMessage />
                         </FormItem>
                       )}
-                    </FormField>
+                    />
                     <FormField
-                      control={form.controlField}
+                      control={form.control}
                       name="host_phone"
                       render={({ field }) => (
                         <FormItem>
@@ -791,14 +784,14 @@ const HostCycling = () => {
                           <FormMessage />
                         </FormItem>
                       )}
-                    </FormField>
+                    />
                   </>
                 )}
               </div>
               <Button
                 ref={createButtonRef}
                 type="submit"
-                className="w-full bg-green-500 hover:bg-dark-green-600 text-white font-medium rounded-lg px-4 py-3 text-lg shadow-md transition-colors mt-6"
+                className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-3 text-lg shadow-md transition-colors mt-6"
                 disabled={loading || loadingLandmarks || !!landmarksError}
               >
                 {loading ? 'Creating...' : 'Create Event'}
@@ -812,15 +805,15 @@ const HostCycling = () => {
           open={successDialogOpen}
           onOpenChange={setSuccessDialogOpen}
           formValues={{
-            title: form.getFieldValue('title') || '',
-            event_date: form.getFieldValue('event_date') || undefined,
-            start_time: form.getFieldValue('start_time') || '',
-            host_name: form.getFieldValue('host_name') || '',
+            title: form.getValues('title') || 'Untitled Event',
+            event_date: form.getValues('event_date'),
+            start_time: form.getValues('start_time') || 'Unknown',
+            host_name: form.getValues('host_name') || 'Unknown',
           }}
-          selectedLandmark={landmarks.find((l) => l.id_uuid === form.getFieldValue('start_landmark_id')) || { id_uuid: '', name: 'Unknown', state: '' }}
+          selectedLandmark={landmarks.find((l) => l.id_uuid === form.getValues('start_landmark_id')) || { id: '', name: 'Unknown', state: '' }}
           supercode={supercode || ''}
           eventSlug={eventSlug || ''}
-          onNavigate={() => handleNavigate(eventSlug || '')}
+          onNavigate={() => handleNavigate(eventSlug)}
         />
       </ErrorBoundary>
       <CreateLandmarkDialog
@@ -828,6 +821,17 @@ const HostCycling = () => {
         onOpenChange={setIsCreateLandmarkOpen}
         onSave={handleCreateLandmark}
       />
+      <Dialog open={successDialogOpen && !eventSlug} onOpenChange={(open) => !open && setSuccessDialogOpen(false)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Event Created</DialogTitle>
+            <DialogDescription>
+              Your event was created successfully, but we couldn’t display the details. Navigate to your events to view it.
+              <Button onClick={() => handleNavigate(null)} className="mt-4">Go to Events</Button>
+            </DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
       <Navbar />
     </div>
   );
