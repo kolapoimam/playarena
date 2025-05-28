@@ -44,6 +44,18 @@ const CyclingSuccessDialog = ({
   const [isDownloading, setIsDownloading] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
+  const code = supercode || confirmationCode;
+
+  // Validate required props
+  if (!code || !formValues?.title || !formValues?.event_date || !formValues?.start_time || !formValues?.host_name || !selectedLandmark || !eventSlug) {
+    toast({
+      title: "Error",
+      description: "Missing required event information.",
+      variant: "destructive",
+    });
+    return null; // Return null to prevent rendering invalid dialog
+  }
+
   const handleDownload = async () => {
     if (!cardRef.current) {
       toast({
@@ -118,16 +130,6 @@ const CyclingSuccessDialog = ({
       setIsDownloading(false);
     }
   };
-
-  const code = supercode || confirmationCode;
-  if (!code) {
-    toast({
-      title: "Error",
-      description: "No supercode or confirmation code provided.",
-      variant: "destructive",
-    });
-    return null;
-  }
 
   return (
     <Dialog
