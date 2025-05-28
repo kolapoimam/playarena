@@ -13,6 +13,21 @@ import {
 import { Loader2 } from "lucide-react";
 import { z } from "zod";
 
+type CyclingEvent = {
+  id: string;
+  super_code: string;
+  slug: string;
+  title: string;
+  event_date: string;
+  start_time: string;
+  max_attendees: number;
+  is_free: boolean;
+  price?: number;
+  host_name: string;
+  host_phone: string;
+  start_landmark_id: string;
+};
+
 const codeSchema = z
   .string()
   .regex(/^\d{6}$/, { message: "Code must be exactly 6 digits" });
@@ -30,7 +45,7 @@ type MatchCodeInputProps = {
   recentSuperCodes: string[];
   setRecentSuperCodes: (codes: string[]) => void;
   setIsCyclingEvent: (value: boolean) => void;
-  setCyclingEvent: (event: any) => void;
+  setCyclingEvent: (event: CyclingEvent | null) => void;
 };
 
 const MatchCodeInput = ({
@@ -52,41 +67,49 @@ const MatchCodeInput = ({
   const codeInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (userId) {
-      const fetchRecentCodes = async () => {
-        try {
-          const { data: matchData, error: matchError } = await supabase
+    if (!userId) return;
+
+    const fetchRecentCodes = async () => {
+      try {
+        // Fetch recent super codes for matches and cycling events in parallel
+        const [matchResponse, cyclingResponse] = await Promise.all([
+          supabase
             .from("matches")
             .select("super_code")
             .eq("organizer_id", userId)
             .order("created_at", { ascending: false })
-            .limit(3);
-
-          if (matchError) throw matchError;
-
-          const { data: cyclingData, error: cyclingError } = await supabase
+            .limit(3),
+          supabase
             .from("cycling_events")
             .select("super_code")
             .eq("organizer_id", userId)
             .order("created_at", { ascending: false })
-            .limit(3);
+            .limit(3),
+        ]);
 
-          if (cyclingError) throw cyclingError;
+        if (matchResponse.error) throw matchResponse.error;
+        if (cyclingResponse.error) throw cyclingResponse.error;
 
-          const matchCodes = matchData.map((match) => match.super_code).filter(Boolean);
-          const cyclingCodes = cyclingData.map((event) => event.super_code).filter(Boolean);
-          const combinedCodes = [...new Set([...matchCodes, ...cyclingCodes])].slice(0, 3);
-          setRecentSuperCodes(combinedCodes);
-        } catch (error) {
-          toast({
-            title: "Error",
-            description: "Failed to load recent super codes.",
-            variant: "destructive",
-          });
-        }
-      };
-      fetchRecentCodes();
-    }
+        const matchCodes = matchResponse.data
+          .map((match) => match.super_code)
+          .filter((code): code is string => !!code);
+        const cyclingCodes = cyclingResponse.data
+          .map((event) => event.super_code)
+          .filter((code): code is string => !!code);
+        const combinedCodes = [...new Set([...matchCodes, ...cyclingCodes])].slice(
+          0,
+          3
+        );
+        setRecentSuperCodes(combinedCodes);
+      } catch (error: any) {
+        toast({
+          title: "Error",
+          description: "Failed to load recent super codes.",
+          variant: "destructive",
+        });
+      }
+    };
+    fetchRecentCodes();
   }, [userId, toast, setRecentSuperCodes]);
 
   const handleCodeChange = async (value: string) => {
@@ -112,8 +135,8 @@ const MatchCodeInput = ({
           setIsCyclingEvent(true);
           setCyclingEvent(data);
         }
-      } catch (error) {
-        console.error("Error checking cycling event", error);
+      } catch (error: any) {
+        console.error("Error checking cycling event:", error);
       } finally {
         setLoading(false);
       }
