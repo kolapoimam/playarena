@@ -458,7 +458,7 @@ const HostCycling = () => {
                   className="flex justify-between items-center w-full text-left"
                   onClick={() => handleSectionToggle(setIsEventDetailsOpen, isEventDetailsOpen)}
                 >
-                  <h2 className="text">Event Details</h2>
+                  <h2 className="text-lg font-semibold">Event Details</h2>
                   <span>{isEventDetailsOpen ? '-' : '+'}</span>
                 </button>
                 {isEventDetailsOpen && (
@@ -487,11 +487,11 @@ const HostCycling = () => {
                           </FormControl>
                           <FormMessage />
                         </FormItem>
-                      ))}
+                      )}
                     />
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <FormField
-                        control="form.control
+                        control={form.control}
                         name="event_date"
                         render={({ field }) => (
                           <FormItem>
@@ -525,7 +525,7 @@ const HostCycling = () => {
                             </div>
                             <FormMessage />
                           </FormItem>
-                        ))}
+                        )}
                       />
                       <FormField
                         control={form.control}
@@ -545,7 +545,7 @@ const HostCycling = () => {
                             </FormDescription>
                             <FormMessage />
                           </FormItem>
-                        ))}
+                        )}
                       />
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -569,7 +569,7 @@ const HostCycling = () => {
                             </Select>
                             <FormMessage />
                           </FormItem>
-                        ))}
+                        )}
                       />
                       <FormField
                         control={form.control}
@@ -588,7 +588,7 @@ const HostCycling = () => {
                             </FormControl>
                             <FormMessage />
                           </FormItem>
-                        ))}
+                        )}
                       />
                     </div>
                   </>
