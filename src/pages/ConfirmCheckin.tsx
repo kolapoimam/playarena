@@ -24,8 +24,8 @@ type Match = {
   title: string;
   match_date: string;
   match_time: string;
-  match_start_time?: string | null;
-  match_end_time?: string | null;
+  match_start_time?: string | null; // Corrected syntax
+  match_end_time?: string | null; // Corrected syntax
   total_slots: number;
   organizer_name: string;
   super_code: string;
@@ -48,31 +48,31 @@ type Match = {
 };
 
 type CyclingEvent = {
-  id string;
-  slug string;
-  title string;
-  event_date string;
-  event_time string;
-  event_start_time? string | null;
-  event_end_time? string | null;
-  total_slots number;
-  host_name string;
-  super_code string;
-  is_paid boolean;
-  price? number;
-  cancellation_status boolean;
-  status string;
-  location {
-    name? string;
-    city? string;
+  id: string;
+  slug: string;
+  title: string;
+  event_date: string;
+  event_time: string;
+  event_start_time?: string | null; // Ensure correct syntax
+  event_end_time?: string | null; // Ensure correct syntax
+  total_slots: number;
+  host_name: string;
+  super_code: string;
+  is_paid: boolean;
+  price?: number;
+  cancellation_status: boolean;
+  status: string;
+  location: {
+    name?: string;
+    city?: string;
   } | null;
-  attendees {
-    id string;
-    attendee_name string;
-    status string;
-    confirmation_code string;
-    details { phone string } | null;
-    number_of_slots? number;
+  attendees: {
+    id: string;
+    attendee_name: string;
+    status: string;
+    confirmation_code: string;
+    details: { phone: string } | null;
+    number_of_slots?: number;
   }[] | null;
 };
 
