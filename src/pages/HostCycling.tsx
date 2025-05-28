@@ -185,6 +185,7 @@ const HostCycling = () => {
       setLandmarks((prev) => [...prev, newLandmark]);
       setLandmarksError(null);
       form.setValue('start_landmark_id', newLandmark.id);
+      console.log('Set start_landmark_id to:', newLandmark.id);
       toast({
         title: 'Success',
         description: 'Landmark created successfully!',
@@ -277,19 +278,6 @@ const HostCycling = () => {
 
   const handleSectionToggle = (setter: (value: boolean) => void, newValue: boolean) => {
     setter(newValue);
-    setTimeout(() => {
-      if (createButtonRef.current) {
-        const buttonRect = createButtonRef.current.getBoundingClientRect();
-        const viewportHeight = window.innerHeight;
-        if (buttonRect.bottom > viewportHeight) {
-          createButtonRef.current.scrollIntoView({
-            behavior: 'smooth',
-            block: 'end',
-          });
-          window.scrollBy(0, -100);
-        }
-      }
-    }, 100);
   };
 
   return (
@@ -320,7 +308,31 @@ const HostCycling = () => {
               ref={formRef}
               onSubmit={form.handleSubmit(onSubmit)}
               className="space-y-8 max-h-[calc(100vh-200px)] overflow-y-auto"
+              style={{
+                scrollbarWidth: 'thin', // Firefox
+                scrollbarColor: 'gray transparent', // Firefox
+                WebkitOverflowScrolling: 'touch', // Smooth scrolling on iOS
+              }}
             >
+              <style>
+                {`
+                  form::-webkit-scrollbar {
+                    width: 8px;
+                  }
+                  form::-webkit-scrollbar-track {
+                    background: transparent;
+                  }
+                  form::-webkit-scrollbar-thumb {
+                    background-color: gray;
+                    border-radius: 4px;
+                    border: 2px solid transparent;
+                    background-clip: padding-box;
+                  }
+                  form::-webkit-scrollbar-thumb:hover {
+                    background-color: darkgray;
+                  }
+                `}
+              </style>
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
                 <div
                   className="flex justify-between items-center cursor-pointer"
@@ -350,7 +362,7 @@ const HostCycling = () => {
                             onValueChange={(value) => {
                               field.onChange(value === 'null' ? null : value);
                             }}
-                            value={field.value || undefined}
+                            value={field.value ?? 'null'}
                           >
                             <FormControl>
                               <SelectTrigger>
@@ -385,7 +397,7 @@ const HostCycling = () => {
                             onValueChange={(value) => {
                               field.onChange(value === 'null' ? null : value);
                             }}
-                            value={field.value || undefined}
+                            value={field.value ?? 'null'}
                           >
                             <FormControl>
                               <SelectTrigger>
