@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useState, useEffect, useCallback } from "react";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -15,9 +15,10 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { ArrowLeft, Calendar, Clock, MapPin, Users, DollarSign, Loader2 } from "lucide-react";
+import { ArrowLeft, Calendar, Clock, MapPin, Users, DollarSign, Loader, Trophy } from "lucide-react";
 import CyclingSuccessDialog from "@/components/CyclingSuccessDialog";
 import Navbar from "@/components/Navbar";
+import html2canvas from "html2canvas";
 
 type Landmark = {
   name: string;
@@ -47,6 +48,8 @@ type CyclingEvent = {
   start_landmark: Landmark;
 };
 
+type PaymentStatus = "pending" | "success" | "failed";
+
 const formSchema = z.object({
   name: z
     .string()
@@ -61,14 +64,22 @@ const JoinCycling = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
+  const paymentReference = searchParams.get("reference") || searchParams.get("trxref");
   const [event, setEvent] = useState<CyclingEvent | null>(null);
   const [attendees, setAttendees] = useState<Attendee[]>([]);
   const [loading, setLoading] = useState(true);
   const [joining, setJoining] = useState(false);
+  const [verifyingPayment, setVerifyingPayment] = useState(false);
   const [paystackLoaded, setPaystackLoaded] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>("pending");
   const [successDialogOpen, setSuccessDialogOpen] = useState(false);
   const [confirmationCode, setConfirmationCode] = useState<string | null>(null);
-  const [paymentReference, setPaymentReference] = useState<string | null>(null);
+  const [isImageLoaded, setIsImageLoaded] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [backgroundOption, setBackgroundOption] = useState("field");
+  const cardRef = useRef<HTMLDivElement>(null);
+  const defaultEmail = `${form.getValues("phone") || "user"}@sportcliq.com`;
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -99,6 +110,7 @@ const JoinCycling = () => {
     if (!slug) return;
     const fetchEvent = async () => {
       try {
+        setLoading(true);
         const { data, error } = await supabase
           .from("cycling_events")
           .select(`
@@ -115,8 +127,6 @@ const JoinCycling = () => {
           .select("*")
           .eq("cycling_event_id", data.id);
         if (!attendeesError) setAttendees(attendeesData || []);
-
-        setLoading(false);
       } catch (error: any) {
         console.error("Error fetching event:", error);
         toast({
@@ -125,13 +135,62 @@ const JoinCycling = () => {
           variant: "destructive",
         });
         navigate("/cycling-activities");
+      } finally {
+        setLoading(false);
       }
     };
     fetchEvent();
   }, [slug, navigate, toast]);
 
+  // Verify payment
+  useEffect(() => {
+    if (!paymentReference || !event) return;
+
+    const verifyPayment = async () => {
+      setVerifyingPayment(true);
+      try {
+        const response = await supabase.functions.invoke("verify-paystack-transaction", {
+          body: { reference: paymentReference },
+        });
+
+        if (response.error) {
+          throw new Error(response.error.message);
+        }
+
+        const { verified, event_id, slug: eventSlug } = response.data;
+
+        if (verified && event_id === event.id && eventSlug === slug) {
+          setPaymentStatus("success");
+          toast({
+            title: "Payment Successful",
+            description: "Your payment was processed successfully. Please complete your registration.",
+          });
+        } else {
+          setPaymentStatus("failed");
+          toast({
+            title: "Payment Verification Failed",
+            description: "We could not verify your payment. Please try again.",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error("Error verifying payment:", error);
+        setPaymentStatus("failed");
+        toast({
+          title: "Payment Verification Error",
+          description: "An error occurred while verifying your payment.",
+          variant: "destructive",
+        });
+      } finally {
+        setVerifyingPayment(false);
+      }
+    };
+
+    verifyPayment();
+  }, [paymentReference, event, slug, toast]);
+
   const handlePaymentInitiation = async () => {
-    if (!event || !event.price || event.is_free) return;
+    if (!event || event.is_free || !event.price) return;
 
     if (!paystackLoaded || !window.PaystackPop) {
       toast({
@@ -147,7 +206,7 @@ const JoinCycling = () => {
 
       const response = await supabase.functions.invoke("initialize-paystack-transaction", {
         body: {
-          email: `${form.getValues("phone")}@sportcliq.com`,
+          email: defaultEmail,
           amount: event.price * 100, // Convert to kobo
           event_id: event.id,
           slug: event.slug,
@@ -163,47 +222,20 @@ const JoinCycling = () => {
 
       const paystack = new window.PaystackPop();
       paystack.resumeTransaction(access_code, {
-        onSuccess: async (transaction: any) => {
-          try {
-            const { data: confirmationCodeData, error: codeError } = await supabase.rpc(
-              "generate_unique_code",
-              { length: 6 }
-            );
-            if (codeError) throw codeError;
-
-            const { error } = await supabase.from("cycling_attendees").insert({
-              cycling_event_id: event.id,
-              attendee_name: form.getValues("name"),
-              attendee_phone: form.getValues("phone"),
-              confirmation_code: confirmationCodeData,
-              payment_status: true,
-              payment_reference: transaction.reference,
-            });
-
-            if (error) throw error;
-
-            setConfirmationCode(confirmationCodeData);
-            setPaymentReference(transaction.reference);
-            setSuccessDialogOpen(true);
-            toast({
-              title: "Payment Successful",
-              description: "You have successfully joined the event.",
-            });
-          } catch (error: any) {
-            console.error("Error joining event:", error);
-            toast({
-              title: "Error",
-              description: "Failed to join event after payment.",
-              variant: "destructive",
-            });
-          } finally {
-            setJoining(false);
-          }
+        onSuccess: (transaction: any) => {
+          setPaymentStatus("success");
+          setPaymentReference(transaction.reference);
+          toast({
+            title: "Payment Successful",
+            description: "Please complete your registration.",
+          });
+          setJoining(false);
         },
         onCancel: () => {
           toast({
             title: "Payment Cancelled",
             description: "You cancelled the payment process.",
+            variant: "destructive",
           });
           setJoining(false);
         },
@@ -219,6 +251,99 @@ const JoinCycling = () => {
     }
   };
 
+  const handleImageLoad = () => {
+    setIsImageLoaded(true);
+  };
+
+  const handleDownload = useCallback(async () => {
+    if (!cardRef.current || !isImageLoaded) {
+      toast({
+        title: "Error",
+        description: "Card is not ready for download. Please wait a moment and try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsDownloading(true);
+    try {
+      const logoSrc = backgroundOption === "white" ? "/playarenalight.png" : "/playarenadark.png";
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.src = logoSrc;
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = () => {
+          console.warn("Failed to load logo image for canvas");
+          resolve(null);
+        };
+      });
+
+      if (backgroundOption === "field") {
+        const bgImg = new Image();
+        bgImg.crossOrigin = "anonymous";
+        bgImg.src = "/cycling-road.jpg";
+        await new Promise((resolve, reject) => {
+          bgImg.onload = resolve;
+          bgImg.onerror = () => {
+            console.warn("Failed to load background image for canvas");
+            resolve(null);
+          };
+        });
+      }
+
+      const canvas = await html2canvas(cardRef.current, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        scrollX: 0,
+        scrollY: -window.scrollY,
+      });
+
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob((blob) => resolve(blob), "image/png")
+      );
+
+      if (!blob) {
+        throw new Error("Failed to convert canvas to Blob");
+      }
+
+      const filename = `PlayArena-Cycling-${event?.title.replace(/\s+/g, '-')}.png`;
+      const url = URL.createObjectURL(blob);
+
+      if (navigator.share && (navigator as any).canShare?.({ files: [new File([blob], filename, { type: "image/png" })] })) {
+        try {
+          await navigator.share({
+            files: [new File([blob], filename, { type: "image/png" })],
+            title: event?.title,
+            text: `I've registered for ${event?.title} at ${event?.start_landmark.name || 'unknown location'}!`,
+          });
+          URL.revokeObjectURL(url);
+          return;
+        } catch (shareError) {
+          console.warn("Share API failed, falling back to download:", shareError);
+        }
+      }
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Error generating image:", error);
+      toast({
+        title: "Error",
+        description: "Failed to download registration card. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDownloading(false);
+    }
+  }, [isImageLoaded, event, toast, backgroundOption]);
+
   const onSubmit = async (data: FormValues) => {
     if (!event) return;
 
@@ -231,48 +356,65 @@ const JoinCycling = () => {
       return;
     }
 
-    if (event.is_free) {
-      setJoining(true);
-      try {
-        const { data: confirmationCodeData, error: codeError } = await supabase.rpc(
-          "generate_unique_code",
-          { length: 6 }
-        );
-        if (codeError) throw codeError;
+    setJoining(true);
+    try {
+      const { data: confirmationCodeData, error: codeError } = await supabase.rpc(
+        "generate_unique_code",
+        { length: 6 }
+      );
+      if (codeError) throw codeError;
 
-        const { error } = await supabase.from("cycling_attendees").insert({
-          cycling_event_id: event.id,
-          attendee_name: data.name,
-          attendee_phone: data.phone,
-          confirmation_code: confirmationCodeData,
-          payment_status: true,
-        });
+      const attendeeData = {
+        cycling_event_id: event.id,
+        attendee_name: data.name,
+        attendee_phone: data.phone,
+        confirmation_code: confirmationCodeData,
+        payment_status: event.is_free || paymentStatus === "success",
+        payment_reference: paymentStatus === "success" ? paymentReference : null,
+      };
 
-        if (error) throw error;
+      const { error } = await supabase.from("cycling_attendees").insert(attendeeData);
 
-        setConfirmationCode(confirmationCodeData);
-        setSuccessDialogOpen(true);
-        toast({
-          title: "Success",
-          description: "You have successfully joined the event.",
-        });
-      } catch (error: any) {
-        console.error("Error joining event:", error);
-        toast({
-          title: "Error",
-          description: "Failed to join event.",
-          variant: "destructive",
-        });
-      } finally {
-        setJoining(false);
-      }
+      if (error) throw error;
+
+      setConfirmationCode(confirmationCodeData);
+      setSuccessDialogOpen(true);
+      toast({
+        title: "Success",
+        description: "You have successfully joined the event.",
+      });
+
+      const { data: updatedAttendees } = await supabase
+        .from("cycling_attendees")
+        .select("*")
+        .eq("cycling_event_id", event.id);
+      if (updatedAttendees) setAttendees(updatedAttendees);
+    } catch (error: any) {
+      console.error("Error joining event:", error);
+      toast({
+        title: "Error",
+        description: "Failed to join event.",
+        variant: "destructive",
+      });
+    } finally {
+      setJoining(false);
     }
   };
 
-  if (loading) {
+  const formatDate = (dateString: string) => {
+    const options: Intl.DateTimeFormatOptions = {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    };
+    return new Date(dateString).toLocaleDateString("en-NG", options);
+  };
+
+  if (loading || verifyingPayment) {
     return (
       <div className="flex justify-center items-center h-[50vh]">
-        <Loader2 className="animate-spin h-8 w-8 text-green-500" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
       </div>
     );
   }
@@ -286,44 +428,37 @@ const JoinCycling = () => {
         </Button>
         <div className="text-center py-8">
           <h2 className="text-xl font-semibold mb-2">Event Not Found</h2>
-          <p className="text-gray-500 dark:text-gray-400">
-            The event doesn't exist or has been removed.
-          </p>
+          <p className="text-muted-foreground">The event doesn't exist or has been removed.</p>
         </div>
       </div>
     );
   }
 
+  const isFull = attendees.length >= event.max_attendees;
+  const isPastEvent = new Date(event.event_date) < new Date(new Date().setHours(0, 0, 0, 0));
+
   return (
-    <div className="min-h-screen pb-20">
+    <div className="min-h-screen pb-24">
       <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg">
         <div className="flex items-center justify-between">
-          <Button
-            variant="ghost"
-            onClick={() => navigate(-1)}
-            className="text-white hover:bg-green-600"
-          >
+          <Button variant="ghost" onClick={() => navigate(-1)} className="text-white hover:bg-green-600">
             <ArrowLeft size={18} className="mr-2" />
             Back
           </Button>
-          <h1 className="text-xl font-bold">Join Cycling Event</h1>
+          <div className="text-center">
+            <h1 className="text-2xl font-bold">Join Cycling Event</h1>
+          </div>
           <div className="w-10"></div>
         </div>
       </header>
-      <div className="p-4">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
-          <h2 className="text-xl font-bold mb-2">{event.title}</h2>
-          <div className="text-gray-600 dark:text-gray-300 space-y-2">
+
+      <div className="p-6">
+        <div className="bg-card rounded-lg shadow-md p-6 mb-6">
+          <h2 className="text-xl font-semibold mb-2">{event.title}</h2>
+          <div className="text-muted-foreground mb-2 space-y-1">
             <div className="flex items-center gap-2">
               <Calendar size={16} />
-              <span>
-                {new Date(event.event_date).toLocaleDateString("en-NG", {
-                  weekday: "short",
-                  day: "numeric",
-                  month: "short",
-                  year: "numeric",
-                })}
-              </span>
+              <span>{formatDate(event.event_date)}</span>
             </div>
             <div className="flex items-center gap-2">
               <Clock size={16} />
@@ -331,90 +466,159 @@ const JoinCycling = () => {
             </div>
             <div className="flex items-center gap-2">
               <MapPin size={16} />
-              <span>
-                {event.start_landmark.name}, {event.start_landmark.state}
-              </span>
+              <span>{event.start_landmark.name}, {event.start_landmark.state}</span>
             </div>
             <div className="flex items-center gap-2">
               <Users size={16} />
-              <span>
-                Spots: {event.max_attendees - attendees.length} /{" "}
-                {event.max_attendees}
-              </span>
+              <span>Spots available: {event.max_attendees - attendees.length} / {event.max_attendees}</span>
             </div>
-            <div className="flex items-center gap-2">
-              <DollarSign size={16} />
-              <span>
-                {event.is_free ? "Free" : `Paid (₦${(event.price || 500) / 100})`}
-              </span>
-            </div>
-          </div>
-        </div>
-        <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(onSubmit)}
-            className="space-y-6 bg-white dark:bg-gray-800 rounded-lg shadow-md p-6"
-          >
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Your Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter your name" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="phone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Phone Number</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="tel"
-                      inputMode="numeric"
-                      placeholder="Enter 11-digit phone number"
-                      {...field}
-                      onChange={(e) => {
-                        const numericValue = e.target.value
-                          .replace(/\D/g, "")
-                          .slice(0, 11);
-                        field.onChange(numericValue);
-                      }}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            {event.is_free ? (
-              <Button
-                type="submit"
-                className="w-full bg-green-500 hover:bg-green-600 text-white rounded-md"
-                disabled={joining}
-              >
-                {joining ? "Joining..." : "Join Event"}
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                className="w-full bg-green-500 hover:bg-green-600 text-white rounded-md"
-                onClick={handlePaymentInitiation}
-                disabled={joining || !paystackLoaded || !form.getValues("name") || !form.getValues("phone")}
-              >
-                {joining ? "Processing..." : `Pay to Join (₦${(event.price || 500) / 100})`}
-              </Button>
+            {!event.is_free && (
+              <div className="mt-2 font-medium text-green-600">Price: ₦{(event.price || 0).toFixed(2)}</div>
             )}
-          </form>
-        </Form>
+          </div>
+          {isPastEvent ? (
+            <div className="text-center py-4 bg-muted rounded-lg">
+              <h2 className="text-lg font-semibold text-gray-700">This event has already passed</h2>
+              <p className="text-muted-foreground mt-2">You cannot join this event anymore.</p>
+              <Button className="mt-4 bg-green-500 hover:bg-green-600 text-white" onClick={() => navigate("/cycling-activities")}>
+                Browse Other Events
+              </Button>
+            </div>
+          ) : isFull ? (
+            <div className="text-center py-4 bg-muted rounded-lg">
+              <h2 className="text-lg font-semibold text-gray-700">This event is full</h2>
+              <p className="text-muted-foreground mt-2">All spots are taken.</p>
+              <Button className="mt-4 bg-green-500 hover:bg-green-600 text-white" onClick={() => navigate(`/cycling/${event.slug}`)}>
+                View Event Details
+              </Button>
+            </div>
+          ) : (
+            <>
+              {(event.is_free || paymentStatus === "success") && (
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 bg-card rounded-lg shadow-md p-6 mt-6">
+                    {event.is_free ? (
+                      <Button
+                        type="submit"
+                        className="w-full bg-green-500 hover:bg-green-600 text-white rounded-md"
+                        disabled={joining}
+                      >
+                        {joining ? (
+                          <>
+                            <Loader size={16} className="mr-2 animate-spin" />
+                            Joining...
+                          </>
+                        ) : (
+                          "Join Event"
+                        )}
+                      </Button>
+                    ) : (
+                      <>
+                        {paymentStatus === "success" && (
+                          <div className="bg-green-50 p-4 rounded-md border border-green-200 text-green-700">
+                            <p className="font-medium">Payment Successful!</p>
+                            <p className="text-sm">Please complete your registration below.</p>
+                            {paymentReference && (
+                              <p className="text-sm mt-1">Reference: {paymentReference}</p>
+                            )}
+                          </div>
+                        )}
+                        <FormField
+                          control={form.control}
+                          name="name"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-gray-700">Your Name</FormLabel>
+                              <FormControl>
+                                <Input
+                                  placeholder="Enter your name"
+                                  {...field}
+                                  className="border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                                />
+                              </FormControl>
+                              <FormMessage className="text-red-500" />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="phone"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-gray-700">Phone Number</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="tel"
+                                  inputMode="numeric"
+                                  placeholder="Enter 11-digit phone number"
+                                  {...field}
+                                  className="border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                                  onChange={(e) => {
+                                    const numericValue = e.target.value.replace(/\D/g, "").slice(0, 11);
+                                    field.onChange(numericValue);
+                                  }}
+                                />
+                              </FormControl>
+                              <FormMessage className="text-red-500" />
+                            </FormItem>
+                          )}
+                        />
+                        <Button
+                          type="submit"
+                          className="w-full bg-green-500 hover:bg-green-600 text-white rounded-md"
+                          disabled={joining}
+                        >
+                          {joining ? (
+                            <>
+                              <Loader size={16} className="mr-2 animate-spin" />
+                              Joining...
+                            </>
+                          ) : (
+                            "Join Event"
+                          )}
+                        </Button>
+                      </>
+                    )}
+                  </form>
+                </Form>
+              )}
+              {!event.is_free && paymentStatus === "pending" && (
+                <div className="bg-card rounded-lg shadow-md p-6 space-y-4 mt-6">
+                  <h3 className="text-lg font-semibold text-gray-800">Payment Required</h3>
+                  <p className="text-muted-foreground">
+                    This is a paid event. Please complete the payment to join.
+                  </p>
+                  <div className="text-sm font-medium">
+                    Total: ₦{(event.price || 0).toFixed(2)}
+                  </div>
+                  <Button
+                    type="button"
+                    className="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg transition-colors"
+                    onClick={handlePaymentInitiation}
+                    disabled={joining || !paystackLoaded}
+                  >
+                    {joining ? (
+                      <>
+                        <Loader size={16} className="mr-2 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      `Pay Now (₦${(event.price || 0).toFixed(2)})`
+                    )}
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
         <CyclingSuccessDialog
           open={successDialogOpen}
-          onOpenChange={setSuccessDialogOpen}
+          onOpenChange={(open) => {
+            setSuccessDialogOpen(open);
+            setIsImageLoaded(false);
+            if (!open) setBackgroundOption("field");
+          }}
           formValues={{
             title: event?.title || "",
             event_date: event ? new Date(event.event_date) : null,
@@ -424,10 +628,87 @@ const JoinCycling = () => {
           selectedLandmark={event?.start_landmark}
           confirmationCode={confirmationCode}
           eventSlug={slug ?? ""}
-          onNavigate={() => navigate("/cycling-activities")}
-        />
-        <Navbar />
+          onNavigate={() => navigate(`/cycling/${event.slug}`)}
+        >
+          <div
+            ref={cardRef}
+            className={`rounded-lg p-6 shadow-lg relative overflow-hidden ${backgroundOption === "field" ? "bg-cover bg-center" : ""}`}
+            style={{
+              backgroundImage: backgroundOption === "field" ? "url('/cycling-road.jpg')" : "",
+              backgroundColor: backgroundOption !== "field" ? backgroundOption : "transparent",
+              ...(backgroundOption === "field" && {
+                backgroundBlendMode: "overlay",
+                backgroundColor: "rgba(0, 0, 0, 0.5)",
+              }),
+            }}
+          >
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-4">
+                <img
+                  src={backgroundOption === "white" ? "/playarenalight.png" : "/playarenadark.png"}
+                  alt="PlayArena Logo"
+                  className="h-8 w-auto"
+                  onLoad={handleImageLoad}
+                  onError={() => {
+                    toast({
+                      title: "Error",
+                      description: "Failed to load logo image.",
+                      variant: "destructive",
+                    });
+                    setIsImageLoaded(true);
+                  }}
+                />
+                <Trophy className={`h-6 w-6 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
+              </div>
+              <h2 className={`text-xl font-bold mb-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`}>{event?.title}</h2>
+              <div className="space-y-2 mb-4">
+                <div className="flex items-center">
+                  <MapPin className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
+                  <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{event?.start_landmark.name || "Location"}, {event?.start_landmark.state || ""}</span>
+                </div>
+                <div className="flex items-center">
+                  <Calendar className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
+                  <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{event && formatDate(event.event_date)} at {event?.start_time}</span>
+                </div>
+                <div className="flex items-center">
+                  <DollarSign className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
+                  <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{event?.is_free ? "Free" : `Paid (₦${(event?.price || 0).toFixed(2)})`}</span>
+                </div>
+                <div className="flex items-center">
+                  <Users className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
+                  <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{attendees.length}/{event?.max_attendees} spots booked</span>
+                </div>
+                <div className="flex items-center">
+                  <span className={`font-bold ${backgroundOption === "white" ? "text-black" : "text-white"}`}>Confirmation Code:</span>
+                  <span className={`ml-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`}>{confirmationCode}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p className="text-sm text-gray-500 dark:text-gray-400 my-4">
+            <strong>Note:</strong> Save this card to present your confirmation code at check-in.
+          </p>
+          <div className="flex gap-2 justify-end">
+            <Button
+              className="bg-green-500 hover:bg-green-600 text-white w-auto px-4"
+              onClick={handleDownload}
+              disabled={!isImageLoaded || isDownloading}
+            >
+              {isDownloading ? "Processing..." : "Share/Download"}
+            </Button>
+            <Button
+              className="bg-green-500 hover:bg-green-600 text-white w-auto px-4"
+              onClick={() => {
+                setSuccessDialogOpen(false);
+                navigate(`/cycling/${event.slug}`);
+              }}
+            >
+              Close
+            </Button>
+          </div>
+        </CyclingSuccessDialog>
       </div>
+      <Navbar />
     </div>
   );
 };
