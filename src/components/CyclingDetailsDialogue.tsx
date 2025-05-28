@@ -4,7 +4,7 @@ import {
   Share2,
   Download,
   ChevronDown,
-  Bicycle,
+  Bike, // Replace Bicycle with Bike
   MapPin,
   Calendar,
   DollarSignIcon,
@@ -345,11 +345,7 @@ const CyclingDetailsDialog: React.FC<CyclingDetailsDialogProps> = ({
                       setIsImageLoaded(true);
                     }}
                   />
-                  <Bicycle
-                    className={`h-6 w-6 ${
-                      backgroundOption === "white" ? "text-black" : "text-white"
-                    }`}
-                  />
+<Bike className={`h-6 w-6 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
                 </div>
                 <h2
                   className={`text-xl font-bold ${
