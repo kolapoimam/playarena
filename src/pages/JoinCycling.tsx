@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -115,7 +115,7 @@ const JoinCycling = () => {
           .from("cycling_events")
           .select(`
             *,
-            start_landmark:landmarks!start_landmark_id(name, state)
+            start_landmark:landmarks!cycling_events_start_landmark_id_fkey(name, state)
           `)
           .eq("slug", slug)
           .single();
