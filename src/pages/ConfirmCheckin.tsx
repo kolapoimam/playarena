@@ -24,8 +24,8 @@ type Match = {
   title: string;
   match_date: string;
   match_time: string;
-  match_start_time?: string | null; // Corrected syntax
-  match_end_time?: string | null; // Corrected syntax
+  match_start_time?: string | null; // Fixed syntax
+  match_end_time?: string | null; // Fixed syntax
   total_slots: number;
   organizer_name: string;
   super_code: string;
@@ -74,6 +74,19 @@ type CyclingEvent = {
     details: { phone: string } | null;
     number_of_slots?: number;
   }[] | null;
+};
+
+type Cashout = {
+  id: string;
+  event_id: string;
+  super_code: string;
+  amount: number;
+  bank_account_number: string;
+  bank_name: string;
+  account_name: string;
+  status: 'Review' | 'Processed' | 'Failed' | 'Successful'; // Fixed syntax
+  temp_identifier?: string; // Fixed syntax
+  created_at: string;
 };
 
 type Cashout = {
