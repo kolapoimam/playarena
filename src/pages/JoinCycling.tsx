@@ -16,7 +16,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { ArrowLeft, Calendar, Clock, MapPin, Users, DollarSign, Loader2 } from "lucide-react";
-import { PaystackButton } from "react-paystack";
 import CyclingSuccessDialog from "@/components/CyclingSuccessDialog";
 import Navbar from "@/components/Navbar";
 
@@ -66,6 +65,7 @@ const JoinCycling = () => {
   const [attendees, setAttendees] = useState<Attendee[]>([]);
   const [loading, setLoading] = useState(true);
   const [joining, setJoining] = useState(false);
+  const [paystackLoaded, setPaystackLoaded] = useState(false);
   const [successDialogOpen, setSuccessDialogOpen] = useState(false);
   const [confirmationCode, setConfirmationCode] = useState<string | null>(null);
   const [paymentReference, setPaymentReference] = useState<string | null>(null);
@@ -75,6 +75,26 @@ const JoinCycling = () => {
     defaultValues: { name: "", phone: "" },
   });
 
+  // Load Paystack script
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.src = "https://js.paystack.co/v2/inline.js";
+    script.async = true;
+    script.onload = () => setPaystackLoaded(true);
+    script.onerror = () => {
+      toast({
+        title: "Error",
+        description: "Failed to load Paystack script. Please try again.",
+        variant: "destructive",
+      });
+    };
+    document.body.appendChild(script);
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, [toast]);
+
+  // Fetch event and attendees
   useEffect(() => {
     if (!slug) return;
     const fetchEvent = async () => {
@@ -110,58 +130,93 @@ const JoinCycling = () => {
     fetchEvent();
   }, [slug, navigate, toast]);
 
-  const handlePaymentSuccess = async (reference: any) => {
-    setJoining(true);
-    try {
-      const { data: confirmationCodeData, error: codeError } = await supabase.rpc(
-        "generate_unique_code",
-        { length: 6 }
-      );
-      if (codeError) throw codeError;
+  const handlePaymentInitiation = async () => {
+    if (!event || !event.price || event.is_free) return;
 
-      const { error } = await supabase.from("cycling_attendees").insert({
-        cycling_event_id: event!.id,
-        attendee_name: form.getValues("name"),
-        attendee_phone: form.getValues("phone"),
-        confirmation_code: confirmationCodeData,
-        payment_status: true,
-      });
-
-      if (error) throw error;
-
-      setConfirmationCode(confirmationCodeData);
-      setPaymentReference(reference.reference);
-      setSuccessDialogOpen(true);
-    } catch (error: any) {
-      console.error("Error joining event:", error);
+    if (!paystackLoaded || !window.PaystackPop) {
       toast({
         title: "Error",
-        description: "Failed to join event.",
+        description: "Paystack is not available. Please try again later.",
         variant: "destructive",
       });
-    } finally {
+      return;
+    }
+
+    try {
+      setJoining(true);
+
+      const response = await supabase.functions.invoke("initialize-paystack-transaction", {
+        body: {
+          email: `${form.getValues("phone")}@sportcliq.com`,
+          amount: event.price * 100, // Convert to kobo
+          event_id: event.id,
+          slug: event.slug,
+          title: event.title,
+        },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      const { access_code } = response.data;
+
+      const paystack = new window.PaystackPop();
+      paystack.resumeTransaction(access_code, {
+        onSuccess: async (transaction: any) => {
+          try {
+            const { data: confirmationCodeData, error: codeError } = await supabase.rpc(
+              "generate_unique_code",
+              { length: 6 }
+            );
+            if (codeError) throw codeError;
+
+            const { error } = await supabase.from("cycling_attendees").insert({
+              cycling_event_id: event.id,
+              attendee_name: form.getValues("name"),
+              attendee_phone: form.getValues("phone"),
+              confirmation_code: confirmationCodeData,
+              payment_status: true,
+              payment_reference: transaction.reference,
+            });
+
+            if (error) throw error;
+
+            setConfirmationCode(confirmationCodeData);
+            setPaymentReference(transaction.reference);
+            setSuccessDialogOpen(true);
+            toast({
+              title: "Payment Successful",
+              description: "You have successfully joined the event.",
+            });
+          } catch (error: any) {
+            console.error("Error joining event:", error);
+            toast({
+              title: "Error",
+              description: "Failed to join event after payment.",
+              variant: "destructive",
+            });
+          } finally {
+            setJoining(false);
+          }
+        },
+        onCancel: () => {
+          toast({
+            title: "Payment Cancelled",
+            description: "You cancelled the payment process.",
+          });
+          setJoining(false);
+        },
+      });
+    } catch (error: any) {
+      console.error("Error initiating payment:", error);
+      toast({
+        title: "Payment Error",
+        description: "Failed to initiate payment. Please try again.",
+        variant: "destructive",
+      });
       setJoining(false);
     }
-  };
-
-  const handlePaymentClose = () => {
-    toast({
-      title: "Payment Cancelled",
-      description: "You cancelled the payment process.",
-    });
-  };
-
-  const paystackConfig = {
-    reference: `sportcliq_${Date.now()}_${Math.floor(Math.random() * 1000000)}`,
-    email: `${form.getValues("phone")}@sportcliq.com`,
-    amount: event?.price ? event.price * 100 : 50000, // Convert to kobo
-    publicKey: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
-    channels: ["card", "bank", "ussd", "mobile_money"],
-    metadata: {
-      event_id: event?.id,
-      attendee_name: form.getValues("name"),
-      attendee_phone: form.getValues("phone"),
-    },
   };
 
   const onSubmit = async (data: FormValues) => {
@@ -197,6 +252,10 @@ const JoinCycling = () => {
 
         setConfirmationCode(confirmationCodeData);
         setSuccessDialogOpen(true);
+        toast({
+          title: "Success",
+          description: "You have successfully joined the event.",
+        });
       } catch (error: any) {
         console.error("Error joining event:", error);
         toast({
@@ -342,16 +401,14 @@ const JoinCycling = () => {
                 {joining ? "Joining..." : "Join Event"}
               </Button>
             ) : (
-              <PaystackButton
-                {...paystackConfig}
-                text={joining ? "Processing..." : "Pay to Join Event"}
-                onSuccess={handlePaymentSuccess}
-                onClose={handlePaymentClose}
-                disabled={
-                  joining || !form.getValues("name") || !form.getValues("phone")
-                }
-                className="w-full bg-green-500 hover:bg-green-600 text-white rounded-md py-3 font-medium"
-              />
+              <Button
+                type="button"
+                className="w-full bg-green-500 hover:bg-green-600 text-white rounded-md"
+                onClick={handlePaymentInitiation}
+                disabled={joining || !paystackLoaded || !form.getValues("name") || !form.getValues("phone")}
+              >
+                {joining ? "Processing..." : `Pay to Join (₦${(event.price || 500) / 100})`}
+              </Button>
             )}
           </form>
         </Form>
