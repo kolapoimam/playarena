@@ -19,31 +19,31 @@ import HostCashout from "@/components/HostCashout"; // New component
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 type Match = {
-  id string;
-  slug string;
-  title string;
-  match_date string;
-  match_time string;
-  match_start_time? string | null;
-  match_end_time? string | null;
-  total_slots number;
-  organizer_name string;
-  super_code string;
-  is_paid boolean;
-  price? number;
-  cancellation_status boolean;
-  status string;
-  venue {
-    name? string;
-    city? string;
+  id: string;
+  slug: string;
+  title: string;
+  match_date: string;
+  match_time: string;
+  match_start_time?: string | null;
+  match_end_time?: string | null;
+  total_slots: number;
+  organizer_name: string;
+  super_code: string;
+  is_paid: boolean;
+  price?: number;
+  cancellation_status: boolean;
+  status: string;
+  venue: {
+    name?: string;
+    city?: string;
   } | null;
-  players {
-    id string;
-    player_name string;
-    status string;
-    confirmation_code string;
-    details { phone string } | null;
-    number_of_slots? number;
+  players: {
+    id: string;
+    player_name: string;
+    status: string;
+    confirmation_code: string;
+    details: { phone: string } | null;
+    number_of_slots?: number;
   }[] | null;
 };
 
