@@ -24,8 +24,11 @@ import CreateLandmarkDialog from '@/components/CreateLandmarkDialog';
 const formSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters').max(100, 'Title cannot exceed 100 characters'),
   notes: z.string().max(500, 'Notes cannot exceed 500 characters').optional(),
-  event_date: z.date({ required_error: 'Please select a date' }),
-  start_time: z.string().regex(/^(0[0-9]|1[0-2]):[0-5][0-9] (AM|PM)$/i, 'Enter a valid time in HH:MM AM/PM format'),
+  event_date: z.date({ required_error: 'Please select a date' }).refine(
+    (date) => date >= new Date(new Date().setHours(0, 0, 0, 0)),
+    { message: 'Event date must be today or in the future' }
+  ),
+  start_time: z.string().min(1, 'Start time is required'),
   duration_type: z.enum(['hours', 'minutes', 'distance']),
   duration_value: z.number().int().min(1, 'Duration must be at least 1').max(1000, 'Duration cannot exceed 1000'),
   start_landmark_id: z.string().uuid('Please select a starting landmark').optional().nullable(),
@@ -127,6 +130,8 @@ const HostCycling = () => {
     },
   });
 
+  console.log('Form errors:', form.formState.errors);
+
   useEffect(() => {
     const fetchLandmarks = async () => {
       try {
@@ -136,6 +141,8 @@ const HostCycling = () => {
         setLandmarks(data || []);
         if (!data || data.length === 0) {
           setLandmarksError('No landmarks available. Please create a new landmark.');
+        } else {
+          setLandmarksError(null);
         }
       } catch (error: any) {
         console.error('Error fetching landmarks:', error);
@@ -176,8 +183,13 @@ const HostCycling = () => {
       if (landmarkError) throw new Error(`Failed to create landmark: ${landmarkError.message}`);
 
       setLandmarks((prev) => [...prev, newLandmark]);
-      setLandmarksError(null); // Clear error if landmarks were previously empty
-      form.setValue('start_landmark_id', newLandmark.id); // Automatically select the new landmark as the start landmark
+      setLandmarksError(null);
+      form.setValue('start_landmark_id', newLandmark.id);
+      toast({
+        title: 'Success',
+        description: 'Landmark created successfully!',
+        variant: 'default',
+      });
     } catch (error: any) {
       console.error('Error creating landmark:', error);
       toast({
@@ -199,10 +211,16 @@ const HostCycling = () => {
       }
 
       const { data: supercodeData, error: codeError } = await supabase.rpc('generate_unique_code', { length: 8 });
-      if (codeError || !supercodeData) throw new Error(`Failed to generate supercode: ${codeError?.message || 'No supercode returned'}`);
+      if (codeError || !supercodeData) {
+        console.error('Supercode error:', codeError?.message);
+        throw new Error(`Failed to generate supercode: ${codeError?.message || 'No supercode returned'}`);
+      }
 
       const { data: slugData, error: slugError } = await supabase.rpc('generate_unique_slug', { title: data.title });
-      if (slugError || !slugData) throw new Error(`Failed to generate slug: ${slugError?.message || 'No slug returned'}`);
+      if (slugError || !slugData) {
+        console.error('Slug error:', slugError?.message);
+        throw new Error(`Failed to generate slug: ${slugError?.message || 'No slug returned'}`);
+      }
 
       const { data: eventData, error: eventError } = await supabase
         .from('cycling_events')
@@ -229,13 +247,16 @@ const HostCycling = () => {
         .select('id, slug')
         .single();
 
-      if (eventError || !eventData) throw new Error(`Failed to create event: ${eventError?.message || 'No event data returned'}`);
+      if (eventError || !eventData) {
+        console.error('Event creation error:', eventError?.message);
+        throw new Error(`Failed to create event: ${eventError?.message || 'No event data returned'}`);
+      }
 
       setSupercode(supercodeData);
       setEventSlug(slugData);
       setSuccessDialogOpen(true);
     } catch (error: any) {
-      console.error('Error creating event:', error);
+      console.error('Error creating event:', error.message);
       toast({
         title: 'Error',
         description: error.message || 'Failed to create event. Please try again.',
@@ -260,21 +281,19 @@ const HostCycling = () => {
       if (createButtonRef.current) {
         const buttonRect = createButtonRef.current.getBoundingClientRect();
         const viewportHeight = window.innerHeight;
-        // Check if the button is below the viewport
         if (buttonRect.bottom > viewportHeight) {
           createButtonRef.current.scrollIntoView({
             behavior: 'smooth',
             block: 'end',
           });
-          // Adjust scroll position to account for the navbar at the bottom
-          window.scrollBy(0, -100); // Adjust this value based on your navbar height
+          window.scrollBy(0, -100);
         }
       }
     }, 100);
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 overflow-y-auto">
       <header className="sticky top-0 z-50 bg-gradient-to-r from-green-500 to-green-700 text-white shadow-lg">
         <div className="p-4 flex items-center justify-between max-w-7xl mx-auto">
           <Button
@@ -293,10 +312,20 @@ const HostCycling = () => {
         <p className="text-center mt-4">Loading landmarks...</p>
       ) : (
         <div className="p-6 max-w-3xl mx-auto">
+          {landmarksError && (
+            <p className="text-red-500 dark:text-red-400 text-center mb-4">{landmarksError}</p>
+          )}
           <Form {...form}>
-            <form ref={formRef} onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+            <form
+              ref={formRef}
+              onSubmit={form.handleSubmit(onSubmit)}
+              className="space-y-8 max-h-[calc(100vh-200px)] overflow-y-auto"
+            >
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
-                <div className="flex justify-between items-center cursor-pointer" onClick={() => handleSectionToggle(setIsRouteDetailsOpen, !isRouteDetailsOpen)}>
+                <div
+                  className="flex justify-between items-center cursor-pointer"
+                  onClick={() => handleSectionToggle(setIsRouteDetailsOpen, !isRouteDetailsOpen)}
+                >
                   <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Route Details</h2>
                   <span>{isRouteDetailsOpen ? '-' : '+'}</span>
                 </div>
@@ -383,7 +412,10 @@ const HostCycling = () => {
                 )}
               </div>
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
-                <div className="flex justify-between items-center cursor-pointer" onClick={() => handleSectionToggle(setIsEventDetailsOpen, !isEventDetailsOpen)}>
+                <div
+                  className="flex justify-between items-center cursor-pointer"
+                  onClick={() => handleSectionToggle(setIsEventDetailsOpen, !isEventDetailsOpen)}
+                >
                   <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Event Details</h2>
                   <span>{isEventDetailsOpen ? '-' : '+'}</span>
                 </div>
@@ -516,7 +548,10 @@ const HostCycling = () => {
                 )}
               </div>
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
-                <div className="flex justify-between items-center cursor-pointer" onClick={() => handleSectionToggle(setIsPreferencesOpen, !isPreferencesOpen)}>
+                <div
+                  className="flex justify-between items-center cursor-pointer"
+                  onClick={() => handleSectionToggle(setIsPreferencesOpen, !isPreferencesOpen)}
+                >
                   <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Event Preferences</h2>
                   <span>{isPreferencesOpen ? '-' : '+'}</span>
                 </div>
@@ -609,7 +644,10 @@ const HostCycling = () => {
                 )}
               </div>
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
-                <div className="flex justify-between items-center cursor-pointer" onClick={() => handleSectionToggle(setIsRegistrationOpen, !isRegistrationOpen)}>
+                <div
+                  className="flex justify-between items-center cursor-pointer"
+                  onClick={() => handleSectionToggle(setIsRegistrationOpen, !isRegistrationOpen)}
+                >
                   <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Registration Details</h2>
                   <span>{isRegistrationOpen ? '-' : '+'}</span>
                 </div>
@@ -652,7 +690,10 @@ const HostCycling = () => {
                 )}
               </div>
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
-                <div className="flex justify-between items-center cursor-pointer" onClick={() => handleSectionToggle(setIsHostDetailsOpen, !isHostDetailsOpen)}>
+                <div
+                  className="flex justify-between items-center cursor-pointer"
+                  onClick={() => handleSectionToggle(setIsHostDetailsOpen, !isHostDetailsOpen)}
+                >
                   <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Host Details</h2>
                   <span>{isHostDetailsOpen ? '-' : '+'}</span>
                 </div>
@@ -713,11 +754,11 @@ const HostCycling = () => {
         onOpenChange={setSuccessDialogOpen}
         formValues={{
           title: form.getValues('title'),
-          event_date: form.getValues('event_date')!,
+          event_date: form.getValues('event_date') || undefined,
           start_time: form.getValues('start_time'),
           host_name: form.getValues('host_name'),
         }}
-        selectedLandmark={landmarks.find((l) => l.id === form.getValues('start_landmark_id')) || { id: '', name: 'Unknown', state: 'Unknown' }}
+        selectedLandmark={landmarks.find((l) => l.id === form.getValues('start_landmark_id')) || undefined}
         supercode={supercode}
         eventSlug={eventSlug || ''}
         onNavigate={() => handleNavigate(eventSlug || '')}
