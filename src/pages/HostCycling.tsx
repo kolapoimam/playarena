@@ -95,7 +95,7 @@ type FormValues = z.infer<typeof formSchema>;
 const HostCycling = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [landmarks, setLandmarks] = useState<{ id: string; name: string; state: string }[]>([]);
+  const [landmarks, setLandmarks] = useState<{ id_uuid: string; name: string; state: string }[]>([]);
   const [loadingLandmarks, setLoadingLandmarks] = useState(true);
   const [landmarksError, setLandmarksError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -134,7 +134,7 @@ const HostCycling = () => {
     const fetchLandmarks = async () => {
       try {
         setLoadingLandmarks(true);
-        const { data, error } = await supabase.from('landmarks').select('id, name, state').order('name', { ascending: true });
+        const { data, error } = await supabase.from('landmarks').select('id_uuid, name, state').order('name', { ascending: true });
         if (error) throw new Error(`Failed to fetch landmarks: ${error.message}`);
         setLandmarks(data || []);
         if (!data || data.length === 0) {
@@ -176,13 +176,13 @@ const HostCycling = () => {
           map_link: data.new_landmark_map_link || null,
           slug: slugData,
         })
-        .select('id, name, state')
+        .select('id_uuid, name, state')
         .single();
       if (landmarkError) throw new Error(`Failed to create landmark: ${landmarkError.message}`);
 
       setLandmarks((prev) => [...prev, newLandmark]);
       setLandmarksError(null);
-      form.setValue('start_landmark_id', newLandmark.id, { shouldValidate: true });
+      form.setValue('start_landmark_id', newLandmark.id_uuid, { shouldValidate: true });
       toast({
         title: 'Success',
         description: 'Landmark created successfully!',
@@ -350,7 +350,7 @@ const HostCycling = () => {
                             <SelectContent>
                               {landmarks.length > 0 ? (
                                 landmarks.map((landmark) => (
-                                  <SelectItem key={landmark.id} value={landmark.id}>
+                                  <SelectItem key={landmark.id_uuid} value={landmark.id_uuid}>
                                     {landmark.name}, {landmark.state}
                                   </SelectItem>
                                 ))
@@ -383,7 +383,7 @@ const HostCycling = () => {
                             <SelectContent>
                               <SelectItem value="none">None</SelectItem>
                               {landmarks.map((landmark) => (
-                                <SelectItem key={landmark.id} value={landmark.id}>
+                                <SelectItem key={landmark.id_uuid} value={landmark.id_uuid}>
                                   {landmark.name}, {landmark.state}
                                 </SelectItem>
                               ))}
@@ -750,7 +750,7 @@ const HostCycling = () => {
           start_time: form.getValues('start_time'),
           host_name: form.getValues('host_name'),
         }}
-        selectedLandmark={landmarks.find((l) => l.id === form.getValues('start_landmark_id')) || undefined}
+        selectedLandmark={landmarks.find((l) => l.id_uuid === form.getValues('start_landmark_id')) || undefined}
         supercode={supercode}
         eventSlug={eventSlug || ''}
         onNavigate={() => handleNavigate(eventSlug || '')}
