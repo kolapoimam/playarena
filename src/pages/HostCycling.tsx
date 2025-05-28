@@ -136,8 +136,15 @@ const HostCycling = () => {
         setLoadingLandmarks(true);
         const { data, error } = await supabase.from('landmarks').select('id_uuid, name, state').order('name', { ascending: true });
         if (error) throw new Error(`Failed to fetch landmarks: ${error.message}`);
-        setLandmarks(data || []);
-        if (!data || data.length === 0) {
+        
+        // Filter out duplicates by id_uuid and ensure valid data
+        const uniqueLandmarks = data
+          ? Array.from(new Map(data.map(item => [item.id_uuid, item])).values())
+              .filter(item => item.id_uuid && item.name && item.state)
+          : [];
+        
+        setLandmarks(uniqueLandmarks);
+        if (!uniqueLandmarks || uniqueLandmarks.length === 0) {
           setLandmarksError('No landmarks available. Please create a new landmark.');
         } else {
           setLandmarksError(null);
@@ -218,7 +225,7 @@ const HostCycling = () => {
       const { data: eventData, error: eventError } = await supabase
         .from('cycling_events')
         .insert({
-          id: gen_random_uuid(), // Generate a new UUID for the event
+          id_uuid: gen_random_uuid(),
           title: data.title,
           slug: slugData,
           notes: data.notes || null,
@@ -240,7 +247,7 @@ const HostCycling = () => {
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         })
-        .select('id, slug')
+        .select('id_uuid AS id, slug')
         .single();
 
       if (eventError) throw new Error(`Failed to create event: ${eventError.message || 'No event data returned'}`);
