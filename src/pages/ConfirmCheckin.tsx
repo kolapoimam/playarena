@@ -180,12 +180,12 @@ toast({
           return;
         }
 
-        if (userId) {
-          const { data walletData, error walletError } = await supabase
-            .from("wallets")
-            .select("balance")
-            .eq("organizer_id", userId)
-            .single();
+if (userId) {
+  const { data: walletData, error: walletError } = await supabase
+    .from("wallets")
+    .select("balance")
+    .eq("organizer_id", userId)
+    .single();
 
           if (!walletError && walletData) {
             setWalletBalance(walletData.balance);
