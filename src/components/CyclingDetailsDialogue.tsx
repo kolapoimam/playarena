@@ -151,9 +151,9 @@ const CyclingDetailsDialogue: React.FC<CyclingDetailsDialogueProps> = ({ event, 
       await new Promise((resolve) => {
         img.onload = resolve;
         img.onerror = () => {
-          console.warn("Failed to load logo");
-          resolve(null);
-        }();
+  console.warn("Failed to load logo");
+  resolve(null);
+})();
       });
 
       if (backgroundOption === "cycle") {
