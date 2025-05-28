@@ -31,7 +31,7 @@ const formSchema = z.object({
   start_time: z.string().min(1, 'Start time is required'),
   duration_type: z.enum(['hours', 'minutes', 'distance']),
   duration_value: z.number().int().min(1, 'Duration must be at least 1').max(1000, 'Duration cannot exceed 1000'),
-  start_landmark_id: z.string().uuid('Please select a starting landmark').optional().nullable(),
+  start_landmark_id: z.string().uuid('Please select a starting landmark'),
   end_landmark_id: z.string().uuid().optional().nullable(),
   max_attendees: z.number().int().min(1, 'At least 1 attendee').max(100, 'Maximum 100 attendees'),
   is_free: z.boolean().default(true),
@@ -125,12 +125,10 @@ const HostCycling = () => {
       is_rental_available: false,
       host_name: '',
       host_phone: '',
-      start_landmark_id: null,
+      start_landmark_id: '',
       end_landmark_id: null,
     },
   });
-
-  console.log('Form errors:', form.formState.errors);
 
   useEffect(() => {
     const fetchLandmarks = async () => {
@@ -184,8 +182,7 @@ const HostCycling = () => {
 
       setLandmarks((prev) => [...prev, newLandmark]);
       setLandmarksError(null);
-      form.setValue('start_landmark_id', newLandmark.id);
-      console.log('Set start_landmark_id to:', newLandmark.id);
+      form.setValue('start_landmark_id', newLandmark.id, { shouldValidate: true });
       toast({
         title: 'Success',
         description: 'Landmark created successfully!',
@@ -204,22 +201,17 @@ const HostCycling = () => {
   const onSubmit = async (data: FormValues) => {
     setLoading(true);
     try {
-      if (!data.title || !data.event_date || !data.start_time || !data.host_name) {
-        throw new Error('Missing required form fields');
-      }
       if (!data.start_landmark_id) {
         throw new Error('Please select a starting landmark');
       }
 
       const { data: supercodeData, error: codeError } = await supabase.rpc('generate_unique_code', { length: 8 });
       if (codeError || !supercodeData) {
-        console.error('Supercode error:', codeError?.message);
         throw new Error(`Failed to generate supercode: ${codeError?.message || 'No supercode returned'}`);
       }
 
       const { data: slugData, error: slugError } = await supabase.rpc('generate_unique_slug', { title: data.title });
       if (slugError || !slugData) {
-        console.error('Slug error:', slugError?.message);
         throw new Error(`Failed to generate slug: ${slugError?.message || 'No slug returned'}`);
       }
 
@@ -249,7 +241,6 @@ const HostCycling = () => {
         .single();
 
       if (eventError || !eventData) {
-        console.error('Event creation error:', eventError?.message);
         throw new Error(`Failed to create event: ${eventError?.message || 'No event data returned'}`);
       }
 
@@ -276,8 +267,8 @@ const HostCycling = () => {
     }
   };
 
-  const handleSectionToggle = (setter: (value: boolean) => void, newValue: boolean) => {
-    setter(newValue);
+  const handleSectionToggle = (setter: (value: boolean) => void, currentValue: boolean) => {
+    setter(!currentValue);
   };
 
   return (
@@ -307,40 +298,29 @@ const HostCycling = () => {
             <form
               ref={formRef}
               onSubmit={form.handleSubmit(onSubmit)}
-              className="space-y-8 max-h-[calc(100vh-200px)] overflow-y-auto"
-              style={{
-                scrollbarWidth: 'thin', // Firefox
-                scrollbarColor: 'gray transparent', // Firefox
-                WebkitOverflowScrolling: 'touch', // Smooth scrolling on iOS
-              }}
+              className="space-y-8 max-h-[calc(100vh-200px)] overflow-y-auto no-scrollbar"
             >
               <style>
                 {`
-                  form::-webkit-scrollbar {
-                    width: 8px;
+                  .no-scrollbar::-webkit-scrollbar {
+                    display: none;
                   }
-                  form::-webkit-scrollbar-track {
-                    background: transparent;
-                  }
-                  form::-webkit-scrollbar-thumb {
-                    background-color: gray;
-                    border-radius: 4px;
-                    border: 2px solid transparent;
-                    background-clip: padding-box;
-                  }
-                  form::-webkit-scrollbar-thumb:hover {
-                    background-color: darkgray;
+                  .no-scrollbar {
+                    -ms-overflow-style: none;
+                    scrollbar-width: none;
+                    -webkit-overflow-scrolling: touch;
                   }
                 `}
               </style>
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
-                <div
-                  className="flex justify-between items-center cursor-pointer"
-                  onClick={() => handleSectionToggle(setIsRouteDetailsOpen, !isRouteDetailsOpen)}
+                <button
+                  type="button"
+                  className="flex justify-between items-center w-full text-left"
+                  onClick={() => handleSectionToggle(setIsRouteDetailsOpen, isRouteDetailsOpen)}
                 >
                   <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Route Details</h2>
                   <span>{isRouteDetailsOpen ? '-' : '+'}</span>
-                </div>
+                </button>
                 {isRouteDetailsOpen && (
                   <div className="space-y-4">
                     <Button
@@ -359,10 +339,8 @@ const HostCycling = () => {
                         <FormItem>
                           <FormLabel>Starting Landmark</FormLabel>
                           <Select
-                            onValueChange={(value) => {
-                              field.onChange(value === 'null' ? null : value);
-                            }}
-                            value={field.value ?? 'null'}
+                            onValueChange={field.onChange}
+                            value={field.value || ''}
                           >
                             <FormControl>
                               <SelectTrigger>
@@ -377,7 +355,7 @@ const HostCycling = () => {
                                   </SelectItem>
                                 ))
                               ) : (
-                                <SelectItem value="null" disabled>
+                                <SelectItem value="" disabled>
                                   No landmarks available
                                 </SelectItem>
                               )}
@@ -394,10 +372,8 @@ const HostCycling = () => {
                         <FormItem>
                           <FormLabel>Ending Landmark (Optional)</FormLabel>
                           <Select
-                            onValueChange={(value) => {
-                              field.onChange(value === 'null' ? null : value);
-                            }}
-                            value={field.value ?? 'null'}
+                            onValueChange={(value) => field.onChange(value === '' ? null : value)}
+                            value={field.value || ''}
                           >
                             <FormControl>
                               <SelectTrigger>
@@ -405,7 +381,7 @@ const HostCycling = () => {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="null">None</SelectItem>
+                              <SelectItem value="">None</SelectItem>
                               {landmarks.map((landmark) => (
                                 <SelectItem key={landmark.id} value={landmark.id}>
                                   {landmark.name}, {landmark.state}
@@ -424,13 +400,14 @@ const HostCycling = () => {
                 )}
               </div>
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
-                <div
-                  className="flex justify-between items-center cursor-pointer"
-                  onClick={() => handleSectionToggle(setIsEventDetailsOpen, !isEventDetailsOpen)}
+                <button
+                  type="button"
+                  className="flex justify-between items-center w-full text-left"
+                  onClick={() => handleSectionToggle(setIsEventDetailsOpen, isEventDetailsOpen)}
                 >
                   <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Event Details</h2>
                   <span>{isEventDetailsOpen ? '-' : '+'}</span>
-                </div>
+                </button>
                 {isEventDetailsOpen && (
                   <>
                     <FormField
@@ -560,13 +537,14 @@ const HostCycling = () => {
                 )}
               </div>
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
-                <div
-                  className="flex justify-between items-center cursor-pointer"
-                  onClick={() => handleSectionToggle(setIsPreferencesOpen, !isPreferencesOpen)}
+                <button
+                  type="button"
+                  className="flex justify-between items-center w-full text-left"
+                  onClick={() => handleSectionToggle(setIsPreferencesOpen, isPreferencesOpen)}
                 >
                   <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Event Preferences</h2>
                   <span>{isPreferencesOpen ? '-' : '+'}</span>
-                </div>
+                </button>
                 {isPreferencesOpen && (
                   <>
                     <FormField
@@ -656,13 +634,14 @@ const HostCycling = () => {
                 )}
               </div>
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
-                <div
-                  className="flex justify-between items-center cursor-pointer"
-                  onClick={() => handleSectionToggle(setIsRegistrationOpen, !isRegistrationOpen)}
+                <button
+                  type="button"
+                  className="flex justify-between items-center w-full text-left"
+                  onClick={() => handleSectionToggle(setIsRegistrationOpen, isRegistrationOpen)}
                 >
                   <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Registration Details</h2>
                   <span>{isRegistrationOpen ? '-' : '+'}</span>
-                </div>
+                </button>
                 {isRegistrationOpen && (
                   <FormField
                     control={form.control}
@@ -702,13 +681,14 @@ const HostCycling = () => {
                 )}
               </div>
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
-                <div
-                  className="flex justify-between items-center cursor-pointer"
-                  onClick={() => handleSectionToggle(setIsHostDetailsOpen, !isHostDetailsOpen)}
+                <button
+                  type="button"
+                  className="flex justify-between items-center w-full text-left"
+                  onClick={() => handleSectionToggle(setIsHostDetailsOpen, isHostDetailsOpen)}
                 >
                   <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Host Details</h2>
                   <span>{isHostDetailsOpen ? '-' : '+'}</span>
-                </div>
+                </button>
                 {isHostDetailsOpen && (
                   <>
                     <FormField
