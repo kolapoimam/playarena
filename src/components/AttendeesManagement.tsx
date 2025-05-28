@@ -386,4 +386,4 @@ variant: "destructive",
       </div>
     );
 
-    export default AttendeesManagement;
+export default AttendeesManagement;
