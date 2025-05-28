@@ -331,23 +331,22 @@ variant: "destructive",
                               className="w-32 text-sm rounded-md"
                               disabled={checkingInAttendees[attendee.id] || loading}
                             />
-                            <Button
-                              onClick={() => validateCheckinCode(attendee.id)}
-                              className="bg-blue-500 hover:bg-blue-600 text-white text-sm px-4 py-2 rounded-md"
-                              disabled={
-                                !checkinCodes[attendee.id] ||
-                                  checkinCodes[attendee.id].length !== 6 ||
-                                  checkingInAttendees[attendee.id] ||
-                                  loading
-                                }
-                              }
-                            >
-                              {checkingInAttendees[attendee.id] ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                "Verify"
-                              )}
-                            </Button>
+<Button
+  onClick={() => validateCheckinCode(attendee.id)}
+  className="bg-blue-500 hover:bg-blue-600 text-white text-sm px-4 py-2 rounded-md"
+  disabled={
+    !checkinCodes[attendee.id] ||
+    checkinCodes[attendee.id].length !== 6 ||
+    checkingInAttendees[attendee.id] ||
+    loading
+  }
+>
+  {checkingInAttendees[attendee.id] ? (
+    <Loader2 className="h-4 w-4 animate-spin" />
+  ) : (
+    "Verify"
+  )}
+</Button>
                           </div>
                         )}
                         {checkinCodeErrors[attendee.id] && (
