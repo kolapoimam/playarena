@@ -50,6 +50,7 @@ import Wallet from "@/pages/Wallet";
 import CyclingActivity from "@/pages/CyclingActivity";
 import CyclingDetail from "@/pages/CyclingDetail";
 import JoinCycling from "@/pages/JoinCycling";
+import HostCycling from "@/pages/HostCycling";
 
 const queryClient = new QueryClient();
 
@@ -135,6 +136,7 @@ const AppRoutes = () => {
       <Route path="/auth" element={<Auth />} />
       <Route path="/confirm" element={<Confirm />} />
       <Route path="/organize" element={<Organize />} />
+      <Route path="/host-cycling" element={<HostCycling />} />
       <Route path="/venue-create" element={<VenueCreate />} />
       <Route path="/venues" element={<VenueDirectory />} />
       <Route path="/confirm-checkin" element={<ConfirmCheckin />} />
@@ -143,7 +145,7 @@ const AppRoutes = () => {
       <Route path="/terms-privacy" element={<TermsAndPrivacy />} />
       <Route path="/match/:slug" element={<MatchDetail />} />
       <Route path="/join/:slug" element={<JoinMatch />} />
-      <Route path="/cycling-event/:slug" element={<CyclingDetail />} />
+      <Route path="/cycling/:slug" element={<CyclingDetail />} />
       <Route path="/join-cycling/:slug" element={<JoinCycling />} />
       <Route path="/venue/:slug" element={<VenueDetail />} />
       <Route path="/match/:slug/team-management" element={<TeamManagement />} />
