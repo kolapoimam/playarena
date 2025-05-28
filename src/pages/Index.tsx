@@ -36,7 +36,7 @@ type CyclingEvent = {
   is_free: boolean;
   start_landmark: {
     name: string;
-    city: string;
+    state: string;
   } | null;
   type: "cycling";
 };
@@ -121,7 +121,7 @@ const Index = () => {
             event_date,
             start_time,
             is_free,
-            start_landmark:landmarks!start_landmark_id(name, city)
+            start_landmark:landmarks!start_landmark_id(name, state)
           `)
           .gte("event_date", currentDate)
           .order("event_date", { ascending: true })
@@ -177,7 +177,7 @@ const Index = () => {
               event_date,
               start_time,
               is_free,
-              start_landmark:landmarks!start_landmark_id(name, city)
+              start_landmark:landmarks!start_landmark_id(name, state)
             `)
             .order("event_date", { ascending: false })
             .order("start_time", { ascending: false })
@@ -348,7 +348,7 @@ const Index = () => {
                       {event.type === "cycling" && event.start_landmark && (
                         <div className="flex items-start gap-2">
                           <Store size={18} />
-                          <span>{event.start_landmark.name}, {event.start_landmark.city}</span>
+                          <span>{event.start_landmark.name}, {event.start_landmark.state}</span>
                         </div>
                       )}
 
