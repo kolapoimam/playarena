@@ -53,12 +53,12 @@ type Event = {
   host_phone: string;
 };
 
-interface CyclingDetailsDialogProps {
+interface CyclingDetailsDialogueProps {
   event: Event;
   attendees: Attendee[];
 }
 
-const CyclingDetailsDialog: React.FC<CyclingDetailsDialogProps> = ({
+const CyclingDetailsDialogue: React.FC<CyclingDetailsDialogueProps> = ({
   event,
   attendees,
 }) => {
