@@ -1,414 +1,634 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Calendar, Clock, MapPin, Users, Filter, ChevronLeft, ChevronRight, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { ArrowLeft, Calendar, Clock, MapPin, Users, DollarSign, Loader } from "lucide-react";
+import CyclingSuccessDialog from "@/components/CyclingSuccessDialog";
 import Navbar from "@/components/Navbar";
-import { DateTime } from "luxon";
 
-interface CyclingEvent {
-  id: string;
+type Landmark = {
+  name: string;
+  state: string;
+};
+
+type Attendee = {
+  id_uuid: string;
+  attendee_name: string;
+  attendee_phone: string;
+  confirmation_code: string;
+  payment_status: boolean;
+  cycling_event_id_uuid: string;
+};
+
+type CyclingEvent = {
+  id_uuid: string;
   slug: string;
   title: string;
   event_date: string;
   start_time: string;
   max_attendees: number;
   is_free: boolean;
-  price: number | null;
+  price?: number;
   host_name: string;
-  host_id: string;
-  start_landmark: { id_uuid: string; name: string; state: string } | null;
-  attendees: { id: string }[];
-  status: string;
-}
-
-type Landmark = {
-  id_uuid: string;
-  name: string;
+  host_phone: string;
+  start_landmark: Landmark;
 };
 
-const CyclingActivity = () => {
+type PaymentStatus = "pending" | "success" | "failed";
+
+const formSchema = z.object({
+  name: z
+    .string()
+    .min(3, "Name must be at least 3 characters")
+    .max(50, "Name cannot exceed 50 characters"),
+  phone: z.string().regex(/^[0-9]{11}$/, "Phone number must be exactly 11 digits"),
+});
+
+type FormValues = z.infer<typeof formSchema>;
+
+const JoinCycling = () => {
+  const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [events, setEvents] = useState<CyclingEvent[]>([]);
-  const [filteredEvents, setFilteredEvents] = useState<CyclingEvent[]>([]);
-  const [landmarks, setLandmarks] = useState<Landmark[]>([]);
+  const [searchParams] = useSearchParams();
+  const [paymentReference, setPaymentReference] = useState<string | null>(
+    searchParams.get("reference") || searchParams.get("trxref")
+  );
+  const [event, setEvent] = useState<CyclingEvent | null>(null);
+  const [attendees, setAttendees] = useState<Attendee[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalEvents, setTotalEvents] = useState(0);
-  const [isFilterOpen, setFilterOpen] = useState(false);
-  const [isPaidFilter, setIsPaidFilter] = useState<boolean | null>(null);
-  const [landmarkFilter, setLandmarkFilter] = useState<string | null>(null);
-  const [durationFilter, setDurationFilter] = useState<string>("all");
-  const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [joining, setJoining] = useState(false);
+  const [verifyingPayment, setVerifyingPayment] = useState(false);
+  const [paystackLoaded, setPaystackLoaded] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>("pending");
+  const [successDialogOpen, setSuccessDialogOpen] = useState(false);
+  const [confirmationCode, setConfirmationCode] = useState<string | null>(null);
 
-  const eventsPerPage = 4;
-  const LAGOS_TIMEZONE = "Africa/Lagos";
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: { name: "", phone: "" },
+  });
 
+  const defaultEmail = form.getValues("phone")
+    ? `${form.getValues("phone")}@sportcliq.com`
+    : "default@sportcliq.com";
+
+  // Load Paystack script
   useEffect(() => {
-    fetchLandmarks();
-    fetchEvents();
-  }, [currentPage, isPaidFilter, landmarkFilter, durationFilter, statusFilter]);
-
-  const fetchLandmarks = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("landmarks")
-        .select("id_uuid, name")
-        .order("name", { ascending: true });
-      if (error) throw error;
-      setLandmarks(data as Landmark[]);
-    } catch (error: any) {
-      console.error("Error fetching landmarks:", error);
+    const script = document.createElement("script");
+    script.src = "https://js.paystack.co/v2/inline.js";
+    script.async = true;
+    script.onload = () => setPaystackLoaded(true);
+    script.onerror = () => {
       toast({
         title: "Error",
-        description: "Failed to load landmarks for filter.",
+        description: "Failed to load Paystack script.",
         variant: "destructive",
       });
+    };
+    document.body.appendChild(script);
+    return () => document.body.removeChild(script);
+  }, [toast]);
+
+  // Fetch event
+  useEffect(() => {
+    if (!slug) return;
+    const fetchEvent = async () => {
+      try {
+        setLoading(true);
+        const { data, error } = await supabase
+          .from("cycling_events")
+          .select(`
+            id_uuid,
+            slug,
+            title,
+            event_date,
+            start_time,
+            max_attendees,
+            is_free,
+            price,
+            host_name,
+            host_phone,
+            start_landmark:landmarks!cycling_events_start_landmark_id_fkey(name, state)
+          `)
+          .eq("slug", slug)
+          .single();
+        if (error) throw error;
+
+        // Validate event.id_uuid is a UUID
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!uuidRegex.test(data.id_uuid)) {
+          throw new Error(`Invalid event ID format: ${data.id_uuid}`);
+        }
+
+        setEvent(data);
+
+        const { data: attendeesData, error: attendeesError } = await supabase
+          .from("cycling_attendees")
+          .select("id_uuid, attendee_name, attendee_phone, confirmation_code, payment_status, cycling_event_id_uuid")
+          .eq("cycling_event_id_uuid", data.id_uuid);
+        if (!attendeesError) setAttendees(attendeesData || []);
+      } catch (error: any) {
+        console.error("Error loading event:", error);
+        toast({
+          title: "Error",
+          description: error.message || "Failed to load event.",
+          variant: "destructive",
+        });
+        navigate("/cycling-activities");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchEvent();
+  }, [slug, navigate, toast]);
+
+  // Verify payment
+  useEffect(() => {
+    if (!paymentReference || !event) return;
+
+    const verifyPayment = async () => {
+      setVerifyingPayment(true);
+      try {
+        const { data, error } = await supabase.functions.invoke("verify-paystack-transaction", {
+          body: { reference: paymentReference },
+        });
+
+        if (error) throw new Error(error.message || "Verification failed");
+
+        const { verified, event_id, slug: resourceSlug } = data;
+
+        if (verified && event_id === event.id_uuid && resourceSlug === slug) {
+          setPaymentStatus("success");
+          toast({
+            title: "Payment Successful",
+            description: "Please complete your registration.",
+          });
+        } else {
+          setPaymentStatus("failed");
+          toast({
+            title: "Payment Verification Failed",
+            description: "Couldn’t verify payment.",
+            variant: "destructive",
+          });
+        }
+      } catch (error: any) {
+        console.error("Error verifying payment:", error);
+        setPaymentStatus("failed");
+        toast({
+          title: "Verification Error",
+          description: error.message || "Failed to verify payment.",
+          variant: "destructive",
+        });
+      } finally {
+        setVerifyingPayment(false);
+      }
+    };
+
+    verifyPayment();
+  }, [paymentReference, event, slug, toast]);
+
+  const handlePaymentInitiation = async () => {
+    if (!event || event.is_free || !event.price) {
+      toast({
+        title: "Error",
+        description: "Event not configured for payment.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!paystackLoaded || !window.PaystackPop) {
+      toast({
+        title: "Error",
+        description: "Paystack not available.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const amountInKobo = event.price * 100;
+    if (!Number.isInteger(amountInKobo) || amountInKobo < 100) {
+      toast({
+        title: "Invalid Amount",
+        description: "Minimum payment is ₦1.00.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!defaultEmail.includes("@") || defaultEmail.length < 5) {
+      toast({
+        title: "Invalid Email",
+        description: "Enter a valid phone number.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate event.id_uuid is a UUID
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(event.id_uuid)) {
+      console.error("Invalid event_id format:", event.id_uuid);
+      toast({
+        title: "Error",
+        description: "Invalid event configuration.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setJoining(true);
+
+      console.log("Initiating payment with payload:", {
+        email: defaultEmail,
+        amount: amountInKobo,
+        event_id: event.id_uuid,
+        resource_type: "cycling",
+        slug: event.slug,
+        title: event.title,
+        callback_url: `${window.location.origin}/join-cycling/${event.slug}`,
+        metadata: {
+          event_id: event.id_uuid,
+          resource_type: "cycling",
+          user_phone: form.getValues("phone") || "unknown",
+        },
+      });
+
+      const response = await supabase.functions.invoke("initialize-paystack-transaction", {
+        body: {
+          email: defaultEmail,
+          amount: amountInKobo,
+          event_id: event.id_uuid,
+          resource_type: "cycling",
+          slug: event.slug,
+          title: event.title,
+          callback_url: `${window.location.origin}/join-cycling/${event.slug}`,
+          metadata: {
+            event_id: event.id_uuid,
+            resource_type: "cycling",
+            user_phone: form.getValues("phone") || "unknown",
+          },
+        },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message || "Failed to initialize payment");
+      }
+
+      const { access_code } = response.data;
+
+      if (!access_code) {
+        throw new Error("No access code returned");
+      }
+
+      const paystack = new window.PaystackPop();
+      paystack.resumeTransaction(access_code, {
+        onSuccess: (transaction: any) => {
+          setPaymentReference(transaction.reference);
+          setPaymentStatus("success");
+          toast({
+            title: "Payment Initiated",
+            description: "Complete your registration.",
+          });
+          setJoining(false);
+        },
+        onCancel: () => {
+          toast({
+            title: "Payment Cancelled",
+            description: "Payment process cancelled.",
+            variant: "destructive",
+          });
+          setJoining(false);
+        },
+      });
+    } catch (error: any) {
+      console.error("Error initiating payment:", error, {
+        email: defaultEmail,
+        amount: amountInKobo,
+        event_id: event.id_uuid,
+        resource_type: "cycling",
+        slug: event.slug,
+      });
+      toast({
+        title: "Payment Error",
+        description: error.message || "Failed to initiate payment.",
+        variant: "destructive",
+      });
+      setJoining(false);
     }
   };
 
-  const fetchEvents = async () => {
+  const onSubmit = async (data: FormValues) => {
+    if (!event) return;
+
+    if (attendees.length >= event.max_attendees) {
+      toast({
+        title: "Error",
+        description: "Event is full.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setJoining(true);
     try {
-      setLoading(true);
-let query = supabase
-  .from("cycling_events")
-  .select(
-    `
-      id, slug, title, event_date, start_time, max_attendees, is_free, price, host_name, host_id, status,
-      start_landmark:landmarks!cycling_events_start_landmark_id_fkey(id_uuid, name, state),
-      cycling_attendees!cycling_attendees_cycling_event_id_uuid_fkey(id_uuid)
-    `,
-    { count: "exact" }
-        );
+      const { data: confirmationCodeData, error: codeError } = await supabase.rpc(
+        "generate_unique_code",
+        { length: 6 }
+      );
+      if (codeError) throw codeError;
 
-      if (isPaidFilter !== null) {
-        query = query.eq("is_free", !isPaidFilter);
-      }
-      if (landmarkFilter) {
-        query = query.eq("start_landmark_id", landmarkFilter);
-      }
-      if (durationFilter !== "all") {
-        query = query.eq("duration_type", durationFilter);
-      }
-      if (statusFilter) {
-        query = query.eq("status", statusFilter);
+      const attendeeData: any = {
+        id_uuid: crypto.randomUUID(),
+        cycling_event_id_uuid: event.id_uuid,
+        attendee_name: data.name,
+        attendee_phone: data.phone,
+        confirmation_code: confirmationCodeData,
+        payment_status: event.is_free || paymentStatus === "success",
+      };
+
+      // Only include payment_reference for paid events with successful payment
+      if (!event.is_free && paymentStatus === "success" && paymentReference) {
+        attendeeData.payment_reference = paymentReference;
       }
 
-      const start = (currentPage - 1) * eventsPerPage;
-      const end = start + eventsPerPage - 1;
-      query = query.range(start, end);
-
-      const { data, error, count } = await query;
+      const { error } = await supabase.from("cycling_attendees").insert(attendeeData);
 
       if (error) throw error;
 
-      const sortedEvents = (data as CyclingEvent[]).sort((a, b) => {
-        const statusOrder = {
-          today: 0,
-          tomorrow: 1,
-          upcoming: 2,
-          passed: 3,
-        };
-        if (statusOrder[a.status] !== statusOrder[b.status]) {
-          return statusOrder[a.status] - statusOrder[b.status];
-        }
-        const aDateTime = DateTime.fromFormat(
-          `${a.event_date} ${a.start_time}`,
-          "yyyy-MM-dd hh:mm a"
-        ).setZone(LAGOS_TIMEZONE);
-        const bDateTime = DateTime.fromFormat(
-          `${b.event_date} ${b.start_time}`,
-          "yyyy-MM-dd hh:mm a"
-        ).setZone(LAGOS_TIMEZONE);
-        return aDateTime.toMillis() - bDateTime.toMillis();
+      setConfirmationCode(confirmationCodeData);
+      setSuccessDialogOpen(true);
+      toast({
+        title: "Success",
+        description: "Joined event successfully.",
       });
 
-      setEvents(sortedEvents);
-      setFilteredEvents(sortedEvents);
-      setTotalEvents(count || 0);
+      const { data: updatedAttendees } = await supabase
+        .from("cycling_attendees")
+        .select("id_uuid, attendee_name, attendee_phone, confirmation_code, payment_status, cycling_event_id_uuid")
+        .eq("cycling_event_id_uuid", event.id_uuid);
+      if (updatedAttendees) setAttendees(updatedAttendees);
     } catch (error: any) {
-      console.error("Error fetching cycling events:", error);
-      setEvents([]);
-      setFilteredEvents([]);
-      setTotalEvents(0);
+      console.error("Error joining event:", error);
       toast({
         title: "Error",
-        description: "Failed to load events. Please try again.",
+        description: "Failed to join event.",
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setJoining(false);
     }
-  };
-
-  const getEventStatus = (event: CyclingEvent) => {
-    if (event.status === "today") return { statusLabel: "Today", statusClass: "bg-green-100 text-green-700" };
-    if (event.status === "tomorrow") return { statusLabel: "Tomorrow", statusClass: "bg-yellow-100 text-yellow-700" };
-    if (event.status === "upcoming") return { statusLabel: "Upcoming", statusClass: "bg-blue-100 text-blue-800" };
-    return { statusLabel: "Passed", statusClass: "bg-gray-200 text-gray-600" };
   };
 
   const formatDate = (dateString: string) => {
-    const date = DateTime.fromISO(dateString, { zone: "utc" }).setZone(LAGOS_TIMEZONE);
-    return date.toFormat("ccc, d LLL yyyy");
+    const options: Intl.DateTimeFormatOptions = {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    };
+    return new Date(dateString).toLocaleDateString("en-NG", options);
   };
 
-  const totalPages = Math.ceil(totalEvents / eventsPerPage);
+  if (loading || verifyingPayment) {
+    return (
+      <div className="flex justify-center items-center h-[50vh]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
+      </div>
+    );
+  }
 
-  const handlePreviousPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage(currentPage - 1);
-    }
-  };
+  if (!event) {
+    return (
+      <div className="p-4">
+        <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4">
+          <ArrowLeft size={18} className="mr-2" />
+          Back
+        </Button>
+        <div className="text-center py-8">
+          <h2 className="text-xl font-semibold mb-2">Event Not Found</h2>
+          <p className="text-muted-foreground">The event doesn't exist or has been removed.</p>
+        </div>
+      </div>
+    );
+  }
 
-  const handleNextPage = () => {
-    if (currentPage < totalPages) {
-      setCurrentPage(currentPage + 1);
-    }
-  };
-
-  const resetFilters = () => {
-    setIsPaidFilter(null);
-    setLandmarkFilter(null);
-    setDurationFilter("all");
-    setStatusFilter(null);
-    setCurrentPage(1);
-  };
+  const isFull = attendees.length >= event.max_attendees;
+  const isPastEvent = new Date(event.event_date) < new Date(new Date().setHours(0, 0, 0, 0));
 
   return (
-    <div className="min-h-screen pb-26 bg-gray-100 dark:bg-gray-900">
-      <header className="bg-gradient-to-r from-green-500 to-green-700 text-white p-4 shadow-sm">
-        <div className="flex items-center justify-between max-w-7xl mx-auto">
-          <Button
-            variant="ghost"
-            onClick={() => navigate(-1)}
-            className="text-white hover:bg-green-600"
-          >
+    <div className="min-h-screen pb-24">
+      <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg">
+        <div className="flex items-center justify-between">
+          <Button variant="ghost" onClick={() => navigate(-1)} className="text-white hover:bg-green-600">
             <ArrowLeft size={18} className="mr-2" />
             Back
           </Button>
           <div className="text-center">
-            <h1 className="text-2xl font-bold">Cycling</h1>
+            <h1 className="text-2xl font-bold">Join Cycling Event</h1>
           </div>
-          <Button
-            className="bg-green-500 hover:bg-green-600 text-white"
-            onClick={() => navigate("/host-cycling")}
-          >
-            Host Event
-          </Button>
+          <div className="w-10"></div>
         </div>
       </header>
 
-      <div className="mt-6 max-w-7xl mx-auto px-4">
-        <Collapsible
-          open={isFilterOpen}
-          onOpenChange={setFilterOpen}
-          className="mb-4"
-        >
-          <CollapsibleTrigger asChild>
-            <Button variant="outline" className="w-full sm:w-auto">
-              <Filter size={16} className="mr-2" />
-              {isFilterOpen ? "Hide Filters" : "Show Filters"}
-            </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="mt-4 p-4 border rounded-lg bg-white dark:bg-gray-800 space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="is-paid-filter">Payment Type</Label>
-                <Select
-                  value={isPaidFilter === null ? "all" : isPaidFilter ? "paid" : "free"}
-                  onValueChange={(value) => {
-                    setIsPaidFilter(value === "all" ? null : value === "paid");
-                    setCurrentPage(1);
-                  }}
-                >
-                  <SelectTrigger id="is-paid-filter" className="border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
-                    <SelectValue placeholder="Select payment type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    <SelectItem value="paid">Paid</SelectItem>
-                    <SelectItem value="free">Free</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="landmark-filter">Meeting Point</Label>
-                <Select
-                  value={landmarkFilter || "all"}
-                  onValueChange={(value) => {
-                    setLandmarkFilter(value === "all" ? null : value);
-                    setCurrentPage(1);
-                  }}
-                >
-                  <SelectTrigger id="landmark-filter" className="border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
-                    <SelectValue placeholder="Select a landmark" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Landmarks</SelectItem>
-                    {landmarks.map((landmark) => (
-                      <SelectItem key={landmark.id_uuid} value={landmark.id_uuid}>
-                        {landmark.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="duration-filter">Duration Type</Label>
-                <Select
-                  value={durationFilter}
-                  onValueChange={(value) => {
-                    setDurationFilter(value);
-                    setCurrentPage(1);
-                  }}
-                >
-                  <SelectTrigger id="duration-filter" className="border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
-                    <SelectValue placeholder="Select duration type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    <SelectItem value="hours">Hours</SelectItem>
-                    <SelectItem value="distance">Distance (km)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="status-filter">Status</Label>
-                <Select
-                  value={statusFilter || "all"}
-                  onValueChange={(value) => {
-                    setStatusFilter(value === "all" ? null : value);
-                    setCurrentPage(1);
-                  }}
-                >
-                  <SelectTrigger id="status-filter" className="border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    <SelectItem value="today">Today</SelectItem>
-                    <SelectItem value="tomorrow">Tomorrow</SelectItem>
-                    <SelectItem value="upcoming">Upcoming</SelectItem>
-                    <SelectItem value="passed">Passed</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+      <div className="p-6">
+        <div className="bg-card rounded-lg shadow-md p-6 mb-6">
+          <h2 className="text-xl font-semibold mb-2">{event.title}</h2>
+          <div className="text-muted-foreground mb-2 space-y-1">
+            <div className="flex items-center gap-2">
+              <Calendar size={16} />
+              <span>{formatDate(event.event_date)}</span>
             </div>
-            <Button variant="outline" onClick={resetFilters}>
-              Reset Filters
-            </Button>
-          </CollapsibleContent>
-        </Collapsible>
-
-        {loading ? (
-          <div className="flex justify-center items-center h-[50vh]">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
+            <div className="flex items-center gap-2">
+              <Clock size={16} />
+              <span>{event.start_time}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <MapPin size={16} />
+              <span>{event.start_landmark.name}, {event.start_landmark.state}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Users size={16} />
+              <span>Spots available: {event.max_attendees - attendees.length} / {event.max_attendees}</span>
+            </div>
+            {!event.is_free && (
+              <div className="flex items-center gap-2 mt-2 font-medium text-green-600">
+                <DollarSign size={16} />
+                <span>Price: ₦{(event.price || 0).toFixed(2)}</span>
+              </div>
+            )}
           </div>
-        ) : filteredEvents.length > 0 ? (
-          <div className="space-y-4">
-            {filteredEvents.map((event) => {
-              const { statusLabel, statusClass } = getEventStatus(event);
-              return (
-                <div key={event.id} className="w-full min-w-full border rounded-lg overflow-hidden shadow-sm bg-white dark:bg-gray-800">
-                  <div className="p-4">
-                    <div className="flex justify-between items-start">
-                      <h3 className="font-bold text-lg text-gray-800 dark:text-gray-200">
-                        {event.title}
-                      </h3>
-                      <div className="flex flex-col gap-1">
-                        <Badge className={statusClass}>{statusLabel}</Badge>
-                        <Badge className={event.is_free ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}>
-                          {event.is_free ? "FREE" : `₦${(event.price || 0).toFixed(2)}`}
-                        </Badge>
-                      </div>
-                    </div>
-                    <div className="mt-2 space-y-2 text-sm text-gray-600 dark:text-gray-300">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
-                          {event.status === "today" ? "Today" : event.status === "tomorrow" ? "Tomorrow" : formatDate(event.event_date)}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-                        <span>{event.start_time}</span>
-                      </div>
-                      {event.start_landmark && (
-                        <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-                          <span>{event.start_landmark.name}, {event.start_landmark.state}</span>
-                        </div>
+          {isPastEvent ? (
+            <div className="text-center py-4 bg-muted rounded-lg">
+              <h2 className="text-lg font-semibold text-gray-700">This event has already passed</h2>
+              <p className="text-muted-foreground mt-2">You cannot join this event anymore.</p>
+              <Button className="mt-4 bg-green-500 hover:bg-green-600 text-white" onClick={() => navigate("/cycling-activities")}>
+                Browse Other Events
+              </Button>
+            </div>
+          ) : isFull ? (
+            <div className="text-center py-4 bg-muted rounded-lg">
+              <h2 className="text-lg font-semibold text-gray-700">This event is full</h2>
+              <p className="text-muted-foreground mt-2">All spots are taken.</p>
+              <Button className="mt-4 bg-green-500 hover:bg-green-600 text-white" onClick={() => navigate(`/cycling/${event.slug}`)}>
+                View Event Details
+              </Button>
+            </div>
+          ) : (
+            <>
+              {(event.is_free || paymentStatus === "success") && (
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 mt-6">
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700">Your Name</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="Enter your name"
+                              {...field}
+                              className="border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                            />
+                          </FormControl>
+                          <FormMessage className="text-red-500" />
+                        </FormItem>
                       )}
-                      <div className="flex items-center gap-2">
-                        <Users className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-                        <span>
-                          {event.attendees?.length || 0}/{event.max_attendees} spots filled
-                        </span>
-                      </div>
-                    </div>
-                    <div className="mt-4 flex justify-between items-center">
-                      <div>
-                        <span className="text-xs text-muted-foreground">Organized by:</span>
-                        <p className="font-medium text-gray-800 dark:text-gray-200">{event.host_name}</p>
-                      </div>
+                    />
+                    <FormField
+                      control={form.control}
+                      name="phone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700">Phone Number</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="tel"
+                              inputMode="numeric"
+                              placeholder="Enter 11-digit phone number"
+                              {...field}
+                              className="border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                              onChange={(e) => {
+                                const numericValue = e.target.value.replace(/\D/g, "").slice(0, 11);
+                                field.onChange(numericValue);
+                              }}
+                            />
+                          </FormControl>
+                          <FormMessage className="text-red-500" />
+                        </FormItem>
+                      )}
+                    />
+                    {event.is_free && (
                       <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => navigate(`/cycling/${event.slug}`)}
+                        type="submit"
+                        className="w-full bg-green-500 hover:bg-green-600 text-white rounded-md"
+                        disabled={joining}
                       >
-                        View Details
+                        {joining ? (
+                          <>
+                            <Loader size={16} className="mr-2 animate-spin" />
+                            Joining...
+                          </>
+                        ) : (
+                          "Join Event"
+                        )}
                       </Button>
-                    </div>
+                    )}
+                    {paymentStatus === "success" && (
+                      <>
+                        <div className="bg-green-50 p-4 rounded-md border border-green-200 text-green-700">
+                          <p className="font-medium">Payment Successful!</p>
+                          <p className="text-sm">Please complete your registration below.</p>
+                          {paymentReference && (
+                            <p className="text-sm mt-1">Reference: {paymentReference}</p>
+                          )}
+                        </div>
+                        <Button
+                          type="submit"
+                          className="w-full bg-green-500 hover:bg-green-600 text-white rounded-md"
+                          disabled={joining}
+                        >
+                          {joining ? (
+                            <>
+                              <Loader size={16} className="mr-2 animate-spin" />
+                              Joining...
+                            </>
+                          ) : (
+                            "Join Event"
+                          )}
+                        </Button>
+                      </>
+                    )}
+                  </form>
+                </Form>
+              )}
+              {!event.is_free && paymentStatus === "pending" && (
+                <>
+                  <h3 className="text-lg font-semibold text-gray-800 mt-6">Payment Required</h3>
+                  <p className="text-muted-foreground">
+                    This is a paid event. Please complete the payment to join.
+                  </p>
+                  <div className="flex items-center gap-2 text-sm font-medium mt-2">
+                    <DollarSign size={16} />
+                    <span>Total: ₦{(event.price || 0).toFixed(2)}</span>
                   </div>
-                </div>
-              );
-            })}
-            <div className="flex justify-between items-center mt-4">
-              <Button
-                variant="outline"
-                disabled={currentPage === 1}
-                onClick={handlePreviousPage}
-              >
-                <ChevronLeft size={16} className="mr-2" />
-                Previous
-              </Button>
-              <span className="text-gray-700 dark:text-gray-300">
-                Page {currentPage} of {totalPages}
-              </span>
-              <Button
-                variant="outline"
-                disabled={currentPage === totalPages || totalPages === 0}
-                onClick={handleNextPage}
-              >
-                Next
-                <ChevronRight size={16} className="ml-2" />
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div className="flex items-center justify-center h-[50vh] flex-col gap-4">
-            <p className="text-muted-foreground text-center p-4">
-              No events found. Host an event to see it here.
-            </p>
-            <Button onClick={() => navigate("/host-cycling")}>
-              Host an Event
-            </Button>
-          </div>
+                  <Button
+                    type="button"
+                    className="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg transition-colors mt-4"
+                    onClick={handlePaymentInitiation}
+                    disabled={joining || !paystackLoaded}
+                  >
+                    {joining ? (
+                      <>
+                        <Loader size={16} className="mr-2 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      `Pay Now (₦${(event.price || 0).toFixed(2)})`
+                    )}
+                  </Button>
+                </>
+              )}
+            </>
+          )}
+        </div>
+
+        {event && confirmationCode && (
+          <CyclingSuccessDialog
+            open={successDialogOpen}
+            onOpenChange={setSuccessDialogOpen}
+            formValues={{
+              title: event.title,
+              event_date: new Date(event.event_date),
+              start_time: event.start_time,
+              host_name: event.host_name,
+            }}
+            selectedLandmark={event.start_landmark}
+            confirmationCode={confirmationCode}
+            eventSlug={event.slug}
+            onNavigate={() => navigate(`/cycling-activities`)}
+          />
         )}
-        <Navbar />
       </div>
+      <Navbar />
     </div>
   );
 };
 
-export default CyclingActivity;
+export default JoinCycling;
