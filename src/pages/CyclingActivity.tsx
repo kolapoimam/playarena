@@ -22,8 +22,8 @@ interface CyclingEvent {
   price: number | null;
   host_name: string;
   host_id: string;
-  start_landmark: { id_uuid: string; name: string; state: string } | null;
-  attendees: { id: string }[];
+  start_landmark: { id_uuid: string; name: string; state: string; slug: string } | null;
+  attendees: { id_uuid: string }[];
   status: string;
 }
 
@@ -76,15 +76,15 @@ const CyclingActivity = () => {
   const fetchEvents = async () => {
     try {
       setLoading(true);
-let query = supabase
-  .from("cycling_events")
-  .select(
-    `
-      id, slug, title, event_date, start_time, max_attendees, is_free, price, host_name, host_id, status,
-      start_landmark:landmarks!cycling_events_start_landmark_id_fkey(id_uuid, name, state),
-      cycling_attendees!cycling_attendees_cycling_event_id_uuid_fkey(id_uuid)
-    `,
-    { count: "exact" }
+      let query = supabase
+        .from("cycling_events")
+        .select(
+          `
+          id, slug, title, event_date, start_time, max_attendees, is_free, price, host_name, host_id, status,
+          start_landmark:landmarks!cycling_events_start_landmark_id_fkey(id_uuid, name, state, slug),
+          cycling_attendees!cycling_attendees_cycling_event_id_uuid_fkey(id_uuid)
+        `,
+          { count: "exact" }
         );
 
       if (isPaidFilter !== null) {
@@ -120,12 +120,14 @@ let query = supabase
         }
         const aDateTime = DateTime.fromFormat(
           `${a.event_date} ${a.start_time}`,
-          "yyyy-MM-dd hh:mm a"
-        ).setZone(LAGOS_TIMEZONE);
+          "yyyy-MM-dd hh:mm a",
+          { zone: LAGOS_TIMEZONE }
+        );
         const bDateTime = DateTime.fromFormat(
           `${b.event_date} ${b.start_time}`,
-          "yyyy-MM-dd hh:mm a"
-        ).setZone(LAGOS_TIMEZONE);
+          "yyyy-MM-dd hh:mm a",
+          { zone: LAGOS_TIMEZONE }
+        );
         return aDateTime.toMillis() - bDateTime.toMillis();
       });
 
@@ -346,7 +348,16 @@ let query = supabase
                       {event.start_landmark && (
                         <div className="flex items-center gap-2">
                           <MapPin className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-                          <span>{event.start_landmark.name}, {event.start_landmark.state}</span>
+                          <a
+                            href={`/landmark/${event.start_landmark.slug}`}
+                            className="text-primary hover:underline"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              navigate(`/landmark/${event.start_landmark.slug}`);
+                            }}
+                          >
+                            {event.start_landmark.name}, {event.start_landmark.state}
+                          </a>
                         </div>
                       )}
                       <div className="flex items-center gap-2">
