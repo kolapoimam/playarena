@@ -23,7 +23,7 @@ interface CyclingEvent {
   host_name: string;
   host_id: string;
   start_landmark: { id_uuid: string; name: string; state: string; slug: string } | null;
-  attendees: { id_uuid: string }[];
+  attendees: { id_uuid: string; attendee_name: string; attendee_status: string }[];
   status: string;
 }
 
@@ -82,7 +82,7 @@ const CyclingActivity = () => {
           `
           id, slug, title, event_date, start_time, max_attendees, is_free, price, host_name, host_id, status,
           start_landmark:landmarks!cycling_events_start_landmark_id_fkey(id_uuid, name, state, slug),
-          cycling_attendees!cycling_attendees_cycling_event_id_uuid_fkey(id_uuid)
+          cycling_attendees!cycling_events_cycling_attendees_cycling_event_id_uuid_fkey(id_uuid, attendee_name, attendee_status)
         `,
           { count: "exact" }
         );
@@ -108,7 +108,13 @@ const CyclingActivity = () => {
 
       if (error) throw error;
 
-      const sortedEvents = (data as CyclingEvent[]).sort((a, b) => {
+      // Ensure attendees is always an array
+      const processedEvents = (data as CyclingEvent[]).map(event => ({
+        ...event,
+        attendees: Array.isArray(event.cycling_attendees) ? event.cycling_attendees : [],
+      }));
+
+      const sortedEvents = processedEvents.sort((a, b) => {
         const statusOrder = {
           today: 0,
           tomorrow: 1,
