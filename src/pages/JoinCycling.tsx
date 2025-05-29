@@ -25,16 +25,16 @@ type Landmark = {
 };
 
 type Attendee = {
-  id: string;
+  id_uuid: string; // Updated to id_uuid
   attendee_name: string;
   attendee_phone: string;
   confirmation_code: string;
   payment_status: boolean;
-  cycling_event_id: string;
+  cycling_event_id_uuid: string;
 };
 
 type CyclingEvent = {
-  id: string;
+  id_uuid: string;
   slug: string;
   title: string;
   event_date: string;
@@ -112,25 +112,34 @@ const JoinCycling = () => {
         const { data, error } = await supabase
           .from("cycling_events")
           .select(`
-            *,
+            id_uuid,
+            slug,
+            title,
+            event_date,
+            start_time,
+            max_attendees,
+            is_free,
+            price,
+            host_name,
+            host_phone,
             start_landmark:landmarks!cycling_events_start_landmark_id_fkey(name, state)
           `)
           .eq("slug", slug)
           .single();
         if (error) throw error;
 
-        // Validate event.id is a UUID
+        // Validate event.id_uuid is a UUID
         const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-        if (!uuidRegex.test(data.id)) {
-          throw new Error(`Invalid event ID format: ${data.id}`);
+        if (!uuidRegex.test(data.id_uuid)) {
+          throw new Error(`Invalid event ID format: ${data.id_uuid}`);
         }
 
         setEvent(data);
 
         const { data: attendeesData, error: attendeesError } = await supabase
           .from("cycling_attendees")
-          .select("*")
-          .eq("cycling_event_id", data.id);
+          .select("id_uuid, attendee_name, attendee_phone, confirmation_code, payment_status, cycling_event_id_uuid") // Updated to select id_uuid
+          .eq("cycling_event_id_uuid", data.id_uuid);
         if (!attendeesError) setAttendees(attendeesData || []);
       } catch (error: any) {
         console.error("Error loading event:", error);
@@ -162,7 +171,7 @@ const JoinCycling = () => {
 
         const { verified, event_id, slug: resourceSlug } = data;
 
-        if (verified && event_id === event.id && resourceSlug === slug) {
+        if (verified && event_id === event.id_uuid && resourceSlug === slug) {
           setPaymentStatus("success");
           toast({
             title: "Payment Successful",
@@ -230,10 +239,10 @@ const JoinCycling = () => {
       return;
     }
 
-    // Validate event.id is a UUID
+    // Validate event.id_uuid is a UUID
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(event.id)) {
-      console.error("Invalid event_id format:", event.id);
+    if (!uuidRegex.test(event.id_uuid)) {
+      console.error("Invalid event_id format:", event.id_uuid);
       toast({
         title: "Error",
         description: "Invalid event configuration.",
@@ -248,13 +257,13 @@ const JoinCycling = () => {
       console.log("Initiating payment with payload:", {
         email: defaultEmail,
         amount: amountInKobo,
-        event_id: event.id,
+        event_id: event.id_uuid,
         resource_type: "cycling",
         slug: event.slug,
         title: event.title,
         callback_url: `${window.location.origin}/cycling/${event.slug}`,
         metadata: {
-          event_id: event.id,
+          event_id: event.id_uuid,
           resource_type: "cycling",
           user_phone: form.getValues("phone") || "unknown",
         },
@@ -264,13 +273,13 @@ const JoinCycling = () => {
         body: {
           email: defaultEmail,
           amount: amountInKobo,
-          event_id: event.id,
+          event_id: event.id_uuid,
           resource_type: "cycling",
           slug: event.slug,
           title: event.title,
           callback_url: `${window.location.origin}/cycling/${event.slug}`,
           metadata: {
-            event_id: event.id,
+            event_id: event.id_uuid,
             resource_type: "cycling",
             user_phone: form.getValues("phone") || "unknown",
           },
@@ -311,7 +320,7 @@ const JoinCycling = () => {
       console.error("Error initiating payment:", error, {
         email: defaultEmail,
         amount: amountInKobo,
-        event_id: event.id,
+        event_id: event.id_uuid,
         resource_type: "cycling",
         slug: event.slug,
       });
@@ -345,7 +354,8 @@ const JoinCycling = () => {
       if (codeError) throw codeError;
 
       const attendeeData = {
-        cycling_event_id: event.id,
+        id_uuid: crypto.randomUUID(), // Generate UUID for new attendee
+        cycling_event_id_uuid: event.id_uuid,
         attendee_name: data.name,
         attendee_phone: data.phone,
         confirmation_code: confirmationCodeData,
@@ -366,8 +376,8 @@ const JoinCycling = () => {
 
       const { data: updatedAttendees } = await supabase
         .from("cycling_attendees")
-        .select("*")
-        .eq("cycling_event_id", event.id);
+        .select("id_uuid, attendee_name, attendee_phone, confirmation_code, payment_status, cycling_event_id_uuid") // Updated to select id_uuid
+        .eq("cycling_event_id_uuid", event.id_uuid);
       if (updatedAttendees) setAttendees(updatedAttendees);
     } catch (error: any) {
       console.error("Error joining event:", error);
