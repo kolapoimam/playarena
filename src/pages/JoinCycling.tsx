@@ -164,15 +164,29 @@ useEffect(() => {
     setVerifyingPayment(true);
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
+        console.log(`Verification attempt ${attempt} for reference: ${paymentReference}`, {
+          eventId: event.id_uuid,
+          eventSlug: event.slug,
+        });
         const { data, error } = await supabase.functions.invoke("verify-paystack-transaction", {
           body: { reference: paymentReference },
         });
 
-        if (error) throw new Error(error.message || "Verification failed");
+        if (error) {
+          console.error('Verification error:', error);
+          throw new Error(error.message || "Verification failed");
+        }
 
         const { verified, event_id, slug: resourceSlug } = data;
+        console.log('Verification response:', {
+          verified,
+          event_id,
+          resourceSlug,
+          expectedEventId: event.id_uuid,
+          expectedSlug: event.slug,
+        });
 
-        if (verified && event_id === event.id_uuid && resourceSlug === slug) {
+        if (verified && event_id === event.id_uuid) {
           setPaymentStatus("success");
           toast({
             title: "Payment Successful",
@@ -180,10 +194,17 @@ useEffect(() => {
           });
           return;
         } else {
+          console.error('Verification failed: Invalid payment details', {
+            verified,
+            event_id,
+            resourceSlug,
+            expectedEventId: event.id_uuid,
+            expectedSlug: event.slug,
+          });
           throw new Error("Invalid payment details");
         }
       } catch (error: any) {
-        console.error(`Verification attempt ${attempt} failed:`, error);
+        console.error(`Verification attempt ${attempt} failed:`, error.message);
         if (attempt < retries) {
           await new Promise(resolve => setTimeout(resolve, delay));
           continue;
@@ -196,7 +217,7 @@ useEffect(() => {
           action: (
             <Button
               variant="outline"
-              onClick={() => verifyPayment(1)} // Allow manual retry
+              onClick={() => verifyPayment(1)}
             >
               Retry
             </Button>
