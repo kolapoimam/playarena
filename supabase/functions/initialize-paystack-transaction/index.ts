@@ -1,10 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { corsHeaders } from "./_shared/cors.ts";
 
 const PAYSTACK_SECRET_KEY = Deno.env.get('PAYSTACK_SECRET_KEY');
 const PAYSTACK_API_URL = 'https://api.paystack.co';
@@ -47,7 +43,7 @@ serve(async (req) => {
       );
     }
 
-    // Convert amount to kobo
+    // Validate amount
     const amountInKobo = parseInt(amount);
     if (isNaN(amountInKobo) || amountInKobo < 100) {
       return new Response(
@@ -59,18 +55,13 @@ serve(async (req) => {
 
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY");
-    if (!supabaseUrl || !supabaseKey) {
-      console.error('Missing Supabase environment variables', { supabaseUrl, supabaseKey });
-      return new Response(
-        JSON.stringify({ error: 'Server configuration error' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    const supabaseKey = Deno.env.get("SUPABASE_KEY");
+    if (!supabase) {
+      console.error('Failed to create Supabase client', { supabaseUrl, supabaseSupabase = createClient(supabaseUrl, supabaseKey);
     }
-    const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Validate resource
-    let resourceId = venue_id || match_id || event_id;
+    let resourceId;
     if (finalResourceType === 'cycling') {
       const { data, error } = await supabase
         .from('cycling_events')
@@ -84,6 +75,7 @@ serve(async (req) => {
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
+      resourceId = event_id;
     } else if (finalResourceType === 'match') {
       const { data, error } = await supabase
         .from('matches')
@@ -97,6 +89,7 @@ serve(async (req) => {
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
+      resourceId = match_id;
     } else if (finalResourceType === 'venue') {
       const { data, error } = await supabase
         .from('venues')
@@ -106,14 +99,15 @@ serve(async (req) => {
       if (error || !data) {
         return new Response(
           JSON.stringify({ error: 'Invalid venue' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
         );
       }
+      resourceId = venue_id;
     }
 
     // Initialize Paystack transaction
     const response = await fetch(`${PAYSTACK_API_URL}/transaction/initialize`, {
-      method: 'POST',
+      method: 'POST`,
       headers: {
         'Authorization': `Bearer ${PAYSTACK_SECRET_KEY}`,
         'Content-Type': 'application/json',
