@@ -326,20 +326,18 @@ const HostCycling = () => {
   };
 
   return (
-    <div className="min-h-screen pb-24">
-      <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg">
-        <div className="flex items-center justify-between">
+    <div className="min-h-screen pb-24 bg-gray-100 dark:bg-gray-900">
+      <header className="sticky top-0 z-50 bg-gradient-to-r from-green-500 to-green-700 text-white shadow-lg">
+        <div className="p-4 flex items-center justify-between max-w-7xl mx-auto">
           <Button 
             variant="ghost" 
             onClick={() => navigate(-1)} 
-            className="text-white hover:bg-green-600"
+            className="text-white hover:bg-green-600 transition-colors"
           >
             <ArrowLeft size={18} className="mr-2" />
             Back
           </Button>
-          <div className="text-center">
-            <h1 className="text-2xl font-bold">Host Cycling</h1>
-          </div>
+          <h1 className="text-2xl font-bold">Host Cycling</h1>
           <div className="w-10"></div>
         </div>
       </header>
@@ -367,15 +365,11 @@ const HostCycling = () => {
                   }
                 `}
               </style>
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-                <button
-                  type="button"
-                  className="flex justify-between items-center w-full text-left"
-                  onClick={() => handleSectionToggle(setIsRouteDetailsOpen, isRouteDetailsOpen)}
-                >
-                  <h2 className="text-lg font-semibold">Route Details</h2>
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
+                <div className="flex justify-between items-center cursor-pointer" onClick={() => handleSectionToggle(setIsRouteDetailsOpen, isRouteDetailsOpen)}>
+                  <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Route Details</h2>
                   <span>{isRouteDetailsOpen ? '-' : '+'}</span>
-                </button>
+                </div>
                 {isRouteDetailsOpen && (
                   <>
                     <Button
@@ -454,15 +448,11 @@ const HostCycling = () => {
                   </>
                 )}
               </div>
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-                <button
-                  type="button"
-                  className="flex justify-between items-center w-full text-left"
-                  onClick={() => handleSectionToggle(setIsEventDetailsOpen, isEventDetailsOpen)}
-                >
-                  <h2 className="text-lg font-semibold">Event Details</h2>
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
+                <div className="flex justify-between items-center cursor-pointer" onClick={() => handleSectionToggle(setIsEventDetailsOpen, isEventDetailsOpen)}>
+                  <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Event Details</h2>
                   <span>{isEventDetailsOpen ? '-' : '+'}</span>
-                </button>
+                </div>
                 {isEventDetailsOpen && (
                   <>
                     <FormField
@@ -596,15 +586,11 @@ const HostCycling = () => {
                   </>
                 )}
               </div>
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-                <button
-                  type="button"
-                  className="flex justify-between items-center w-full text-left"
-                  onClick={() => handleSectionToggle(setIsPreferencesOpen, isPreferencesOpen)}
-                >
-                  <h2 className="text-lg font-semibold">Event Preferences</h2>
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
+                <div className="flex justify-between items-center cursor-pointer" onClick={() => handleSectionToggle(setIsPreferencesOpen, isPreferencesOpen)}>
+                  <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Event Preferences</h2>
                   <span>{isPreferencesOpen ? '-' : '+'}</span>
-                </button>
+                </div>
                 {isPreferencesOpen && (
                   <>
                     <FormField
@@ -689,15 +675,11 @@ const HostCycling = () => {
                   </>
                 )}
               </div>
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-                <button
-                  type="button"
-                  className="flex justify-between items-center w-full text-left"
-                  onClick={() => handleSectionToggle(setIsRegistrationOpen, isRegistrationOpen)}
-                >
-                  <h2 className="text-lg font-semibold">Registration Details</h2>
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
+                <div className="flex justify-between items-center cursor-pointer" onClick={() => handleSectionToggle(setIsRegistrationOpen, isRegistrationOpen)}>
+                  <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Registration Details</h2>
                   <span>{isRegistrationOpen ? '-' : '+'}</span>
-                </button>
+                </div>
                 {isRegistrationOpen && (
                   <FormField
                     control={form.control}
@@ -741,15 +723,11 @@ const HostCycling = () => {
                   />
                 )}
               </div>
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-                <button
-                  type="button"
-                  className="flex justify-between items-center w-full text-left"
-                  onClick={() => handleSectionToggle(setIsHostDetailsOpen, isHostDetailsOpen)}
-                >
-                  <h2 className="text-lg font-semibold">Host Details</h2>
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
+                <div className="flex justify-between items-center cursor-pointer" onClick={() => handleSectionToggle(setIsHostDetailsOpen, isHostDetailsOpen)}>
+                  <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Host Details</h2>
                   <span>{isHostDetailsOpen ? '-' : '+'}</span>
-                </button>
+                </div>
                 {isHostDetailsOpen && (
                   <>
                     <FormField
