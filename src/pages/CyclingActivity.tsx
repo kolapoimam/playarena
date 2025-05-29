@@ -76,15 +76,15 @@ const CyclingActivity = () => {
   const fetchEvents = async () => {
     try {
       setLoading(true);
-      let query = supabase
-        .from("cycling_events")
-        .select(
-          `
-            id, slug, title, event_date, start_time, max_attendees, is_free, price, host_name, host_id, status,
-            start_landmark:landmarks!cycling_events_start_landmark_id_fkey(id_uuid, name, state),
-            cycling_attendees!cycling_attendees_cycling_event_id_uuid_fkey(id)
-          `,
-          { count: "exact" }
+let query = supabase
+  .from("cycling_events")
+  .select(
+    `
+      id, slug, title, event_date, start_time, max_attendees, is_free, price, host_name, host_id, status,
+      start_landmark:landmarks!cycling_events_start_landmark_id_fkey(id_uuid, name, state),
+      cycling_attendees!cycling_attendees_cycling_event_id_uuid_fkey(id_uuid)
+    `,
+    { count: "exact" }
         );
 
       if (isPaidFilter !== null) {
