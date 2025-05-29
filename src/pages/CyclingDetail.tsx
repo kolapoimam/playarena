@@ -223,7 +223,7 @@ const CyclingDetail = () => {
   const { status, isStarted, isEnded, isFull } = getEventStatus();
 
   return (
-    <div className="min-h-screen pb-24">
+    <div className="min-h-screen pb-26">
       <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg">
         <div className="flex items-center justify-between">
           <Button
