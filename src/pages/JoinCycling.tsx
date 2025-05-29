@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -15,10 +15,9 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { ArrowLeft, Calendar, Clock, MapPin, Users, DollarSign, Loader, Bike } from "lucide-react";
+import { ArrowLeft, Calendar, Clock, MapPin, Users, DollarSign, Loader } from "lucide-react";
 import CyclingSuccessDialog from "@/components/CyclingSuccessDialog";
 import Navbar from "@/components/Navbar";
-import html2canvas from "html2canvas";
 
 type Landmark = {
   name: string;
@@ -77,14 +76,15 @@ const JoinCycling = () => {
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>("pending");
   const [successDialogOpen, setSuccessDialogOpen] = useState(false);
   const [confirmationCode, setConfirmationCode] = useState<string | null>(null);
-  const cardRef = useRef<HTMLDivElement>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: { name: "", phone: "" },
   });
 
-  const defaultEmail = `${form.getValues("phone") || "user"}@sportcliq.com`;
+  const defaultEmail = form.getValues("phone")
+    ? `${form.getValues("phone")}@sportcliq.com`
+    : "default@sportcliq.com";
 
   // Load Paystack script
   useEffect(() => {
@@ -95,17 +95,15 @@ const JoinCycling = () => {
     script.onerror = () => {
       toast({
         title: "Error",
-        description: "Failed to load Paystack script. Please try again.",
+        description: "Failed to load Paystack script.",
         variant: "destructive",
       });
     };
     document.body.appendChild(script);
-    return () => {
-      document.body.removeChild(script);
-    };
+    return () => document.body.removeChild(script);
   }, [toast]);
 
-  // Fetch event and attendees
+  // Fetch event
   useEffect(() => {
     if (!slug) return;
     const fetchEvent = async () => {
@@ -127,8 +125,8 @@ const JoinCycling = () => {
           .select("*")
           .eq("cycling_event_id", data.id);
         if (!attendeesError) setAttendees(attendeesData || []);
-      } catch (error: any) {
-        console.error("Error fetching event:", error);
+      } catch (error) {
+        console.error("Error loading event:", error);
         toast({
           title: "Error",
           description: "Failed to load event.",
@@ -149,27 +147,25 @@ const JoinCycling = () => {
     const verifyPayment = async () => {
       setVerifyingPayment(true);
       try {
-        const response = await supabase.functions.invoke("verify-paystack-transaction", {
+        const { data, error } = await supabase.functions.invoke("verify-paystack-transaction", {
           body: { reference: paymentReference },
         });
 
-        if (response.error) {
-          throw new Error(response.error.message);
-        }
+        if (error) throw new Error(error.message || "Verification failed");
 
-        const { verified, event_id, slug: eventSlug } = response.data;
+        const { verified, event_id, slug: resourceSlug } = data;
 
-        if (verified && event_id === event.id && eventSlug === slug) {
+        if (verified && event_id === event.id && resourceSlug === slug) {
           setPaymentStatus("success");
           toast({
             title: "Payment Successful",
-            description: "Your payment was processed successfully. Please complete your registration.",
+            description: "Please complete your registration.",
           });
         } else {
           setPaymentStatus("failed");
           toast({
             title: "Payment Verification Failed",
-            description: "We could not verify your payment. Please try again.",
+            description: "Couldn’t verify payment.",
             variant: "destructive",
           });
         }
@@ -177,8 +173,8 @@ const JoinCycling = () => {
         console.error("Error verifying payment:", error);
         setPaymentStatus("failed");
         toast({
-          title: "Payment Verification Error",
-          description: "An error occurred while verifying your payment.",
+          title: "Verification Error",
+          description: error.message || "Failed to verify payment.",
           variant: "destructive",
         });
       } finally {
@@ -190,12 +186,38 @@ const JoinCycling = () => {
   }, [paymentReference, event, slug, toast]);
 
   const handlePaymentInitiation = async () => {
-    if (!event || event.is_free || !event.price) return;
+    if (!event || event.is_free || !event.price) {
+      toast({
+        title: "Error",
+        description: "Event not configured for payment.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     if (!paystackLoaded || !window.PaystackPop) {
       toast({
         title: "Error",
-        description: "Paystack is not available. Please try again later.",
+        description: "Paystack not available.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const amountInKobo = event.price * 100;
+    if (!Number.isInteger(amountInKobo) || amountInKobo < 100) {
+      toast({
+        title: "Invalid Amount",
+        description: "Minimum payment is ₦1.00.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!defaultEmail.includes("@") || defaultEmail.length < 5) {
+      toast({
+        title: "Invalid Email",
+        description: "Enter a valid phone number.",
         variant: "destructive",
       });
       return;
@@ -207,44 +229,61 @@ const JoinCycling = () => {
       const response = await supabase.functions.invoke("initialize-paystack-transaction", {
         body: {
           email: defaultEmail,
-          amount: event.price * 100, // Convert to kobo
+          amount: amountInKobo,
           event_id: event.id,
+          resource_type: "cycling",
           slug: event.slug,
           title: event.title,
+          callback_url: `${window.location.origin}/cycling/${event.slug}`,
+          metadata: {
+            event_id: event.id,
+            resource_type: "cycling",
+            user_phone: form.getValues("phone") || "unknown",
+          },
         },
       });
 
       if (response.error) {
-        throw new Error(response.error.message);
+        throw new Error(response.error.message || "Failed to initialize payment");
       }
 
       const { access_code } = response.data;
 
+      if (!access_code) {
+        throw new Error("No access code returned");
+      }
+
       const paystack = new window.PaystackPop();
       paystack.resumeTransaction(access_code, {
-        onSuccess: (transaction: any) => {
-          setPaymentStatus("success");
+        onSuccess: (transaction) => {
           setPaymentReference(transaction.reference);
+          setPaymentStatus("success");
           toast({
-            title: "Payment Successful",
-            description: "Please complete your registration.",
+            title: "Payment Initiated",
+            description: "Complete your registration.",
           });
           setJoining(false);
         },
         onCancel: () => {
           toast({
             title: "Payment Cancelled",
-            description: "You cancelled the payment process.",
+            description: "Payment process cancelled.",
             variant: "destructive",
           });
           setJoining(false);
         },
       });
-    } catch (error: any) {
-      console.error("Error initiating payment:", error);
+    } catch (error) {
+      console.error("Error initiating payment:", error, {
+        email: defaultEmail,
+        amount: amountInKobo,
+        event_id: event.id,
+        resource_type: "cycling",
+        slug: event.slug,
+      });
       toast({
         title: "Payment Error",
-        description: "Failed to initiate payment. Please try again.",
+        description: error.message || "Failed to initiate payment.",
         variant: "destructive",
       });
       setJoining(false);
@@ -288,7 +327,7 @@ const JoinCycling = () => {
       setSuccessDialogOpen(true);
       toast({
         title: "Success",
-        description: "You have successfully joined the event.",
+        description: "Joined event successfully.",
       });
 
       const { data: updatedAttendees } = await supabase
@@ -296,7 +335,7 @@ const JoinCycling = () => {
         .select("*")
         .eq("cycling_event_id", event.id);
       if (updatedAttendees) setAttendees(updatedAttendees);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error joining event:", error);
       toast({
         title: "Error",
@@ -380,7 +419,10 @@ const JoinCycling = () => {
               <span>Spots available: {event.max_attendees - attendees.length} / {event.max_attendees}</span>
             </div>
             {!event.is_free && (
-              <div className="mt-2 font-medium text-green-600">Price: ₦{(event.price || 0).toFixed(2)}</div>
+              <div className="flex items-center gap-2 mt-2 font-medium text-green-600">
+                <DollarSign size={16} />
+                <span>Price: ₦{(event.price || 0).toFixed(2)}</span>
+              </div>
             )}
           </div>
           {isPastEvent ? (
@@ -490,13 +532,14 @@ const JoinCycling = () => {
                 </Form>
               )}
               {!event.is_free && paymentStatus === "pending" && (
-                <div className="bg-card rounded-lg shadow-md p-6 space-y-4 mt-6">
+                <div className="space-y-4 mt-6">
                   <h3 className="text-lg font-semibold text-gray-800">Payment Required</h3>
                   <p className="text-muted-foreground">
                     This is a paid event. Please complete the payment to join.
                   </p>
-                  <div className="text-sm font-medium">
-                    Total: ₦{(event.price || 0).toFixed(2)}
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <DollarSign size={16} />
+                    <span>Total: ₦{(event.price || 0).toFixed(2)}</span>
                   </div>
                   <Button
                     type="button"
