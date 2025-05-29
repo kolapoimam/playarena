@@ -287,6 +287,7 @@ const CyclingActivity = () => {
                     <SelectItem value="all">All</SelectItem>
                     <SelectItem value="hours">Hours</SelectItem>
                     <SelectItem value="distance">Distance (km)</SelectItem>
+                  </SelectContent>
                 </Select>
               </div>
 
@@ -320,7 +321,7 @@ const CyclingActivity = () => {
 
         {loading ? (
           <div className="flex justify-center items-center h-[50vh]">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-600 dark:border-gray-400"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
           </div>
         ) : filteredEvents.length > 0 ? (
           <div className="space-y-4">
@@ -335,7 +336,7 @@ const CyclingActivity = () => {
                       </h3>
                       <div className="flex flex-col gap-1">
                         <Badge className={statusClass}>{statusLabel}</Badge>
-                        <Badge className={event.is_free ? "bg-green-600 text-white" : "bg-red-600 dark:bg-red-600 dark:text-white text-white"}>
+                        <Badge className={event.is_free ? "bg-green-600 text-white" : "bg-red-600 text-white dark:bg-red-600 dark:text-white"}>
                           {event.is_free ? "FREE" : `₦${(event.price || 0).toFixed(2)}`}
                         </Badge>
                       </div>
@@ -396,7 +397,7 @@ const CyclingActivity = () => {
                 disabled={currentPage === 1}
                 onClick={handlePreviousPage}
               >
-                <ChevronLeft size="16" className="mr-2" />
+                <ChevronLeft size={16} className="mr-2" />
                 Previous
               </Button>
               <span className="text-gray-700 dark:text-gray-200">
@@ -408,7 +409,7 @@ const CyclingActivity = () => {
                 onClick={handleNextPage}
               >
                 Next
-                <ChevronRight size="16" className="ml-2" />
+                <ChevronRight size={16} className="ml-2" />
               </Button>
             </div>
           </div>
