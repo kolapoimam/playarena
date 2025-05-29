@@ -191,40 +191,40 @@ serve(async (req) => {
       resourceId = venue_id;
     }
 
-    // Initialize Paystack transaction
-    const response = await fetch(`${PAYSTACK_API_URL}/transaction/initialize`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${PAYSTACK_SECRET_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        email,
-        amount: amountInKobo,
-        callback_url: callback_url || `${FRONTEND_URL}/join/${slug}`,
-        metadata: {
-          venue_id,
-          match_id,
-          event_id,
-          resource_type: finalResourceType,
-          slug,
-          title,
-          ...metadata || {}
-        }
-      })
-    });
+// Insert into pending_transactions
+const transactionData = {
+  reference: data.data.reference,
+  venue_id,
+  match_id,
+  event_id,
+  resource_id: resourceId, // Add resource_id using the resourceId variable
+  resource_type: finalResourceType,
+  slug,
+  amount: amountInNaira,
+  status: "pending",
+  email: email // From previous fix
+};
+console.log('Inserting into pending_transactions:', transactionData);
+const { error: insertError } = await supabase
+  .from("pending_transactions")
+  .insert(transactionData);
 
-    const data = await response.json();
-    if (!data.status) {
-      console.error('Paystack error:', data);
-      return new Response(JSON.stringify({
-        error: data.message || 'Failed to initialize payment'
-      }), {
-        status: 400,
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/json'
-        }
+if (insertError) {
+  console.error('Failed to insert into pending_transactions:', {
+    error: insertError.message,
+    code: insertError.code,
+    details: insertError.details,
+    hint: insertError.hint,
+    transactionData
+  });
+  return new Response(JSON.stringify({
+    error: `Failed to save transaction: ${insertError.message}`
+  }), {
+    status: 500,
+    headers: {
+      ...corsHeaders,
+      'Content-Type': 'application/json'
+    }
       });
     }
 
