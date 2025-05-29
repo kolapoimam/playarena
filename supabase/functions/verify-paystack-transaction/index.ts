@@ -12,6 +12,8 @@ interface PaystackVerifyResponse {
     metadata: {
       venue_id?: string;
       match_id?: string;
+      event_id?: string;
+      resource_type?: string;
       slug: string;
     };
   };
@@ -40,7 +42,7 @@ serve(async (req: Request) => {
     // Check pending transaction
     const { data: pendingTransaction, error: transactionError } = await supabase
       .from("pending_transactions")
-      .select("resource_id, resource_type, slug, amount")
+      .select("venue_id, match_id, event_id, resource_type, slug, amount")
       .eq("reference", reference)
       .single();
 
@@ -68,7 +70,7 @@ serve(async (req: Request) => {
       throw new Error("Payment verification failed");
     }
 
-    // Validate amount (convert stored naira to kobo for comparison)
+    // Validate amount
     const expectedAmountInKobo = Math.round(pendingTransaction.amount * 100);
     if (paystackData.data.amount !== expectedAmountInKobo) {
       console.error("Amount mismatch:", {
@@ -88,15 +90,24 @@ serve(async (req: Request) => {
       console.error("Failed to update transaction status:", updateError.message);
     }
 
+    // Determine response fields
+    const resourceId = pendingTransaction.event_id || pendingTransaction.match_id || pendingTransaction.venue_id;
+    const responseData = {
+      verified: true,
+      slug: pendingTransaction.slug,
+      resource_type: pendingTransaction.resource_type,
+    };
+
+    if (pendingTransaction.event_id) {
+      responseData.event_id = pendingTransaction.event_id;
+    } else if (pendingTransaction.match_id) {
+      responseData.match_id = pendingTransaction.match_id;
+    } else if (pendingTransaction.venue_id) {
+      responseData.venue_id = pendingTransaction.venue_id;
+    }
+
     return new Response(
-      JSON.stringify({
-        verified: true,
-        resource_id: pendingTransaction.resource_id,
-        resource_type: pendingTransaction.resource_type,
-        slug: pendingTransaction.slug,
-        venue_id: paystackData.data.metadata.venue_id,
-        match_id: paystackData.data.metadata.match_id,
-      }),
+      JSON.stringify(responseData),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
