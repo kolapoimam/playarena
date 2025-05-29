@@ -1,47 +1,39 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+const allowedOrigins = (Deno.env.get("ALLOWED_ORIGINS") || "https://playarenagames.vercel.app,https://app.sportcliq.com").split(",");
+
 const corsHeaders = {
-  'Access-Control-Allow-Origin': 'https://playarenagames.vercel.app',
+  'Access-Control-Allow-Origin': '*', // Temporary wildcard for testing; restrict in production
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface PaystackVerifyResponse {
-  status: boolean;
-  message: string;
-  data: {
-    status: string;
-    reference: string;
-    amount: number;
-    metadata: {
-      venue_id?: string;
-      match_id?: string;
-      event_id?: string;
-      slug: string;
-    };
-  };
-}
-
 serve(async (req: Request) => {
+  const origin = req.headers.get("Origin") || "";
+  const responseHeaders = {
+    ...corsHeaders,
+    'Access-Control-Allow-Origin': allowedOrigins.includes(origin) ? origin : allowedOrigins[0], // Use first allowed origin as fallback
+  };
+
   if (req.method === "OPTIONS") {
     return new Response(null, {
       status: 204,
       headers: {
-        ...corsHeaders,
+        ...responseHeaders,
         'Access-Control-Max-Age': '86400',
       },
     });
   }
 
   const headers = {
-    ...corsHeaders,
+    ...responseHeaders,
     "Content-Type": "application/json",
   };
 
   try {
     const { reference } = await req.json();
-    console.log("Received Verification Request:", { reference });
+    console.log("Received Verification Request:", { reference, origin });
 
     if (!reference) {
       console.error("Missing reference");
@@ -67,7 +59,7 @@ serve(async (req: Request) => {
       );
     }
 
-    const supabase = createClient(supabaseUrl, supabaseKey); // Fixed typo: supabase_key -> supabaseKey
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
     const { data: pendingTransaction, error: transactionError } = await supabase
       .from("pending_transactions")
@@ -148,3 +140,19 @@ serve(async (req: Request) => {
     );
   }
 });
+
+interface PaystackVerifyResponse {
+  status: boolean;
+  message: string;
+  data: {
+    status: string;
+    reference: string;
+    amount: number;
+    metadata: {
+      venue_id?: string;
+      match_id?: string;
+      event_id?: string;
+      slug: string;
+    };
+  };
+}
