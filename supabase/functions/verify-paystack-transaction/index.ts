@@ -4,7 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const corsHeaders = {
   'Access-Control-Allow-Origin': 'https://playarenagames.vercel.app',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
 };
 
 interface PaystackVerifyResponse {
@@ -67,7 +67,7 @@ serve(async (req: Request) => {
       );
     }
 
-    const supabase = createClient(supabaseUrl, supabase_key);
+    const supabase = createClient(supabaseUrl, supabaseKey); // Fixed typo: supabase_key -> supabaseKey
 
     const { data: pendingTransaction, error: transactionError } = await supabase
       .from("pending_transactions")
@@ -94,6 +94,8 @@ serve(async (req: Request) => {
     });
 
     const paystackData: PaystackVerifyResponse = await paystackResponse.json();
+    console.log("Paystack Verification Response:", JSON.stringify(paystackData, null, 2));
+
     if (!paystackData.status || paystackData.data.status !== "success") {
       console.error("Paystack verification failed:", paystackData.message);
       return new Response(
@@ -131,7 +133,7 @@ serve(async (req: Request) => {
         slug: pendingTransaction.slug,
         venue_id: paystackData.data.metadata.venue_id,
         match_id: paystackData.data.metadata.match_id,
-        event_id: paystackData.data.event_id,
+        event_id: paystackData.data.metadata.event_id,
       }),
       { status: 200, headers }
     );
