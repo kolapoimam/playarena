@@ -118,6 +118,13 @@ const JoinCycling = () => {
           .eq("slug", slug)
           .single();
         if (error) throw error;
+
+        // Validate event.id is a UUID
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!uuidRegex.test(data.id)) {
+          throw new Error(`Invalid event ID format: ${data.id}`);
+        }
+
         setEvent(data);
 
         const { data: attendeesData, error: attendeesError } = await supabase
@@ -125,11 +132,11 @@ const JoinCycling = () => {
           .select("*")
           .eq("cycling_event_id", data.id);
         if (!attendeesError) setAttendees(attendeesData || []);
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error loading event:", error);
         toast({
           title: "Error",
-          description: "Failed to load event.",
+          description: error.message || "Failed to load event.",
           variant: "destructive",
         });
         navigate("/cycling-activities");
@@ -169,7 +176,7 @@ const JoinCycling = () => {
             variant: "destructive",
           });
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error verifying payment:", error);
         setPaymentStatus("failed");
         toast({
@@ -223,8 +230,35 @@ const JoinCycling = () => {
       return;
     }
 
+    // Validate event.id is a UUID
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(event.id)) {
+      console.error("Invalid event_id format:", event.id);
+      toast({
+        title: "Error",
+        description: "Invalid event configuration.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       setJoining(true);
+
+      console.log("Initiating payment with payload:", {
+        email: defaultEmail,
+        amount: amountInKobo,
+        event_id: event.id,
+        resource_type: "cycling",
+        slug: event.slug,
+        title: event.title,
+        callback_url: `${window.location.origin}/cycling/${event.slug}`,
+        metadata: {
+          event_id: event.id,
+          resource_type: "cycling",
+          user_phone: form.getValues("phone") || "unknown",
+        },
+      });
 
       const response = await supabase.functions.invoke("initialize-paystack-transaction", {
         body: {
@@ -255,7 +289,7 @@ const JoinCycling = () => {
 
       const paystack = new window.PaystackPop();
       paystack.resumeTransaction(access_code, {
-        onSuccess: (transaction) => {
+        onSuccess: (transaction: any) => {
           setPaymentReference(transaction.reference);
           setPaymentStatus("success");
           toast({
@@ -273,7 +307,7 @@ const JoinCycling = () => {
           setJoining(false);
         },
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error initiating payment:", error, {
         email: defaultEmail,
         amount: amountInKobo,
@@ -335,7 +369,7 @@ const JoinCycling = () => {
         .select("*")
         .eq("cycling_event_id", event.id);
       if (updatedAttendees) setAttendees(updatedAttendees);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error joining event:", error);
       toast({
         title: "Error",
