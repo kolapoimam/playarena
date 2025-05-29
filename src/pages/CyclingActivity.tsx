@@ -336,11 +336,11 @@ const CyclingActivity = () => {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
           </div>
         ) : filteredEvents.length > 0 ? (
-          <div className="px-4 space-y-4">
+          <div className="px-4 space-y-4 max-w-full">
             {filteredEvents.map((event) => {
               const { statusLabel, statusClass } = getEventStatus(event);
               return (
-                <div key={event.id} className="w-full border rounded-lg overflow-hidden shadow-sm bg-white dark:bg-gray-800">
+                <div key={event.id} className="w-full min-w-full border rounded-lg overflow-hidden shadow-sm bg-white dark:bg-gray-800">
                   <div className="p-4">
                     <div className="flex justify-between items-start">
                       <h3 className="font-bold text-lg text-gray-800 dark:text-gray-200">
