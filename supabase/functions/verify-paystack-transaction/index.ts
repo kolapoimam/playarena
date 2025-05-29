@@ -1,6 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { corsHeaders } from "../_shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': 'https://playarenagames.vercel.app',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
 
 interface PaystackVerifyResponse {
   status: boolean;
@@ -19,18 +24,16 @@ interface PaystackVerifyResponse {
 }
 
 serve(async (req: Request) => {
-  // Handle preflight OPTIONS request
   if (req.method === "OPTIONS") {
     return new Response(null, {
       status: 204,
       headers: {
         ...corsHeaders,
-        'Access-Control-Max-Age': '86400', // Cache preflight for 24 hours
+        'Access-Control-Max-Age': '86400',
       },
     });
   }
 
-  // Ensure CORS headers are included in all responses
   const headers = {
     ...corsHeaders,
     "Content-Type": "application/json",
@@ -48,7 +51,6 @@ serve(async (req: Request) => {
       );
     }
 
-    // Validate environment variables
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY");
     const paystackSecretKey = Deno.env.get("PAYSTACK_SECRET_KEY");
@@ -65,10 +67,8 @@ serve(async (req: Request) => {
       );
     }
 
-    // Initialize Supabase client
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabase = createClient(supabaseUrl, supabase_key);
 
-    // Check pending transaction
     const { data: pendingTransaction, error: transactionError } = await supabase
       .from("pending_transactions")
       .select("resource_id, resource_type, slug, amount")
@@ -85,7 +85,6 @@ serve(async (req: Request) => {
 
     console.log("Pending Transaction:", pendingTransaction);
 
-    // Verify transaction with Paystack
     const paystackResponse = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
       method: "GET",
       headers: {
@@ -95,8 +94,6 @@ serve(async (req: Request) => {
     });
 
     const paystackData: PaystackVerifyResponse = await paystackResponse.json();
-    console.log("Paystack Verification Response:", JSON.stringify(paystackData, null, 2));
-
     if (!paystackData.status || paystackData.data.status !== "success") {
       console.error("Paystack verification failed:", paystackData.message);
       return new Response(
@@ -105,7 +102,6 @@ serve(async (req: Request) => {
       );
     }
 
-    // Validate amount (amount in pending_transactions is in naira, Paystack returns kobo)
     const expectedAmountInKobo = Math.round(pendingTransaction.amount * 100);
     if (paystackData.data.amount !== expectedAmountInKobo) {
       console.error("Amount mismatch:", {
@@ -118,7 +114,6 @@ serve(async (req: Request) => {
       );
     }
 
-    // Update transaction status
     const { error: updateError } = await supabase
       .from("pending_transactions")
       .update({ status: "verified" })
@@ -136,7 +131,7 @@ serve(async (req: Request) => {
         slug: pendingTransaction.slug,
         venue_id: paystackData.data.metadata.venue_id,
         match_id: paystackData.data.metadata.match_id,
-        event_id: paystackData.data.metadata.event_id,
+        event_id: paystackData.data.event_id,
       }),
       { status: 200, headers }
     );
