@@ -80,9 +80,9 @@ const CyclingActivity = () => {
         .from("cycling_events")
         .select(
           `
-          id, slug, title, event_date, start_time, max_attendees, is_free, price, host_name, host_id, status, id_uuid,
+          id, slug, title, event_date, start_time, max_attendees, is_free, price, host_name, host_id, status,
           start_landmark:landmarks!cycling_events_start_landmark_id_fkey(id_uuid, name, state, slug),
-          cycling_attendees(id_uuid, attendee_name, attendee_status, cycling_event_id_uuid)
+          cycling_attendees!cycling_attendees_cycling_event_id_uuid_fkey(id_uuid, attendee_name, attendee_status)
         `,
           { count: "exact" }
         );
@@ -108,16 +108,11 @@ const CyclingActivity = () => {
 
       if (error) throw error;
 
-      // Process events to filter attendees by matching cycling_event_id_uuid
-      const processedEvents = (data as any[]).map(event => {
-        const attendees = Array.isArray(event.cycling_attendees)
-          ? event.cycling_attendees.filter((attendee: any) => attendee.cycling_event_id_uuid === event.id_uuid)
-          : [];
-        return {
-          ...event,
-          attendees,
-        };
-      });
+      // Ensure attendees is always an array
+      const processedEvents = (data as CyclingEvent[]).map(event => ({
+        ...event,
+        attendees: Array.isArray(event.cycling_attendees) ? event.cycling_attendees : [],
+      }));
 
       const sortedEvents = processedEvents.sort((a, b) => {
         const statusOrder = {
@@ -142,6 +137,7 @@ const CyclingActivity = () => {
         return aDateTime.toMillis() - bDateTime.toMillis();
       });
 
+      console.log("Processed events:", sortedEvents); // Debug log
       setEvents(sortedEvents);
       setFilteredEvents(sortedEvents);
       setTotalEvents(count || 0);
@@ -304,7 +300,7 @@ const CyclingActivity = () => {
                     setCurrentPage(1);
                   }}
                 >
-                  <SelectTrigger id="status-filter" className="border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                  <SelectTrigger id="status-filter" className="border-gray-400 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -358,7 +354,7 @@ const CyclingActivity = () => {
                       </div>
                       {event.start_landmark && (
                         <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                          <MapPin size={16} className="text-gray-600 dark:text-gray-400" />
                           <a
                             href={`/landmark/${event.start_landmark.slug}`}
                             className="text-primary hover:underline"
@@ -381,7 +377,7 @@ const CyclingActivity = () => {
                     <div className="mt-4 flex justify-between items-center">
                       <div>
                         <span className="text-xs text-muted-foreground">Organized by:</span>
-                        <p className="font-medium text-gray-800 dark:text-gray-200">{event.host_name}</p>
+                        <p className="font-medium text-gray-800 dark:text-gray-400">{event.host_name}</p>
                       </div>
                       <Button
                         variant="outline"
@@ -401,10 +397,10 @@ const CyclingActivity = () => {
                 disabled={currentPage === 1}
                 onClick={handlePreviousPage}
               >
-                <ChevronLeft size={16} className="mr-2" />
+                <ChevronLeft size={16" className="mr-2" />
                 Previous
               </Button>
-              <span className="text-gray-700 dark:text-gray-300">
+              <span className="text-gray-700 dark:text-gray-400">
                 Page {currentPage} of {totalPages}
               </span>
               <Button
@@ -416,19 +412,19 @@ const CyclingActivity = () => {
                 <ChevronRight size={16} className="ml-2" />
               </Button>
             </div>
-          </div>
-        ) : (
-          <div className="flex items-center justify-center h-[50vh] flex-col gap-4">
-            <p className="text-muted-foreground text-center p-4">
-              No events found. Host an event to see it here.
-            </p>
-            <Button onClick={() => navigate("/host-cycling")}>
-              Host an Event
-            </Button>
-          </div>
-        )}
-        <Navbar />
-      </div>
+          p-6>
+        </div>
+      ) : (
+        <div className="flex items-center justify-center h-[50vh] flex-col gap-4">
+          <p class="text-muted-foreground text-center p-4">
+            No events found. Host an event to see it here.
+          </p>
+          <Button onClick={() => navigate("/host-cycling")}>
+            Host an Event
+          </Button>
+        </div>
+      )}
+      <Navbar />
     </div>
   );
 };
