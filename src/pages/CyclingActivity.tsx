@@ -22,13 +22,13 @@ interface CyclingEvent {
   price: number | null;
   host_name: string;
   host_id: string;
-  start_landmark: { id: string; name: string; state: string } | null;
+  start_landmark: { id_uuid: string; name: string; state: string } | null;
   attendees: { id: string }[];
   status: string;
 }
 
 type Landmark = {
-  id: string;
+  id_uuid: string;
   name: string;
 };
 
@@ -45,6 +45,7 @@ const CyclingActivity = () => {
   const [isPaidFilter, setIsPaidFilter] = useState<boolean | null>(null);
   const [landmarkFilter, setLandmarkFilter] = useState<string | null>(null);
   const [durationFilter, setDurationFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
 
   const eventsPerPage = 4;
   const LAGOS_TIMEZONE = "Africa/Lagos";
@@ -52,13 +53,13 @@ const CyclingActivity = () => {
   useEffect(() => {
     fetchLandmarks();
     fetchEvents();
-  }, [currentPage, isPaidFilter, landmarkFilter, durationFilter]);
+  }, [currentPage, isPaidFilter, landmarkFilter, durationFilter, statusFilter]);
 
   const fetchLandmarks = async () => {
     try {
       const { data, error } = await supabase
         .from("landmarks")
-        .select("id, name")
+        .select("id_uuid, name")
         .order("name", { ascending: true });
       if (error) throw error;
       setLandmarks(data as Landmark[]);
@@ -79,8 +80,8 @@ const CyclingActivity = () => {
         .from("cycling_events")
         .select(
           `
-            id, slug, title, event_date, start_time, max_attendees, is_free, price, host_name, host_id,
-            start_landmark:landmarks!cycling_events_start_landmark_id_fkey(id, name, state),
+            id, slug, title, event_date, start_time, max_attendees, is_free, price, host_name, host_id, status,
+            start_landmark:landmarks!cycling_events_start_landmark_id_fkey(id_uuid, name, state),
             cycling_attendees!cycling_attendees_cycling_event_id_uuid_fkey(id)
           `,
           { count: "exact" }
@@ -95,6 +96,9 @@ const CyclingActivity = () => {
       if (durationFilter !== "all") {
         query = query.eq("duration_type", durationFilter);
       }
+      if (statusFilter) {
+        query = query.eq("status", statusFilter);
+      }
 
       const start = (currentPage - 1) * eventsPerPage;
       const end = start + eventsPerPage - 1;
@@ -104,28 +108,7 @@ const CyclingActivity = () => {
 
       if (error) throw error;
 
-      const now = DateTime.now().setZone(LAGOS_TIMEZONE);
-      const today = now.startOf("day");
-      const tomorrow = today.plus({ days: 1 });
-      const dayAfterTomorrow = tomorrow.plus({ days: 1 });
-
-      const sortedEvents = (data as CyclingEvent[]).map((event) => {
-        const eventDateTime = DateTime.fromFormat(
-          `${event.event_date} ${event.start_time}`,
-          "yyyy-MM-dd hh:mm a"
-        ).setZone(LAGOS_TIMEZONE);
-        let status;
-        if (eventDateTime < now) {
-          status = "passed";
-        } else if (eventDateTime >= today && eventDateTime < tomorrow) {
-          status = "today";
-        } else if (eventDateTime >= tomorrow && eventDateTime < dayAfterTomorrow) {
-          status = "tomorrow";
-        } else {
-          status = "upcoming";
-        }
-        return { ...event, status };
-      }).sort((a, b) => {
+      const sortedEvents = (data as CyclingEvent[]).sort((a, b) => {
         const statusOrder = {
           today: 0,
           tomorrow: 1,
@@ -194,6 +177,7 @@ const CyclingActivity = () => {
     setIsPaidFilter(null);
     setLandmarkFilter(null);
     setDurationFilter("all");
+    setStatusFilter(null);
     setCurrentPage(1);
   };
 
@@ -221,7 +205,7 @@ const CyclingActivity = () => {
         </div>
       </header>
 
-      <div className="mt-6 px-4">
+      <div className="mt-6 max-w-7xl mx-auto px-4">
         <Collapsible
           open={isFilterOpen}
           onOpenChange={setFilterOpen}
@@ -270,7 +254,7 @@ const CyclingActivity = () => {
                   <SelectContent>
                     <SelectItem value="all">All Landmarks</SelectItem>
                     {landmarks.map((landmark) => (
-                      <SelectItem key={landmark.id} value={landmark.id}>
+                      <SelectItem key={landmark.id_uuid} value={landmark.id_uuid}>
                         {landmark.name}
                       </SelectItem>
                     ))}
@@ -297,6 +281,28 @@ const CyclingActivity = () => {
                   </SelectContent>
                 </Select>
               </div>
+
+              <div>
+                <Label htmlFor="status-filter">Status</Label>
+                <Select
+                  value={statusFilter || "all"}
+                  onValueChange={(value) => {
+                    setStatusFilter(value === "all" ? null : value);
+                    setCurrentPage(1);
+                  }}
+                >
+                  <SelectTrigger id="status-filter" className="border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="today">Today</SelectItem>
+                    <SelectItem value="tomorrow">Tomorrow</SelectItem>
+                    <SelectItem value="upcoming">Upcoming</SelectItem>
+                    <SelectItem value="passed">Passed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <Button variant="outline" onClick={resetFilters}>
               Reset Filters
@@ -309,11 +315,11 @@ const CyclingActivity = () => {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
           </div>
         ) : filteredEvents.length > 0 ? (
-         <div className="px-4 space-y-4 max-w-full">
-  {filteredEvents.map((event) => {
-    const { statusLabel, statusClass } = getEventStatus(event);
-    return (
-      <div key={event.id} className="w-full min-w-full border rounded-lg overflow-hidden shadow-sm bg-white dark:bg-gray-800">
+          <div className="space-y-4">
+            {filteredEvents.map((event) => {
+              const { statusLabel, statusClass } = getEventStatus(event);
+              return (
+                <div key={event.id} className="w-full min-w-full border rounded-lg overflow-hidden shadow-sm bg-white dark:bg-gray-800">
                   <div className="p-4">
                     <div className="flex justify-between items-start">
                       <h3 className="font-bold text-lg text-gray-800 dark:text-gray-200">
