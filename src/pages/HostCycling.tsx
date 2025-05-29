@@ -326,18 +326,20 @@ const HostCycling = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 overflow-y-auto">
-      <header className="sticky top-0 z-50 bg-gradient-to-r from-green-600 to-dark-green-700 text-white shadow-sm">
-        <div className="p-4 flex items-center justify-between max-w-7xl mx-auto">
-          <Button
-            variant="ghost"
-            className="text-white hover:bg-green-700 transition-colors"
-            onClick={() => navigate(-1)}
+    <div className="min-h-screen pb-24">
+      <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg">
+        <div className="flex items-center justify-between">
+          <Button 
+            variant="ghost" 
+            onClick={() => navigate(-1)} 
+            className="text-white hover:bg-green-600"
           >
             <ArrowLeft size={18} className="mr-2" />
             Back
           </Button>
-          <h1 className="text-xl font-bold">Host a Cycling Event</h1>
+          <div className="text-center">
+            <h1 className="text-2xl font-bold">Host Cycling</h1>
+          </div>
           <div className="w-10"></div>
         </div>
       </header>
