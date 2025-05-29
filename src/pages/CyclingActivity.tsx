@@ -194,7 +194,7 @@ const CyclingActivity = () => {
             Back
           </Button>
           <div className="text-center">
-            <h1 className="text-2xl font-bold">Cycling Events</h1>
+            <h1 className="text-2xl font-bold">Cycling</h1>
           </div>
           <Button
             className="bg-green-500 hover:bg-green-600 text-white"
