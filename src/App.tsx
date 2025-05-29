@@ -51,6 +51,8 @@ import CyclingActivity from "@/pages/CyclingActivity";
 import CyclingDetail from "@/pages/CyclingDetail";
 import JoinCycling from "@/pages/JoinCycling";
 import HostCycling from "@/pages/HostCycling";
+import LandmarkDirectory from "@/pages/LandmarkDirectory";
+import LandmarkDetail from "@/pages/LandmarkDetail";
 
 const queryClient = new QueryClient();
 
@@ -139,6 +141,7 @@ const AppRoutes = () => {
       <Route path="/host-cycling" element={<HostCycling />} />
       <Route path="/venue-create" element={<VenueCreate />} />
       <Route path="/venues" element={<VenueDirectory />} />
+      <Route path="/landmarks" element={<LandmarkDirectory />} />
       <Route path="/confirm-checkin" element={<ConfirmCheckin />} />
       <Route path="/feedback" element={<Feedback />} />
       <Route path="/ticketing/:slug/*" element={<Ticketing />} />
@@ -148,6 +151,7 @@ const AppRoutes = () => {
       <Route path="/cycling/:slug" element={<CyclingDetail />} />
       <Route path="/join-cycling/:slug" element={<JoinCycling />} />
       <Route path="/venue/:slug" element={<VenueDetail />} />
+      <Route path="/landmark/:slug" element={<LandmarkDetail />} />
       <Route path="/match/:slug/team-management" element={<TeamManagement />} />
       <Route path="/highlights/:slug" element={<MatchHighlights />} />
       <Route path="/match-id/:id" element={<MatchRedirect />} />
