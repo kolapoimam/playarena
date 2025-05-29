@@ -276,104 +276,81 @@ const CyclingDetail = () => {
           </div>
         ) : null}
 
-        <div className="space-y-4">
-          <div className="border rounded-lg p-4 bg-card shadow-md relative">
-            <div className="absolute top-4 right-4 m-0 p-0">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={addToCalendar}
-                className="text-playarena-600 border-playarena-300 hover:bg-playarena-50 p-2 m-0"
+<div className="space-y-4">
+  <div className="border rounded-lg p-4 bg-card shadow-md relative">
+    <div className="absolute top-4 right-4 m-0 p-0">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={addToCalendar}
+        className="text-playarena-600 border-playarena-300 hover:bg-playarena-50 p-2 m-0"
+      >
+        <Bell size={16} className="mr-0" />
+      </Button>
+    </div>
+    <h2 className="font-semibold mb-3">Event Details</h2>
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <Calendar size={18} />
+        <span>{formatDate(event.event_date)}</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <Clock size={18} />
+        <span>{formatTime(event.start_time)}</span>
+      </div>
+      <div className="flex items-start gap-2">
+        <MapPin size={18} className="mt-0.5" />
+        <div>
+          <span className="text-playarena-600">
+            {event.start_landmark.name}, {event.start_landmark.state}
+          </span>
+          {event.start_landmark.map_link && (
+            <div className="mt-1">
+              <a
+                href={event.start_landmark.map_link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs flex items-center text-playarena-600 hover:underline"
               >
-                <Bell size={16} className="mr-0" />
-              </Button>
+                <ExternalLink size={12} className="mr-1" />
+                View on Google Maps
+              </a>
             </div>
-            <h2 className="font-semibold mb-3">Event Details</h2>
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Calendar size={18} />
-                <span>{formatDate(event.event_date)}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Clock size={18} />
-                <span>{formatTime(event.start_time)}</span>
-              </div>
-              <div className="flex items-start gap-2">
-                <MapPin size={18} className="mt-0.5" />
-                <div>
-                  <span className="text-playarena-600">
-                    {event.start_landmark.name}, {event.start_landmark.state}
-                  </span>
-                  {event.start_landmark.map_link && (
-                    <div className="mt-1">
-                      <a
-                        href={event.start_landmark.map_link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs flex items-center text-playarena-600 hover:underline"
-                      >
-                        <ExternalLink size={12} className="mr-1" />
-                        View on Google Maps
-                      </a>
-                    </div>
-                  )}
-                </div>
-              </div>
-              {event.end_landmark && (
-                <div className="flex items-start gap-2">
-                  <MapPin size={18} className="mt-0.5" />
-                  <div>
-                    <span className="text-playarena-600">
-                      {event.end_landmark.name}, {event.end_landmark.state}
-                    </span>
-                    {event.end_landmark.map_link && (
-                      <div className="mt-1">
-                        <a
-                          href={event.end_landmark.map_link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs flex items-center text-playarena-600 hover:underline"
-                        >
-                          <ExternalLink size={12} className="mr-1" />
-                          View on Google Maps
-                        </a>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-              <div className="flex items-center gap-2">
-                <Clock size={18} />
-                <span>
-                  Duration: {event.duration_value} {event.duration_type}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Users size={18} />
-                <span>
-                  {attendees.length}/{event.max_attendees} spots filled
-                  {isFull && " (FULL)"}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Bike size={18} />
-                <span>
-                  {event.is_own_bike && "Bring Your Own Bike"}
-                  {event.is_own_bike && event.is_rental_available && " | "}
-                  {event.is_rental_available && "Rentals Available"}
-                </span>
-              </div>
-              <div className="font-semibold mt-2">
-                Cost: {event.is_free ? "Free" : `₦${event.price?.toFixed(2)}`}
-              </div>
-              {event.notes && (
-                <div className="mt-3">
-                  <h3 className="text-sm font-medium mb-1">Notes:</h3>
-                  <p className="text-sm bg-muted p-2 rounded">{event.notes}</p>
-                </div>
-              )}
-            </div>
-          </div>
+          )}
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <Clock size={18} />
+        <span>
+          Duration: {event.duration_value} {event.duration_type}
+        </span>
+      </div>
+      <div className="flex items-center gap-2">
+        <Users size={18} />
+        <span>
+          {attendees.length}/{event.max_attendees} spots filled
+          {isFull && " (FULL)"}
+        </span>
+      </div>
+      <div className="flex items-center gap-2">
+        <Bike size={18} />
+        <span>
+          {event.is_own_bike && "Bring Your Own Bike"}
+          {event.is_own_bike && event.is_rental_available && " | "}
+          {event.is_rental_available && "Rentals Available"}
+        </span>
+      </div>
+      <div className="font-semibold mt-2">
+        Cost: {event.is_free ? "Free" : `₦${event.price?.toFixed(2)}`}
+      </div>
+      {event.notes && (
+        <div className="mt-3">
+          <h3 className="text-sm font-medium mb-1">Notes:</h3>
+          <p className="text-sm bg-muted p-2 rounded">{event.notes}</p>
+        </div>
+      )}
+    </div>
+  </div>
 
           <AttendeesTable
             event={event}
@@ -383,23 +360,6 @@ const CyclingDetail = () => {
             isFull={isFull}
             totalAttendees={attendees.length}
           />
-
-          <div className="flex flex-col sm:flex-row gap-2 mt-4">
-            <Button
-              onClick={handleShare}
-              className="bg-green-500 hover:bg-green-600 text-white flex-1"
-            >
-              Share
-            </Button>
-            {!isEnded && attendees.length < event.max_attendees && (
-              <Button
-                onClick={() => navigate(`/join-cycling/${event.slug}`)}
-                className="bg-playarena-500 hover:bg-playarena-600 text-white flex-1"
-              >
-                Join Event
-              </Button>
-            )}
-          </div>
 
           <CyclingDetailsDialogue event={event} attendees={attendees} />
         </div>
