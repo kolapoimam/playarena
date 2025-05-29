@@ -15,7 +15,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { ArrowLeft, Calendar, Clock, MapPin, Users, DollarSign, Loader, Trophy } from "lucide-react";
+import { ArrowLeft, Calendar, Clock, MapPin, Users, DollarSign, Loader, Bike } from "lucide-react";
 import CyclingSuccessDialog from "@/components/CyclingSuccessDialog";
 import Navbar from "@/components/Navbar";
 import html2canvas from "html2canvas";
@@ -65,7 +65,9 @@ const JoinCycling = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
-  const paymentReference = searchParams.get("reference") || searchParams.get("trxref");
+  const [paymentReference, setPaymentReference] = useState<string | null>(
+    searchParams.get("reference") || searchParams.get("trxref")
+  );
   const [event, setEvent] = useState<CyclingEvent | null>(null);
   const [attendees, setAttendees] = useState<Attendee[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,9 +77,6 @@ const JoinCycling = () => {
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>("pending");
   const [successDialogOpen, setSuccessDialogOpen] = useState(false);
   const [confirmationCode, setConfirmationCode] = useState<string | null>(null);
-  const [isImageLoaded, setIsImageLoaded] = useState(false);
-  const [isDownloading, setIsDownloading] = useState(false);
-  const [backgroundOption, setBackgroundOption] = useState("field");
   const cardRef = useRef<HTMLDivElement>(null);
 
   const form = useForm<FormValues>({
@@ -225,7 +224,6 @@ const JoinCycling = () => {
       paystack.resumeTransaction(access_code, {
         onSuccess: (transaction: any) => {
           setPaymentStatus("success");
-          // Set paymentReference in state to ensure it's available
           setPaymentReference(transaction.reference);
           toast({
             title: "Payment Successful",
@@ -252,99 +250,6 @@ const JoinCycling = () => {
       setJoining(false);
     }
   };
-
-  const handleImageLoad = () => {
-    setIsImageLoaded(true);
-  };
-
-  const handleDownload = useCallback(async () => {
-    if (!cardRef.current || !isImageLoaded) {
-      toast({
-        title: "Error",
-        description: "Card is not ready for download. Please wait a moment and try again.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsDownloading(true);
-    try {
-      const logoSrc = backgroundOption === "white" ? "/playarenalight.png" : "/playarenadark.png";
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.src = logoSrc;
-      await new Promise((resolve, reject) => {
-        img.onload = resolve;
-        img.onerror = () => {
-          console.warn("Failed to load logo image for canvas");
-          resolve(null);
-        };
-      });
-
-      if (backgroundOption === "field") {
-        const bgImg = new Image();
-        bgImg.crossOrigin = "anonymous";
-        bgImg.src = "/cycling-road.jpg";
-        await new Promise((resolve, reject) => {
-          bgImg.onload = resolve;
-          bgImg.onerror = () => {
-            console.warn("Failed to load background image for canvas");
-          resolve(null);
-          };
-        });
-      }
-
-      const canvas = await html2canvas(cardRef.current, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        scrollX: 0,
-        scrollY: -window.scrollY,
-      });
-
-      const blob = await new Promise<Blob | null>((resolve) =>
-        canvas.toBlob((blob) => resolve(blob), "image/png")
-      );
-
-      if (!blob) {
-        throw new Error("Failed to convert canvas to Blob");
-      }
-
-      const filename = `PlayArena-Cycling-${event?.title.replace(/\s+/g, '-')}.png`;
-      const url = URL.createObjectURL(blob);
-
-      if (navigator.share && (navigator as any).canShare?.({ files: [new File([blob], filename, { type: "image/png" })] })) {
-        try {
-          await navigator.share({
-            files: [new File([blob], filename, { type: "image/png" })],
-            title: event?.title,
-            text: `I've registered for ${event?.title} at ${event?.start_landmark.name || 'unknown location'}!`,
-          });
-          URL.revokeObjectURL(url);
-          return;
-        } catch (shareError) {
-          console.warn("Share API failed, falling back to download:", shareError);
-        }
-      }
-
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error("Error generating image:", error);
-      toast({
-        title: "Error",
-        description: "Failed to download registration card. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsDownloading(false);
-    }
-  }, [isImageLoaded, event, toast, backgroundOption]);
 
   const onSubmit = async (data: FormValues) => {
     if (!event) return;
@@ -617,30 +522,17 @@ const JoinCycling = () => {
         {event && confirmationCode && (
           <CyclingSuccessDialog
             open={successDialogOpen}
-            onOpenChange={(open) => {
-              setSuccessDialogOpen(open);
-              setIsImageLoaded(false);
-              if (!open) setBackgroundOption("field");
+            onOpenChange={setSuccessDialogOpen}
+            formValues={{
+              title: event.title,
+              event_date: new Date(event.event_date),
+              start_time: event.start_time,
+              host_name: event.host_name,
             }}
-            title={event.title}
-            eventDate={new Date(event.event_date)}
-            startTime={event.start_time}
-            hostName={event.host_name}
-            landmark={event.start_landmark}
+            selectedLandmark={event.start_landmark}
             confirmationCode={confirmationCode}
-            eventSlug={slug ?? ""}
-            attendeesCount={attendees.length}
-            maxAttendees={event.max_attendees}
-            isFree={event.is_free}
-            price={event.price}
-            cardRef={cardRef}
-            isImageLoaded={isImageLoaded}
-            isDownloading={isDownloading}
-            backgroundOption={backgroundOption}
-            setBackgroundOption={setBackgroundOption}
-            onImageLoad={handleImageLoad}
-            onDownload={handleDownload}
-            onNavigate={() => navigate(`/cycling/${event.slug}`)}
+            eventSlug={event.slug}
+            onNavigate={() => navigate(`/cycling-activities`)}
           />
         )}
       </div>
