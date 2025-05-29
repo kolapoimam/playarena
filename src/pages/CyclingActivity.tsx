@@ -80,9 +80,9 @@ const CyclingActivity = () => {
         .from("cycling_events")
         .select(
           `
-          id, slug, title, event_date, start_time, max_attendees, is_free, price, host_name, host_id, status,
+          id, slug, title, event_date, start_time, max_attendees, is_free, price, host_name, host_id, status, id_uuid,
           start_landmark:landmarks!cycling_events_start_landmark_id_fkey(id_uuid, name, state, slug),
-          cycling_attendees!cycling_events_cycling_attendees_cycling_event_id_uuid_fkey(id_uuid, attendee_name, attendee_status)
+          cycling_attendees(id_uuid, attendee_name, attendee_status, cycling_event_id_uuid)
         `,
           { count: "exact" }
         );
@@ -108,11 +108,16 @@ const CyclingActivity = () => {
 
       if (error) throw error;
 
-      // Ensure attendees is always an array
-      const processedEvents = (data as CyclingEvent[]).map(event => ({
-        ...event,
-        attendees: Array.isArray(event.cycling_attendees) ? event.cycling_attendees : [],
-      }));
+      // Process events to filter attendees by matching cycling_event_id_uuid
+      const processedEvents = (data as any[]).map(event => {
+        const attendees = Array.isArray(event.cycling_attendees)
+          ? event.cycling_attendees.filter((attendee: any) => attendee.cycling_event_id_uuid === event.id_uuid)
+          : [];
+        return {
+          ...event,
+          attendees,
+        };
+      });
 
       const sortedEvents = processedEvents.sort((a, b) => {
         const statusOrder = {
