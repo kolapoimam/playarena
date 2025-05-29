@@ -1,17 +1,26 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { corsHeaders } from "../_shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS'
-};
+interface PaystackVerifyResponse {
+  status: boolean;
+  message: string;
+  data: {
+    status: string;
+    reference: string;
+    amount: number;
+    metadata: {
+      venue_id?: string;
+      match_id?: string;
+      event_id?: string;
+      slug: string;
+    };
+  };
+}
 
-serve(async (req) => {
+serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", {
-      headers: corsHeaders
-    });
+    return new Response("ok", { headers: corsHeaders });
   }
 
   try {
@@ -23,54 +32,47 @@ serve(async (req) => {
       throw new Error("Reference is required");
     }
 
+    // Validate environment variables
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY");
+    const paystackSecretKey = Deno.env.get("PAYSTACK_SECRET_KEY");
+
+    if (!supabaseUrl || !supabaseKey || !paystackSecretKey) {
+      console.error("Missing environment variables", {
+        supabaseUrl: !!supabaseUrl,
+        supabaseKey: !!supabaseKey,
+        paystackSecretKey: !!paystackSecretKey,
+      });
+      throw new Error("Server configuration error");
+    }
+
     // Initialize Supabase client
-    const supabase = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_ANON_KEY") ?? "");
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Check pending transaction
     const { data: pendingTransaction, error: transactionError } = await supabase
       .from("pending_transactions")
-      .select("venue_id, match_id, event_id, resource_type, slug, amount")
+      .select("resource_id, resource_type, slug, amount")
       .eq("reference", reference)
       .single();
 
     if (transactionError || !pendingTransaction) {
-      console.error("Pending transaction not found:", {
-        reference,
-        error: transactionError?.message
-      });
+      console.error("Pending transaction not found:", { reference, error: transactionError?.message });
       throw new Error("Transaction not found");
     }
 
     console.log("Pending Transaction:", pendingTransaction);
 
-    // Validate event_id if resource_type is cycling
-    if (pendingTransaction.resource_type === "cycling" && pendingTransaction.event_id) {
-      const { data: eventData, error: eventError } = await supabase
-        .from("cycling_events")
-        .select("id_uuid")
-        .eq("id_uuid", pendingTransaction.event_id)
-        .single();
-
-      if (eventError || !eventData) {
-        console.error("Cycling event validation failed:", {
-          event_id: pendingTransaction.event_id,
-          slug: pendingTransaction.slug,
-          error: eventError?.message
-        });
-        throw new Error("Invalid cycling event in transaction");
-      }
-    }
-
     // Verify transaction with Paystack
     const paystackResponse = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
       method: "GET",
       headers: {
-        Authorization: `Bearer ${Deno.env.get("PAYSTACK_SECRET_KEY")}`,
-        "Content-Type": "application/json"
-      }
+        Authorization: `Bearer ${paystackSecretKey}`,
+        "Content-Type": "application/json",
+      },
     });
 
-    const paystackData = await paystackResponse.json();
+    const paystackData: PaystackVerifyResponse = await paystackResponse.json();
     console.log("Paystack Verification Response:", JSON.stringify(paystackData, null, 2));
 
     if (!paystackData.status || paystackData.data.status !== "success") {
@@ -78,12 +80,12 @@ serve(async (req) => {
       throw new Error("Payment verification failed");
     }
 
-    // Validate amount
+    // Validate amount (amount in pending_transactions is in naira, Paystack returns kobo)
     const expectedAmountInKobo = Math.round(pendingTransaction.amount * 100);
     if (paystackData.data.amount !== expectedAmountInKobo) {
       console.error("Amount mismatch:", {
         expected: expectedAmountInKobo,
-        received: paystackData.data.amount
+        received: paystackData.data.amount,
       });
       throw new Error("Transaction amount does not match");
     }
@@ -91,55 +93,39 @@ serve(async (req) => {
     // Update transaction status
     const { error: updateError } = await supabase
       .from("pending_transactions")
-      .update({
-        status: "verified"
-      })
+      .update({ status: "verified" })
       .eq("reference", reference);
 
     if (updateError) {
-      console.error("Failed to update transaction status:", {
-        error: updateError.message,
-        code: updateError.code,
-        details: updateError.details
-      });
-      // Log the error but don't throw to preserve existing functionality
+      console.error("Failed to update transaction status:", updateError.message);
     }
 
-    // Determine response fields
-    const responseData = {
-      verified: true,
-      slug: pendingTransaction.slug,
-      resource_type: pendingTransaction.resource_type
-    };
-
-    if (pendingTransaction.event_id) {
-      responseData.event_id = pendingTransaction.event_id;
-    } else if (pendingTransaction.match_id) {
-      responseData.match_id = pendingTransaction.match_id;
-    } else if (pendingTransaction.venue_id) {
-      responseData.venue_id = pendingTransaction.venue_id;
-    }
-
-    return new Response(JSON.stringify(responseData), {
-      headers: {
-        ...corsHeaders,
-        "Content-Type": "application/json"
-      },
-      status: 200
-    });
-  } catch (error) {
+    return new Response(
+      JSON.stringify({
+        verified: true,
+        resource_id: pendingTransaction.resource_id,
+        resource_type: pendingTransaction.resource_type,
+        slug: pendingTransaction.slug,
+        venue_id: paystackData.data.metadata.venue_id,
+        match_id: paystackData.data.metadata.match_id,
+        event_id: paystackData.data.metadata.event_id,
+      }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      }
+    );
+  } catch (error: any) {
     console.error("Verification Error:", {
       message: error.message,
-      stack: error.stack
+      stack: error.stack,
     });
-    return new Response(JSON.stringify({
-      error: error.message
-    }), {
-      headers: {
-        ...corsHeaders,
-        "Content-Type": "application/json"
-      },
-      status: 400
-    });
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400,
+      }
+    );
   }
 });
