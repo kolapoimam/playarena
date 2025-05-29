@@ -156,12 +156,13 @@ const JoinCycling = () => {
     fetchEvent();
   }, [slug, navigate, toast]);
 
-  // Verify payment
-  useEffect(() => {
-    if (!paymentReference || !event) return;
+  // Verify payment// Inside JoinCycling component
+useEffect(() => {
+  if (!paymentReference || !event) return;
 
-    const verifyPayment = async () => {
-      setVerifyingPayment(true);
+  const verifyPayment = async (retries = 3, delay = 1000) => {
+    setVerifyingPayment(true);
+    for (let attempt = 1; attempt <= retries; attempt++) {
       try {
         const { data, error } = await supabase.functions.invoke("verify-paystack-transaction", {
           body: { reference: paymentReference },
@@ -177,29 +178,37 @@ const JoinCycling = () => {
             title: "Payment Successful",
             description: "Please complete your registration.",
           });
+          return;
         } else {
-          setPaymentStatus("failed");
-          toast({
-            title: "Payment Verification Failed",
-            description: "Invalid payment details.",
-            variant: "destructive",
-          });
+          throw new Error("Invalid payment details");
         }
       } catch (error: any) {
-        console.error("Error verifying payment:", error);
+        console.error(`Verification attempt ${attempt} failed:`, error);
+        if (attempt < retries) {
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+        setPaymentStatus("failed");
         toast({
           title: "Verification Error",
-          description: "Failed to verify payment. Please try again.",
+          description: "Failed to verify payment. Please try again or contact support.",
           variant: "destructive",
+          action: (
+            <Button
+              variant="outline"
+              onClick={() => verifyPayment(1)} // Allow manual retry
+            >
+              Retry
+            </Button>
+          ),
         });
-        setPaymentStatus("failed");
-      } finally {
-        setVerifyingPayment(false);
       }
-    };
+    }
+    setVerifyingPayment(false);
+  };
 
-    verifyPayment();
-  }, [paymentReference, event, slug, toast]);
+  verifyPayment();
+}, [paymentReference, event, slug, toast]);
 
   const handlePaymentInitiation = async () => {
     if (!event || event.is_free || !event.price) {
