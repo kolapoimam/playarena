@@ -287,7 +287,6 @@ const CyclingActivity = () => {
                     <SelectItem value="all">All</SelectItem>
                     <SelectItem value="hours">Hours</SelectItem>
                     <SelectItem value="distance">Distance (km)</SelectItem>
-                  </SelectContent>
                 </Select>
               </div>
 
@@ -300,7 +299,7 @@ const CyclingActivity = () => {
                     setCurrentPage(1);
                   }}
                 >
-                  <SelectTrigger id="status-filter" className="border-gray-400 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                  <SelectTrigger id="status-filter" className="border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -321,35 +320,35 @@ const CyclingActivity = () => {
 
         {loading ? (
           <div className="flex justify-center items-center h-[50vh]">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-600 dark:border-gray-400"></div>
           </div>
         ) : filteredEvents.length > 0 ? (
           <div className="space-y-4">
             {filteredEvents.map((event) => {
               const { statusLabel, statusClass } = getEventStatus(event);
               return (
-                <div key={event.id} className="w-full min-w-full border rounded-lg overflow-hidden shadow-sm bg-white dark:bg-gray-800">
+                <div key={event.id} className="w-full border rounded-lg overflow-hidden shadow-sm bg-white dark:bg-gray-800">
                   <div className="p-4">
-                    <div className="flex justify-between items-start">
+                    <div className="flex justify-between items-center">
                       <h3 className="font-bold text-lg text-gray-800 dark:text-gray-200">
                         {event.title}
                       </h3>
                       <div className="flex flex-col gap-1">
                         <Badge className={statusClass}>{statusLabel}</Badge>
-                        <Badge className={event.is_free ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}>
+                        <Badge className={event.is_free ? "bg-green-600 text-white" : "bg-red-600 dark:bg-red-600 dark:text-white text-white"}>
                           {event.is_free ? "FREE" : `₦${(event.price || 0).toFixed(2)}`}
                         </Badge>
                       </div>
                     </div>
-                    <div className="mt-2 space-y-2 text-sm text-gray-600 dark:text-gray-300">
+                    <div className="mt-3 space-y-2 text-sm text-gray-600 dark:text-gray-400">
                       <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                        <Calendar size={16} className="text-gray-600 dark:text-gray-400" />
                         <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
                           {event.status === "today" ? "Today" : event.status === "tomorrow" ? "Tomorrow" : formatDate(event.event_date)}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                        <Clock size={16} className="text-gray-600 dark:text-gray-400" />
                         <span>{event.start_time}</span>
                       </div>
                       {event.start_landmark && (
@@ -368,7 +367,7 @@ const CyclingActivity = () => {
                         </div>
                       )}
                       <div className="flex items-center gap-2">
-                        <Users className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                        <Users size={16} className="text-gray-600 dark:text-gray-400" />
                         <span>
                           {event.attendees?.length || 0}/{event.max_attendees} spots filled
                         </span>
@@ -377,7 +376,7 @@ const CyclingActivity = () => {
                     <div className="mt-4 flex justify-between items-center">
                       <div>
                         <span className="text-xs text-muted-foreground">Organized by:</span>
-                        <p className="font-medium text-gray-800 dark:text-gray-400">{event.host_name}</p>
+                        <p className="font-medium text-gray-800 dark:text-gray-200">{event.host_name}</p>
                       </div>
                       <Button
                         variant="outline"
@@ -397,10 +396,10 @@ const CyclingActivity = () => {
                 disabled={currentPage === 1}
                 onClick={handlePreviousPage}
               >
-                <ChevronLeft size={16" className="mr-2" />
+                <ChevronLeft size="16" className="mr-2" />
                 Previous
               </Button>
-              <span className="text-gray-700 dark:text-gray-400">
+              <span className="text-gray-700 dark:text-gray-200">
                 Page {currentPage} of {totalPages}
               </span>
               <Button
@@ -409,22 +408,22 @@ const CyclingActivity = () => {
                 onClick={handleNextPage}
               >
                 Next
-                <ChevronRight size={16} className="ml-2" />
+                <ChevronRight size="16" className="ml-2" />
               </Button>
             </div>
-          p-6>
-        </div>
-      ) : (
-        <div className="flex items-center justify-center h-[50vh] flex-col gap-4">
-          <p class="text-muted-foreground text-center p-4">
-            No events found. Host an event to see it here.
-          </p>
-          <Button onClick={() => navigate("/host-cycling")}>
-            Host an Event
-          </Button>
-        </div>
-      )}
-      <Navbar />
+          </div>
+        ) : (
+          <div className="flex items-center justify-center h-[50vh] flex-col gap-4">
+            <p className="text-muted-foreground text-center p-4">
+              No events found. Host an event to see it here.
+            </p>
+            <Button onClick={() => navigate("/host-cycling")}>
+              Host an Event
+            </Button>
+          </div>
+        )}
+        <Navbar />
+      </div>
     </div>
   );
 };
