@@ -333,61 +333,67 @@ const JoinCycling = () => {
     }
   };
 
-  const onSubmit = async (data: FormValues) => {
-    if (!event) return;
+const onSubmit = async (data: FormValues) => {
+  if (!event) return;
 
-    if (attendees.length >= event.max_attendees) {
-      toast({
-        title: "Error",
-        description: "Event is full.",
-        variant: "destructive",
-      });
-      return;
-    }
+  if (attendees.length >= event.max_attendees) {
+    toast({
+      title: "Error",
+      description: "Event is full.",
+      variant: "destructive",
+    });
+    return;
+  }
 
-    setJoining(true);
-    try {
-      const { data: confirmationCodeData, error: codeError } = await supabase.rpc(
-        "generate_unique_code",
-        { length: 6 }
-      );
-      if (codeError) throw codeError;
+  setJoining(true);
+  try {
+    const { data: confirmationCodeData, error: codeError } = await supabase.rpc(
+      "generate_unique_code",
+      { length: 6 }
+    );
+    if (codeError) throw codeError;
 
-      const attendeeData = {
-        id_uuid: crypto.randomUUID(), // Generate UUID for new attendee
-        cycling_event_id_uuid: event.id_uuid,
-        attendee_name: data.name,
-        attendee_phone: data.phone,
-        confirmation_code: confirmationCodeData,
-        payment_status: event.is_free || paymentStatus === "success",
-        payment_reference: paymentStatus === "success" ? paymentReference : null,
-      };
+    const attendeeData = {
+      id_uuid: crypto.randomUUID(),
+      cycling_event_id_uuid: event.id_uuid,
+      attendee_name: data.name,
+      attendee_phone: data.phone,
+      confirmation_code: confirmationCodeData,
+      payment_status: event.is_free || paymentStatus === "success",
+    };
 
-      const { error } = await supabase.from("cycling_attendees").insert(attendeeData);
+    console.log('Submitting attendeeData:', {
+      is_free: event.is_free,
+      paymentStatus,
+      paymentReference,
+      attendeeData
+    });
 
-      if (error) throw error;
+    const { error } = await supabase.from("cycling_attendees").insert(attendeeData);
 
-      setConfirmationCode(confirmationCodeData);
-      setSuccessDialogOpen(true);
-      toast({
-        title: "Success",
-        description: "Joined event successfully.",
-      });
+    if (error) throw error;
 
-      const { data: updatedAttendees } = await supabase
-        .from("cycling_attendees")
-        .select("id_uuid, attendee_name, attendee_phone, confirmation_code, payment_status, cycling_event_id_uuid") // Updated to select id_uuid
-        .eq("cycling_event_id_uuid", event.id_uuid);
-      if (updatedAttendees) setAttendees(updatedAttendees);
-    } catch (error: any) {
-      console.error("Error joining event:", error);
-      toast({
-        title: "Error",
-        description: "Failed to join event.",
-        variant: "destructive",
-      });
-    } finally {
-      setJoining(false);
+    setConfirmationCode(confirmationCodeData);
+    setSuccessDialogOpen(true);
+    toast({
+      title: "Success",
+      description: "Joined event successfully.",
+    });
+
+    const { data: updatedAttendees } = await supabase
+      .from("cycling_attendees")
+      .select("id_uuid, attendee_name, attendee_phone, confirmation_code, payment_status, cycling_event_id_uuid")
+      .eq("cycling_event_id_uuid", event.id_uuid);
+    if (updatedAttendees) setAttendees(updatedAttendees);
+  } catch (error: any) {
+    console.error("Error joining event:", error);
+    toast({
+      title: "Error",
+      description: "Failed to join event.",
+      variant: "destructive",
+    });
+  } finally {
+    setJoining(false);
     }
   };
 
