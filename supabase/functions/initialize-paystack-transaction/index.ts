@@ -58,6 +58,18 @@ serve(async (req) => {
     }
     const amountInNaira = amountInKobo / 100;
 
+    // Validate event_id format if provided
+    if (event_id) {
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(event_id)) {
+        console.error('Invalid event_id format:', event_id);
+        return new Response(
+          JSON.stringify({ error: 'Invalid event_id format, must be a UUID' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY");
@@ -80,6 +92,7 @@ serve(async (req) => {
         .eq('slug', slug)
         .single();
       if (error || !data) {
+        console.error('Cycling event validation failed:', { event_id, slug, error: error?.message });
         return new Response(
           JSON.stringify({ error: 'Invalid cycling event' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -94,6 +107,7 @@ serve(async (req) => {
         .eq('slug', slug)
         .single();
       if (error || !data) {
+        console.error('Match validation failed:', { match_id, slug, error: error?.message });
         return new Response(
           JSON.stringify({ error: 'Invalid match' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -107,6 +121,7 @@ serve(async (req) => {
         .eq('id', venue_id)
         .single();
       if (error || !data) {
+        console.error('Venue validation failed:', { venue_id, error: error?.message });
         return new Response(
           JSON.stringify({ error: 'Invalid venue' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -149,7 +164,7 @@ serve(async (req) => {
     }
 
     // Insert into pending_transactions
-    const { error: insertError } = await supabase.from("pending_transactions").insert({
+    const transactionData = {
       reference: data.data.reference,
       venue_id,
       match_id,
@@ -158,12 +173,22 @@ serve(async (req) => {
       slug,
       amount: amountInNaira,
       status: "pending"
-    });
+    };
+
+    console.log('Inserting into pending_transactions:', transactionData);
+
+    const { error: insertError } = await supabase.from("pending_transactions").insert(transactionData);
 
     if (insertError) {
-      console.error('Failed to insert into pending_transactions:', insertError);
+      console.error('Failed to insert into pending_transactions:', {
+        error: insertError.message,
+        code: insertError.code,
+        details: insertError.details,
+        hint: insertError.hint,
+        transactionData
+      });
       return new Response(
-        JSON.stringify({ error: 'Failed to save transaction' }),
+        JSON.stringify({ error: `Failed to save transaction: ${insertError.message}` }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -175,8 +200,11 @@ serve(async (req) => {
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-  } catch (error) {
-    console.error('Error initializing payment:', error);
+  } catch (error: any) {
+    console.error('Error initializing payment:', {
+      message: error.message,
+      stack: error.stack
+    });
     return new Response(
       JSON.stringify({ error: 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
