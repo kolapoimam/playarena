@@ -45,7 +45,6 @@ const CyclingActivity = () => {
   const [isPaidFilter, setIsPaidFilter] = useState<boolean | null>(null);
   const [landmarkFilter, setLandmarkFilter] = useState<string | null>(null);
   const [durationFilter, setDurationFilter] = useState<string>("all");
-  const [statusFilter, setStatusFilter] = useState<string | null>(null);
 
   const eventsPerPage = 4;
   const LAGOS_TIMEZONE = "Africa/Lagos";
@@ -53,7 +52,7 @@ const CyclingActivity = () => {
   useEffect(() => {
     fetchLandmarks();
     fetchEvents();
-  }, [currentPage, isPaidFilter, landmarkFilter, durationFilter, statusFilter]);
+  }, [currentPage, isPaidFilter, landmarkFilter, durationFilter]);
 
   const fetchLandmarks = async () => {
     try {
@@ -95,9 +94,6 @@ const CyclingActivity = () => {
       }
       if (durationFilter !== "all") {
         query = query.eq("duration_type", durationFilter);
-      }
-      if (statusFilter) {
-        query = query.eq("status", statusFilter);
       }
 
       const start = (currentPage - 1) * eventsPerPage;
@@ -198,7 +194,6 @@ const CyclingActivity = () => {
     setIsPaidFilter(null);
     setLandmarkFilter(null);
     setDurationFilter("all");
-    setStatusFilter(null);
     setCurrentPage(1);
   };
 
@@ -302,28 +297,6 @@ const CyclingActivity = () => {
                   </SelectContent>
                 </Select>
               </div>
-
-              <div>
-                <Label htmlFor="status-filter">Status</Label>
-                <Select
-                  value={statusFilter || "all"}
-                  onValueChange={(value) => {
-                    setStatusFilter(value === "all" ? null : value);
-                    setCurrentPage(1);
-                  }}
-                >
-                  <SelectTrigger id="status-filter" className="border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    <SelectItem value="today">Today</SelectItem>
-                    <SelectItem value="tomorrow">Tomorrow</SelectItem>
-                    <SelectItem value="upcoming">Upcoming</SelectItem>
-                    <SelectItem value="passed">Passed</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
             <Button variant="outline" onClick={resetFilters}>
               Reset Filters
@@ -336,11 +309,11 @@ const CyclingActivity = () => {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
           </div>
         ) : filteredEvents.length > 0 ? (
-          <div className="px-4 space-y-4 max-w-full">
-            {filteredEvents.map((event) => {
-              const { statusLabel, statusClass } = getEventStatus(event);
-              return (
-                <div key={event.id} className="w-full min-w-full border rounded-lg overflow-hidden shadow-sm bg-white dark:bg-gray-800">
+         <div className="px-4 space-y-4 max-w-full">
+  {filteredEvents.map((event) => {
+    const { statusLabel, statusClass } = getEventStatus(event);
+    return (
+      <div key={event.id} className="w-full min-w-full border rounded-lg overflow-hidden shadow-sm bg-white dark:bg-gray-800">
                   <div className="p-4">
                     <div className="flex justify-between items-start">
                       <h3 className="font-bold text-lg text-gray-800 dark:text-gray-200">
