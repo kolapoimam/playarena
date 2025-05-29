@@ -82,7 +82,7 @@ const CyclingActivity = () => {
           `
             id, slug, title, event_date, start_time, max_attendees, is_free, price, host_name, host_id,
             start_landmark:landmarks!cycling_events_start_landmark_id_fkey(id, name, state),
-            attendees(id)
+            cycling_attendees(id)
           `,
           { count: "exact" }
         );
