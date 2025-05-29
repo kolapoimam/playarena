@@ -79,12 +79,13 @@ const JoinCycling = () => {
   const [isDownloading, setIsDownloading] = useState(false);
   const [backgroundOption, setBackgroundOption] = useState("field");
   const cardRef = useRef<HTMLDivElement>(null);
-  const defaultEmail = `${form.getValues("phone") || "user"}@sportcliq.com`;
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: { name: "", phone: "" },
   });
+
+  const defaultEmail = `${form.getValues("phone") || "user"}@sportcliq.com`;
 
   // Load Paystack script
   useEffect(() => {
@@ -224,6 +225,7 @@ const JoinCycling = () => {
       paystack.resumeTransaction(access_code, {
         onSuccess: (transaction: any) => {
           setPaymentStatus("success");
+          // Set paymentReference in state to ensure it's available
           setPaymentReference(transaction.reference);
           toast({
             title: "Payment Successful",
@@ -287,7 +289,7 @@ const JoinCycling = () => {
           bgImg.onload = resolve;
           bgImg.onerror = () => {
             console.warn("Failed to load background image for canvas");
-            resolve(null);
+          resolve(null);
           };
         });
       }
@@ -612,101 +614,35 @@ const JoinCycling = () => {
           )}
         </div>
 
-        <CyclingSuccessDialog
-          open={successDialogOpen}
-          onOpenChange={(open) => {
-            setSuccessDialogOpen(open);
-            setIsImageLoaded(false);
-            if (!open) setBackgroundOption("field");
-          }}
-          formValues={{
-            title: event?.title || "",
-            event_date: event ? new Date(event.event_date) : null,
-            start_time: event?.start_time || "",
-            host_name: event?.host_name || "",
-          }}
-          selectedLandmark={event?.start_landmark}
-          confirmationCode={confirmationCode}
-          eventSlug={slug ?? ""}
-          onNavigate={() => navigate(`/cycling/${event.slug}`)}
-        >
-          <div
-            ref={cardRef}
-            className={`rounded-lg p-6 shadow-lg relative overflow-hidden ${backgroundOption === "field" ? "bg-cover bg-center" : ""}`}
-            style={{
-              backgroundImage: backgroundOption === "field" ? "url('/cycling-road.jpg')" : "",
-              backgroundColor: backgroundOption !== "field" ? backgroundOption : "transparent",
-              ...(backgroundOption === "field" && {
-                backgroundBlendMode: "overlay",
-                backgroundColor: "rgba(0, 0, 0, 0.5)",
-              }),
+        {event && confirmationCode && (
+          <CyclingSuccessDialog
+            open={successDialogOpen}
+            onOpenChange={(open) => {
+              setSuccessDialogOpen(open);
+              setIsImageLoaded(false);
+              if (!open) setBackgroundOption("field");
             }}
-          >
-            <div className="relative z-10">
-              <div className="flex items-center justify-between mb-4">
-                <img
-                  src={backgroundOption === "white" ? "/playarenalight.png" : "/playarenadark.png"}
-                  alt="PlayArena Logo"
-                  className="h-8 w-auto"
-                  onLoad={handleImageLoad}
-                  onError={() => {
-                    toast({
-                      title: "Error",
-                      description: "Failed to load logo image.",
-                      variant: "destructive",
-                    });
-                    setIsImageLoaded(true);
-                  }}
-                />
-                <Trophy className={`h-6 w-6 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-              </div>
-              <h2 className={`text-xl font-bold mb-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`}>{event?.title}</h2>
-              <div className="space-y-2 mb-4">
-                <div className="flex items-center">
-                  <MapPin className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-                  <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{event?.start_landmark.name || "Location"}, {event?.start_landmark.state || ""}</span>
-                </div>
-                <div className="flex items-center">
-                  <Calendar className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-                  <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{event && formatDate(event.event_date)} at {event?.start_time}</span>
-                </div>
-                <div className="flex items-center">
-                  <DollarSign className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-                  <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{event?.is_free ? "Free" : `Paid (₦${(event?.price || 0).toFixed(2)})`}</span>
-                </div>
-                <div className="flex items-center">
-                  <Users className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-                  <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{attendees.length}/{event?.max_attendees} spots booked</span>
-                </div>
-                <div className="flex items-center">
-                  <span className={`font-bold ${backgroundOption === "white" ? "text-black" : "text-white"}`}>Confirmation Code:</span>
-                  <span className={`ml-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`}>{confirmationCode}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400 my-4">
-            <strong>Note:</strong> Save this card to present your confirmation code at check-in.
-          </p>
-          <div className="flex gap-2 justify-end">
-            <Button
-              className="bg-green-500 hover:bg-green-600 text-white w-auto px-4"
-              onClick={handleDownload}
-              disabled={!isImageLoaded || isDownloading}
-            >
-              {isDownloading ? "Processing..." : "Share/Download"}
-            </Button>
-            <Button
-              className="bg-green-500 hover:bg-green-600 text-white w-auto px-4"
-              onClick={() => {
-                setSuccessDialogOpen(false);
-                navigate(`/cycling/${event.slug}`);
-              }}
-            >
-              Close
-            </Button>
-          </div>
-        </CyclingSuccessDialog>
+            title={event.title}
+            eventDate={new Date(event.event_date)}
+            startTime={event.start_time}
+            hostName={event.host_name}
+            landmark={event.start_landmark}
+            confirmationCode={confirmationCode}
+            eventSlug={slug ?? ""}
+            attendeesCount={attendees.length}
+            maxAttendees={event.max_attendees}
+            isFree={event.is_free}
+            price={event.price}
+            cardRef={cardRef}
+            isImageLoaded={isImageLoaded}
+            isDownloading={isDownloading}
+            backgroundOption={backgroundOption}
+            setBackgroundOption={setBackgroundOption}
+            onImageLoad={handleImageLoad}
+            onDownload={handleDownload}
+            onNavigate={() => navigate(`/cycling/${event.slug}`)}
+          />
+        )}
       </div>
       <Navbar />
     </div>
