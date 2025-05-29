@@ -47,7 +47,7 @@ const CyclingActivity = () => {
   const [durationFilter, setDurationFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
 
-  const eventsPerPage = 6;
+  const eventsPerPage = 4;
   const LAGOS_TIMEZONE = "Africa/Lagos";
 
   useEffect(() => {
@@ -340,7 +340,7 @@ const CyclingActivity = () => {
             {filteredEvents.map((event) => {
               const { statusLabel, statusClass } = getEventStatus(event);
               return (
-                <div key={event.id} className="border rounded-lg shadow-sm bg-white dark:bg-gray-800">
+                <div key={event.id} className="w-full border rounded-lg overflow-hidden shadow-sm bg-white dark:bg-gray-800">
                   <div className="p-4">
                     <div className="flex justify-between items-start">
                       <h3 className="font-bold text-lg text-gray-800 dark:text-gray-200">
