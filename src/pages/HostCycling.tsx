@@ -21,6 +21,7 @@ import CyclingSuccessDialog from '@/components/CyclingSuccessDialog';
 import TimeInput from '@/components/TimeInput';
 import CreateLandmarkDialog from '@/components/CreateLandmarkDialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { DateTime } from 'luxon';
 
 // Error Boundary Component
 class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
@@ -242,6 +243,21 @@ const HostCycling = () => {
         throw new Error(`Failed to generate slug: ${slugError?.message || 'No slug data'}`);
       }
 
+      // Calculate status based on event_date
+      const eventDate = DateTime.fromJSDate(data.event_date, { zone: 'Africa/Lagos' });
+      const now = DateTime.now().setZone('Africa/Lagos');
+      let status: string;
+
+      if (eventDate.hasSame(now, 'day')) {
+        status = 'today';
+      } else if (eventDate.hasSame(now.plus({ days: 1 }), 'day')) {
+        status = 'tomorrow';
+      } else if (eventDate > now) {
+        status = 'upcoming';
+      } else {
+        status = 'passed';
+      }
+
       const { data: eventData, error: eventError } = await supabase
         .from('cycling_events')
         .insert({
@@ -265,6 +281,7 @@ const HostCycling = () => {
           supercode: supercodeData,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
+          status: status,
         })
         .select('id_uuid')
         .single();
@@ -790,7 +807,7 @@ const HostCycling = () => {
             start_time: form.getValues('start_time') || 'Unknown',
             host_name: form.getValues('host_name') || 'Unknown',
           }}
-          selectedLandmark={landmarks.find((l) => l.id_uuid === form.getValues('start_landmark_id')) || { id: '', name: 'Unknown', state: '' }}
+          selectedLandmark={landmarks.find((l) => l.id_uuid === form.getValues('start_landmark_id')) || { id_uuid: '', name: 'Unknown', state: '' }}
           supercode={supercode || ''}
           eventSlug={eventSlug || ''}
           onNavigate={() => handleNavigate(eventSlug)}
