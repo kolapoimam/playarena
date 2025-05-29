@@ -489,8 +489,48 @@ const JoinCycling = () => {
             <>
               {(event.is_free || paymentStatus === "success") && (
                 <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 bg-card rounded-lg shadow-md p-6 mt-6">
-                    {event.is_free ? (
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 mt-6">
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700">Your Name</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="Enter your name"
+                              {...field}
+                              className="border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                            />
+                          </FormControl>
+                          <FormMessage className="text-red-500" />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="phone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700">Phone Number</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="tel"
+                              inputMode="numeric"
+                              placeholder="Enter 11-digit phone number"
+                              {...field}
+                              className="border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                              onChange={(e) => {
+                                const numericValue = e.target.value.replace(/\D/g, "").slice(0, 11);
+                                field.onChange(numericValue);
+                              }}
+                            />
+                          </FormControl>
+                          <FormMessage className="text-red-500" />
+                        </FormItem>
+                      )}
+                    />
+                    {event.is_free && (
                       <Button
                         type="submit"
                         className="w-full bg-green-500 hover:bg-green-600 text-white rounded-md"
@@ -505,57 +545,16 @@ const JoinCycling = () => {
                           "Join Event"
                         )}
                       </Button>
-                    ) : (
+                    )}
+                    {paymentStatus === "success" && (
                       <>
-                        {paymentStatus === "success" && (
-                          <div className="bg-green-50 p-4 rounded-md border border-green-200 text-green-700">
-                            <p className="font-medium">Payment Successful!</p>
-                            <p className="text-sm">Please complete your registration below.</p>
-                            {paymentReference && (
-                              <p className="text-sm mt-1">Reference: {paymentReference}</p>
-                            )}
-                          </div>
-                        )}
-                        <FormField
-                          control={form.control}
-                          name="name"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-gray-700">Your Name</FormLabel>
-                              <FormControl>
-                                <Input
-                                  placeholder="Enter your name"
-                                  {...field}
-                                  className="border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
-                                />
-                              </FormControl>
-                              <FormMessage className="text-red-500" />
-                            </FormItem>
+                        <div className="bg-green-50 p-4 rounded-md border border-green-200 text-green-700">
+                          <p className="font-medium">Payment Successful!</p>
+                          <p className="text-sm">Please complete your registration below.</p>
+                          {paymentReference && (
+                            <p className="text-sm mt-1">Reference: {paymentReference}</p>
                           )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="phone"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-gray-700">Phone Number</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="tel"
-                                  inputMode="numeric"
-                                  placeholder="Enter 11-digit phone number"
-                                  {...field}
-                                  className="border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
-                                  onChange={(e) => {
-                                    const numericValue = e.target.value.replace(/\D/g, "").slice(0, 11);
-                                    field.onChange(numericValue);
-                                  }}
-                                />
-                              </FormControl>
-                              <FormMessage className="text-red-500" />
-                            </FormItem>
-                          )}
-                        />
+                        </div>
                         <Button
                           type="submit"
                           className="w-full bg-green-500 hover:bg-green-600 text-white rounded-md"
@@ -576,18 +575,18 @@ const JoinCycling = () => {
                 </Form>
               )}
               {!event.is_free && paymentStatus === "pending" && (
-                <div className="space-y-4 mt-6">
-                  <h3 className="text-lg font-semibold text-gray-800">Payment Required</h3>
+                <>
+                  <h3 className="text-lg font-semibold text-gray-800 mt-6">Payment Required</h3>
                   <p className="text-muted-foreground">
                     This is a paid event. Please complete the payment to join.
                   </p>
-                  <div className="flex items-center gap-2 text-sm font-medium">
+                  <div className="flex items-center gap-2 text-sm font-medium mt-2">
                     <DollarSign size={16} />
                     <span>Total: ₦{(event.price || 0).toFixed(2)}</span>
                   </div>
                   <Button
                     type="button"
-                    className="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg transition-colors"
+                    className="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg transition-colors mt-4"
                     onClick={handlePaymentInitiation}
                     disabled={joining || !paystackLoaded}
                   >
@@ -600,7 +599,7 @@ const JoinCycling = () => {
                       `Pay Now (₦${(event.price || 0).toFixed(2)})`
                     )}
                   </Button>
-                </div>
+                </>
               )}
             </>
           )}
