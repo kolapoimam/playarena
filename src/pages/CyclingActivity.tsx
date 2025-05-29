@@ -182,7 +182,7 @@ let query = supabase
   };
 
   return (
-    <div className="min-h-screen pb-24 bg-gray-100 dark:bg-gray-900">
+    <div className="min-h-screen pb-26 bg-gray-100 dark:bg-gray-900">
       <header className="bg-gradient-to-r from-green-500 to-green-700 text-white p-4 shadow-sm">
         <div className="flex items-center justify-between max-w-7xl mx-auto">
           <Button
