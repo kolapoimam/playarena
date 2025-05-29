@@ -10,7 +10,7 @@ import {
   Users, 
   ArrowLeft, 
   ExternalLink, 
-  Bicycle, 
+  Bike, 
   Bell 
 } from "lucide-react";
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
@@ -356,7 +356,7 @@ const CyclingDetail = () => {
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <Bicycle size={18} />
+                <Bike size={18} />
                 <span>
                   {event.is_own_bike && "Bring Your Own Bike"}
                   {event.is_own_bike && event.is_rental_available && " | "}
