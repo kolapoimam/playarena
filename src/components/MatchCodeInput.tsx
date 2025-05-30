@@ -15,7 +15,7 @@ import { z } from "zod";
 
 type CyclingEvent = {
   id: string;
-  super_code: string;
+  supercode: string; // Updated to match database schema
   slug: string;
   title: string;
   event_date: string;
@@ -75,13 +75,13 @@ const MatchCodeInput = ({
         const [matchResponse, cyclingResponse] = await Promise.all([
           supabase
             .from("matches")
-            .select("super_code")
+            .select("supercode") // Updated to supercode
             .eq("organizer_id", userId)
             .order("created_at", { ascending: false })
             .limit(3),
           supabase
             .from("cycling_events")
-            .select("super_code")
+            .select("supercode") // Updated to supercode
             .eq("organizer_id", userId)
             .order("created_at", { ascending: false })
             .limit(3),
@@ -91,10 +91,10 @@ const MatchCodeInput = ({
         if (cyclingResponse.error) throw cyclingResponse.error;
 
         const matchCodes = matchResponse.data
-          .map((match) => match.super_code)
+          .map((match) => match.supercode) // Updated to supercode
           .filter((code): code is string => !!code);
         const cyclingCodes = cyclingResponse.data
-          .map((event) => event.super_code)
+          .map((event) => event.supercode) // Updated to supercode
           .filter((code): code is string => !!code);
         const combinedCodes = [...new Set([...matchCodes, ...cyclingCodes])].slice(
           0,
@@ -126,17 +126,26 @@ const MatchCodeInput = ({
         const { data, error } = await supabase
           .from("cycling_events")
           .select("*")
-          .eq("super_code", numericValue)
-          .single();
+          .eq("supercode", numericValue) // Updated to supercode
+          .maybeSingle(); // Changed to maybeSingle to handle no rows
 
         if (error && error.code !== "PGRST116") throw error;
 
         if (data) {
           setIsCyclingEvent(true);
           setCyclingEvent(data);
+        } else {
+          // If no cycling event is found, trigger fetchMatch to check matches table
+          fetchMatch();
         }
       } catch (error: any) {
         console.error("Error checking cycling event:", error);
+        toast({
+          title: "Error",
+          description: "Failed to validate super code.",
+          variant: "destructive",
+        });
+        fetchMatch(); // Still try to fetch match if cycling event check fails
       } finally {
         setLoading(false);
       }
