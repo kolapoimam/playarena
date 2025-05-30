@@ -393,43 +393,44 @@ const ConfirmCheckin = () => {
                     player_status: "Absent",
                     updated_at: new Date().toISOString(),
                   })
-                  .eq("id", p.id)
+                  .eq("id", player_id)
               ) || [];
 
-          await Promise.all(updates);
+          await Promise.all(updatesToPlayers);
         }
       }
     } catch (error: any) {
       console.error("Error fetching event", error.message, error.details || error);
       setMatchNotFound(true);
       resetState();
-      setError("An error occurred while fetching the event. Please try again.");
       toast({
         title: "Error",
         description: error.message.includes("0 rows")
-          ? `No event found with super code ${superCode}. Please check the code and try again.`
+          ? `No event found with super code ${superCode}'. Please try again.`
           : "An error occurred while fetching the event. Please try again.",
         variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
-  };
+};
 
-  const isEventPast = isCyclingEvent
-    ? cyclingEvent
-      ? isPast(new Date(`${cyclingEvent.event_date}T${cyclingEvent.event_time}`))
-      : false
-    : match
-    ? isPast(new Date(`${match.match_date}T${match.match_time}`))
-    : false;
+  const isEventPast = () => {
+    if (isCyclingEvent && cyclingEvent) {
+      return isPast(new Date(`${cyclingEvent.event_date}T${cyclingEvent.event_time}`));
+    }
+    if (match) {
+      return isPast(new Date(`${match.match_date}T${match.match_time}`));
+    }
+    return false;
+  };
 
   const canConfirmAttendees = () => {
     if (isCyclingEvent && cyclingEvent) {
-      if (cyclingEvent.cancellation_status || isEventPast) return false;
+      if (cyclingEvent.cancellation_status || isEventPast()) return false;
       return !!cyclingEvent.attendees?.length;
     }
-    if (!match || match.cancellation_status || isEventPast) return false;
+    if (!match || match.cancellation_status || isEventPast()) return false;
     return !!match.players?.length;
   };
 
@@ -439,8 +440,8 @@ const ConfirmCheckin = () => {
 
       const eventDateTime = new Date(`${cyclingEvent.event_date}T${cyclingEvent.event_time}`);
       const now = new Date();
-      const minutesToStart = differenceInMinutes(eventDateTime, now);
-      if (minutesToStart <= 0) {
+      const timeToStartMinutes = differenceInMinutes(eventDateTime, now);
+      if (timeToStartMinutes <= 0) {
         toast({
           title: "Error",
           description: "Cannot cancel event after it has started.",
@@ -452,39 +453,39 @@ const ConfirmCheckin = () => {
 
       setLoading(true);
       try {
-        const { error: eventError } = await supabase
-          .from("cycling_events")
-          .update({
-            status: "cancelled",
-            cancellation_status: true,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", cyclingEvent.id);
+        const { data, error } = eventError } = await supabase
+        .from("cycling_events")
+        .update({
+          status: "cancelled",
+          cancellation_status: true,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", cyclingEvent.id);
 
         if (eventError) throw eventError;
 
         const { error: attendeesError } = await supabase
-          .from("cycling_attendees")
-          .update({
-            status: "cancelled",
-            cancellation_status: true,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("event_id", cyclingEvent.id);
+        .from("cycling_attendees")
+        .update({
+          status: "canceled",
+          cancellation_status: true,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("event_id", cyclingEvent.id);
 
         if (attendeesError) throw attendeesError;
 
         toast({
-          title: "Success",
-          description: "Cycling event cancelled successfully.",
+          title: "Success',
+          description: 'Cycling event canceled successfully.',
         });
         await fetchMatch();
       } catch (error: any) {
-        console.error("Error cancelling cycling event", error);
+        console.error('Error cancelling cycling event', error);
         toast({
-          title: "Error",
-          description: "Failed to cancel cycling event. Please try again.",
-          variant: "destructive",
+          title: 'Error',
+          description: 'Failed to cancel cycling event. Please try again.',
+          variant: 'destructive',
         });
       } finally {
         setLoading(false);
@@ -493,12 +494,12 @@ const ConfirmCheckin = () => {
     } else if (match && !match.cancellation_status) {
       const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
       const now = new Date();
-      const minutesToStart = differenceInMinutes(matchDateTime, now);
-      if (minutesToStart <= 0) {
+      const timeToStartMinutes = differenceInMinutes(matchDateTime, now);
+      if (timeToStartMinutes <= 0) {
         toast({
-          title: "Error",
-          description: "Cannot cancel match after it has started.",
-          variant: "destructive",
+          title: 'Error',
+          description: 'Cannot cancel match after it has started.',
+          variant: 'destructive',
         });
         setIsCancelDialogOpen(false);
         return;
@@ -506,40 +507,40 @@ const ConfirmCheckin = () => {
 
       setLoading(true);
       try {
-        const { error: matchError } = await supabase
-          .from("matches")
-          .update({
-            status: "cancelled",
-            cancellation_status: true,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", match.id);
+        const { data, error } = matchError } = await supabase
+        .from('matches')
+        .update({
+          match_status: 'canceled',
+          cancellation_status: true,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', match.id);
 
         if (matchError) throw matchError;
 
         const { error: playersError } = await supabase
-          .from("players")
+          .from('players')
           .update({
-            status: "cancelled",
+            player_status: 'canceled',
             cancellation_status: true,
-            player_status: "Absent",
+            player_status: 'Absent',
             updated_at: new Date().toISOString(),
           })
-          .eq("match_id", match.id);
+          .eq('match_id', match.id);
 
         if (playersError) throw playersError;
 
         toast({
-          title: "Success",
-          description: "Match cancelled successfully.",
+          title: 'Success',
+          description: 'Match canceled successfully.',
         });
         await fetchMatch();
       } catch (error: any) {
-        console.error("Error cancelling match", error);
+        console.error('Error cancelling match', error);
         toast({
-          title: "Error",
-          description: "Failed to cancel match. Please try again.",
-          variant: "destructive",
+          title: 'Error',
+          description: 'Failed to cancel match.',
+          variant: 'destructive',
         });
       } finally {
         setLoading(false);
@@ -559,18 +560,18 @@ const ConfirmCheckin = () => {
     if (isCyclingEvent && cyclingEvent?.id) {
       const subscription = supabase
         .channel(`attendees_cycling_${cyclingEvent.id}`)
-        .on(
-          "postgres_changes",
+        .onChange(
+          'postgres_changes',
           {
-            event: "UPDATE",
-            schema: "public",
-            table: "cycling_attendees",
-            filter: `event_id=eq.${cyclingEvent.id}`,
+            event: 'changed',
+            schema: 'public',
+            table: 'cycling_attendees',
+            filter: `event_id=eq-${cyclingEvent.id}`,
           },
           (payload) => {
-            console.log("Attendee update received", payload);
+            console.log('Attendee update received', payload);
             fetchMatch();
-          }
+          },
         )
         .subscribe();
 
@@ -580,18 +581,18 @@ const ConfirmCheckin = () => {
     } else if (match?.id) {
       const subscription = supabase
         .channel(`players_match_${match.id}`)
-        .on(
-          "postgres_changes",
+        .onChange(
+          'postgres_changes',
           {
-            event: "UPDATE",
-            schema: "public",
-            table: "players",
-            filter: `match_id=eq.${match.id}`,
+            event: 'changed',
+            schema: 'public',
+            table_name: 'players',
+            filter: `match_id=match-${match.id}`,
           },
           (payload) => {
-            console.log("Player update received", payload);
+            console.log('Player updated', payload);
             fetchMatch();
-          }
+          },
         )
         .subscribe();
 
@@ -602,23 +603,23 @@ const ConfirmCheckin = () => {
   }, [match?.id, cyclingEvent?.id, isCyclingEvent]);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-24">
-      <header className="sticky top-0 z-50 bg-green-500 text-white shadow-md">
-        <div className="p-4 flex items-center justify-between">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
+      <header className="sticky top-0 dark:bg-gray-50 bg-green-500 text-white">
+        <div className="p-4">
           <Button
             variant="ghost"
             onClick={() => navigate(-1)}
-            className="text-white hover:text-gray-200"
+            className="text-white hover:text-gray-300"
           >
-            <ArrowLeft size={18} className="mr-2" />
+            <Arrow size={18} className="mr-2" />
             Back
           </Button>
-          <h1 className="text-2xl font-bold">Manage Events</h1>
+          <h2 className="text-xl font-bold">Manage Events</h2>
           <div className="w-10"></div>
         </div>
       </header>
 
-      <div className="max-w-4xl mx-auto p-6">
+      <div className="max-w-4xl mx-auto p-4">
         <MatchCodeInput
           superCode={superCode}
           setSuperCode={setSuperCode}
@@ -636,19 +637,19 @@ const ConfirmCheckin = () => {
         />
 
         {loading && (
-          <div className="flex items-center py-3">
-            <Loader2 className="animate-spin text-green-600" size={24} />
+          <div className="flex items-center py-4">
+            <Loader className="animate-spin text-green-600" size={24} />
             <span className="ml-3 text-gray-700">Loading...</span>
           </div>
         )}
 
         {error && !loading && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 text-center mb-4 border border-gray-200 dark:border-gray-600">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 text-center">
             <AlertCircle
-              size={40}
-              className="text-red-600 dark:text-red-400 mx-auto mb-3"
+              size={36}
+              className="text-red-600 dark:text-red-400 mx-auto"
             />
-            <h2 className="text-lg font-semibold text-red-600 dark:text-red-400">
+            <h2 className="text-lg font-semibold error-text-red-600 dark:text-red-400">
               Error
             </h2>
             <p className="mt-2 text-gray-500 dark:text-gray-400">{error}</p>
@@ -656,41 +657,41 @@ const ConfirmCheckin = () => {
         )}
 
         {matchNotFound && !loading && !error && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6 text-center border border-gray-200 dark:border-gray-600">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-4">
             <AlertCircle
-              size={40}
-              className="text-red-600 dark:text-red-400 mx-auto mb-3"
+              size={36}
+              className="text-red-400 dark:text-red-400 text-center"
             />
-            <h2 className="text-lg font-semibold text-red-600 dark:text-red-400">
+            <h2 className="text-lg font-semibold text-center text-red-600 dark:text-red-400">
               Event Not Found
             </h2>
-            <p className="mt-2 text-gray-600 dark:text-gray-400">
-              No event found with super code <strong>{superCode}</strong>. Please
-              check the code and try again.
+            <p className="mt-2 text-center text-gray-600 dark:text-gray-400">
+              No event found with super code <strong>{superCode}</strong>.
             </p>
+            </div>
           </div>
         )}
 
         {(match || cyclingEvent) && !error && (
           <Tabs defaultValue="details" className="w-full">
-            <div className="sticky top-[64px] z-10">
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6">
-                <TabsList className="w-full grid grid-cols-3 bg-gray-100 dark:bg-gray-700 rounded-lg h-12">
+            <div className="sticky top-4 z-10">
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
+                <TabsList className="w-full grid grid-cols-2 bg-gray-100 dark:bg-gray-700 rounded-lg h-12">
                   <TabsTrigger
                     value="details"
-                    className="data-[state=active]:bg-green-500 data-[state=active]:text-white py-2 text-sm font-medium rounded-md"
+                    className="active:bg-green-500 active:text-white py-2 text-sm font-semibold rounded-lg"
                   >
                     Details
                   </TabsTrigger>
                   <TabsTrigger
                     value="manage"
-                    className="data-[state=active]:bg-green-500 data-[state=active]:text-white py-2 text-sm font-medium rounded-md"
+                    className="active:bg-green-500 active:text-white py-2 text-sm font-semibold rounded-lg"
                   >
                     Manage
                   </TabsTrigger>
                   <TabsTrigger
                     value="cashout"
-                    className="data-[state=active]:bg-green-500 data-[state=active]:text-white py-2 text-sm font-medium rounded-md"
+                    className="active:bg-green-500 active:text-white py-2 text-sm font-semibold rounded-lg"
                   >
                     Cashout
                   </TabsTrigger>
@@ -703,11 +704,11 @@ const ConfirmCheckin = () => {
                   <CyclingDetails
                     event={cyclingEvent}
                     cashout={cashout}
-                    handleCancelEvent={() => setIsCancelDialogOpen(true)}
+                    handleCancel={() => setIsCancelDialogOpen(true)}
                     loading={loading}
                     isEventPast={isEventPast}
                     walletBalance={walletBalance || 0}
-                  />
+                    />
                 ) : (
                   <MatchDetails
                     match={match}
@@ -715,7 +716,7 @@ const ConfirmCheckin = () => {
                     handleCancelMatch={() => setIsCancelDialogOpen(true)}
                     loading={loading}
                     isMatchPast={isEventPast}
-                  />
+                    />
                 )}
               </div>
             </TabsContent>
@@ -736,15 +737,15 @@ const ConfirmCheckin = () => {
                     setLoading={setLoading}
                     isEventPast={isEventPast}
                     canConfirmAttendees={canConfirmAttendees()}
-                    handleCancelEvent={() => setIsCancelDialogOpen(true)}
+                    handleCancel={() => setIsCancelDialogOpen(true)}
                     navigate={navigate}
-                  />
+                    />
                 ) : (
                   <PlayerManagement
                     match={match}
-                    tempIdentifier={tempIdentifier}
+                    tempIdentifier={temp_id}
                     playerStatuses={playerStatuses}
-                    setPlayerStatuses={setPlayerStatuses}
+                    setPlayerStatus={setPlayerStatuses}
                     checkinCodes={checkinCodes}
                     setCheckinCodes={setCheckinCodes}
                     checkinCodeErrors={checkinCodeErrors}
@@ -752,11 +753,11 @@ const ConfirmCheckin = () => {
                     fetchMatch={fetchMatch}
                     loading={loading}
                     setLoading={setLoading}
-                    isMatchPast={isEventPast}
-                    canConfirmPlayers={canConfirmAttendees()}
+                    isMatchPast={isPast}
+                    canConfirmPlayers={canConfirmPlayers()}
                     handleCancelMatch={() => setIsCancelDialogOpen(true)}
                     navigate={navigate}
-                  />
+                    />
                 )}
               </div>
             </TabsContent>
@@ -777,40 +778,39 @@ const ConfirmCheckin = () => {
         <DialogContent className="max-w-sm rounded-2xl p-6">
           <DialogHeader>
             <DialogTitle className="text-lg font-semibold text-center">
-              Confirm {isCyclingEvent ? "Event" : "Match"} Cancellation
+              Confirm {isCyclingEvent ? 'Event' : 'Match'} Cancellation
             </DialogTitle>
             <DialogDescription className="text-sm text-center mt-2 text-gray-600">
-              Are you sure you want to cancel this {isCyclingEvent ? "event" : "match"}? This
-              action cannot be undone, and {isCyclingEvent ? "attendees" : "players"} will be
-              notified.
+              Are you sure you want to cancel this {isCyclingEvent ? 'event' : 'match'}?
+              This action cannot be undone, and {isCyclingEvent ? 'attendees' : 'players'} will be notified.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="mt-6 flex items-center justify-between gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setIsCancelDialogOpen(false)}
-              className="rounded-full px-4 py-2 border-gray-300 hover:bg-gray-50"
-            >
-              No, Keep {isCyclingEvent ? "Event" : "Match"}
-            </Button>
-            <Button
-              onClick={handleCancelEvent}
-              className="bg-red-500 hover:bg-red-600 text-white rounded-full px-4 py-2"
-              disabled={loading}
-            >
-              {loading ? (
-                <span className="flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Processing...
-                </span>
-              ) : (
-                `Yes, Cancel ${isCyclingEvent ? "Event" : "Match"}`
-              )}
-            </Button>
+          <DialogFooter>
+            <div className="mt-6 flex items-center justify-between gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setIsCancelDialogOpen(false)}
+                className="rounded-full px-2 py-1"
+                >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => handleCancelEvent}
+                className="bg-red-500 hover:bg-red-600 text-white rounded-full px-2 py-1"
+                disabled={loading}
+                >
+                {loading ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Processing...
+                  </span>
+                ) : (
+                    `Yes, Cancel ${isCyclingEvent ? 'Event' : 'Match'}`
+                  )}
+              </Button>
+            </div>
           </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
+      </DialogContent>
       <Navbar />
     </div>
   );
