@@ -114,12 +114,7 @@ const ConfirmCheckin = () => {
   const [playerStatuses, setPlayerStatuses] = useState<
     { id: string; status: string; checkinCode: string }[]
   >([]);
-  const [players, setPlayers] = useState<
-    { id: string; status: string; checkinCode: string }[]
-  >([]);
-  const [checkinCodes, setCheckinCodes] = useState<{ [key: string]: string }>(
-    {}
-  );
+  const [checkinCodes, setCheckinCodes] = useState<{ [key: string]: string }>({});
   const [checkinCodeErrors, setCheckinCodeErrors] = useState<{
     [key: string]: string | null;
   }>({});
@@ -171,11 +166,11 @@ const ConfirmCheckin = () => {
         const { data, error } = await supabase
           .from("cycling_events")
           .select(`
-            id, slug, title, event_date, event_time, event_start_time, event_end_time, total_slots, host_name, super_code, is_paid, price, cancellation_status, status,
-            location:locations(name, city),
-            attendees(id, attendee_name, status, confirmation_code, details, number_of_slots)
+            id, slug, title, event_date, event_time, event_start_time, event_end_time, total_slots, host_name, supercode, is_paid, price, cancellation_status, status,
+            start_landmark:landmarks(name, state),
+            attendees:cycling_attendees(id, attendee_name, attendee_phone, status, confirmation_code, details, number_of_slots)
           `)
-          .eq("super_code", superCode)
+          .eq("supercode", superCode)
           .single();
 
         if (error) throw error;
@@ -205,13 +200,19 @@ const ConfirmCheckin = () => {
 
         const cyclingData: CyclingEvent = {
           ...data,
-          location: data.location
+          super_code: data.supercode,
+          event_time: data.event_time || data.start_time || "00:00:00",
+          total_slots: data.total_slots || data.max_attendees || 0,
+          location: data.start_landmark
             ? {
-                name: data.location.name ?? "Unknown Location",
-                city: data.location.city ?? "Unknown City",
+                name: data.start_landmark.name ?? "Unknown Location",
+                city: data.start_landmark.state ?? "Unknown City",
               }
             : null,
-          attendees: Array.isArray(data.attendees) ? data.attendees : [],
+          attendees: Array.isArray(data.attendees) ? data.attendees.map(attendee => ({
+            ...attendee,
+            details: attendee.details ? { phone: attendee.attendee_phone } : null,
+          })) : [],
           cancellation_status: data.cancellation_status ?? false,
           status: data.status ?? "upcoming",
         };
@@ -272,10 +273,9 @@ const ConfirmCheckin = () => {
               ?.filter((p) => p.status === "registered" && p.status !== "checked_in")
               .map((p) =>
                 supabase
-                  .from("attendees")
+                  .from("cycling_attendees")
                   .update({
                     status: "absent",
-                    attendee_status: "Absent",
                     updated_at: new Date().toISOString(),
                   })
                   .eq("id", p.id)
@@ -310,9 +310,9 @@ const ConfirmCheckin = () => {
 
         if (userId) {
           const { data: walletData, error: walletError } = await supabase
-            .from("wallets")
-            .select("balance")
-            .eq("organizer_id", userId)
+            .from("wallet")
+            .select("id,balance")
+            .eq("user_id", userId)
             .single();
 
           if (!walletError && walletData) {
@@ -466,11 +466,10 @@ const ConfirmCheckin = () => {
         if (eventError) throw eventError;
 
         const { error: attendeesError } = await supabase
-          .from("attendees")
+          .from("cycling_attendees")
           .update({
             status: "cancelled",
             cancellation_status: true,
-            attendee_status: "Absent",
             updated_at: new Date().toISOString(),
           })
           .eq("event_id", cyclingEvent.id);
@@ -568,7 +567,7 @@ const ConfirmCheckin = () => {
           {
             event: "UPDATE",
             schema: "public",
-            table: "attendees",
+            table: "cycling_attendees",
             filter: `event_id=eq.${cyclingEvent.id}`,
           },
           (payload) => {
