@@ -227,103 +227,105 @@ const HostCycling = () => {
   };
 
   const onSubmit = async (data: FormValues) => {
-    setLoading(true);
-    try {
-      if (!data.start_landmark_id) {
-        throw new Error('Please select a starting landmark');
-      }
-
-      const { data: supercodeData, error: codeError } = await supabase.rpc('generate_unique_code', { length: 8 });
-      if (codeError || !supercodeData) {
-        throw new Error(`Failed to generate supercode: ${codeError?.message || 'No supercode data'}`);
-      }
-
-      const { data: slugData, error: slugError } = await supabase.rpc('generate_unique_slug', { title: data.title });
-      if (slugError || !slugData) {
-        throw new Error(`Failed to generate slug: ${slugError?.message || 'No slug data'}`);
-      }
-
-      // Calculate status based on event_date
-      const eventDate = DateTime.fromJSDate(data.event_date, { zone: 'Africa/Lagos' });
-      const now = DateTime.now().setZone('Africa/Lagos');
-      let status: string;
-
-      if (eventDate.hasSame(now, 'day')) {
-        status = 'today';
-      } else if (eventDate.hasSame(now.plus({ days: 1 }), 'day')) {
-        status = 'tomorrow';
-      } else if (eventDate > now) {
-        status = 'upcoming';
-      } else {
-        status = 'passed';
-      }
-
-      const { data: eventData, error: eventError } = await supabase
-        .from('cycling_events')
-        .insert({
-          title: data.title,
-          slug: slugData,
-          notes: data.notes || null,
-          event_date: format(data.event_date, 'yyyy-MM-dd'),
-          start_time: data.start_time,
-          duration_type: data.duration_type,
-          duration_value: data.duration_value,
-          start_landmark_id: data.start_landmark_id,
-          end_landmark_id: data.end_landmark_id || null,
-          max_attendees: data.max_attendees,
-          is_free: data.is_free,
-          price: data.is_free ? null : data.price,
-          is_own_bike: data.is_own_bike,
-          is_rental_available: data.is_rental_available,
-          registration_deadline: data.registration_deadline ? format(data.registration_deadline, 'yyyy-MM-dd') : null,
-          host_name: data.host_name,
-          host_phone: data.host_phone,
-          supercode: supercodeData,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          status: status,
-        })
-        .select('id_uuid')
-        .single();
-
-      if (eventError || !eventData) {
-        console.error('Supabase insert error:', eventError);
-        throw new Error(`Failed to create event: ${eventError?.message || 'No event data'}`);
-      }
-
-      // Query cycling_events_api to get correct response format
-      const { data: apiData, error: apiError } = await supabase
-        .from('cycling_events_api')
-        .select('id, slug')
-        .eq('id', eventData.id_uuid)
-        .single();
-
-      if (apiError || !apiData) {
-        console.error('API view fetch error:', apiError);
-        throw new Error(`Failed to fetch API view data: ${apiError?.message || 'No API data'}`);
-      }
-
-      console.log('Event created:', apiData);
-
-      // Validate response
-      if (!apiData.id || !apiData.slug || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(apiData.id)) {
-        throw new Error('Invalid event data: ID must be a UUID and slug must be valid');
-      }
-
-      setSupercode(supercodeData);
-      setEventSlug(apiData.slug);
-      setSuccessDialogOpen(true);
-    } catch (err: any) {
-      console.error('Error in onSubmit:', err);
-      toast({
-        title: 'Error',
-        description: err.message || 'Failed to create event. Please try again.',
-        variant: 'error',
-      });
-    } finally {
-      setLoading(false);
+  setLoading(true);
+  try {
+    if (!data.start_landmark_id) {
+ Pinterest
+      throw new Error('Please select a starting landmark');
     }
-  };
+
+    // Generate a unique 6-digit numeric supercode
+    const { data: supercodeData, error: codeError } = await supabase.rpc('generate_unique_supercode');
+    if (codeError || !supercodeData) {
+      throw new Error(`Failed to generate supercode: ${codeError?.message || 'No supercode data'}`);
+    }
+
+    const { data: slugData, error: slugError } = await supabase.rpc('generate_unique_slug', { title: data.title });
+    if (slugError || !slugData) {
+      throw new Error(`Failed to generate slug: ${slugError?.message || 'No slug data'}`);
+    }
+
+    // Calculate status based on event_date
+    const eventDate = DateTime.fromJSDate(data.event_date, { zone: 'Africa/Lagos' });
+    const now = DateTime.now().setZone('Africa/Lagos');
+    let status: string;
+
+    if (eventDate.hasSame(now, 'day')) {
+      status = 'today';
+    } else if (eventDate.hasSame(now.plus({ days: 1 }), 'day')) {
+      status = 'tomorrow';
+    } else if (eventDate > now) {
+      status = 'upcoming';
+    } else {
+      status = 'passed';
+    }
+
+    const { data: eventData, error: eventError } = await supabase
+      .from('cycling_events')
+      .insert({
+        title: data.title,
+        slug: slugData,
+        notes: data.notes || null,
+        event_date: format(data.event_date, 'yyyy-MM-dd'),
+        start_time: data.start_time,
+        duration_type: data.duration_type,
+        duration_value: data.duration_value,
+        start_landmark_id: data.start_landmark_id,
+        end_landmark_id: data.end_landmark_id || null,
+        max_attendees: data.max_attendees,
+        is_free: data.is_free,
+        price: data.is_free ? null : data.price,
+        is_own_bike: data.is_own_bike,
+        is_rental_available: data.is_rental_available,
+        registration_deadline: data.registration_deadline ? format(data.registration_deadline, 'yyyy-MM-dd') : null,
+        host_name: data.host_name,
+        host_phone: data.host_phone,
+        supercode: supercodeData,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        status: status,
+      })
+      .select('id_uuid')
+      .single();
+
+    if (eventError || !eventData) {
+      console.error('Supabase insert error:', eventError);
+      throw new Error(`Failed to create event: ${eventError?.message || 'No event data'}`);
+    }
+
+    // Query cycling_events_api to get correct response format
+    const { data: apiData, error: apiError } = await supabase
+      .from('cycling_events_api')
+      .select('id, slug')
+      .eq('id', eventData.id_uuid)
+      .single();
+
+    if (apiError || !apiData) {
+      console.error('API view fetch error:', apiError);
+      throw new Error(`Failed to fetch API view data: ${apiError?.message || 'No API data'}`);
+    }
+
+    console.log('Event created:', apiData);
+
+    // Validate response
+    if (!apiData.id || !apiData.slug || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(apiData.id)) {
+      throw new Error('Invalid event data: ID must be a UUID and slug must be valid');
+    }
+
+    setSupercode(supercodeData);
+    setEventSlug(apiData.slug);
+    setSuccessDialogOpen(true);
+  } catch (err: any) {
+    console.error('Error in onSubmit:', err);
+    toast({
+      title: 'Error',
+      description: err.message || 'Failed to create event. Please try again.',
+      variant: 'error',
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleNavigate = (slug: string | null) => {
     try {
