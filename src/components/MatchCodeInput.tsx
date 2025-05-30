@@ -157,11 +157,11 @@ const MatchCodeInput = ({
           setIsCyclingEvent(true);
           setCyclingEvent(cyclingEvent);
           setSuperCodeError(null);
-          await fetchMatch(); // Trigger ConfirmCheckin to fetch full details
+          await fetchMatch();
           return;
         }
 
-        // If no cycling event, try match
+        // Try match
         const { data: matchData, error: matchError } = await supabase
           .from("matches")
           .select("id, super_code")
