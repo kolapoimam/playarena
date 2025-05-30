@@ -161,13 +161,13 @@ const ConfirmCheckin = () => {
     setMatchNotFound(false);
     setLoading(true);
     try {
-      if (isCyclingEvent && cyclingEvent) {
+      if (isCyclingEvent) {
         // Fetch cycling event data
         const { data, error } = await supabase
           .from("cycling_events")
           .select(`
             id, slug, title, event_date, event_time, event_start_time, event_end_time, total_slots, host_name, supercode, is_paid, price, cancellation_status, status,
-            start_landmark:landmarks(name, state),
+            start_landmark:start_landmark_id_fkey(name, state),
             attendees:cycling_attendees(id, attendee_name, attendee_phone, status, confirmation_code, details, number_of_slots)
           `)
           .eq("supercode", superCode)
@@ -211,7 +211,7 @@ const ConfirmCheckin = () => {
             : null,
           attendees: Array.isArray(data.attendees) ? data.attendees.map(attendee => ({
             ...attendee,
-            details: attendee.details ? { phone: attendee.attendee_phone } : null,
+            details: attendee.details || { phone: attendee.attendee_phone || "N/A" },
           })) : [],
           cancellation_status: data.cancellation_status ?? false,
           status: data.status ?? "upcoming",
@@ -266,7 +266,6 @@ const ConfirmCheckin = () => {
           });
         }
 
-        // Update absent status for attendees who haven't checked in after event end time
         if (cyclingData.event_end_time && isPast(new Date(cyclingData.event_end_time))) {
           const updates =
             cyclingData.attendees
@@ -284,7 +283,7 @@ const ConfirmCheckin = () => {
           await Promise.all(updates);
         }
       } else {
-        // Existing match fetching logic
+        // Fetch match data
         const { data, error } = await supabase
           .from("matches")
           .select(`
@@ -310,9 +309,9 @@ const ConfirmCheckin = () => {
 
         if (userId) {
           const { data: walletData, error: walletError } = await supabase
-            .from("wallet")
-            .select("id,balance")
-            .eq("user_id", userId)
+            .from("wallets")
+            .select("balance")
+            .eq("organizer_id", userId)
             .single();
 
           if (!walletError && walletData) {
@@ -382,7 +381,6 @@ const ConfirmCheckin = () => {
           });
         }
 
-        // Update absent status for players
         if (matchData.match_end_time && isPast(new Date(matchData.match_end_time))) {
           const updates =
             matchData.players
@@ -555,9 +553,8 @@ const ConfirmCheckin = () => {
     if (superCode && codeSchema.safeParse(superCode).success) {
       fetchMatch();
     }
-  }, [superCode, isCyclingEvent, cyclingEvent]);
+  }, [superCode, isCyclingEvent]);
 
-  // Set up real-time subscriptions
   useEffect(() => {
     if (isCyclingEvent && cyclingEvent?.id) {
       const subscription = supabase
