@@ -15,7 +15,7 @@ import { z } from "zod";
 
 type CyclingEvent = {
   id: string;
-  supercode: string; // Updated to match database schema
+  supercode: string;
   slug: string;
   title: string;
   event_date: string;
@@ -75,13 +75,13 @@ const MatchCodeInput = ({
         const [matchResponse, cyclingResponse] = await Promise.all([
           supabase
             .from("matches")
-            .select("supercode") // Updated to supercode
+            .select("super_code")
             .eq("organizer_id", userId)
             .order("created_at", { ascending: false })
             .limit(3),
           supabase
             .from("cycling_events")
-            .select("supercode") // Updated to supercode
+            .select("supercode")
             .eq("organizer_id", userId)
             .order("created_at", { ascending: false })
             .limit(3),
@@ -91,10 +91,10 @@ const MatchCodeInput = ({
         if (cyclingResponse.error) throw cyclingResponse.error;
 
         const matchCodes = matchResponse.data
-          .map((match) => match.supercode) // Updated to supercode
+          .map((match) => match.super_code)
           .filter((code): code is string => !!code);
         const cyclingCodes = cyclingResponse.data
-          .map((event) => event.supercode) // Updated to supercode
+          .map((event) => event.supercode)
           .filter((code): code is string => !!code);
         const combinedCodes = [...new Set([...matchCodes, ...cyclingCodes])].slice(
           0,
@@ -121,34 +121,73 @@ const MatchCodeInput = ({
     setCyclingEvent(null);
 
     if (numericValue.length === 6) {
+      // Validate with zod schema
+      const validation = codeSchema.safeParse(numericValue);
+      if (!validation.success) {
+        setSuperCodeError(validation.error.errors[0].message);
+        return;
+      }
+
       setLoading(true);
       try {
         const { data, error } = await supabase
           .from("cycling_events")
           .select("*")
-          .eq("supercode", numericValue) // Updated to supercode
-          .maybeSingle(); // Changed to maybeSingle to handle no rows
+          .eq("supercode", numericValue)
+          .maybeSingle();
 
-        if (error && error.code !== "PGRST116") throw error;
+        if (error && error.code !== "PGRST116") {
+          console.error("Cycling event query error:", error);
+          throw error;
+        }
 
         if (data) {
           setIsCyclingEvent(true);
           setCyclingEvent(data);
+          setSuperCodeError(null); // Clear error on success
         } else {
-          // If no cycling event is found, trigger fetchMatch to check matches table
-          fetchMatch();
+          // No cycling event found, try fetching match
+          await handleFetchMatch();
         }
       } catch (error: any) {
         console.error("Error checking cycling event:", error);
         toast({
           title: "Error",
-          description: "Failed to validate super code.",
+          description: "Failed to validate super code for cycling event.",
           variant: "destructive",
         });
-        fetchMatch(); // Still try to fetch match if cycling event check fails
+        await handleFetchMatch(); // Try fetching match even if cycling event fails
       } finally {
         setLoading(false);
       }
+    }
+  };
+
+  const handleFetchMatch = async () => {
+    // Validate code before fetching
+    const validation = codeSchema.safeParse(superCode);
+    if (!validation.success) {
+      setSuperCodeError(validation.error.errors[0].message);
+      return;
+    }
+
+    setSuperCodeError(null); // Clear error before fetching
+
+    // Wrap fetchMatch to ensure superCodeError is cleared on success
+    setLoading(true);
+    try {
+      await fetchMatch();
+      setSuperCodeError(null); // Ensure error is cleared if fetchMatch succeeds
+    } catch (error: any) {
+      console.error("Error fetching match:", error);
+      setMatchNotFound(true);
+      toast({
+        title: "Not Found",
+        description: "No event or match found with this super code.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -211,7 +250,7 @@ const MatchCodeInput = ({
         </div>
         <Button
           className="bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 w-full sm:w-auto"
-          onClick={fetchMatch}
+          onClick={handleFetchMatch}
           disabled={loading}
         >
           {loading ? (
