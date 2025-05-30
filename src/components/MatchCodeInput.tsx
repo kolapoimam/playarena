@@ -19,13 +19,17 @@ type CyclingEvent = {
   slug: string;
   title: string;
   event_date: string;
-  start_time: string;
-  max_attendees: number;
-  is_free: boolean;
+  event_time: string;
+  total_slots: number;
+  is_paid: boolean;
   price?: number;
   host_name: string;
   host_phone: string;
   start_landmark_id: string;
+  location: {
+    name?: string;
+    city?: string;
+  } | null;
 };
 
 const codeSchema = z
@@ -96,10 +100,7 @@ const MatchCodeInput = ({
         const cyclingCodes = cyclingResponse.data
           .map((event) => event.supercode)
           .filter((code): code is string => !!code);
-        const combinedCodes = [...new Set([...matchCodes, ...cyclingCodes])].slice(
-          0,
-          3
-        );
+        const combinedCodes = [...new Set([...matchCodes, ...cyclingCodes])].slice(0, 3);
         setRecentSuperCodes(combinedCodes);
       } catch (error: any) {
         toast({
@@ -132,7 +133,10 @@ const MatchCodeInput = ({
       try {
         const { data, error } = await supabase
           .from("cycling_events")
-          .select("*")
+          .select(`
+            id, supercode, slug, title, event_date, event_time, total_slots, is_paid, price, host_name, host_phone, start_landmark_id,
+            start_landmark:landmarks(name, state)
+          `)
           .eq("supercode", numericValue)
           .maybeSingle();
 
@@ -142,9 +146,18 @@ const MatchCodeInput = ({
         }
 
         if (data) {
+          const cyclingData: CyclingEvent = {
+            ...data,
+            location: data.start_landmark
+              ? {
+                  name: data.start_landmark.name ?? "Unknown Location",
+                  city: data.start_landmark.state ?? "Unknown City",
+                }
+              : null,
+          };
           setIsCyclingEvent(true);
-          setCyclingEvent(data);
-          setSuperCodeError(null); // Clear error on success
+          setCyclingEvent(cyclingData);
+          setSuperCodeError(null);
         } else {
           // No cycling event found, try fetching match
           await handleFetchMatch();
@@ -156,7 +169,7 @@ const MatchCodeInput = ({
           description: "Failed to validate super code for cycling event.",
           variant: "destructive",
         });
-        await handleFetchMatch(); // Try fetching match even if cycling event fails
+        await handleFetchMatch();
       } finally {
         setLoading(false);
       }
@@ -171,13 +184,12 @@ const MatchCodeInput = ({
       return;
     }
 
-    setSuperCodeError(null); // Clear error before fetching
+    setSuperCodeError(null);
 
-    // Wrap fetchMatch to ensure superCodeError is cleared on success
     setLoading(true);
     try {
       await fetchMatch();
-      setSuperCodeError(null); // Ensure error is cleared if fetchMatch succeeds
+      setSuperCodeError(null);
     } catch (error: any) {
       console.error("Error fetching match:", error);
       setMatchNotFound(true);
