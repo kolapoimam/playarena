@@ -32,7 +32,12 @@ const usePWAInstallPrompt = () => {
     setIsInstallable(false);
   };
 
-  return { isInstallable, triggerInstall };
+  const closeInstallPrompt = () => {
+    setDeferredPrompt(null);
+    setIsInstallable(false);
+  };
+
+  return { isInstallable, triggerInstall, closeInstallPrompt };
 };
 
 export default usePWAInstallPrompt;
