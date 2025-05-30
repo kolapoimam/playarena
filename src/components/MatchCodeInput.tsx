@@ -134,7 +134,7 @@ const MatchCodeInput = ({
           .from("cycling_events")
           .select(`
             id, supercode, slug, title, event_date, event_time, total_slots, is_paid, price, host_name, host_phone, start_landmark_id,
-            start_landmark:start_landmark_id_fkey(name, state)
+            start_landmark:landmarks(name, state)
           `)
           .eq("supercode", numericValue)
           .maybeSingle();
