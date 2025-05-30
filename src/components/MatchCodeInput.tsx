@@ -75,7 +75,6 @@ const MatchCodeInput = ({
 
     const fetchRecentCodes = async () => {
       try {
-        // Fetch recent super codes for matches and cycling events in parallel
         const [matchResponse, cyclingResponse] = await Promise.all([
           supabase
             .from("matches")
@@ -122,7 +121,6 @@ const MatchCodeInput = ({
     setCyclingEvent(null);
 
     if (numericValue.length === 6) {
-      // Validate with zod schema
       const validation = codeSchema.safeParse(numericValue);
       if (!validation.success) {
         setSuperCodeError(validation.error.errors[0].message);
@@ -131,45 +129,72 @@ const MatchCodeInput = ({
 
       setLoading(true);
       try {
-        const { data, error } = await supabase
+        // Try cycling event first
+        const { data: cyclingData, error: cyclingError } = await supabase
           .from("cycling_events")
           .select(`
             id, supercode, slug, title, event_date, event_time, total_slots, is_paid, price, host_name, host_phone, start_landmark_id,
-            start_landmark:landmarks(name, state)
+            start_landmark:start_landmark_id_fkey(name, state)
           `)
           .eq("supercode", numericValue)
           .maybeSingle();
 
-        if (error && error.code !== "PGRST116") {
-          console.error("Cycling event query error:", error);
-          throw error;
+        if (cyclingError) {
+          console.error("Cycling event query error:", cyclingError);
+          throw cyclingError;
         }
 
-        if (data) {
-          const cyclingData: CyclingEvent = {
-            ...data,
-            location: data.start_landmark
+        if (cyclingData) {
+          const cyclingEvent: CyclingEvent = {
+            ...cyclingData,
+            location: cyclingData.start_landmark
               ? {
-                  name: data.start_landmark.name ?? "Unknown Location",
-                  city: data.start_landmark.state ?? "Unknown City",
+                  name: cyclingData.start_landmark.name ?? "Unknown Location",
+                  city: cyclingData.start_landmark.state ?? "Unknown City",
                 }
               : null,
           };
           setIsCyclingEvent(true);
-          setCyclingEvent(cyclingData);
+          setCyclingEvent(cyclingEvent);
           setSuperCodeError(null);
-        } else {
-          // No cycling event found, try fetching match
-          await handleFetchMatch();
+          await fetchMatch(); // Trigger ConfirmCheckin to fetch full details
+          return;
         }
-      } catch (error: any) {
-        console.error("Error checking cycling event:", error);
+
+        // If no cycling event, try match
+        const { data: matchData, error: matchError } = await supabase
+          .from("matches")
+          .select("id, super_code")
+          .eq("super_code", numericValue)
+          .maybeSingle();
+
+        if (matchError) {
+          console.error("Match query error:", matchError);
+          throw matchError;
+        }
+
+        if (matchData) {
+          setIsCyclingEvent(false);
+          setCyclingEvent(null);
+          await fetchMatch();
+          return;
+        }
+
+        // No event found
+        setMatchNotFound(true);
         toast({
-          title: "Error",
-          description: "Failed to validate super code for cycling event.",
+          title: "Not Found",
+          description: "No event or match found with this super code.",
           variant: "destructive",
         });
-        await handleFetchMatch();
+      } catch (error: any) {
+        console.error("Error checking event:", error);
+        setMatchNotFound(true);
+        toast({
+          title: "Error",
+          description: error.message || "Failed to validate super code.",
+          variant: "destructive",
+        });
       } finally {
         setLoading(false);
       }
@@ -177,7 +202,6 @@ const MatchCodeInput = ({
   };
 
   const handleFetchMatch = async () => {
-    // Validate code before fetching
     const validation = codeSchema.safeParse(superCode);
     if (!validation.success) {
       setSuperCodeError(validation.error.errors[0].message);
@@ -185,11 +209,9 @@ const MatchCodeInput = ({
     }
 
     setSuperCodeError(null);
-
     setLoading(true);
     try {
       await fetchMatch();
-      setSuperCodeError(null);
     } catch (error: any) {
       console.error("Error fetching match:", error);
       setMatchNotFound(true);
