@@ -196,7 +196,7 @@ const AttendeesManagement = ({
 
       if (updateError) throw updateError;
 
-      if (!event.is_paid && event.price) {
+      if (event.is_paid && event.price) {
         const slots = attendee.number_of_slots || 1;
         const amount = slots * event.price;
 
@@ -308,7 +308,7 @@ const AttendeesManagement = ({
         </Button>
         <Button
           onClick={handleCancelEvent}
-          className="bg-red-500 hover:bg-red-600 text-white flex-1",
+          className="bg-red-500 hover:bg-red-600 text-white flex-1"
           disabled={event.cancellation_status || isEventPast || loading}
         >
           Cancel Event
@@ -327,30 +327,30 @@ const AttendeesManagement = ({
         {isAttendeesOpen && (
           <div className="space-y-4 max-h-96 overflow-y-auto">
             {event.attendees?.length === 0 ? (
-              <p className="text-center text-gray-600 dark:text-gray-400 text-center">
+              <p className="text-center text-gray-600 dark:text-gray-400">
                 No attendees registered.
               </p>
-            >
             ) : (
               event.attendees?.map((attendee) => (
                 <div
                   key={attendee.id}
-                  className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 border border">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between justify-between items-center">
+                  className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between">
                     <div className="mb-2 sm:mb-0">
-                      <p className="font-medium font-semibold text-gray-900 dark:text-white">
+                      <p className="font-medium text-gray-900 dark:text-white">
                         {attendee.attendee_name}
                       </p>
                       <p className="text-sm text-gray-600 dark:text-gray-400">
                         Phone: {attendee.attendee_phone || "N/A"}
                       </p>
-                      <p className="text-sm sm text-gray-600 dark:text-gray">
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
                         Slots: {attendee.number_of_slots || 1}
                       </p>
                     </div>
-                    <div className="flex flex-col items-end space-y-2 items-end">
+                    <div className="flex flex-col items-end space-y-2">
                       <span
-                        className="`inline-block px-2 py-1 text-sm font-medium rounded border ${getStatusStyles(attendee.status)}`"
+                        className={`inline-block px-2 py-1 text-sm font-medium rounded border ${getStatusStyles(attendee.status)}`}
                       >
                         {attendee.status
                           .replace("_", " ")
@@ -358,9 +358,8 @@ const AttendeesManagement = ({
                       </span>
                       {canConfirmAttendees && attendee.status !== "checked_in" && (
                         <div className="flex items-center gap-2">
-                          <div>
-                        <Input
-                          placeholder="6-digit code"
+                          <Input
+                            placeholder="6-digit code"
                             value={checkinCodes[attendee.id] || ""}
                             onChange={(e) =>
                               handleCheckinCodeChange(attendee.id, e.target.value)
@@ -368,13 +367,12 @@ const AttendeesManagement = ({
                             inputMode="numeric"
                             pattern="[0-9]*"
                             maxLength={6}
-                            className="w-32 w-full text-sm"
+                            className="w-32 text-sm"
                             disabled={checkingInAttendees[attendee.id] || loading}
-                          >
                           />
                           <Button
                             onClick={() => validateCheckinCode(attendee.id)}
-                            className="bg-blue-500 hover:bg-blue-600 text-white font-semibold text-sm font-medium px-4 py-2 rounded-md py-2 rounded",
+                            className="bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium px-4 py-2 rounded"
                             disabled={
                               !checkinCodes[attendee.id] ||
                               checkinCodes[attendee.id].length !== 6 ||
@@ -383,21 +381,19 @@ const AttendeesManagement = ({
                             }
                           >
                             {checkingInAttendees[attendee.id] ? (
-                              <Loader2 className="h-4 w-4 animate-spin"
-                            />
+                              <Loader2 className="h-4 w-4 animate-spin" />
                             ) : (
-                                "Attendance"
-                              )}
+                              "Attendance"
+                            )}
                           </Button>
                         </div>
-                        </div>
-                      {checkinginCodeErrors[attendee.id] && (
-                            <p className="text-sm text-red-500 mt-1">
-                              {checkinCodeErrors[attendee.id]}
-                            </p>
-                          )}
-                      </div>
-                    )}
+                      )}
+                      {checkinCodeErrors[attendee.id] && (
+                        <p className="text-sm text-red-500 mt-1">
+                          {checkinCodeErrors[attendee.id]}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))
@@ -406,36 +402,32 @@ const AttendeesManagement = ({
         )}
       </div>
 
-      <Dialog open={checkinDialogOpen}
-      open={checkDialogOpen} onOpenChange={setCheckinDialogOpen}>
+      <Dialog open={checkinDialogOpen} onOpenChange={setCheckinDialogOpen}>
         <DialogContent className="sm:max-w-md rounded-lg">
           <DialogHeader>
             <DialogTitle>Check-in Successful</DialogTitle>
             <DialogDescription>
               {checkinAttendee && (
                 <>
-                  {checkinAttendee.name} has been checked in with
-                  "                "
+                  {checkinAttendee.name} has been checked in with{" "}
                   {checkinAttendee.slots} slot
                   {checkinAttendee.slots !== 1 ? "s" : ""}.
                 </>
               )}
             </DialogDescription>
           </DialogHeader>
-        )}
-        <DialogContent>
           <DialogFooter>
             <Button
               onClick={() => setCheckinDialogOpen(false)}
-              className="bg-green-500 hover:bg-green-700"
-              variant="green">
+              className="bg-green-500 hover:bg-green-600 text-white"
+            >
               Close
             </Button>
           </DialogFooter>
+        </DialogContent>
       </Dialog>
-</dialog>
     </div>
-);
+  );
 };
-        
+
 export default AttendeesManagement;
