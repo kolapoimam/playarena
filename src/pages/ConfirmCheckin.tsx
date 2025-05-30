@@ -167,7 +167,7 @@ const ConfirmCheckin = () => {
           .from("cycling_events")
           .select(`
             id, slug, title, event_date, event_time, event_start_time, event_end_time, total_slots, host_name, supercode, is_paid, price, cancellation_status, status,
-            start_landmark:start_landmark_id_fkey(name, state),
+            start_landmark:landmarks(name, state),
             attendees:cycling_attendees(id, attendee_name, attendee_phone, status, confirmation_code, details, number_of_slots)
           `)
           .eq("supercode", superCode)
