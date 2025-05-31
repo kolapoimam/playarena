@@ -125,10 +125,9 @@ const CyclingCodeInput = ({
       setLoading(true);
       try {
 const { data: cyclingData, error: cyclingError } = await supabase
-  .from("cycling_events")
+.from("cycling_events_view")
 .select(`
-  id, supercode, slug, title, event_date, start_time, max_attendees, is_free, price, host_name, host_phone, start_landmark_id, cancellation_status, status,
-  start_landmark:start_landmark_id!inner(name, state),
+  id, supercode, slug, title, event_date, start_time, max_attendees, is_free, price, host_name, host_phone, start_landmark_id, status, start_landmark, attendees),
   cycling_attendees(id_uuid, attendee_name, attendee_phone, attendee_status, confirmation_code, payment_status, number_of_slots)
 `)
   .eq("supercode", numericValue)
