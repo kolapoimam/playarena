@@ -19,7 +19,7 @@ type MatchCodeInputProps = {
   setMatchNotFound: (value: boolean) => void;
   loading: boolean;
   setLoading: (value: boolean) => void;
-  fetchMatch: () => Promise<void>;
+  fetchMatch: () => void;
   userId: string | null;
   recentSuperCodes: string[];
   setRecentSuperCodes: (codes: string[]) => void;
@@ -44,102 +44,29 @@ const MatchCodeInput = ({
   useEffect(() => {
     if (userId) {
       const fetchRecentCodes = async () => {
-        try {
-          const { data: matchData, error: matchError } = await supabase
-            .from("matches")
-            .select("super_code")
-            .eq("organizer_id", userId)
-            .order("created_at", { ascending: false })
-            .limit(3);
-
-          if (matchError) throw matchError;
-
-          const matchCodes = matchData
-            .map((match) => match.super_code)
-            .filter((code): code is string => !!code)
-            .slice(0, 3);
-          setRecentSuperCodes(matchCodes);
-        } catch (error) {
+        const { data, error } = await supabase
+          .from("matches")
+          .select("super_code")
+          .eq("organizer_id", userId)
+          .order("created_at", { ascending: false })
+          .limit(3);
+        if (error) {
           toast({
             title: "Error",
             description: "Failed to load recent super codes.",
             variant: "destructive",
           });
+        } else {
+          setRecentSuperCodes(data.map((match) => match.super_code).filter(code => code));
         }
       };
       fetchRecentCodes();
     }
   }, [userId, toast, setRecentSuperCodes]);
 
-  const handleCodeChange = async (value: string) => {
-    const numericValue = value.replace(/[^0-9]/g, "").slice(0, 6);
-    setSuperCode(numericValue);
-    setSuperCodeError(null);
-    setMatchNotFound(false);
-
-    if (numericValue.length === 6) {
-      setLoading(true);
-      try {
-        const result = codeSchema.safeParse(numericValue);
-        if (!result.success) {
-          setSuperCodeError(result.error.errors[0].message);
-        }
-      } finally {
-        setLoading(false);
-      }
-    }
-  };
-
-  // Example fetchMatch implementation
-  const handleFetchMatch = async () => {
-    if (!superCode) {
-      setSuperCodeError("Please enter a super code");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from("matches")
-        .select("id, slug, title, venue_id, match_date, match_time, total_slots, status, organizer_id")
-        .eq("super_code", superCode)
-        .single();
-
-      if (error) {
-        if (error.code === "PGRST116") {
-          setMatchNotFound(true);
-          setSuperCodeError("No match found with this super code");
-        } else {
-          throw error;
-        }
-      }
-
-      if (data) {
-        // Assuming parent component handles match data via context or state
-        toast({
-          title: "Success",
-          description: `Match "${data.title}" loaded successfully`,
-        });
-        // You may want to pass `data` to a parent component or context
-        // For now, we assume fetchMatch updates state elsewhere
-        await fetchMatch();
-      }
-    } catch (error) {
-      console.error("Error fetching match:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load match. Please try again.",
-        variant: "destructive",
-      });
-      setMatchNotFound(true);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6 border border-gray-200 dark:border-gray-700">
-      <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Enter Super Code</h2>
+      <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Enter Match Super Code</h2>
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="flex-1 relative">
           {userId && recentSuperCodes.length > 0 ? (
@@ -166,7 +93,12 @@ const MatchCodeInput = ({
               <Input
                 placeholder="Enter 6-digit super code"
                 value={superCode}
-                onChange={(e) => handleCodeChange(e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/[^0-9]/g, "").slice(0, 6);
+                  setSuperCode(value);
+                  setSuperCodeError(null);
+                  setMatchNotFound(false);
+                }}
                 inputMode="numeric"
                 pattern="[0-9]*"
                 maxLength={6}
@@ -178,7 +110,12 @@ const MatchCodeInput = ({
             <Input
               placeholder="Enter 6-digit super code"
               value={superCode}
-              onChange={(e) => handleCodeChange(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value.replace(/[^0-9]/g, "").slice(0, 6);
+                setSuperCode(value);
+                setSuperCodeError(null);
+                setMatchNotFound(false);
+              }}
               inputMode="numeric"
               pattern="[0-9]*"
               maxLength={6}
@@ -192,7 +129,7 @@ const MatchCodeInput = ({
         </div>
         <Button
           className="bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 w-full sm:w-auto"
-          onClick={handleFetchMatch}
+          onClick={fetchMatch}
           disabled={loading}
         >
           {loading ? (
