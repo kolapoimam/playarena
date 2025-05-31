@@ -20,27 +20,27 @@ type CyclingEvent = {
   slug: string;
   title: string;
   event_date: string;
-  event_time: string;
-  total_slots: number;
+  start_time: string;
+  max_attendees: number;
   host_name: string;
   host_phone: string;
-  super_code?: string;
-  is_paid: boolean;
+  supercode: string;
+  is_free: boolean;
   price?: number;
-  cancellation_status: boolean;
+  cancellation_status: string | null;
   status: string;
   location: {
-    name?: string;
-    city?: string;
+    name?: string | null;
+    city?: string | null;
   } | null;
   attendees: {
     id: string;
     attendee_name: string;
     attendee_phone: string;
     status: string;
-    confirmation_code: string;
+    confirmation_code: number;
     payment_status: boolean;
-    number_of_slots?: number;
+    number_of_slots?: string;
   }[] | null;
 };
 
@@ -68,7 +68,7 @@ type AttendeesManagementProps = {
   setLoading: (value: boolean) => void;
   isEventPast: boolean;
   canConfirmAttendees: boolean;
-  handleCancelEvent: () => void;
+  handleCancel: () => void;
   navigate: (path: string) => void;
 };
 
@@ -86,7 +86,7 @@ const AttendeesManagement = ({
   setLoading,
   isEventPast,
   canConfirmAttendees,
-  handleCancelEvent,
+  handleCancel,
   navigate,
 }: AttendeesManagementProps) => {
   const { toast } = useToast();
@@ -115,7 +115,7 @@ const AttendeesManagement = ({
   const canCheckin = () => {
     if (!event || event.cancellation_status || !event.attendees?.length)
       return false;
-    const eventDateTime = new Date(`${event.event_date}T${event.event_time}`);
+    const eventDateTime = new Date(`${event.event_date}T${event.start_time}`);
     const eventEndTime = addHours(eventDateTime, 2);
     return !isPast(eventEndTime);
   };
@@ -182,7 +182,7 @@ const AttendeesManagement = ({
         throw new Error("Attendee is marked as absent.");
       }
 
-      if (attendeeData.confirmation_code !== code) {
+      if (attendeeData.confirmation_code !== Number(code)) {
         throw new Error("Invalid confirmation code.");
       }
 
@@ -196,8 +196,8 @@ const AttendeesManagement = ({
 
       if (updateError) throw updateError;
 
-      if (event.is_paid && event.price) {
-        const slots = attendee.number_of_slots || 1;
+      if (!event.is_free && event.price) {
+        const slots = Number(attendee.number_of_slots) || 1;
         const amount = slots * event.price;
 
         const { data: userData } = await supabase.auth.getUser();
@@ -234,7 +234,7 @@ const AttendeesManagement = ({
       setCheckinAttendee({
         id: attendeeId,
         name: attendee.attendee_name,
-        slots: attendee.number_of_slots || 1,
+        slots: Number(attendee.number_of_slots) || 1,
       });
       setCheckinDialogOpen(true);
 
@@ -263,13 +263,13 @@ const AttendeesManagement = ({
   const getStatusStyles = (status: string) => {
     switch (status) {
       case "registered":
-        return "bg-yellow-100 text-yellow-700 border-yellow-300";
+        return "bg-yellow-100 text-yellow-700 border-yellow-300 dark:bg-yellow-800 dark:text-yellow-200 dark:border-yellow-600";
       case "checked_in":
-        return "bg-green-100 text-green-700 border-green-300";
+        return "bg-green-100 text-green-700 border-green-300 dark:bg-green-800 dark:text-green-200 dark:border-green-600";
       case "absent":
-        return "bg-red-100 text-red-700 border-red-300";
+        return "bg-red-100 text-red-700 border-red-300 dark:bg-red-800 dark:text-red-200 dark:border-red-600";
       default:
-        return "bg-gray-100 text-gray-700 border-gray-300";
+        return "bg-gray-100 text-gray-700 border-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600";
     }
   };
 
@@ -294,7 +294,7 @@ const AttendeesManagement = ({
               });
             }
           }}
-          className="bg-green-500 hover:bg-green-600 text-white flex-1"
+          className="bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700 text-white flex-1"
           disabled={!canCheckin() || loading}
         >
           {loading ? (
@@ -307,8 +307,8 @@ const AttendeesManagement = ({
           )}
         </Button>
         <Button
-          onClick={handleCancelEvent}
-          className="bg-red-500 hover:bg-red-600 text-white flex-1"
+          onClick={handleCancel}
+          className="bg-red-500 hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700 text-white flex-1"
           disabled={event.cancellation_status || isEventPast || loading}
         >
           Cancel Event
@@ -345,7 +345,7 @@ const AttendeesManagement = ({
                         Phone: {attendee.attendee_phone || "N/A"}
                       </p>
                       <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Slots: {attendee.number_of_slots || 1}
+                        Slots: {Number(attendee.number_of_slots) || 1}
                       </p>
                     </div>
                     <div className="flex flex-col items-end space-y-2">
@@ -367,12 +367,12 @@ const AttendeesManagement = ({
                             inputMode="numeric"
                             pattern="[0-9]*"
                             maxLength={6}
-                            className="w-32 text-sm"
+                            className="w-32 text-sm dark:bg-gray-800 dark:text-gray-100"
                             disabled={checkingInAttendees[attendee.id] || loading}
                           />
                           <Button
                             onClick={() => validateCheckinCode(attendee.id)}
-                            className="bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium px-4 py-2 rounded"
+                            className="bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded"
                             disabled={
                               !checkinCodes[attendee.id] ||
                               checkinCodes[attendee.id].length !== 6 ||
@@ -389,7 +389,7 @@ const AttendeesManagement = ({
                         </div>
                       )}
                       {checkinCodeErrors[attendee.id] && (
-                        <p className="text-sm text-red-500 mt-1">
+                        <p className="text-sm text-red-500 dark:text-red-400 mt-1">
                           {checkinCodeErrors[attendee.id]}
                         </p>
                       )}
@@ -419,7 +419,7 @@ const AttendeesManagement = ({
           <DialogFooter>
             <Button
               onClick={() => setCheckinDialogOpen(false)}
-              className="bg-green-500 hover:bg-green-600 text-white"
+              className="bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700 text-white"
             >
               Close
             </Button>
