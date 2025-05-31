@@ -117,7 +117,7 @@ const CyclingCodeInput = ({
           .from("cycling_events")
           .select(`
             id, supercode, slug, title, event_date, start_time, max_attendees, is_free, price, host_name, host_phone, start_landmark_id,
-            start_landmark:landmarks(name, state)
+            start_landmark:start_landmark_id!inner(name, state)
           `)
           .eq("supercode", numericValue)
           .maybeSingle();
