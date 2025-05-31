@@ -173,7 +173,7 @@ const ConfirmCheckin = () => {
           .select(`
             id, slug, title, event_date, start_time, event_start_time, event_end_time, max_attendees, host_id, host_name, host_phone, supercode, is_free, price, cancellation_status, status, start_landmark_id,
             start_landmark:start_landmark_id!inner(name, state),
-            attendees:cycling_attendees(id, attendee_name, attendee_phone, status, confirmation_code, details, number_of_slots)
+            cycling_attendees:cycling_attendees(id, attendee_name, attendee_phone, status, confirmation_code, details, number_of_slots)
           `)
           .eq("supercode", superCode)
           .single();
@@ -211,7 +211,7 @@ const ConfirmCheckin = () => {
                 city: data.start_landmark.state ?? "Unknown City",
               }
             : null,
-          attendees: Array.isArray(data.attendees) ? data.attendees.map(attendee => ({
+          attendees: Array.isArray(data.cycling_attendees) ? data.cycling_attendees.map(attendee => ({
             ...attendee,
             details: attendee.details || { phone: attendee.attendee_phone || "N/A" },
           })) : [],
@@ -602,8 +602,8 @@ const ConfirmCheckin = () => {
   }, [match?.id, cyclingEvent?.id, isCyclingEvent]);
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
-      <header className="sticky top-0 dark:bg-gray-50 bg-green-500 text-white">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex flex-col">
+      <header className="sticky top-0 dark:bg-gray-50 bg-green-500 text-white z-20">
         <div className="p-4 flex items-center justify-between">
           <Button
             variant="ghost"
@@ -618,7 +618,7 @@ const ConfirmCheckin = () => {
         </div>
       </header>
 
-      <div className="max-w-4xl mx-auto p-4">
+      <div className="flex-1 max-w-4xl mx-auto p-4 pb-24 overflow-y-auto">
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6 border border-gray-200 dark:border-gray-700">
           <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">
             Select Event Type
@@ -864,7 +864,9 @@ const ConfirmCheckin = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <Navbar />
+      <div className="sticky bottom-0 z-10">
+        <Navbar />
+      </div>
     </div>
   );
 };
