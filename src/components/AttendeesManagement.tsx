@@ -37,7 +37,7 @@ type CyclingEvent = {
 id_uuid: string;
     attendee_name: string;
     attendee_phone: string;
-    status: "registered" | "checked_in" | "absent";
+    attendee_status: "registered" | "checked_in" | "absent";
     confirmation_code: number;
     payment_status: boolean;
     number_of_slots?: string;
@@ -46,7 +46,7 @@ id_uuid: string;
 
 type AttendeeStatus = {
   id_uuid: string;
-  status: "registered" | "checked_in" | "absent";
+  attendee_status: "registered" | "checked_in" | "absent";
   checkinCode: string;
 };
 
@@ -120,7 +120,7 @@ const AttendeesManagement = ({
 
 const initialStatuses = event.cycling_attendees.map((attendee) => ({
   id: attendee.id_uuid,
-  status: attendee.status as "registered" | "checked_in" | "absent",
+  status: attendee.attendee_status as "registered" | "checked_in" | "absent",
   checkinCode: checkinCodes[attendee.id_uuid] || "",
 }));
     setAttendeeStatuses(initialStatuses);
@@ -200,7 +200,7 @@ const initialStatuses = event.cycling_attendees.map((attendee) => ({
     try {
 const { data: attendeeData, error: attendeeError } = await supabase
   .from("cycling_attendees")
-  .select("id_uuid, confirmation_code, status")
+  .select("id_uuid, confirmation_code, attendee_status")
   .eq("id_uuid", attendeeId)
   .single();
       
@@ -208,11 +208,11 @@ const { data: attendeeData, error: attendeeError } = await supabase
         throw new Error(attendeeError?.message || "Attendee not found.");
       }
 
-      if (attendeeData.status === "checked_in") {
+      if (attendeeData.attendee_status === "checked_in") {
         throw new Error("Attendee is already checked in.");
       }
 
-      if (attendeeData.status === "absent") {
+      if (attendeeData.attendee_status === "absent") {
         throw new Error("Attendee is marked as absent.");
       }
 
@@ -261,7 +261,7 @@ const { data: attendeeData, error: attendeeError } = await supabase
 
       setAttendeeStatuses((prev) =>
         prev.map((s) =>
-          s.id === attendeeId ? { ...s, status: "checked_in" } : s
+          s.id === attendeeId ? { ...s, attendee_status: "checked_in" } : s
         )
       );
 
@@ -384,13 +384,13 @@ const { data: attendeeData, error: attendeeError } = await supabase
                     </div>
                     <div className="flex flex-col items-end space-y-2">
                       <span
-                        className={`inline-block px-2 py-1 text-sm font-medium rounded border ${getStatusStyles(attendee.status)}`}
+                        className={`inline-block px-2 py-1 text-sm font-medium rounded border ${getStatusStyles(attendee.attendee_status)}`}
                       >
-                        {attendee.status
+                        {attendee.attendee_status
                           .replace("_", " ")
                           .replace(/\b\w/g, (c) => c.toUpperCase())}
                       </span>
-                      {canConfirmAttendees && attendee.status !== "checked_in" && (
+                      {canConfirmAttendees && attendee.attendee_status !== "checked_in" && (
                         <div className="flex items-center gap-2">
                           <Input
                             placeholder="6-digit code"
