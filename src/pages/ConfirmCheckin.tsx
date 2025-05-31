@@ -42,7 +42,7 @@ type Match = {
   is_paid: boolean;
   price?: number;
   cancellation_status: boolean;
-  match_status: string;
+  status: string;
   venue: {
     name?: string;
     city?: string;
@@ -288,7 +288,7 @@ const ConfirmCheckin = () => {
         const { data, error } = await supabase
           .from("matches")
           .select(`
-            id, slug, title, match_date, match_time, match_start_time, match_end_time, total_slots, organizer_id, organizer_name, super_code, is_paid, price, cancellation_status, match_status,
+            id, slug, title, match_date, match_time, match_start_time, match_end_time, total_slots, organizer_id, organizer_name, super_code, is_paid, price, cancellation_status, status,
             venue:venues(name, city),
             players(id, player_name, status, confirmation_code, details, number_of_slots)
           `)
@@ -330,7 +330,7 @@ const ConfirmCheckin = () => {
             : null,
           players: Array.isArray(data.players) ? data.players : [],
           cancellation_status: data.cancellation_status ?? false,
-          match_status: data.match_status ?? "upcoming",
+          status: data.status ?? "upcoming",
         };
 
         setMatch(matchData);
@@ -510,7 +510,7 @@ const ConfirmCheckin = () => {
         const { error: matchError } = await supabase
           .from("matches")
           .update({
-            match_status: "canceled",
+            status: "canceled",
             cancellation_status: true,
             updated_at: new Date().toISOString(),
           })
