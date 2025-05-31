@@ -10,31 +10,32 @@ type CyclingEvent = {
   slug: string;
   title: string;
   event_date: string;
-  event_time: string;
+  start_time: string;
   event_start_time?: string | null;
-  event_end_time?: string | null;
-  total_slots: number;
+  event_end_time?: number | null;
+  max_attendees: number;
   host_name: string;
-  super_code: string;
-  is_paid: boolean;
+  supercode: string;
+  is_free: boolean;
   price?: number;
-  cancellation_status: boolean;
-  event_status: string;
+  cancellation_status: string | null;
+  status: string;
   location: {
-    name?: string;
-    city?: string;
+    name?: string | null;
+    city?: string | null;
   } | null;
   attendees: {
     id: string;
     attendee_name: string;
+    attendee_phone: string;
     status: string;
-    confirmation_code: string;
+    confirmation_code: number;
     details: { phone: string } | null;
-    number_of_slots?: number;
+    number_of_slots?: string;
   }[] | null;
 };
 
-type CashoutProps = {
+type Cashout = {
   id: string;
   event_id: string;
   super_code: string;
@@ -48,13 +49,13 @@ type CashoutProps = {
 type CyclingDetailsProps = {
   event: CyclingEvent | null;
   cashout: Cashout | null;
-  handleCancelEvent: () => void;
+  handleCancel: () => void;
   loading: boolean;
   isEventPast: boolean;
   walletBalance: number;
 };
 
-const CyclingDetails = ({ event, cashout, handleCancelEvent, loading, isEventPast, walletBalance }: CyclingDetailsProps) => {
+const CyclingDetails = ({ event, cashout, handleCancel, loading, isEventPast, walletBalance }: CyclingDetailsProps) => {
   const { toast } = useToast();
   const [localWalletBalance, setLocalWalletBalance] = useState<number>(walletBalance);
 
@@ -66,18 +67,18 @@ const CyclingDetails = ({ event, cashout, handleCancelEvent, loading, isEventPas
 
     const fetchWalletBalance = async () => {
       try {
-        const { data: attendeesData, error: attendeesError } = await supabase
-          .from("attendees")
-          .select("attendee_status, number_of_slots")
+        const { data: attendeesData, error } = await supabase
+          .from("cycling_attendees")
+          .select("status, number_of_slots")
           .eq("event_id", event.id);
 
-        if (attendeesError) throw attendeesError;
+        if (error) throw error;
 
         let balance = 0;
-        if (event.is_paid && event.price) {
-          const checkedInAttendees = attendeesData.filter((a => a.attendee_status === "Checked In"));
+        if (!event.is_free && event.price) {
+          const checkedInAttendees = attendeesData.filter((a) => a.status === "checked_in");
           balance = checkedInAttendees.reduce(
-            (sum, attendee) => sum + ((attendee.number_of_slots || 1) * (event.price || 0)),
+            (sum, attendee) => sum + ((Number(attendee.number_of_slots) || 1) * (event.price || 0)),
             0
           );
         }
@@ -103,7 +104,7 @@ const CyclingDetails = ({ event, cashout, handleCancelEvent, loading, isEventPas
         {
           event: 'UPDATE',
           schema: 'public',
-          table: 'attendees',
+          table: 'cycling_attendees',
           filter: `event_id=eq.${event.id}`,
         },
         () => {
@@ -119,10 +120,10 @@ const CyclingDetails = ({ event, cashout, handleCancelEvent, loading, isEventPas
 
   const canCancelEvent = () => {
     if (!event) return false;
-    const eventDateTime = new Date(`${event.event_date}T${event.event_time}`);
+    const eventDateTime = new Date(`${event.event_date}T${event.start_time}`);
     const now = new Date();
     const minutesToStart = differenceInMinutes(eventDateTime, now);
-    const hasCheckedInAttendees = event.attendees?.some((a) => a.status === "Checked In") || false;
+    const hasCheckedInAttendees = event.attendees?.some((a) => a.status === "checked_in") || false;
     return minutesToStart > 0 && !event.cancellation_status && !hasCheckedInAttendees;
   };
 
@@ -137,10 +138,10 @@ const CyclingDetails = ({ event, cashout, handleCancelEvent, loading, isEventPas
   };
 
   const formatTime = (timeString: string) => {
-    const [hours, minutes] = timeString.split(":").map(Number);
-    const period = hours >= 12 ? "PM" : "AM";
-    const adjustedHours = hours % 12 || 12;
-    return `${adjustedHours}:${minutes.toString().padStart(2, "0")} ${period}`;
+    const match = timeString.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+    if (!match) return timeString;
+    let [_, hours, minutes, period] = match;
+    return `${parseInt(hours)}:${minutes} ${period.toUpperCase()}`;
   };
 
   const getStatusStyles = (status: string) => {
@@ -161,10 +162,10 @@ const CyclingDetails = ({ event, cashout, handleCancelEvent, loading, isEventPas
   const calculateExpectedAmount = () => {
     if (!event) return "N/A";
     let total = 0;
-    if (event.is_paid && event.price) {
-      const checkedInAttendees = event.attendees?.filter((a) => a.status === "Checked In") || [];
+    if (!event.is_free && event.price) {
+      const checkedInAttendees = event.attendees?.filter((a) => a.status === "checked_in") || [];
       total = checkedInAttendees.reduce(
-        (sum, attendee) => sum + ((attendee.number_of_slots || 1) * (event.price || 0)),
+        (sum, attendee) => sum + ((Number(attendee.number_of_slots) || 1) * (event.price || 0)),
         0
       );
     }
@@ -173,7 +174,7 @@ const CyclingDetails = ({ event, cashout, handleCancelEvent, loading, isEventPas
 
   const calculateTotalSlotsOccupied = () => {
     if (!event || !event.attendees) return 0;
-    return event.attendees.reduce((sum, attendee) => sum + (attendee.number_of_slots || 1), 0);
+    return event.attendees.reduce((sum, attendee) => sum + (Number(attendee.number_of_slots) || 1), 0);
   };
 
   if (!event) return null;
@@ -222,19 +223,19 @@ const CyclingDetails = ({ event, cashout, handleCancelEvent, loading, isEventPas
         <div className="flex items-center gap-3">
           <Clock size={20} className="text-green-500" />
           <span className="text-gray-900 dark:text-gray-100">
-            {event.event_time ? formatTime(event.event_time) : "Time TBD"}
+            {event.start_time ? formatTime(event.start_time) : "Time TBD"}
           </span>
         </div>
         <div className="flex items-center gap-3">
           <Users size={20} className="text-green-500" />
           <span className="text-gray-900 dark:text-gray-100">
-            {calculateTotalSlotsOccupied()}/{event.total_slots || 0} slots
+            {calculateTotalSlotsOccupied()}/{event.max_attendees || 0} slots
           </span>
         </div>
         <div className="flex items-center gap-3">
           <DollarSign size={20} className="text-green-500" />
           <span className="text-gray-900 dark:text-gray-100">
-            {event.is_paid ? `₦${event.price?.toLocaleString() || "0"} per ticket` : "Free"}
+            {event.is_free ? "Free" : `₦${event.price?.toLocaleString() || "0"} per ticket`}
           </span>
         </div>
         <div className="flex items-center gap-3">
@@ -244,7 +245,7 @@ const CyclingDetails = ({ event, cashout, handleCancelEvent, loading, isEventPas
           </span>
         </div>
       </div>
-      {event.cancellation_status && event.is_paid && (
+      {event.cancellation_status && !event.is_free && (
         <div className="mt-4 p-4 rounded bg-red-100 dark:bg-red-900">
           <p className="text-red-700 dark:text-red-300">
             This event has been cancelled. Attendees will be contacted for a refund.
@@ -260,8 +261,8 @@ const CyclingDetails = ({ event, cashout, handleCancelEvent, loading, isEventPas
       )}
       <div className="flex flex-wrap gap-4 mt-4">
         <Button
-          onClick={handleCancelEvent}
-          className={`bg-red-500 hover:bg-blue-600 text-white ${!canCancelEvent() ? 'opacity-50 cursor-not-allowed' : ''}`}
+          onClick={handleCancel}
+          className={`bg-red-500 hover:bg-red-600 text-white ${!canCancelEvent() ? 'opacity-50 cursor-not-allowed' : ''}`}
           disabled={!canCancelEvent() || loading}
         >
           Cancel Event
