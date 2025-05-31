@@ -198,12 +198,12 @@ const initialStatuses = event.cycling_attendees.map((attendee) => ({
     setLoading(true);
 
     try {
-      const { data: attendeeData, error: attendeeError } = await supabase
-        .from("cycling_attendees")
-        .select("id, confirmation_code, status")
-        .eq("id", attendeeId)
-        .single();
-
+const { data: attendeeData, error: attendeeError } = await supabase
+  .from("cycling_attendees")
+  .select("id_uuid, confirmation_code, status")
+  .eq("id_uuid", attendeeId)
+  .single();
+      
       if (attendeeError || !attendeeData) {
         throw new Error(attendeeError?.message || "Attendee not found.");
       }
