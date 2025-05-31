@@ -220,13 +220,13 @@ const { data, error } = await supabase
         };
 
         setCyclingEvent(cyclingData);
-        setPlayerStatuses(
-          (cyclingData.attendees || []).map((attendee) => ({
-            id: attendee.id,
-            status: attendee.status,
-            checkinCode: "",
-          }))
-        );
+setPlayerStatuses(
+  (cyclingData.attendees || []).map((attendee) => ({
+    id: attendee.id_uuid,
+    status: attendee.status,
+    checkinCode: "",
+  }))
+);
 
         try {
           const { data: cashoutData, error: cashoutError } = await supabase
