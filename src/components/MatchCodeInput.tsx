@@ -12,19 +12,19 @@ const codeSchema = z
    .regex(/^\d{6}$/, { message: "Code must be exactly 6 digits" });
 
 type MatchCodeInputProps = {
-  superCode string;
-  setSuperCode (code string) => void;
-  superCodeError string | null;
-  setSuperCodeError (error string | null) => void;
-  setMatchNotFound (value boolean) => void;
-  loading boolean;
-  setLoading (value boolean) => void;
-  fetchMatch () => void;
-  userId string | null;
-  recentSuperCodes string[];
-  setRecentSuperCodes (codes string[]) => void;
-  setIsCyclingEvent (value boolean) => void; // New prop to indicate cycling event
-  setCyclingEvent (event any) => void; // New prop to store cycling event data
+  superCode: string;
+  setSuperCode: (code: string) => void;
+  superCodeError: string | null;
+  setSuperCodeError: (error: string | null) => void;
+  setMatchNotFound: (value: boolean) => void;
+  loading: boolean;
+  setLoading: (value: boolean) => void;
+  fetchMatch: () => void;
+  userId: string | null;
+  recentSuperCodes: string[];
+  setRecentSuperCodes: (codes: string[]) => void;
+  setIsCyclingEvent: (value: boolean) => void;
+  setCyclingEvent: (event: any) => void;
 };
 
 const MatchCodeInput = ({
@@ -41,7 +41,7 @@ const MatchCodeInput = ({
   setRecentSuperCodes,
   setIsCyclingEvent,
   setCyclingEvent,
-} MatchCodeInputProps) => {
+}: MatchCodeInputProps) => {
   const { toast } = useToast();
   const codeInputRef = useRef<HTMLInputElement>(null);
 
@@ -50,21 +50,21 @@ const MatchCodeInput = ({
       const fetchRecentCodes = async () => {
         try {
           // Fetch recent match super codes
-          const { data matchData, error matchError } = await supabase
+          const { data: matchData, error: matchError } = await supabase
             .from("matches")
             .select("super_code")
             .eq("organizer_id", userId)
-            .order("created_at", { ascending false })
+            .order("created_at", { ascending: false })
             .limit(3);
 
           if (matchError) throw matchError;
 
           // Fetch recent cycling event super codes
-          const { data cyclingData, error cyclingError } = await supabase
+          const { data: cyclingData, error: cyclingError } = await supabase
             .from("cycling_events")
             .select("super_code")
             .eq("organizer_id", userId)
-            .order("created_at", { ascending false })
+            .order("created_at", { ascending: false })
             .limit(3);
 
           if (cyclingError) throw cyclingError;
@@ -76,9 +76,9 @@ const MatchCodeInput = ({
           setRecentSuperCodes(combinedCodes);
         } catch (error) {
           toast({
-            title "Error",
-            description "Failed to load recent super codes.",
-            variant "destructive",
+            title: "Error",
+            description: "Failed to load recent super codes.",
+            variant: "destructive",
           });
         }
       };
@@ -86,7 +86,7 @@ const MatchCodeInput = ({
     }
   }, [userId, toast, setRecentSuperCodes]);
 
-  const handleCodeChange = async (value string) => {
+  const handleCodeChange = async (value: string) => {
     const numericValue = value.replace(/[^0-9]/g, "").slice(0, 6);
     setSuperCode(numericValue);
     setSuperCodeError(null);
@@ -119,9 +119,9 @@ const MatchCodeInput = ({
   };
 
   return (
-    <div className="bg-white darkbg-gray-800 rounded-xl shadow-md p-6 mb-6 border border-gray-200 darkborder-gray-700">
-      <h2 className="text-xl font-semibold mb-4 text-gray-900 darktext-gray-100">Enter Super Code</h2>
-      <div className="flex flex-col smflex-row gap-4">
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6 border border-gray-200 dark:border-gray-700">
+      <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Enter Super Code</h2>
+      <div className="flex flex-col sm:flex-row gap-4">
         <div className="flex-1 relative">
           {userId && recentSuperCodes.length > 0 ? (
             <div className="relative">
@@ -157,7 +157,7 @@ const MatchCodeInput = ({
                 ref={codeInputRef}
               />
             </div>
-          ) (
+          ) : (
             <Input
               placeholder="Enter 6-digit super code"
               value={superCode}
@@ -174,7 +174,7 @@ const MatchCodeInput = ({
           )}
         </div>
         <Button
-          className="bg-green-500 hoverbg-green-600 text-white font-medium rounded-lg px-4 py-2 w-full smw-auto"
+          className="bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 w-full sm:w-auto"
           onClick={fetchMatch}
           disabled={loading}
         >
@@ -183,7 +183,7 @@ const MatchCodeInput = ({
               <Loader2 size={16} className="mr-2 animate-spin" />
               Loading...
             </>
-          ) (
+          ) : (
             "Load Event"
           )}
         </Button>
