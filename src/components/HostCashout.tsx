@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/hooks/use-supabase';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle as Description} from '@/components/ui.dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
@@ -102,7 +102,7 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
       if (!event.is_free && event.price) {
         const checkedInAttendees = attendeesData.filter(a => a.status === 'checked_in');
         balance = checkedInAttendees.reduce(
-          (sum, attendee) => sum + ((Number(attendeeNumber_of_slots) || 0) * (event.price || 0)),
+          (sum, attendee) => sum + ((Number(attendee.number_of_slots) || 1) * (event.price || 0)),
           0
         );
       }
@@ -119,12 +119,12 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
       balance -= cashoutTotal;
 
       setWalletBalance(balance < 0 ? 0 : balance);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching wallet balance:', error);
       toast({
-        title: ": " + "Error",
+        title: "Error",
         description: "Failed to load wallet balance.",
-        variant: "failed",
+        variant: "destructive",
       });
       setWalletBalance(0);
     }
@@ -146,8 +146,8 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
 
       if (error) throw error;
 
-      setCashoutsRequests(data || []);
-    } catch (error) {
+      setCashoutRequests(data || []);
+    } catch (error: any) {
       console.error('Error fetching cashout requests:', error);
       toast({
         title: "Error",
@@ -156,9 +156,7 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
       });
       setCashoutRequests([]);
     }
-  }, [event,
-      localTempIdentifier,
-      toast]);
+  }, [event, localTempIdentifier, toast]);
 
   useEffect(() => {
     if (!event || !localTempIdentifier) return;
@@ -174,7 +172,7 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
           event: '*',
           schema: 'public',
           table: 'cashouts',
-          filter: 'event_id=eq-${event.id}`,
+          filter: `event_id=eq.${event.id}`,
         },
         () => {
           fetchWalletBalance();
@@ -183,12 +181,12 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
       )
       .subscribe();
 
-      return () => {
-        supabase.removeChannel(channel);
-      };
-    }, [event, localTempIdentifier, fetchWalletBalance, fetchCashoutRequests]);
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [event, localTempIdentifier, fetchWalletBalance, fetchCashoutRequests]);
 
-  const handleInputChange(field, value) => {
+  const handleInputChange = (field: string, value: string) => {
     if (field === 'bankAccountNumber') {
       setBankAccountNumber(value.replace(/[^0-9]/g, '').slice(0, 10));
       const validation = bankAccountSchema.safeParse(value);
@@ -217,7 +215,7 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
       toast({
         title: "Error",
         description: "Event or session data is missing.",
-        variant: "failed",
+        variant: "destructive",
       });
       return;
     }
@@ -230,7 +228,7 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
       bankName: bankNameSchema.safeParse(bankName),
     };
 
-    const newErrors = {};
+    const newErrors: { [key: string]: string | null } = {};
     let hasError = false;
 
     for (const [field, result] of Object.entries(validations)) {
@@ -291,19 +289,19 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
       if (cashoutError) throw cashoutError;
 
       const { error: walletError } = await supabase
-          .rpc('update_wallet_balance', {
-            p_organizer_id: userId,
-            p_amount: amount,
-            p_operation: 'subtract',
-          });
+        .rpc('update_wallet_balance', {
+          p_organizer_id: userId,
+          p_amount: amount,
+          p_operation: 'subtract',
+        });
 
       if (walletError) {
         console.error('Wallet update error:', walletError);
         toast({
-              title: "Warning",
-              description: "Cashout requested, but failed to update wallet balance.",
-              variant: "destructive",
-            });
+          title: "Warning",
+          description: "Cashout requested, but failed to update wallet balance.",
+          variant: "destructive",
+        });
       }
 
       await fetchCashoutRequests();
@@ -317,12 +315,12 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
         title: "Success",
         description: "Cashout request submitted successfully.",
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Cashout error:', error);
       toast({
         title: "Error",
-          description: error.message || "Failed to submit cashout request.",
-          variant: "destructive",
+        description: error.message || "Failed to submit cashout request.",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -330,18 +328,18 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
   };
 
   const getStatusStyles = (status: string) => {
-    switch (status {
+    switch (status) {
       case 'Successful':
         return 'bg-green-100 dark:bg-green-800 text-green-700 dark:text-green-200 border-green-300 dark:border-green-600';
       case 'Failed':
         return 'bg-red-100 dark:bg-red-800 text-red-700 dark:text-red-200 border-red-300 dark:border-red-600';
       case 'Processed':
-        return 'bg-blue-100 dark:bg-blue-800 text-blue-700 dark-blue-200 border-blue-300 dark:border-blue-600';
+        return 'bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-200 border-blue-300 dark:border-blue-600';
       case 'Pending':
-        return 'bg-yellow-100 dark:bg-yellow-800 text-yellow-700 dark-yellow-200 border-yellow-300 dark-yellow-600';
+        return 'bg-yellow-100 dark:bg-yellow-800 text-yellow-700 dark:text-yellow-200 border-yellow-300 dark:border-yellow-600';
       default:
-        return 'bg-gray-100 dark:bg-gray-400 text-gray-700 dark-gray-200 border-gray-300 dark-gray-600';
-      }
+        return 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600';
+    }
   };
 
   if (!event) return null;
@@ -354,7 +352,7 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
           onClick={() => {
             fetchWalletBalance();
             fetchCashoutRequests();
-          }
+          }}
           className="bg-gray-500 dark:bg-gray-600 hover:bg-gray-600 dark:hover:bg-gray-500 text-white dark:text-gray-100"
         >
           <RefreshCw className="h-4 w-4 mr-2" />
