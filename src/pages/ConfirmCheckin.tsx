@@ -83,7 +83,7 @@ cycling_attendees: {
     id_uuid: string;
     attendee_name: string;
     attendee_phone: string;
-    status: string;
+    attendee_status: string;
     confirmation_code: string;
     details: { phone: string } | null;
     number_of_slots?: number;
@@ -173,7 +173,7 @@ const { data, error } = await supabase
 .select(`
   id, slug, title, event_date, start_time, event_start_time, event_end_time, max_attendees, host_id, host_name, host_phone, supercode, is_free, price, cancellation_status, status, start_landmark_id,
   start_landmark:start_landmark_id!inner(name, state),
-  attendees:cycling_attendees!cycling_event_id(id_uuid, attendee_name, attendee_phone, status, confirmation_code, details, number_of_slots)
+  attendees:cycling_attendees!cycling_event_id(id_uuid, attendee_name, attendee_phone, attendee_status, confirmation_code, details, number_of_slots)
 `)
   .eq("supercode", superCode)
   .single();
@@ -223,7 +223,7 @@ const { data, error } = await supabase
 setPlayerStatuses(
   (cyclingData.attendees || []).map((attendee) => ({
     id: attendee.id_uuid,
-    status: attendee.status,
+    status: attendee.attendee_status,
     checkinCode: "",
   }))
 );
@@ -271,12 +271,12 @@ setPlayerStatuses(
         if (cyclingData.event_end_time && isPast(new Date(cyclingData.event_end_time))) {
           const updates =
             cyclingData.attendees
-              ?.filter((p) => p.status === "registered" && p.status !== "checked_in")
+              ?.filter((p) => p.attendee_status === "registered" && p.attendee_status !== "checked_in")
               .map((p) =>
                 supabase
                   .from("cycling_attendees")
                   .update({
-                    status: "absent",
+                    attendee_status: "absent",
                     updated_at: new Date().toISOString(),
                   })
                   .eq("id", p.id)
