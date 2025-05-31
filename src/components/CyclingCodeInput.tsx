@@ -26,10 +26,21 @@ type CyclingEvent = {
   host_name: string;
   host_phone: string;
   start_landmark_id: string;
+  cancellation_status: string | null;
+  status: string;
   location: {
     name?: string;
     city?: string;
   } | null;
+  cycling_attendees: {
+    id: string;
+    attendee_name: string;
+    attendee_phone: string;
+    status: "registered" | "checked_in" | "absent";
+    confirmation_code: number;
+    payment_status: boolean;
+    number_of_slots?: string;
+  }[] | null;
 };
 
 const codeSchema = z
@@ -44,7 +55,7 @@ type CyclingCodeInputProps = {
   setEventNotFound: (value: boolean) => void;
   loading: boolean;
   setLoading: (value: boolean) => void;
-  fetchEvent: () => void;
+  fetchEvent: () => Promise<void>;
   userId: string | null;
   recentSuperCodes: string[];
   setRecentSuperCodes: (codes: string[]) => void;
@@ -116,8 +127,9 @@ const CyclingCodeInput = ({
         const { data: cyclingData, error: cyclingError } = await supabase
           .from("cycling_events")
           .select(`
-            id, supercode, slug, title, event_date, start_time, max_attendees, is_free, price, host_name, host_phone, start_landmark_id,
-            start_landmark:start_landmark_id!inner(name, state)
+            id, supercode, slug, title, event_date, start_time, max_attendees, is_free, price, host_name, host_phone, start_landmark_id, cancellation_status, status,
+            start_landmark:start_landmark_id!inner(name, state),
+            cycling_attendees!event_id(id, attendee_name, attendee_phone, status, confirmation_code, payment_status, number_of_slots)
           `)
           .eq("supercode", numericValue)
           .maybeSingle();
@@ -136,6 +148,7 @@ const CyclingCodeInput = ({
                   city: cyclingData.start_landmark.state ?? "Unknown City",
                 }
               : null,
+            cycling_attendees: cyclingData.cycling_attendees || [],
           };
           setCyclingEvent(cyclingEvent);
           setSuperCodeError(null);
@@ -167,7 +180,7 @@ const CyclingCodeInput = ({
     const validation = codeSchema.safeParse(superCode);
     if (!validation.success) {
       setSuperCodeError(validation.error.errors[0].message);
-      return;
+      return; 
     }
 
     setSuperCodeError(null);
@@ -178,8 +191,8 @@ const CyclingCodeInput = ({
       console.error("Error fetching event:", error);
       setEventNotFound(true);
       toast({
-        title: "Not Found",
-        description: "No cycling event found with this super code.",
+        title: "Error",
+        description: error.message || "Failed to fetch event.",
         variant: "destructive",
       });
     } finally {
@@ -205,7 +218,7 @@ const CyclingCodeInput = ({
                 }}
                 value={superCode}
               >
-                <SelectTrigger className="w-full text-base">
+                <SelectTrigger className="w-full text-base dark:bg-gray-700 dark:text-gray-100">
                   <SelectValue placeholder="Select or enter super code" />
                 </SelectTrigger>
                 <SelectContent>
@@ -223,7 +236,7 @@ const CyclingCodeInput = ({
                 inputMode="numeric"
                 pattern="[0-9]*"
                 maxLength={6}
-                className="w-full text-base mt-2"
+                className="w-full text-base mt-2 dark:bg-gray-700 dark:text-gray-100"
                 ref={codeInputRef}
               />
             </div>
@@ -235,18 +248,18 @@ const CyclingCodeInput = ({
               inputMode="numeric"
               pattern="[0-9]*"
               maxLength={6}
-              className="w-full text-base"
+              className="w-full text-base dark:bg-gray-700 dark:text-gray-100"
               ref={codeInputRef}
             />
           )}
           {superCodeError && (
-            <p className="text-sm text-red-600 mt-1">{superCodeError}</p>
+            <p className="text-sm text-red-600 dark:text-red-400 mt-1">{superCodeError}</p>
           )}
         </div>
         <Button
-          className="bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 w-full sm:w-auto"
+          className="bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700 text-white font-medium rounded-lg px-4 py-2 w-full sm:w-auto"
           onClick={handleFetchEvent}
-          disabled={loading}
+          disabled={loading || superCode.length !== 6}
         >
           {loading ? (
             <>
