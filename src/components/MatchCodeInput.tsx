@@ -23,8 +23,6 @@ type MatchCodeInputProps = {
   userId: string | null;
   recentSuperCodes: string[];
   setRecentSuperCodes: (codes: string[]) => void;
-  setIsCyclingEvent: (value: boolean) => void;
-  setCyclingEvent: (event: any) => void;
 };
 
 const MatchCodeInput = ({
@@ -39,8 +37,6 @@ const MatchCodeInput = ({
   userId,
   recentSuperCodes,
   setRecentSuperCodes,
-  setIsCyclingEvent,
-  setCyclingEvent,
 }: MatchCodeInputProps) => {
   const { toast } = useToast();
   const codeInputRef = useRef<HTMLInputElement>(null);
@@ -59,21 +55,12 @@ const MatchCodeInput = ({
 
           if (matchError) throw matchError;
 
-          // Fetch recent cycling event super codes
-          const { data: cyclingData, error: cyclingError } = await supabase
-            .from("cycling_events")
-            .select("super_code")
-            .eq("organizer_id", userId)
-            .order("created_at", { ascending: false })
-            .limit(3);
-
-          if (cyclingError) throw cyclingError;
-
-          // Combine and deduplicate super codes
-          const matchCodes = matchData.map((match) => match.super_code).filter(code => code);
-          const cyclingCodes = cyclingData.map((event) => event.super_code).filter(code => code);
-          const combinedCodes = [...new Set([...matchCodes, ...cyclingCodes])].slice(0, 3);
-          setRecentSuperCodes(combinedCodes);
+          // Set recent super codes for matches
+          const matchCodes = matchData
+            .map((match) => match.super_code)
+            .filter((code): code is string => !!code)
+            .slice(0, 3);
+          setRecentSuperCodes(matchCodes);
         } catch (error) {
           toast({
             title: "Error",
@@ -91,27 +78,15 @@ const MatchCodeInput = ({
     setSuperCode(numericValue);
     setSuperCodeError(null);
     setMatchNotFound(false);
-    setIsCyclingEvent(false);
-    setCyclingEvent(null);
 
-    // Check if the code corresponds to a cycling event
+    // Validate super code format
     if (numericValue.length === 6) {
       setLoading(true);
       try {
-        const { data, error } = await supabase
-          .from("cycling_events")
-          .select("*")
-          .eq("super_code", numericValue)
-          .single();
-
-        if (error && error.code !== "PGRST116") throw error;
-
-        if (data) {
-          setIsCyclingEvent(true);
-          setCyclingEvent(data);
+        const result = codeSchema.safeParse(numericValue);
+        if (!result.success) {
+          setSuperCodeError(result.error.errors[0].message);
         }
-      } catch (error) {
-        console.error("Error checking cycling event", error);
       } finally {
         setLoading(false);
       }
@@ -130,8 +105,6 @@ const MatchCodeInput = ({
                   setSuperCode(value);
                   setSuperCodeError(null);
                   setMatchNotFound(false);
-                  setIsCyclingEvent(false);
-                  setCyclingEvent(null);
                 }}
                 value={superCode}
               >
@@ -184,7 +157,7 @@ const MatchCodeInput = ({
               Loading...
             </>
           ) : (
-            "Load Event"
+            "Load Match"
           )}
         </Button>
       </div>
