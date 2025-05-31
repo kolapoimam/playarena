@@ -169,10 +169,9 @@ const ConfirmCheckin = () => {
     try {
       if (isCyclingEvent) {
 const { data, error } = await supabase
-  .from("cycling_events")
+.from("cycling_events_view")
 .select(`
-  id, slug, title, event_date, start_time, event_start_time, event_end_time, max_attendees, host_id, host_name, host_phone, supercode, is_free, price, cancellation_status, status, start_landmark_id,
-  start_landmark:start_landmark_id!inner(name, state),
+  id, slug, title, event_date, start_time, max_attendees, host_id, host_name, host_phone, supercode, is_free, price, status, start_landmark_id, start_landmark, attendees),
   attendees:cycling_attendees!cycling_event_id(id_uuid, attendee_name, attendee_phone, attendee_status, confirmation_code, details, number_of_slots)
 `)
   .eq("supercode", superCode)
