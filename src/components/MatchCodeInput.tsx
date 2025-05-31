@@ -8,8 +8,8 @@ import { Loader2 } from "lucide-react";
 import { z } from "zod";
 
 const codeSchema = z
-   .string()
-   .regex(/^\d{6}$/, { message: "Code must be exactly 6 digits" });
+  .string()
+  .regex(/^\d{6}$/, { message: "Code must be exactly 6 digits" });
 
 type MatchCodeInputProps = {
   superCode: string;
@@ -19,7 +19,7 @@ type MatchCodeInputProps = {
   setMatchNotFound: (value: boolean) => void;
   loading: boolean;
   setLoading: (value: boolean) => void;
-  fetchMatch: () => void;
+  fetchMatch: () => Promise<void>;
   userId: string | null;
   recentSuperCodes: string[];
   setRecentSuperCodes: (codes: string[]) => void;
@@ -45,7 +45,6 @@ const MatchCodeInput = ({
     if (userId) {
       const fetchRecentCodes = async () => {
         try {
-          // Fetch recent match super codes
           const { data: matchData, error: matchError } = await supabase
             .from("matches")
             .select("super_code")
@@ -55,7 +54,6 @@ const MatchCodeInput = ({
 
           if (matchError) throw matchError;
 
-          // Set recent super codes for matches
           const matchCodes = matchData
             .map((match) => match.super_code)
             .filter((code): code is string => !!code)
@@ -79,7 +77,6 @@ const MatchCodeInput = ({
     setSuperCodeError(null);
     setMatchNotFound(false);
 
-    // Validate super code format
     if (numericValue.length === 6) {
       setLoading(true);
       try {
@@ -90,6 +87,53 @@ const MatchCodeInput = ({
       } finally {
         setLoading(false);
       }
+    }
+  };
+
+  // Example fetchMatch implementation
+  const handleFetchMatch = async () => {
+    if (!superCode) {
+      setSuperCodeError("Please enter a super code");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("matches")
+        .select("id, slug, title, venue_id, match_date, match_time, total_slots, status, organizer_id")
+        .eq("super_code", superCode)
+        .single();
+
+      if (error) {
+        if (error.code === "PGRST116") {
+          setMatchNotFound(true);
+          setSuperCodeError("No match found with this super code");
+        } else {
+          throw error;
+        }
+      }
+
+      if (data) {
+        // Assuming parent component handles match data via context or state
+        toast({
+          title: "Success",
+          description: `Match "${data.title}" loaded successfully`,
+        });
+        // You may want to pass `data` to a parent component or context
+        // For now, we assume fetchMatch updates state elsewhere
+        await fetchMatch();
+      }
+    } catch (error) {
+      console.error("Error fetching match:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load match. Please try again.",
+        variant: "destructive",
+      });
+      setMatchNotFound(true);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -148,7 +192,7 @@ const MatchCodeInput = ({
         </div>
         <Button
           className="bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 w-full sm:w-auto"
-          onClick={fetchMatch}
+          onClick={handleFetchMatch}
           disabled={loading}
         >
           {loading ? (
