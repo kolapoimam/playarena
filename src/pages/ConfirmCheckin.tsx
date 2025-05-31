@@ -168,15 +168,15 @@ const ConfirmCheckin = () => {
     setLoading(true);
     try {
       if (isCyclingEvent) {
-        const { data, error } = await supabase
-          .from("cycling_events")
-          .select(`
-            id, slug, title, event_date, start_time, event_start_time, event_end_time, max_attendees, host_id, host_name, host_phone, supercode, is_free, price, cancellation_status, status, start_landmark_id,
-            start_landmark:start_landmark_id!inner(name, state),
-            attendees:cycling_attendees(id, attendee_name, attendee_phone, status, confirmation_code, details, number_of_slots)
-          `)
-          .eq("supercode", superCode)
-          .single();
+const { data, error } = await supabase
+  .from("cycling_events")
+  .select(`
+    id, slug, title, event_date, start_time, event_start_time, event_end_time, max_attendees, host_id, host_name, host_phone, supercode, is_free, price, cancellation_status, status, start_landmark_id,
+    start_landmark:start_landmark_id!inner(name, state),
+    attendees:cycling_attendees!cycling_event_id(id, attendee_name, attendee_phone, status, confirmation_code, details, number_of_slots)
+  `)
+  .eq("supercode", superCode)
+  .single();
 
         if (error) throw error;
 
