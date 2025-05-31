@@ -34,7 +34,7 @@ type CyclingEvent = {
     city?: string | null;
   } | null;
   cycling_attendees: {
-    id: string;
+id_uuid: string;
     attendee_name: string;
     attendee_phone: string;
     status: "registered" | "checked_in" | "absent";
@@ -45,7 +45,7 @@ type CyclingEvent = {
 };
 
 type AttendeeStatus = {
-  id: string;
+  id_uuid: string;
   status: "registered" | "checked_in" | "absent";
   checkinCode: string;
 };
@@ -118,11 +118,11 @@ const AttendeesManagement = ({
   useEffect(() => {
     if (!event?.cycling_attendees) return;
 
-    const initialStatuses = event.cycling_attendees.map((attendee) => ({
-      id: attendee.id,
-      status: attendee.status as "registered" | "checked_in" | "absent",
-      checkinCode: checkinCodes[attendee.id] || "",
-    }));
+const initialStatuses = event.cycling_attendees.map((attendee) => ({
+  id: attendee.id_uuid,
+  status: attendee.status as "registered" | "checked_in" | "absent",
+  checkinCode: checkinCodes[attendee.id_uuid] || "",
+}));
     setAttendeeStatuses(initialStatuses);
 
     const channel = supabase
@@ -184,7 +184,7 @@ const AttendeesManagement = ({
       return;
     }
 
-    const attendee = event?.cycling_attendees?.find((p) => p.id === attendeeId);
+    const attendee = event?.cycling_attendees?.find((p) => p.id_uuid === attendeeId);
     if (!attendee) {
       toast({
         title: "Error",
