@@ -8,8 +8,8 @@ import { Loader2 } from "lucide-react";
 import { z } from "zod";
 
 const codeSchema = z
-  .string()
-  .regex(/^\d{6}$/, { message "Code must be exactly 6 digits" });
+   .string()
+   .regex(/^\d{6}$/, { message: "Code must be exactly 6 digits" });
 
 type MatchCodeInputProps = {
   superCode string;
