@@ -79,8 +79,8 @@ type CyclingEvent = {
     name?: string;
     city?: string;
   } | null;
-  attendees: {
-    id: string;
+attendees: {
+    id_uuid: string;
     attendee_name: string;
     attendee_phone: string;
     status: string;
