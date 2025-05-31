@@ -33,11 +33,11 @@ type CyclingEvent = {
     name?: string | null;
     city?: string | null;
   } | null;
-  attendees: {
+  cycling_attendees: {
     id: string;
     attendee_name: string;
     attendee_phone: string;
-    status: string;
+    status: "registered" | "checked_in" | "absent";
     confirmation_code: number;
     payment_status: boolean;
     number_of_slots?: string;
@@ -100,20 +100,54 @@ const AttendeesManagement = ({
   const [checkingInAttendees, setCheckingInAttendees] = useState<{
     [key: string]: boolean;
   }>({});
+  const [localTempIdentifier, setLocalTempIdentifier] = useState(tempIdentifier);
 
   useEffect(() => {
-    if (!event?.attendees) return;
+    if (!tempIdentifier) {
+      const stored = localStorage.getItem('tempIdentifier');
+      if (stored) {
+        setLocalTempIdentifier(stored);
+      } else {
+        const newId = require('uuid').v4();
+        localStorage.setItem('tempIdentifier', newId);
+        setLocalTempIdentifier(newId);
+      }
+    }
+  }, [tempIdentifier]);
 
-    const initialStatuses = event.attendees.map((attendee) => ({
+  useEffect(() => {
+    if (!event?.cycling_attendees) return;
+
+    const initialStatuses = event.cycling_attendees.map((attendee) => ({
       id: attendee.id,
       status: attendee.status as "registered" | "checked_in" | "absent",
       checkinCode: checkinCodes[attendee.id] || "",
     }));
     setAttendeeStatuses(initialStatuses);
-  }, [event?.attendees, setAttendeeStatuses, checkinCodes]);
+
+    const channel = supabase
+      .channel(`attendees_event_${event.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'cycling_attendees',
+          filter: `event_id=eq.${event.id}`,
+        },
+        () => {
+          fetchEvent();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [event?.cycling_attendees, setAttendeeStatuses, checkinCodes, event?.id, fetchEvent]);
 
   const canCheckin = () => {
-    if (!event || event.cancellation_status || !event.attendees?.length)
+    if (!event || event.cancellation_status || !event.cycling_attendees?.length)
       return false;
     const eventDateTime = new Date(`${event.event_date}T${event.start_time}`);
     const eventEndTime = addHours(eventDateTime, 2);
@@ -150,7 +184,7 @@ const AttendeesManagement = ({
       return;
     }
 
-    const attendee = event?.attendees?.find((p) => p.id === attendeeId);
+    const attendee = event?.cycling_attendees?.find((p) => p.id === attendeeId);
     if (!attendee) {
       toast({
         title: "Error",
@@ -320,18 +354,18 @@ const AttendeesManagement = ({
           onClick={() => setIsAttendeesOpen(!isAttendeesOpen)}
           className="flex items-center justify-between w-full text-left text-lg font-semibold mb-2 text-gray-900 dark:text-white"
         >
-          <span>Attendees ({event.attendees?.length || 0})</span>
+          <span>Attendees ({event.cycling_attendees?.length || 0})</span>
           {isAttendeesOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
         </button>
 
         {isAttendeesOpen && (
           <div className="space-y-4 max-h-96 overflow-y-auto">
-            {event.attendees?.length === 0 ? (
+            {event.cycling_attendees?.length === 0 ? (
               <p className="text-center text-gray-600 dark:text-gray-400">
                 No attendees registered.
               </p>
             ) : (
-              event.attendees?.map((attendee) => (
+              event.cycling_attendees?.map((attendee) => (
                 <div
                   key={attendee.id}
                   className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600"
@@ -367,7 +401,7 @@ const AttendeesManagement = ({
                             inputMode="numeric"
                             pattern="[0-9]*"
                             maxLength={6}
-                            className="w-32 text-sm dark:bg-gray-800 dark:text-gray-100"
+                            className="w-32 text-sm dark:bg-gray-700 dark:text-gray-100"
                             disabled={checkingInAttendees[attendee.id] || loading}
                           />
                           <Button
@@ -383,13 +417,13 @@ const AttendeesManagement = ({
                             {checkingInAttendees[attendee.id] ? (
                               <Loader2 className="h-4 w-4 animate-spin" />
                             ) : (
-                              "Attendance"
+                              "Check In"
                             )}
                           </Button>
                         </div>
                       )}
                       {checkinCodeErrors[attendee.id] && (
-                        <p className="text-sm text-red-500 dark:text-red-400 mt-1">
+                        <p className="text-sm text-red-600 dark:text-red-400 mt-1">
                           {checkinCodeErrors[attendee.id]}
                         </p>
                       )}
@@ -419,7 +453,7 @@ const AttendeesManagement = ({
           <DialogFooter>
             <Button
               onClick={() => setCheckinDialogOpen(false)}
-              className="bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700 text-white"
+              className="bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700 text-white rounded-md"
             >
               Close
             </Button>
