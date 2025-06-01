@@ -196,12 +196,10 @@ const Ticketing = () => {
     try {
       setSubmitting(true);
 
-      // totalPrice is in naira (e.g., 5000 for one ticket at ₦5000)
-      // Convert to kobo for Paystack (5000 * 100 = 500000 kobo)
       const response = await supabase.functions.invoke("initialize-paystack-transaction", {
         body: {
           email: defaultEmail,
-          amount: totalPrice * 100, // Paystack expects amount in kobo
+          amount: totalPrice,
           match_id: match.id,
           slug: match.slug,
           title: match.title,
