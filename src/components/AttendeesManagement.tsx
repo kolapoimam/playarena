@@ -319,41 +319,39 @@ const AttendeesManagement = ({
         throw new Error("Invalid confirmation code");
       }
 
-      // Update attendee status (one-time check-in), include confirmation_code in the WHERE clause
-      const { error: updateError, data: updateData } = await supabase
+      // Update attendee status
+      const { error: updateError } = await supabase
         .from("cycling_attendees")
-        .update({ attendee_status: "checked_in" })
-        .eq("id_uuid", attendeeId)
-        .eq("confirmation_code", code) // Add this to satisfy RLS policy
-        .select("id_uuid, attendee_status")
-        .single();
+        .update({ 
+          attendee_status: "checked_in",
+          updated_at: new Date().toISOString()
+        })
+        .eq("id_uuid", attendeeId);
 
       if (updateError) {
         console.error('Update error:', updateError);
         throw new Error("Failed to update attendee status");
       }
 
-      if (!updateData) {
-        throw new Error("Failed to update attendee status");
+      // Fetch the updated attendee data
+      const { data: updatedAttendee, error: fetchError } = await supabase
+        .from("cycling_attendees")
+        .select("id_uuid, attendee_status")
+        .eq("id_uuid", attendeeId)
+        .single();
+
+      if (fetchError || !updatedAttendee) {
+        throw new Error("Failed to fetch updated attendee data");
       }
 
       // Update local state
       setAttendeeStatuses((prev) =>
         prev.map((status) =>
           status.id_uuid === attendeeId
-            ? { ...status, attendee_status: "checked_in" }
+            ? { ...status, attendee_status: updatedAttendee.attendee_status as "registered" | "checked_in" | "absent" }
             : status
         )
       );
-
-      // Update event attendees
-      const updatedEvent = {
-        ...event,
-        attendees: event.attendees?.map((a) =>
-          a.id_uuid === attendeeId ? { ...a, attendee_status: "checked_in" } : a
-        ),
-      };
-      await fetchEvent();
 
       setCheckinAttendee({
         id: attendeeId,
@@ -379,13 +377,46 @@ const AttendeesManagement = ({
         delete newErrors[attendeeId];
         return newErrors;
       });
+
+      await fetchEvent();
     } catch (error: any) {
       console.error('Check-in error:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to check in attendee",
-        variant: "destructive",
-      });
+      if (error.message === "Attendee is already checked in or marked absent") {
+        const { data: updatedAttendee, error: fetchError } = await supabase
+          .from("cycling_attendees")
+          .select("id_uuid, attendee_status")
+          .eq("id_uuid", attendeeId)
+          .single();
+
+        if (fetchError || !updatedAttendee) {
+          toast({
+            title: "Error",
+            description: "Failed to fetch updated attendee status.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        setAttendeeStatuses((prev) =>
+          prev.map((status) =>
+            status.id_uuid === attendeeId
+              ? { ...status, attendee_status: updatedAttendee.attendee_status as "registered" | "checked_in" | "absent" }
+              : status
+          )
+        );
+
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to check in attendee",
+          variant: "destructive",
+        });
+      }
     } finally {
       setCheckingInAttendees((prev) => ({ ...prev, [attendeeId]: false }));
       setLoading(false);
