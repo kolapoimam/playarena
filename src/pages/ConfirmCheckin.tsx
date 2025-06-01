@@ -168,14 +168,13 @@ const ConfirmCheckin = () => {
     setLoading(true);
     try {
       if (isCyclingEvent) {
-const { data, error } = await supabase
-  .from("cycling_events_view")
-  .select(`
-    id_uuid, slug, title, event_date, start_time, max_attendees, host_id, host_name, host_phone, supercode, is_free, price, status, start_landmark_id, start_landmark,
-    attendees:cycling_attendees!cycling_attendees_cycling_event_id_uuid_fkey(id_uuid, attendee_name, attendee_phone, attendee_status, confirmation_code, details, number_of_slots)
-  `)
-  .eq("supercode", superCode)
-  .single();
+        const { data, error } = await supabase
+          .from("cycling_events_view")
+          .select(`
+            id_uuid, slug, title, event_date, start_time, max_attendees, host_id, host_name, host_phone, supercode, is_free, price, status, start_landmark_id, start_landmark, attendees
+          `)
+          .eq("supercode", superCode)
+          .single();
 
         if (error) throw error;
 
@@ -219,13 +218,13 @@ const { data, error } = await supabase
         };
 
         setCyclingEvent(cyclingData);
-setPlayerStatuses(
-  (cyclingData.attendees || []).map((attendee) => ({
-    id: attendee.id_uuid,
-    status: attendee.attendee_status,
-    checkinCode: "",
-  }))
-);
+        setPlayerStatuses(
+          (cyclingData.attendees || []).map((attendee) => ({
+            id: attendee.id_uuid,
+            status: attendee.attendee_status,
+            checkinCode: "",
+          }))
+        );
 
         try {
           const { data: cashoutData, error: cashoutError } = await supabase
