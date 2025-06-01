@@ -392,12 +392,12 @@ const CyclingActivity = () => {
           </div>
         ) : filteredEvents.length > 0 ? (
           <div className="space-y-4">
-{filteredEvents.map((event) => {
-  const { statusLabel, statusClass } = getEventStatus(event);
-  const isPast = event.status === "passed";
-  return (
-    <div key={event.id_uuid} className="w-full border rounded-lg overflow-hidden shadow-sm bg-white dark:bg-gray-800">
-      <div className="p-4">
+            {filteredEvents.map((event) => {
+              const { statusLabel, statusClass } = getEventStatus(event);
+              const isPast = event.status === "passed";
+              return (
+                <div key={event.id_uuid} className="w-full border rounded-lg overflow-hidden shadow-sm bg-white dark:bg-gray-800">
+                  <div className="p-4">
                     <div className="flex justify-between items-center">
                       <h3 className="font-bold text-lg text-gray-800 dark:text-gray-200">
                         {event.title}
@@ -457,6 +457,7 @@ const CyclingActivity = () => {
                     </div>
                   </div>
                 </div>
+              );
             })}
             <div className="flex justify-between items-center mt-4">
               <Button
@@ -464,7 +465,7 @@ const CyclingActivity = () => {
                 disabled={currentPage === 1}
                 onClick={handlePreviousPage}
               >
-                <ChevronLeft size={16" className="mr-2"/>
+                <ChevronLeft size={16} className="mr-2" />
                 Previous
               </Button>
               <span className="text-gray-700 dark:text-gray-200">
@@ -476,8 +477,8 @@ const CyclingActivity = () => {
                 onClick={handleNextPage}
               >
                 Next
-                  <ChevronRight size={16} className="ml-2" />
-                </Button>
+                <ChevronRight size={16} className="ml-2" />
+              </Button>
             </div>
           </div>
         ) : (
