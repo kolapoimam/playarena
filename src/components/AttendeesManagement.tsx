@@ -297,19 +297,18 @@ const AttendeesManagement = ({
     setLoading(true);
 
     try {
-      console.log('Checking in attendee:', { attendeeId, eventId: event.id_uuid, code, supercode: event.supercode });
+      console.log('Checking in attendee:', { attendeeId, code });
 
       // Verify attendee and current status
       const { data, error } = await supabase
         .from("cycling_attendees")
-        .select("id_uuid, confirmation_code, attendee_status, cycling_event_id_uuid")
+        .select("id_uuid, confirmation_code, attendee_status")
         .eq("id_uuid", attendeeId)
-        .eq("cycling_event_id_uuid", event.id_uuid)
         .single();
 
       if (error || !data) {
         console.error('Select error:', error);
-        throw new Error(error?.message || "Attendee not found in database");
+        throw new Error("Attendee not found in database");
       }
 
       if (data.attendee_status !== "registered") {
@@ -321,33 +320,27 @@ const AttendeesManagement = ({
       }
 
       // Update attendee status (one-time check-in)
-      const updatePayload = {
-        attendee_status: "checked_in",
-      };
-      console.log('Update payload:', updatePayload);
-
       const { error: updateError, data: updateData } = await supabase
         .from("cycling_attendees")
-        .update(updatePayload)
+        .update({ attendee_status: "checked_in" })
         .eq("id_uuid", attendeeId)
-        .eq("cycling_event_id_uuid", event.id_uuid)
-        .select("id_uuid, attendee_status, updated_at");
+        .select("id_uuid, attendee_status")
+        .single();
 
       if (updateError) {
         console.error('Update error:', updateError);
-        throw new Error(updateError.message || "Failed to update attendee status");
+        throw new Error("Failed to update attendee status");
       }
 
-      if (!updateData || updateData.length === 0) {
-        console.error('No rows updated:', { attendeeId, eventId: event.id_uuid, supercode: event.supercode });
-        throw new Error("No rows updated, please verify event and attendee IDs or supercode");
+      if (!updateData) {
+        throw new Error("Failed to update attendee status");
       }
 
-      const updatedAttendee = updateData[0];
+      // Update local state
       setAttendeeStatuses((prev) =>
         prev.map((status) =>
           status.id_uuid === attendeeId
-            ? { ...status, attendee_status: updatedAttendee.attendee_status as "registered" | "checked_in" | "absent" }
+            ? { ...status, attendee_status: "checked_in" }
             : status
         )
       );
@@ -373,6 +366,7 @@ const AttendeesManagement = ({
         description: `${attendee.attendee_name} has been checked in successfully.`,
       });
 
+      // Clear check-in code and errors
       setCheckinCodes((prev) => {
         const newCodes = { ...prev };
         delete newCodes[attendeeId];
@@ -386,48 +380,11 @@ const AttendeesManagement = ({
       });
     } catch (error: any) {
       console.error('Check-in error:', error);
-      if (error.message === "Attendee is already checked in or marked absent") {
-        const { data: updatedAttendee, error: fetchError } = await supabase
-          .from("cycling_attendees")
-          .select("id_uuid, attendee_status")
-          .eq("id_uuid", attendeeId)
-          .single();
-
-        if (fetchError || !updatedAttendee) {
-          toast({
-            title: "Error",
-            description: "Failed to fetch updated attendee status.",
-            variant: "destructive",
-          });
-          return;
-        }
-
-        setAttendeeStatuses((prev) =>
-          prev.map((status) =>
-            status.id_uuid === attendeeId
-              ? { ...status, attendee_status: updatedAttendee.attendee_status as "registered" | "checked_in" | "absent" }
-              : status
-          )
-        );
-
-        toast({
-          title: "Error",
-          description: error.message,
-          variant: "destructive",
-        });
-      } else if (error.message.includes("No rows updated")) {
-        toast({
-          title: "Error",
-          description: error.message,
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Error",
-          description: "Failed to check in attendee",
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Error",
+        description: error.message || "Failed to check in attendee",
+        variant: "destructive",
+      });
     } finally {
       setCheckingInAttendees((prev) => ({ ...prev, [attendeeId]: false }));
       setLoading(false);
