@@ -58,7 +58,7 @@ type Match = {
 };
 
 type CyclingEvent = {
-  id: string;
+  id_uuid: string;
   slug: string;
   title: string;
   event_date: string;
@@ -79,7 +79,7 @@ type CyclingEvent = {
     name?: string;
     city?: string;
   } | null;
-cycling_attendees: {
+  attendees: {
     id_uuid: string;
     attendee_name: string;
     attendee_phone: string;
@@ -169,11 +169,11 @@ const ConfirmCheckin = () => {
     try {
       if (isCyclingEvent) {
 const { data, error } = await supabase
-.from("cycling_events_view")
-.select(`
-  id, slug, title, event_date, start_time, max_attendees, host_id, host_name, host_phone, supercode, is_free, price, status, start_landmark_id, start_landmark, attendees),
-  attendees:cycling_attendees!cycling_event_id(id_uuid, attendee_name, attendee_phone, attendee_status, confirmation_code, details, number_of_slots)
-`)
+  .from("cycling_events_view")
+  .select(`
+    id_uuid, slug, title, event_date, start_time, max_attendees, host_id, host_name, host_phone, supercode, is_free, price, status, start_landmark_id, start_landmark,
+    attendees:cycling_attendees!cycling_attendees_cycling_event_id_uuid_fkey(id_uuid, attendee_name, attendee_phone, attendee_status, confirmation_code, details, number_of_slots)
+  `)
   .eq("supercode", superCode)
   .single();
 
@@ -460,7 +460,7 @@ setPlayerStatuses(
             cancellation_status: true,
             updated_at: new Date().toISOString(),
           })
-          .eq("id", cyclingEvent.id);
+          .eq("id", cyclingEvent.id_uuid);
 
         if (eventError) throw eventError;
 
@@ -470,7 +470,7 @@ setPlayerStatuses(
             status: "canceled",
             updated_at: new Date().toISOString(),
           })
-          .eq("event_id", cyclingEvent.id);
+          .eq("event_id", cyclingEvent.id_uuid);
 
         if (attendeesError) throw attendeesError;
 
@@ -555,16 +555,16 @@ setPlayerStatuses(
   }, [superCode, isCyclingEvent]);
 
   useEffect(() => {
-    if (isCyclingEvent && cyclingEvent?.id) {
+    if (isCyclingEvent && cyclingEvent?.id_uuid) {
       const subscription = supabase
-        .channel(`attendees_cycling_${cyclingEvent.id}`)
+        .channel(`attendees_cycling_${cyclingEvent.id_uuid}`)
         .on(
           "postgres_changes",
           {
             event: "*",
             schema: "public",
             table: "cycling_attendees",
-            filter: `event_id=eq.${cyclingEvent.id}`,
+            filter: `event_id=eq.${cyclingEvent.id_uuid}`,
           },
           (payload) => {
             console.log("Attendee update received", payload);
@@ -598,7 +598,7 @@ setPlayerStatuses(
         supabase.removeChannel(subscription);
       };
     }
-  }, [match?.id, cyclingEvent?.id, isCyclingEvent]);
+  }, [match?.id, cyclingEvent?.id_uuid, isCyclingEvent]);
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
