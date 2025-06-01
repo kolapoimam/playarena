@@ -201,7 +201,7 @@ const HostCycling = () => {
         toast({
           title: 'Error loading landmarks',
           description: 'Failed to load landmarks. Please try again.',
-          variant: 'error',
+          variant: 'destructive',
         });
       } finally {
         setLoadingLandmarks(false);
@@ -281,7 +281,7 @@ const handleCreateLandmark = async (data: {
     toast({
       title: 'Error creating landmark',
       description: error instanceof Error ? error.message : 'Failed to create landmark. Try again.',
-      variant: 'error',
+      variant: 'destructive',
     });
   }
 };
@@ -934,7 +934,7 @@ const handleCreateLandmark = async (data: {
       <CreateLandmarkDialog
         open={isCreateLandmarkOpen}
         onOpenChange={setIsCreateLandmarkOpen}
-        onSuccess={handleCreateLandmark}
+        onSave={handleCreateLandmark}
       />
       <Dialog open={successDialogIsOpen && !eventSlug} onOpenChange={(open) => !open && setIssuccessDialogIsOpen(false)}>
         <DialogContent>
