@@ -296,7 +296,7 @@ const AttendeesManagement = ({
     setCheckingInAttendees((prev) => ({ ...prev, [attendeeId]: true }));
     setLoading(true);
 
-    let currentStatus: string | null = null;
+    let currentStatus: "registered" | "checked_in" | "absent" | null = null;
 
     try {
       console.log('Checking in attendee:', { attendeeId, code });
@@ -313,7 +313,7 @@ const AttendeesManagement = ({
         throw new Error("Attendee not found in database");
       }
 
-      currentStatus = data.status;
+      currentStatus = data.status as "registered" | "checked_in" | "absent";
 
       if (data.status !== "registered") {
         throw new Error("Attendee is already checked in or marked absent");
@@ -345,12 +345,12 @@ const AttendeesManagement = ({
       setAttendeeStatuses((prev) =>
         prev.map((status) =>
           status.id_uuid === attendeeId
-            ? { ...status, attendee_status: "checked_in" }
+            ? { ...status, status: "checked_in" }
             : status
         )
       );
 
-      // Refresh event data to ensure consistency
+      // Refresh event data
       await fetchEvent();
 
       setCheckinAttendee({
@@ -388,7 +388,7 @@ const AttendeesManagement = ({
       setAttendeeStatuses((prev) =>
         prev.map((status) =>
           status.id_uuid === attendeeId
-            ? { ...status, attendee_status: currentStatus || "registered" }
+            ? { ...status, status: currentStatus || "registered" }
             : status
         )
       );
