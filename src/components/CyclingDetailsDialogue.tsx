@@ -45,12 +45,31 @@ type Event = {
   title: string;
   event_date: string;
   start_time: string;
+  event_start_time?: string | null;
+  event_end_time?: string | null;
   max_attendees: number;
-  is_free: boolean;
-  price?: number;
-  start_landmark: Landmark;
+  host_id: string;
   host_name: string;
   host_phone: string;
+  supercode: string;
+  is_free: boolean;
+  price?: number;
+  cancellation_status: boolean;
+  status: string;
+  start_landmark_id: string;
+  location: {
+    name?: string;
+    city?: string;
+  } | null;
+  cycling_attendees: {
+    id_uuid: string;
+    attendee_name: string;
+    attendee_phone: string;
+    attendee_status: string;
+    confirmation_code: string;
+    details: { phone: string } | null;
+    number_of_slots?: number;
+  }[] | null;
 };
 
 interface CyclingDetailsDialogueProps {
