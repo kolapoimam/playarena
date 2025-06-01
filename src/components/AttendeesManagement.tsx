@@ -299,7 +299,7 @@ const AttendeesManagement = ({
     try {
       console.log('Checking in attendee:', { attendeeId, eventId: event.id_uuid, code, supercode: event.supercode });
 
-      // Verify attendee
+      // Verify attendee and current status
       const { data, error } = await supabase
         .from("cycling_attendees")
         .select("id_uuid, confirmation_code, attendee_status, cycling_event_id_uuid")
@@ -313,17 +313,16 @@ const AttendeesManagement = ({
       }
 
       if (data.attendee_status !== "registered") {
-        throw new Error("Attendee is already checked in or absent");
+        throw new Error("Attendee is already checked in or marked absent");
       }
 
       if (data.confirmation_code !== code) {
         throw new Error("Invalid confirmation code");
       }
 
-      // Update attendee status
+      // Update attendee status (one-time check-in)
       const updatePayload = {
         attendee_status: "checked_in",
-        updated_at: new Date().toISOString().replace('Z', '+00:00'),
       };
       console.log('Update payload:', updatePayload);
 
@@ -340,8 +339,8 @@ const AttendeesManagement = ({
       }
 
       if (!updateData || updateData.length === 0) {
-        console.error('No rows updated:', { attendeeId, eventId: event.id_uuid });
-        throw new Error("No rows updated, please check event and attendee IDs");
+        console.error('No rows updated:', { attendeeId, eventId: event.id_uuid, supercode: event.supercode });
+        throw new Error("No rows updated, please verify event and attendee IDs or supercode");
       }
 
       const updatedAttendee = updateData[0];
@@ -361,23 +360,6 @@ const AttendeesManagement = ({
         ),
       };
       await fetchEvent();
-
-      // Fetch wallet balance (non-critical)
-      try {
-        const { data: walletData, error: walletError } = await supabase
-          .from("wallets")
-          .select("balance")
-          .eq("organizer_id", event.host_id)
-          .single();
-
-        if (walletError) {
-          console.error('Wallet fetch error:', walletError);
-        } else if (walletData) {
-          console.log('Wallet balance:', walletData.balance);
-        }
-      } catch (err) {
-        console.error('Wallet fetch exception:', err);
-      }
 
       setCheckinAttendee({
         id: attendeeId,
@@ -404,7 +386,7 @@ const AttendeesManagement = ({
       });
     } catch (error: any) {
       console.error('Check-in error:', error);
-      if (error.message === "Attendee is already checked in or absent") {
+      if (error.message === "Attendee is already checked in or marked absent") {
         const { data: updatedAttendee, error: fetchError } = await supabase
           .from("cycling_attendees")
           .select("id_uuid, attendee_status")
@@ -433,10 +415,16 @@ const AttendeesManagement = ({
           description: error.message,
           variant: "destructive",
         });
+      } else if (error.message.includes("No rows updated")) {
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive",
+        });
       } else {
         toast({
           title: "Error",
-          description: error.message || "Failed to check in attendee",
+          description: "Failed to check in attendee",
           variant: "destructive",
         });
       }
