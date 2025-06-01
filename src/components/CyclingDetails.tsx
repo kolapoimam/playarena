@@ -27,7 +27,7 @@ type CyclingEvent = {
     name?: string;
     city?: string;
   } | null;
-  cycling_attendees: {
+  attendees: {
     id_uuid: string;
     attendee_name: string;
     attendee_phone: string;
@@ -126,7 +126,7 @@ const CyclingDetails = ({ event, cashout, handleCancel, loading, isEventPast, wa
     const eventDateTime = new Date(`${event.event_date}T${event.start_time}`);
     const now = new Date();
     const minutesToStart = differenceInMinutes(eventDateTime, now);
-    const hasCheckedInAttendees = event.cycling_attendees?.some((a) => a.attendee_status === "checked_in") || false;
+    const hasCheckedInAttendees = event.attendees?.some((a) => a.attendee_status === "checked_in") || false;
     return minutesToStart > 0 && !event.cancellation_status && !hasCheckedInAttendees;
   };
 
@@ -166,7 +166,7 @@ const CyclingDetails = ({ event, cashout, handleCancel, loading, isEventPast, wa
     if (!event) return "N/A";
     let total = 0;
     if (!event.is_free && event.price) {
-      const checkedInAttendees = event.cycling_attendees?.filter((a) => a.attendee_status === "checked_in") || [];
+      const checkedInAttendees = event.attendees?.filter((a) => a.attendee_status === "checked_in") || [];
       total = checkedInAttendees.reduce(
         (sum, attendee) => sum + ((Number(attendee.number_of_slots) || 1) * (event.price || 0)),
         0
@@ -176,8 +176,8 @@ const CyclingDetails = ({ event, cashout, handleCancel, loading, isEventPast, wa
   };
 
   const calculateTotalSlotsOccupied = () => {
-    if (!event || !event.cycling_attendees) return 0;
-    return event.cycling_attendees.reduce((sum, attendee) => sum + (Number(attendee.number_of_slots) || 1), 0);
+    if (!event || !event.attendees) return 0;
+    return event.attendees.reduce((sum, attendee) => sum + (Number(attendee.number_of_slots) || 1), 0);
   };
 
   if (!event) return null;
