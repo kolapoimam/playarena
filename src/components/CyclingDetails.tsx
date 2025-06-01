@@ -62,7 +62,7 @@ type CyclingDetailsProps = {
 
 const CyclingDetails = ({ event, cashout, handleCancel, loading, isEventPast, walletBalance }: CyclingDetailsProps) => {
   const { toast } = useToast();
-  const [localWalletBalance, setLocalWalletBalance] = useState<number>(walletBalance);
+  const [localWalletBalance, setLocalWalletBalance] = useState<number>(walletBalance || 0);
 
   useEffect(() => {
     if (!event) {
@@ -75,17 +75,33 @@ const CyclingDetails = ({ event, cashout, handleCancel, loading, isEventPast, wa
         const { data: attendeesData, error } = await supabase
           .from("cycling_attendees")
           .select("status")
-          .eq("cycling_event_id_uuid", event.id_uuid);
+          .eq("cycling_event_id_uuid", event.id_uuid)
+          .throwOnError();
 
         if (error) throw error;
 
         let balance = 0;
         if (!event.is_free && event.price) {
-          const checkedInAttendees = attendeesData.filter((a) => a.status === "checked_in");
+          const checkedInAttendees = attendeesData?.filter((a) => a?.status === "checked_in") || [];
           balance = checkedInAttendees.reduce(
             (sum, attendee) => sum + (event.price || 0),
             0
           );
+        }
+
+        // Fetch wallet balance with proper headers
+        const { data: walletData, error: walletError } = await supabase
+          .from("wallets")
+          .select("balance")
+          .eq("organizer_id", event.host_id)
+          .single()
+          .throwOnError();
+
+        if (walletError) {
+          console.error("Wallet fetch error:", walletError);
+          // Continue with attendee-based balance if wallet fetch fails
+        } else if (walletData) {
+          balance = walletData.balance;
         }
 
         setLocalWalletBalance(balance < 0 ? 0 : balance);
@@ -168,9 +184,9 @@ const CyclingDetails = ({ event, cashout, handleCancel, loading, isEventPast, wa
     if (!event) return "N/A";
     let total = 0;
     if (!event.is_free && event.price) {
-      const checkedInAttendees = event.attendees?.filter((a) => a.status === "checked_in") || [];
+      const checkedInAttendees = event.attendees?.filter((a) => a?.status === "checked_in") || [];
       total = checkedInAttendees.reduce(
-        (sum, attendee) => sum + ((Number(attendee.number_of_slots) || 1) * (event.price || 0)),
+        (sum, attendee) => sum + ((Number(attendee?.number_of_slots) || 1) * (event.price || 0)),
         0
       );
     }
@@ -179,7 +195,7 @@ const CyclingDetails = ({ event, cashout, handleCancel, loading, isEventPast, wa
 
   const calculateTotalSlotsOccupied = () => {
     if (!event || !event.attendees) return 0;
-    return event.attendees.reduce((sum, attendee) => sum + (Number(attendee.number_of_slots) || 1), 0);
+    return event.attendees.reduce((sum, attendee) => sum + (Number(attendee?.number_of_slots) || 1), 0);
   };
 
   if (!event) return null;
