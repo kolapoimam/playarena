@@ -41,7 +41,7 @@ type CyclingEvent = {
     id_uuid: string;
     attendee_name: string;
     attendee_phone: string;
-    attendee_status: string;
+    status: "registered" | "checked_in" | "absent";
     confirmation_code: string;
     details: { phone: string } | null;
     number_of_slots?: number;
@@ -50,7 +50,7 @@ type CyclingEvent = {
 
 type AttendeeStatus = {
   id_uuid: string;
-  attendee_status: "registered" | "checked_in" | "absent";
+  status: "registered" | "checked_in" | "absent";
   checkinCode: string;
 };
 
@@ -131,14 +131,14 @@ const AttendeesManagement = ({
       try {
         const { data: attendeesData, error } = await supabase
           .from('cycling_attendees')
-          .select('id_uuid, attendee_status, confirmation_code')
+          .select('id_uuid, status, confirmation_code')
           .eq('cycling_event_id_uuid', event.id_uuid);
 
         if (error) throw error;
 
         const initialStatuses = attendeesData.map(attendee => ({
           id_uuid: attendee.id_uuid,
-          attendee_status: (attendee.attendee_status || 'registered') as "registered" | "checked_in" | "absent",
+          status: (attendee.status || 'registered') as "registered" | "checked_in" | "absent",
           checkinCode: checkinCodes[attendee.id_uuid] || ''
         }));
         setAttendeeStatuses(initialStatuses);
@@ -147,24 +147,24 @@ const AttendeesManagement = ({
         const eventDateTime = new Date(`${event.event_date}T${event.start_time}`);
         const checkTime = addDays(eventDateTime, 1);
         if (isPast(checkTime) && attendeesData.length > 0) {
-          const registeredAttendees = attendeesData.filter(a => a.attendee_status === 'registered');
+          const registeredAttendees = attendeesData.filter(a => a.status === 'registered');
           if (registeredAttendees.length > 0) {
             try {
               const { error: updateError } = await supabase
                 .from('cycling_attendees')
                 .update({ 
-                  attendee_status: 'absent',
+                  status: 'absent',
                   updated_at: new Date().toISOString()
                 })
                 .eq('cycling_event_id_uuid', event.id_uuid)
-                .eq('attendee_status', 'registered');
+                .eq('status', 'registered');
 
               if (updateError) throw updateError;
 
               setAttendeeStatuses(prev =>
                 prev.map(status =>
                   registeredAttendees.some(a => a.id_uuid === status.id_uuid)
-                    ? { ...status, attendee_status: 'absent' }
+                    ? { ...status, status: 'absent' }
                     : status
                 )
               );
@@ -190,7 +190,7 @@ const AttendeesManagement = ({
         if (event?.attendees) {
           const initialStatuses = event.attendees.map(attendee => ({
             id_uuid: attendee.id_uuid,
-            attendee_status: (attendee.attendee_status || 'registered') as "registered" | "checked_in" | "absent",
+            status: (attendee.status || 'registered') as "registered" | "checked_in" | "absent",
             checkinCode: checkinCodes[attendee.id_uuid] || ''
           }));
           setAttendeeStatuses(initialStatuses);
@@ -226,7 +226,7 @@ const AttendeesManagement = ({
     if (!event || event.cancellation_status || !event.attendees?.length) return false;
     const eventDateTime = new Date(`${event.event_date}T${event.start_time}`);
     const checkTime = addDays(eventDateTime, 1);
-    const hasRegisteredAttendees = event.attendees?.some(a => a.attendee_status === "registered");
+    const hasRegisteredAttendees = event.attendees?.some(a => a.status === "registered");
     return !isPast(checkTime) && hasRegisteredAttendees;
   };
 
@@ -344,7 +344,7 @@ const AttendeesManagement = ({
       setAttendeeStatuses((prev) =>
         prev.map((status) =>
           status.id_uuid === attendeeId
-            ? { ...status, attendee_status: "checked_in" }
+            ? { ...status, status: "checked_in" }
             : status
         )
       );
@@ -397,7 +397,7 @@ const AttendeesManagement = ({
       setAttendeeStatuses((prev) =>
         prev.map((status) =>
           status.id_uuid === attendeeId
-            ? { ...status, attendee_status: "registered" }
+            ? { ...status, status: "registered" }
             : status
         )
       );
@@ -484,11 +484,11 @@ const AttendeesManagement = ({
                     </div>
                     <div className="flex flex-col items-end space-y-2">
                       <span
-                        className={`inline-block px-2 py-1 text-sm font-medium rounded border ${getStatusStyles(attendee.attendee_status)}`}
+                        className={`inline-block px-2 py-1 text-sm font-medium rounded border ${getStatusStyles(attendee.status)}`}
                       >
-                        {getDisplayStatus(attendee.attendee_status)}
+                        {getDisplayStatus(attendee.status)}
                       </span>
-                      {mode === "checkin" && attendee.attendee_status === "registered" && canConfirmAttendees && (
+                      {mode === "checkin" && attendee.status === "registered" && canConfirmAttendees && (
                         <div className="flex items-center gap-2">
                           <Input
                             placeholder="6-digit code"
