@@ -617,7 +617,7 @@ setPlayerStatuses(
         </div>
       </header>
 
-      <div className="max-w-4xl mx-auto p-4 mt-4">
+      <div className="max-w-4xl mx-auto p-4 mt-4 pb-24">
         {superCode.length < 6 && (
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6 border border-gray-200 dark:border-gray-700">
             <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">
@@ -721,29 +721,27 @@ setPlayerStatuses(
 
         {(match || cyclingEvent) && !error && (
           <Tabs defaultValue="details" className="w-full">
-            <div className="sticky top-4 z-10">
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
-                <TabsList className="w-full grid grid-cols-3 bg-gray-100 dark:bg-gray-700 rounded-lg h-12">
-                  <TabsTrigger
-                    value="details"
-                    className="data-[state=active]:bg-green-500 data-[state=active]:text-white py-2 text-sm font-semibold rounded-lg"
-                  >
-                    Details
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="manage"
-                    className="data-[state=active]:bg-green-500 data-[state=active]:text-white py-2 text-sm font-semibold rounded-lg"
-                  >
-                    Manage
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="cashout"
-                    className="data-[state=active]:bg-green-500 data-[state=active]:text-white py-2 text-sm font-semibold rounded-lg"
-                  >
-                    Cashout
-                  </TabsTrigger>
-                </TabsList>
-              </div>
+            <div className="sticky top-16 z-10 bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
+              <TabsList className="w-full grid grid-cols-3 bg-gray-100 dark:bg-gray-700 rounded-lg h-12">
+                <TabsTrigger
+                  value="details"
+                  className="data-[state=active]:bg-green-500 data-[state=active]:text-white py-2 text-sm font-semibold rounded-lg"
+                >
+                  Details
+                </TabsTrigger>
+                <TabsTrigger
+                  value="manage"
+                  className="data-[state=active]:bg-green-500 data-[state=active]:text-white py-2 text-sm font-semibold rounded-lg"
+                >
+                  Manage
+                </TabsTrigger>
+                <TabsTrigger
+                  value="cashout"
+                  className="data-[state=active]:bg-green-500 data-[state=active]:text-white py-2 text-sm font-semibold rounded-lg"
+                >
+                  Cashout
+                </TabsTrigger>
+              </TabsList>
             </div>
             <TabsContent value="details" className="mt-0 pb-8">
               <div className="max-w-4xl mx-auto">
@@ -753,7 +751,7 @@ setPlayerStatuses(
                     cashout={cashout}
                     handleCancel={() => setIsCancelDialogOpen(true)}
                     loading={loading}
-                    isEventPast={isEventPast}
+                    isEventPast={isEventPast()}
                     walletBalance={walletBalance || 0}
                   />
                 ) : (
@@ -762,7 +760,7 @@ setPlayerStatuses(
                     cashout={cashout}
                     handleCancelMatch={() => setIsCancelDialogOpen(true)}
                     loading={loading}
-                    isMatchPast={isEventPast}
+                    isMatchPast={isEventPast()}
                   />
                 )}
               </div>
@@ -782,7 +780,7 @@ setPlayerStatuses(
                     fetchEvent={fetchEvent}
                     loading={loading}
                     setLoading={setLoading}
-                    isEventPast={isEventPast}
+                    isEventPast={isEventPast()}
                     canConfirmAttendees={canConfirmAttendees()}
                     handleCancel={() => setIsCancelDialogOpen(true)}
                     navigate={navigate}
@@ -800,7 +798,7 @@ setPlayerStatuses(
                     fetchMatch={fetchEvent}
                     loading={loading}
                     setLoading={setLoading}
-                    isMatchPast={isEventPast}
+                    isMatchPast={isEventPast()}
                     canConfirmPlayers={canConfirmAttendees()}
                     handleCancelMatch={() => setIsCancelDialogOpen(true)}
                     navigate={navigate}
