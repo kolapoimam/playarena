@@ -10,7 +10,7 @@ import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 
 type CyclingEvent = {
-  id: string;
+  id_uuid: string;
   slug: string;
   title: string;
   event_date: string;
@@ -31,7 +31,7 @@ type CyclingEvent = {
     name?: string;
     city?: string;
   } | null;
-  cycling_attendees: {
+  attendees: {
     id_uuid: string;
     attendee_name: string;
     attendee_phone: string;
@@ -46,7 +46,7 @@ type Cashout = {
   id: string;
   cycling_event_id_uuid: string;
   super_code: string;
-  amount: number;
+  total_amount_paid: number;
   bank_account_number: string;
   bank_name: string;
   account_name: string;
@@ -71,7 +71,7 @@ const nigerianBanks = [
 
 type HostCashoutProps = {
   event: CyclingEvent | null;
-  tempIdentifier: string;
+  tempIdentifier?: string;
 };
 
 const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
@@ -125,13 +125,13 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
 
       const { data: cashoutData, error: cashoutError } = await supabase
         .from('cashouts')
-        .select('amount')
+        .select('total_amount_paid')
         .eq('cycling_event_id_uuid', event.id_uuid)
         .in('status', ['Review', 'Processed', 'Pending', 'Successful']);
 
       if (cashoutError) throw cashoutError;
 
-      const cashoutTotal = cashoutData.reduce((sum, request) => sum + (request.amount || 0), 0);
+      const cashoutTotal = cashoutData.reduce((sum, request) => sum + (request.total_amount_paid || 0), 0);
       balance -= cashoutTotal;
 
       setWalletBalance(balance < 0 ? 0 : balance);
@@ -277,6 +277,34 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
       return;
     }
 
+    if (walletBalance === 0) {
+      setErrors(prev => ({ ...prev, cashoutAmount: 'No funds available for cashout' }));
+      toast({
+        title: "Error",
+        description: "No funds available for cashout.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (event.is_free) {
+      toast({
+        title: "Error",
+        description: "Cashout is not available for free events.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (event.cancellation_status) {
+      toast({
+        title: "Error",
+        description: "Cashout is not available for cancelled events.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -292,7 +320,7 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
         .insert({
           cycling_event_id_uuid: event.id_uuid,
           super_code: event.supercode,
-          amount,
+          total_amount_paid: amount,
           bank_account_number: bankAccountNumber,
           bank_name: bankName,
           account_name: accountName,
@@ -403,7 +431,7 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
             <div key={request.id} className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
               <div className="flex justify-between items-center">
                 <div>
-                  <p className="font-medium text-gray-900 dark:text-white">₦{request.amount.toLocaleString()}</p>
+                  <p className="font-medium text-gray-900 dark:text-white">₦{request.total_amount_paid.toLocaleString()}</p>
                   <p className="text-sm text-gray-600 dark:text-gray-400">{request.account_name}</p>
                   <p className="text-sm text-gray-600 dark:text-gray-400">{request.bank_name} - {request.bank_account_number}</p>
                   <p className="text-sm text-gray-600 dark:text-gray-400">{new Date(request.created_at).toLocaleString()}</p>
