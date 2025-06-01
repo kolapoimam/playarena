@@ -142,7 +142,6 @@ const CyclingDetail = () => {
             return;
           }
 
-          // Refresh attendees
           const { data: updatedAttendees, error: fetchError } = await supabase
             .from("cycling_attendees")
             .select("*")
@@ -201,14 +200,13 @@ const CyclingDetail = () => {
         .catch(() =>
           toast({ title: "Error", description: "Failed to share event." })
         );
-      } else {
-        navigator.clipboard.writeText(url);
-        toast({
-          title: "Link Copied",
-          description: "Event link copied to clipboard.",
-        });
-      }
-    });
+    } else {
+      navigator.clipboard.writeText(url);
+      toast({
+        title: "Link Copied",
+        description: "Event link copied to clipboard.",
+      });
+    }
   };
 
   const addToCalendar = () => {
@@ -222,9 +220,9 @@ const CyclingDetail = () => {
 
     const formatGoogleDate = (date: Date) => {
       const pad = (num: number) => num.toString().padStart(2, '0');
-      return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}T${pad(date.getHours())}}${pad(date.getMinutes())}${pad(date.getSeconds())}`;
-      };
-    const googleCalendar = `https://www.google.com/calendar/render?action=TEMPLATE` +
+      return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}T${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`;
+    };
+    const googleCalendarUrl = `https://www.google.com/calendar/render?action=TEMPLATE` +
       `&text=${encodeURIComponent(`Sport Cliq: ${event.title}`)}` +
       `&dates=${formatGoogleDate(eventDateTime)}/${formatGoogleDate(endDateTime)}` +
       `&location=${encodeURIComponent(`${event.start_landmark.name}, ${event.start_landmark.state}`)}` +
@@ -238,10 +236,8 @@ const CyclingDetail = () => {
       )}` +
       `&sf=true&output=xml`;
 
-      window.open(googleCalendarUrl, '_blank', 'width=600,height=600');
-      );
-      setTimeout(() => navigate(`/cycling-event/${slug}`), 1000);
-    );
+    window.open(googleCalendarUrl, '_blank', 'width=600,height=600');
+    setTimeout(() => navigate(`/cycling-event/${slug}`), 1000);
   };
 
   const formatDate = (dateString: string) => {
@@ -259,7 +255,6 @@ const CyclingDetail = () => {
     const date = new Date();
     date.setHours(parseInt(hours), parseInt(minutes), 0, 0);
     return date.toLocaleTimeString("en-NG", { hour: "2-digit", minute: "2-digit", hour12: true });
-    );
   };
 
   if (loading) {
@@ -269,12 +264,10 @@ const CyclingDetail = () => {
           <ArrowLeft size={18} className="mr-2" />
           Back
         </Button>
-      ))}
         <div className="text-center py-8">
-          <h2 className="text-xl font-semibold mb-2">}Event Not Found</h2>
-          <p className="text-muted-foreground">The event doesn't exist or has been removed.</p>
+          <h2 className="text-xl font-semibold mb-2">Loading...</h2>
+          <p className="text-muted-foreground">Fetching event details...</p>
         </div>
-      ))}
       </div>
     );
   }
@@ -283,15 +276,14 @@ const CyclingDetail = () => {
     return (
       <div className="p-4">
         <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4">
-          <ArrowLeft size={18} />
+          <ArrowLeft size={18} className="mr-2" />
           Back
         </Button>
-      );}
         <div className="text-center py-8">
-          <p className="h-2xl font-semibold mb-2">Event Not Found</h2>
+          <h2 className="text-2xl font-semibold mb-2">Event Not Found</h2>
           <p className="text-muted-foreground">The event doesn't exist or has been removed.</p>
         </div>
-      );}
+      </div>
     );
   }
 
@@ -299,91 +291,78 @@ const CyclingDetail = () => {
 
   return (
     <div className="min-h-screen pb-24">
-      <div className="min-h-screen pb-24">
-      <header className="p-4 bg-gradient-to-r from-green-500 to-green-700"> text-white rounded-b-2xl shadow-lg">
-        <div className="flex items-center justify-between items-center">
+      <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg">
+        <div className="flex items-center justify-between">
           <Button
             variant="ghost"
-            onClick={() => navigate(-1)} className="text-white hover:bg-green-600"
-            class="text-white hover:bg-green-600"
+            onClick={() => navigate(-1)}
+            className="text-white hover:bg-green-600"
           >
-            <ArrowLeft size={18} className="mr-2" />}
+            <ArrowLeft size={18} className="mr-2" />
             Back
           </Button>
           <div className="text-center">
             <h1 className="text-2xl font-bold">Event Details</h1>
           </div>
-          <div class="="w-10"></div>
+          <div className="w-10"></div>
         </div>
-      ))}
-    </div>
+      </header>
 
-    <div class="="p-4"> className="p-4">
-      <h1 class="="text-2xl font-bold mb-2">{event.title}</h1>
-      <div className="flex justify-between items-center mb-4">
-        <div class="flex items-center gap-2">
+      <div className="p-4">
+        <h1 className="text-2xl font-bold mb-2">{event.title}</h1>
+        <div className="flex justify-between items-center mb-4">
           <div className="flex items-center gap-2">
-            <p class="="text-muted-foreground" className="text-muted-foreground">Hosted by {event.host_name}</p>
+            <p className="text-muted-foreground">Hosted by {event.host_name}</p>
             <img 
               src="/green-verified.png"
               alt="Verified"
               className="inline-block w-5 h-5"
             />
           </div>
-        );}
-      </div>
-      ))}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleShare}
+            className="text-blue-600 border-blue-300 hover:bg-blue-50"
+          >
+            Share
+          </Button>
+        </div>
 
-      {isEnded ? (
-        <div class="="bg-gray-100 border border-gray-2 text-gray-700 px-4 py-3 rounded mb-4">
-          <div className="bg-gray-100 border-gray-200 border text-gray-700 px-4 py-3 rounded mb-4">
-            This is event has passed
+        {isEnded ? (
+          <div className="bg-gray-100 border border-gray-200 text-gray-700 px-4 py-3 rounded mb-4">
+            This event has passed
           </div>
-        ))}
-      ) : isStarted ? (
-          <div class="="bg-playarena-100 border border-playarena-blue-200 text-playarena-blue-700 px-4 py-3 rounded mb-4">
-            <div className="bg-playarena-100 border-playarena-200 border text-blue-700 px-4 py-3 rounded mb-4">
-            This is event has started!
-            </div>
+        ) : isStarted ? (
+          <div className="bg-blue-100 border border-blue-200 text-blue-700 px-4 py-3 rounded mb-4">
+            This event has started!
           </div>
         ) : isFull ? (
-          <div class="="bg-red-100 border border-red-200 text-red-700 px-4 py-3 rounded" mb-4">
-            <div className="bg-red-100 border-red-200 border text-red-700 px-4 py-3 rounded mb-4">
-              This is event is completely filled up!
-            >
-            </div>
+          <div className="bg-red-100 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
+            This event is completely filled up!
           </div>
         ) : status === "today" ? (
-            <div class="="bg-green-100 border border-green-200 Green text-green-700 px-4 py-3 rounded mb-4">
-              <div className="bg-green-100 border-green-200 border text-green-700 px-4 py-3 rounded mb-4">
-                This is event is happening today!
-            </div>
+          <div className="bg-green-100 border border-green-200 text-green-700 px-4 py-3 rounded mb-4">
+            This event is happening today!
           </div>
-            ) : status === "tomorrow" ? (
-              <div class="="bg-blue-100 border border-blue-200 text-blue-700 px-4 py-3 rounded mb-4">
-              <div className="bg-blue-100 border-blue-200 border text-blue-700 px-4 py-3 rounded mb-4">
-                This is event is happening tomorrow!
-              </div>
-            ) : null}
-            </div>
-          )};}
+        ) : status === "tomorrow" ? (
+          <div className="bg-blue-100 border border-blue-200 text-blue-700 px-4 py-3 rounded mb-4">
+            This event is happening tomorrow!
+          </div>
+        ) : null}
 
-      <div class="="space-y-4"> className="space-y-4">
-        <div class="border">
+        <div className="space-y-4">
           <div className="border rounded-lg p-4 bg-card shadow-md relative">
-            <div class="absolute top-4 right-4 m-0 p-0">
             <div className="absolute top-4 right-4 m-0 p-0">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => {addToCalendar;}}
-                className="text-playarena-blue-600 p-2 border-blue-300 hover:bg-blue-50 p-2 m-0"
+                onClick={addToCalendar}
+                className="text-blue-600 p-2 border-blue-300 hover:bg-blue-50 m-0"
               >
-                <Bell size={16} className="ml-0 mr-0" />
-              )}
+                <Bell size={16} className="m-0" />
               </Button>
             </div>
-          ))}
             <h2 className="font-semibold mb-3">Event Details</h2>
             <div className="space-y-3">
               <div className="flex items-center gap-2">
@@ -398,7 +377,7 @@ const CyclingDetail = () => {
                 onClick={() => navigate(`/landmark/${event.start_landmark.slug}`)}>
                 <MapPin size={18} className="mt-0.5" />
                 <div>
-                  <span className="text-playarena-green-600 hover:underline">
+                  <span className="text-green-600 hover:underline">
                     {event.start_landmark.name}, {event.start_landmark.state}
                   </span>
                   {event.start_landmark.map_link && (
@@ -414,7 +393,7 @@ const CyclingDetail = () => {
                         Link to Google Maps
                       </a>
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -427,7 +406,7 @@ const CyclingDetail = () => {
                 <Users size={18} />
                 <span>
                   {attendees.length}/{event.max_attendees} spots filled
-                  {isFull ? && "(FULL)" : ""}
+                  {isFull && " (FULL)"}
                 </span>
               </div>
               <div className="flex items-center gap-2">
@@ -449,24 +428,22 @@ const CyclingDetail = () => {
               )}
             </div>
           </div>
-        ))}
 
-        <AttendeesTable
-          event={event}
-          attendees={attendees}
-          navigate={navigate}
-          isEnded={isEnded}
-          isFull={isFull}
-          totalAttendees={attendees.length}
-        />
+          <AttendeesTable
+            event={event}
+            attendees={attendees}
+            navigate={navigate}
+            isEnded={isEnded}
+            isFull={isFull}
+            totalAttendees={attendees.length}
+          />
 
-        <CyclingDetailsDialogue event={event} attendees={attendees} />
+          <CyclingDetailsDialogue event={event} attendees={attendees} />
+        </div>
       </div>
-    ))}
-    <Navbar />
-  </div>
-);
-  )};
+      <Navbar />
+    </div>
+  );
 };
 
 export default CyclingDetail;
