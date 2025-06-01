@@ -51,19 +51,22 @@ interface AttendeesTableProps {
 }
 
 const formatStatus = (status: string) => {
-  return status.toLowerCase() === "no_show" ? "No Show" : status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, " ");
+  if (status.toLowerCase() === "absent") return "No Show";
+  return status.toLowerCase() === "no_show" ? "No Show" : 
+         status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, " ");
 };
 
 const getStatusStyles = (status: string) => {
   switch (status.toLowerCase()) {
     case "registered":
-      return "bg-yellow-500 text-white border-yellow-600";
+      return "bg-yellow-500 text-white border-yellow-200";
     case "checked_in":
-      return "bg-green-500 text-white border-green-600";
+      return "bg-green-500 text-white border-green-200";
+    case "absent":
     case "no_show":
-      return "bg-red-500 text-white border-red-600";
+      return "bg-red-500 text-white border-red-200";
     default:
-      return "bg-gray-500 text-white border-gray-600";
+      return "bg-gray-100 text-gray-800 border-gray-300";
   }
 };
 
@@ -98,24 +101,17 @@ const AttendeesTable: React.FC<AttendeesTableProps> = ({ event, attendees, navig
         {isEnded ? (
           <Button 
             className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
-            onClick={() => navigate(`/feedback?cyclingSlug=${event.slug}`)}
+            onClick={() => navigate(`/feedback/cycling/${event.slug}`)}
           >
             Give Feedback
-          </Button>
-        ) : isFull ? (
-          <Button 
-            className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
-            variant="outline"
-            disabled
-          >
-            Event Is Full
           </Button>
         ) : (
           <Button 
             className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
-            onClick={() => navigate(`/join-cycling/${event.slug}`)}
+            onClick={() => navigate(`/cycling/join/${event.slug}`)}
+            disabled={isFull || isStarted}
           >
-            Join This Event
+            {isFull ? "Event Full" : "Join This Event"}
           </Button>
         )}
       </div>
