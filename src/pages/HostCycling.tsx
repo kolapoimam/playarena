@@ -152,6 +152,7 @@ const HostCycling = () => {
   const [isRegistrationOpen, setIsRegistrationOpen] = useState(false);
   const [isHostDetailsOpen, setIsHostDetailsOpen] = useState(false);
   const [isCreateLandmarkOpen, setIsCreateLandmarkOpen] = useState(false);
+  const [isEndTimeEnabled, setIsEndTimeEnabled] = useState(false); // New state for end_time toggle
   const formRef = useRef<HTMLFormElement>(null);
   const createButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -209,6 +210,13 @@ const HostCycling = () => {
     fetchLandmarks();
   }, [toast]);
 
+  // Reset end_time when toggle is disabled
+  useEffect(() => {
+    if (!isEndTimeEnabled) {
+      form.setValue('end_time', '', { shouldValidate: true });
+    }
+  }, [isEndTimeEnabled, form]);
+
   const handleCreateLandmark = async (data: {
     new_landmark_name: string;
     new_landmark_state: string;
@@ -216,11 +224,11 @@ const HostCycling = () => {
     new_landmark_map_link?: string | null;
   }) => {
     try {
-const { data: slugData, error: slugDataError } = await supabase.rpc('generate_unique_slug', {
-  p_text_input: data.new_landmark_name,
-  p_table_name: 'landmarks',
-  p_id_uuid: null,
-});
+      const { data: slugData, error: slugDataError } = await supabase.rpc('generate_unique_slug', {
+        p_text_input: data.new_landmark_name,
+        p_table_name: 'landmarks',
+        p_id_uuid: null,
+      });
       if (slugDataError || !slugData) throw new Error(`Failed to generate landmark slug: ${slugDataError?.message || 'No slug data'}`);
 
       const { data: newLandmark, error: landmarkError } = await supabase
@@ -267,7 +275,11 @@ const { data: slugData, error: slugDataError } = await supabase.rpc('generate_un
         throw new Error(`Failed to generate supercode: ${supercodeError?.message || 'No supercode data'}`);
       }
 
-      const { data: slugData, error: slugError } = await supabase.rpc('generate_unique_slug', { title: data.title });
+      const { data: slugData, error: slugError } = await supabase.rpc('generate_unique_slug', {
+        p_text_input: data.title,
+        p_table_name: 'cycling_events',
+        p_id_uuid: null,
+      });
       if (slugError || !slugData) {
         throw new Error(`Failed to generate slug: ${slugError?.message || 'No slug data'}`);
       }
@@ -585,6 +597,26 @@ const { data: slugData, error: slugDataError } = await supabase.rpc('generate_un
                           </FormItem>
                         )}
                       />
+                    </div>
+                    <FormField
+                      control={form.control}
+                      name="isEndTimeEnabled" // Not part of formSchema, used for toggle
+                      render={({ field }) => (
+                        <FormItem className="flex items-center space-x-2">
+                          <FormControl>
+                            <Checkbox
+                              checked={isEndTimeEnabled}
+                              onCheckedChange={(checked) => {
+                                setIsEndTimeEnabled(!!checked);
+                                field.onChange(checked);
+                              }}
+                            />
+                          </FormControl>
+                          <FormLabel className="text-sm font-medium">Set End Time</FormLabel>
+                        </FormItem>
+                      )}
+                    />
+                    {isEndTimeEnabled && (
                       <FormField
                         control={form.control}
                         name="end_time"
@@ -603,7 +635,7 @@ const { data: slugData, error: slugDataError } = await supabase.rpc('generate_un
                           </FormItem>
                         )}
                       />
-                    </div>
+                    )}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
