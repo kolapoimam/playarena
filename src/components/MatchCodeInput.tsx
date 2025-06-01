@@ -66,7 +66,7 @@ const MatchCodeInput = ({
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6 border border-gray-200 dark:border-gray-700">
-      <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Enter Match Super Code</h2>
+      <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Match Super Code</h2>
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="flex-1 relative">
           {userId && recentSuperCodes.length > 0 ? (
