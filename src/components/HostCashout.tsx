@@ -110,7 +110,7 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
       const { data: attendeesData, error } = await supabase
         .from('cycling_attendees')
         .select('attendee_status, number_of_slots')
-        .eq('event_id', event.id);
+        .eq('cycling_event_id_uuid', event.id_uuid);
 
       if (error) throw error;
 
@@ -126,7 +126,7 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
       const { data: cashoutData, error: cashoutError } = await supabase
         .from('cashouts')
         .select('amount')
-        .eq('cycling_event_id_uuid', event.id)
+        .eq('cycling_event_id_uuid', event.id_uuid)
         .in('status', ['Review', 'Processed', 'Pending', 'Successful']);
 
       if (cashoutError) throw cashoutError;
@@ -156,7 +156,7 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
       const { data, error } = await supabase
         .from('cashouts')
         .select('*')
-        .eq('cycling_event_id_uuid', event.id)
+        .eq('cycling_event_id_uuid', event.id_uuid)
         .eq('temp_identifier', localTempIdentifier)
         .order('created_at', { ascending: false });
 
@@ -181,14 +181,14 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
     fetchCashoutRequests();
 
     const channel = supabase
-      .channel(`cashouts_event_${event.id}`)
+      .channel(`cashouts_event_${event.id_uuid}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
           table: 'cashouts',
-          filter: `cycling_event_id_uuid=eq.${event.id}`,
+          filter: `cycling_event_id_uuid=eq.${event.id_uuid}`,
         },
         () => {
           fetchWalletBalance();
@@ -290,7 +290,7 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
       const { error: cashoutError } = await supabase
         .from('cashouts')
         .insert({
-          cycling_event_id_uuid: event.id,
+          cycling_event_id_uuid: event.id_uuid,
           super_code: event.supercode,
           amount,
           bank_account_number: bankAccountNumber,
