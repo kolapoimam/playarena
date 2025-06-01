@@ -35,24 +35,36 @@ type Attendee = {
 };
 
 type CyclingEvent = {
-  id: string;
   id_uuid: string;
   slug: string;
   title: string;
   event_date: string;
   start_time: string;
-  duration_value: number;
-  duration_type: string;
+  event_start_time?: string | null;
+  event_end_time?: string | null;
   max_attendees: number;
-  is_free: boolean;
-  price?: number;
+  host_id: string;
   host_name: string;
   host_phone: string;
-  notes?: string;
-  is_own_bike: boolean;
-  is_rental_available: boolean;
-  start_landmark: Landmark;
-  end_landmark?: Landmark;
+  supercode: string;
+  is_free: boolean;
+  price?: number;
+  cancellation_status: boolean;
+  status: string;
+  start_landmark_id: string;
+  location: {
+    name?: string;
+    city?: string;
+  } | null;
+  cycling_attendees: {
+    id_uuid: string;
+    attendee_name: string;
+    attendee_phone: string;
+    attendee_status: string;
+    confirmation_code: string;
+    details: { phone: string } | null;
+    number_of_slots?: number;
+  }[] | null;
 };
 
 const CyclingDetail = () => {
