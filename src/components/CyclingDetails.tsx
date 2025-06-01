@@ -33,7 +33,7 @@ type CyclingEvent = {
     id_uuid: string;
     attendee_name: string;
     attendee_phone: string;
-    attendee_status: string;
+    status: "registered" | "checked_in" | "absent";
     confirmation_code: string;
     details: { phone: string } | null;
     number_of_slots?: number;
@@ -74,14 +74,14 @@ const CyclingDetails = ({ event, cashout, handleCancel, loading, isEventPast, wa
       try {
         const { data: attendeesData, error } = await supabase
           .from("cycling_attendees")
-          .select("attendee_status")
+          .select("status")
           .eq("cycling_event_id_uuid", event.id_uuid);
 
         if (error) throw error;
 
         let balance = 0;
         if (!event.is_free && event.price) {
-          const checkedInAttendees = attendeesData.filter((a) => a.attendee_status === "checked_in");
+          const checkedInAttendees = attendeesData.filter((a) => a.status === "checked_in");
           balance = checkedInAttendees.reduce(
             (sum, attendee) => sum + (event.price || 0),
             0
@@ -128,7 +128,7 @@ const CyclingDetails = ({ event, cashout, handleCancel, loading, isEventPast, wa
     const eventDateTime = new Date(`${event.event_date}T${event.start_time}`);
     const now = new Date();
     const minutesToStart = differenceInMinutes(eventDateTime, now);
-    const hasCheckedInAttendees = event.attendees?.some((a) => a.attendee_status === "checked_in") || false;
+    const hasCheckedInAttendees = event.attendees?.some((a) => a.status === "checked_in") || false;
     return minutesToStart > 0 && !event.cancellation_status && !hasCheckedInAttendees;
   };
 
@@ -168,7 +168,7 @@ const CyclingDetails = ({ event, cashout, handleCancel, loading, isEventPast, wa
     if (!event) return "N/A";
     let total = 0;
     if (!event.is_free && event.price) {
-      const checkedInAttendees = event.attendees?.filter((a) => a.attendee_status === "checked_in") || [];
+      const checkedInAttendees = event.attendees?.filter((a) => a.status === "checked_in") || [];
       total = checkedInAttendees.reduce(
         (sum, attendee) => sum + ((Number(attendee.number_of_slots) || 1) * (event.price || 0)),
         0
