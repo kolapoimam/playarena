@@ -32,7 +32,7 @@ type Attendee = {
   id: string;
   attendee_name: string;
   attendee_phone: string;
-  attendee_status: string;
+  status: "registered" | "checked_in" | "absent";
   cycling_event_id: string;
 };
 
@@ -65,7 +65,7 @@ type CyclingEvent = {
     id_uuid: string;
     attendee_name: string;
     attendee_phone: string;
-    attendee_status: string;
+    status: "registered" | "checked_in" | "absent";
     confirmation_code: string;
     details: { phone: string } | null;
     number_of_slots?: number;
@@ -134,9 +134,9 @@ const CyclingDetail = () => {
         try {
           const { error } = await supabase
             .from("cycling_attendees")
-            .update({ attendee_status: "Absent" })
+            .update({ status: "absent" })
             .eq("cycling_event_id_uuid", event.id_uuid)
-            .neq("attendee_status", "Checked In");
+            .neq("status", "checked_in");
 
           if (error) {
             console.error("Error updating attendee status:", error);
