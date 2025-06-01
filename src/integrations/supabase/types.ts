@@ -77,7 +77,7 @@ export interface Database {
       cycling_attendees: {
         Row: {
           id_uuid: string
-          event_id: string
+          cycling_event_id: string
           attendee_name: string
           attendee_phone: string
           attendee_status: string
@@ -89,7 +89,7 @@ export interface Database {
         }
         Insert: {
           id_uuid?: string
-          event_id: string
+          cycling_event_id: string
           attendee_name: string
           attendee_phone: string
           attendee_status?: string
@@ -101,7 +101,7 @@ export interface Database {
         }
         Update: {
           id_uuid?: string
-          event_id?: string
+          cycling_event_id?: string
           attendee_name?: string
           attendee_phone?: string
           attendee_status?: string
