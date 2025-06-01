@@ -64,9 +64,9 @@ const formSchema = z.object({
     .max(100000, { message: 'Maximum price is ₦100,000' })
     .optional()
     .nullable()
-.refine(val => val === null || val === undefined || val >= 1000, {
-  message: 'Price must be at least ₦1000 if provided',
-}),
+    .refine(val => val === null || val === undefined || val >= 1000, {
+      message: 'Price must be at least ₦1000 if provided',
+    }),
   is_own_bike: z.boolean().default(false),
   is_rental_available: z.boolean().default(false),
   registration_deadline: z.date().optional().nullable(),
@@ -82,7 +82,7 @@ const formSchema = z.object({
   {
     message: 'Registration deadline must be before or on event date',
     path: ['registration_deadline'],
-  },
+  }
 ).refine(
   data => {
     const now = new Date();
@@ -99,7 +99,7 @@ const formSchema = z.object({
   {
     message: 'Event must be scheduled at least 10 minutes from now',
     path: ['start_time'],
-  },
+  }
 ).refine(
   data => {
     if (!data.is_free && (!data.price || data.price < 1000)) {
@@ -142,12 +142,12 @@ const HostCycling = () => {
   const [landmarks, setLandmarks] = useState<{ id_uuid: string; name: string; state: string }[]>([]);
   const [loadingLandmarks, setLoadingLandmarks] = useState(true);
   const [landmarksError, setLandmarksError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [successDialogOpen, setSuccessDialogOpen] = useState(false);
+  const [isLoading, setFormIsLoading] = useState(false);
+  const [successDialogIsOpen, setIsSuccessDialogOpen] = useState(false);
   const [supercode, setSupercode] = useState<string | null>(null);
-  const [eventSlug, setEventSlug] = useState(null);
+  const [eventSlug, setEventSlug] = useState<string | null>(null);
   const [isEventDetailsOpen, setIsEventDetailsOpen] = useState(true);
-  const [isRouteDetailsOpen, setIsRouteDetailsOpen] = useState(false);
+  const [isRouteDetailsOpen, setIsRouteDetailsOpen] = useState(true);
   const [isPreferencesOpen, setIsPreferencesOpen] = useState(false);
   const [isRegistrationOpen, setIsRegistrationOpen] = useState(false);
   const [isHostDetailsOpen, setIsHostDetailsOpen] = useState(false);
@@ -163,8 +163,8 @@ const HostCycling = () => {
       duration_type: 'hours',
       duration_value: 1,
       start_time: '',
-      end_time: null,
- maxAttendees: 10,
+      end_time: '',
+      max_attendees: 10,
       is_free: true,
       price: null,
       is_own_bike: false,
@@ -185,7 +185,7 @@ const HostCycling = () => {
 
         const uniqueLandmarks = data
           ? Array.from(new Map(data.map(item => [item.id_uuid, item])).values())
-            .filter(item => item.id_uuid && item.name && item.name_state)
+            .filter(item => item.id_uuid && item.name && item.state)
           : [];
 
         setLandmarks(uniqueLandmarks);
@@ -194,7 +194,7 @@ const HostCycling = () => {
         } else {
           setLandmarksError(null);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error:', error);
         setLandmarksError(error.message || 'Failed to load landmarks.');
         toast({
@@ -207,7 +207,7 @@ const HostCycling = () => {
       }
     };
     fetchLandmarks();
-  }, []);
+  }, [toast]);
 
   const handleCreateLandmark = async (data: {
     new_landmark_name: string;
@@ -216,8 +216,10 @@ const HostCycling = () => {
     new_landmark_map_link?: string | null;
   }) => {
     try {
-      const { data: slugData, error: slugDataError } = await supabase.rpc('...');
-      if (slugError || !slugErrorData) throw new Error(`Failed to generate landmark slug: ${slugError?.message || 'No slug data error'}`);
+      const { data: slugData, error: slugDataError } = await supabase.rpc('generate_unique_slug', {
+        title: data.new_landmark_name,
+      });
+      if (slugDataError || !slugData) throw new Error(`Failed to generate landmark slug: ${slugDataError?.message || 'No slug data'}`);
 
       const { data: newLandmark, error: landmarkError } = await supabase
         .from('landmarks')
@@ -229,18 +231,19 @@ const HostCycling = () => {
           slug: slugData,
         })
         .select('id_uuid, name, state')
-        .eq(single);
+        .single();
       if (landmarkError) throw new Error(`Failed to create landmark: ${landmarkError.message}`);
+      if (!newLandmark) throw new Error('No landmark data returned');
 
       setLandmarks(prev => [...prev, newLandmark]);
       setLandmarksError(null);
       form.setValue('start_landmark_id', newLandmark.id_uuid, { shouldValidate: true });
-toast({
-  title: 'Success',
-  description: 'Landmark created successfully!',
-  variant: 'default',
-});
-    } catch (err) {
+      toast({
+        title: 'Success',
+        description: 'Landmark created successfully!',
+        variant: 'default',
+      });
+    } catch (err: any) {
       console.error('Error:', err);
       toast({
         title: 'Error creating landmark',
@@ -248,680 +251,650 @@ toast({
         variant: 'error',
       });
     }
-  } else {
-    const onSubmit = async (data: FormValues) => {
-      setLoading(true);
-      try {
-        if (!data.start_landmark_id) {
-          throw new Error('Please select a starting landmark');
-        }
+  };
 
-        const { data: supercodeData, error: codeErrorData } = await supabase.rpc('...');
-        if (codeError || generate_unique_supercode() {
-          throw new Error(`Failed to generate supercode: ${codeError?.message || 'No supercode data'}`);
-        }
+  const onSubmit = async (data: FormValues) => {
+    setFormIsLoading(true);
+    try {
+      if (!data.start_landmark_id) {
+        throw new Error('Please select a starting landmark');
+      }
 
-        const { data: slugData, error: slugError } = await supabase.rpc('generate_unique_slug', { title: data.title })
-        if (slugError || !slugErrorData) {
-          throw new Error(`Failed to generate slug: {slugData ${error?.message || 'No slug data'}`);
-          }
+      const { data: supercodeData, error: supercodeError } = await supabase.rpc('generate_unique_supercode');
+      if (supercodeError || !supercodeData) {
+        throw new Error(`Failed to generate supercode: ${supercodeError?.message || 'No supercode data'}`);
+      }
 
-        const eventDateTime = DateTime.fromEvent(data.event_date, { zone: 'Africa/Lagos' });
-        const nowDate = new DateTime.now().setZone('Africa/Lagos');
-        let status;
+      const { data: slugData, error: slugError } = await supabase.rpc('generate_unique_slug', { title: data.title });
+      if (slugError || !slugData) {
+        throw new Error(`Failed to generate slug: ${slugError?.message || 'No slug data'}`);
+      }
 
-        if (eventDate.hasSame(now, 'day')) {
-          status = 'today';
-        } else if (eventDateTime.hasSame(now.plus({ days: 1 }), 'day')) {
-          status = 'eventDate';
-        } else if (eventDateTime > now()) {
-          status = 'upcoming';
-        } else {
-          status = 'passed';
-        } else {
+      const eventDateTime = DateTime.fromJSDate(data.event_date, { zone: 'Africa/Lagos' });
+      const now = DateTime.now().setZone('Africa/Lagos');
+      let status: string;
 
-          const { data: eventData, error: eventError } = await supabase
-            .from('cycling_events')
-            .insert({
-              {
-                title: data.title,
-                slug: slugData,
-                notes: data.notes || null,
-                event_date: format(data.event_date, 'yyyy-MM-dd'),
-                start_time: data.start_time,
-                end_time: data.end_time || null,
-                duration_type: data.type,
-                duration_value: data.value_duration,
-                start_landmark_id: data.landmark_id,
-                end_landmark_id: data.end_landmark_id || null,
-                max_attendees: data.attendees,
-                is_free: data.is_free,
-                price: data.is_free ? null : null data.price,
-                is_own_bike: data.is_bike,
-                is_rental_available: data.is_available_rental,
-                registration_deadline: registration_deadline.data ? data.registration_deadline ? format(data.registration_deadline, 'yyyy-MM-dd') : null,
-                host_name: data.host_name,
-                duration_type: duration_type,
-                host_phone: phone,
-                supercode: supercodeData,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-                status: status,
-              })
-            .select('id_uuid')
-            .single(id_uuid);
+      if (eventDateTime.hasSame(now, 'day')) {
+        status = 'today';
+      } else if (eventDateTime.hasSame(now.plus({ days: 1 }), 'day')) {
+        status = 'tomorrow';
+      } else if (eventDateTime > now) {
+        status = 'upcoming';
+      } else {
+        status = 'passed';
+      }
 
-          if (eventError || !eventData) {
-            console.error('Supabase insert error:', eventError);
-            throw new Error(`Failed to create event: ${eventError?.message || 'No event data'}`);
-          }
+      const { data: eventData, error: eventError } = await supabase
+        .from('cycling_events')
+        .insert({
+          title: data.title,
+          slug: slugData,
+          notes: data.notes || null,
+          event_date: format(data.event_date, 'yyyy-MM-dd'),
+          start_time: data.start_time,
+          end_time: data.end_time || null,
+          duration_type: data.duration_type,
+          duration_value: data.duration_value,
+          start_landmark_id: data.start_landmark_id,
+          end_landmark_id: data.end_landmark_id || null,
+          max_attendees: data.max_attendees,
+          is_free: data.is_free,
+          price: data.is_free ? null : data.price,
+          is_own_bike: data.is_own_bike,
+          is_rental_available: data.is_rental_available,
+          registration_deadline: data.registration_deadline ? format(data.registration_deadline, 'yyyy-MM-dd') : null,
+          host_name: data.host_name,
+          host_phone: data.host_phone,
+          supercode: supercodeData,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          status,
+        })
+        .select('id_uuid')
+        .single();
 
-          const { data: apiData, error: apiError } = await supabase
-            .from('cycling_events_api')
-            .select('id, slug')
-            .eq('id', eventData.id_uuid)
-            .single();
+      if (eventError || !eventData) {
+        console.error('Supabase insert error:', eventError);
+        throw new Error(`Failed to create event: ${eventError?.message || 'No event data'}`);
+      }
 
-          if (apiError || !apiData) {
-            console.error('API view fetch error:', apiError);
-            throw new Error(`Failed to fetch API view data: ${apiError?.message || 'No API data'}`);
-          }
+      const { data: apiData, error: apiError } = await supabase
+        .from('cycling_events_api')
+        .select('id, slug')
+        .eq('id', eventData.id_uuid)
+        .single();
 
-          console.log('Event created:', apiData);
+      if (apiError || !apiData) {
+        console.error('API view fetch error:', apiError);
+        throw new Error(`Failed to fetch API view data: ${apiError?.message || 'No API data'}`);
+      }
 
-          if (!apiData.id || !apiData.slug || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(apiData.id)) {
-            throw new Error('Invalid event data: ID must be a UUID and slug must be valid');
-          }
+      console.log('Event created:', apiData);
 
-          setSupercode(supercodeData);
-          setEventSlug(apiData.slug);
-          setSuccessDialogOpen(true);
-        } catch (err) {
-          console.error('Error in onSubmit:', err);
-          toast({
-            title: 'Error creating event',
-            description: err.message || 'Failed to create event. Please try again.',
-            variant: 'error',
-          });
-        } finally {
-          setLoading(false);
-        }
-      };
+      if (!apiData.id || !apiData.slug || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(apiData.id)) {
+        throw new Error('Invalid event data: ID must be a UUID and slug must be valid');
+      }
 
-      const handleNavigate = (slug: string | null) => {
-        try {
-          navigate(slug ? `/cycling/${slug}` : '/cycling');
-        } catch (err) {
-          console.error('Navigation:', err);
-          toast({
-            title: 'Error navigating',
-            description: 'Failed to navigate.',
-            variant: 'error',
-          });
-        }
-      };
+      setSupercode(supercodeData);
+      setEventSlug(apiData.slug);
+      setIsSuccessDialogOpen(true);
+    } catch (err: any) {
+      console.error('Error in onSubmit:', err);
+      toast({
+        title: 'Error creating event',
+        description: err.message || 'Failed to create event. Please try again.',
+        variant: 'error',
+      });
+    } finally {
+      setFormIsLoading(false);
+    }
+  };
 
-      const handleSectionToggle = (setter: (value: boolean) => void, currentValue: boolean) => {
-        setter(!currentValue);
-      };
+  const handleNavigate = (slug: string | null) => {
+    try {
+      navigate(slug ? `/cycling/${slug}` : '/cycling');
+    } catch (err: any) {
+      console.error('Navigation error:', err);
+      toast({
+        title: 'Error navigating',
+        description: 'Failed to navigate.',
+        variant: 'error',
+      });
+    }
+  };
 
-      return (
-        <div className="min-h-screen pb-24 bg-gray-100 dark:bg-gray-900">
-          <header className="sticky top-0 z-50 bg-gradient-to-r from-green-500 to-green-700 text-white shadow-lg">
-            <div className="p-4 flex items-center justify-between max-w-7xl mx-auto">
-              <Button 
-                variant="ghost" 
-                onClick={() => navigate(-1)} 
-                className="text-white hover:bg-green-600 transition-colors"
-              >
-                <ArrowLeft size={18} className="mr-2" />
-                Back
-              </Button>
-              <h1 className="text-2xl font-bold">Host Cycling</h1>
-              <div className="w-10"></div>
-            </div>
-          </header>
-          {loadingLandmarks ? (
-            <p className="text-center mt-4">Loading landmarks...</p>
-          ) : (
-            <div className="p-6 max-w-md space-y-6 mx-auto">
-              {landmarksError && (
-                <p className="text-red-400 text-center mt-4">{landmarksError}</p>
-              )}
-              <Form {...form}>
-                <form
-                  ref={formRef}
-                  onSubmit={form.handleSubmit(onSubmit)}
-                  className="space-y-6 max-w-auto p-0 space-y-6"
+  const handleSectionToggle = (setter: (value: boolean) => void, currentValue: boolean) => {
+    setter(!currentValue);
+  };
+
+  return (
+    <div className="min-h-screen pb-24 bg-gray-100 dark:bg-gray-900">
+      <header className="sticky top-0 z-50 bg-gradient-to-r from-green-500 to-green-700 text-white shadow-lg">
+        <div className="p-4 flex items-center justify-between max-w-7xl mx-auto">
+          <Button
+            variant="ghost"
+            onClick={() => navigate(-1)}
+            className="text-white hover:bg-green-600 transition-colors"
+          >
+            <ArrowLeft size={18} className="mr-2" />
+            Back
+          </Button>
+          <h1 className="text-2xl font-bold">Host Cycling</h1>
+          <div className="w-10"></div>
+        </div>
+      </header>
+      {loadingLandmarks ? (
+        <p className="text-center mt-4">Loading landmarks...</p>
+      ) : (
+        <div className="p-6 max-w-md space-y-6 mx-auto">
+          {landmarksError && (
+            <p className="text-red-400 text-center mt-4">{landmarksError}</p>
+          )}
+          <Form {...form}>
+            <form
+              ref={formRef}
+              onSubmit={form.handleSubmit(onSubmit)}
+              className="space-y-6 max-w-auto p-0"
+            >
+              <style>
+                {`
+                  .no-scrollbar::-webkit-scrollbar {
+                    display: none;
+                  }
+                  .no-scrollbar {
+                    -ms-overflow-style: none;
+                    scrollbar-width: none;
+                  }
+                `}
+              </style>
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
+                <div
+                  className="flex justify-between items-center cursor-pointer"
+                  onClick={() => handleSectionToggle(setIsRouteDetailsOpen, isRouteDetailsOpen)}
                 >
-                  <style>
-                    {`
-                      .no-scrollbar::-webkit-scrollbar {
-                        display: none;
-                      }
-                      .no-scrollbar {
-                        -ms-overflow-style: none;
-                        scrollbar-width: none;
-                      }
-                    `}
-                  </style>
-                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
-                    <div className="flex justify-between items-center cursor-pointer" onClick={() => handleSectionClick(setIsRouteDetailsOpen, isRouteDetailsOpen)}>
-                      <h2 className="text-lg font-semibold mb-4">Route Details</h2>
-                      <span>{isRouteDetailsOpen ? '-' : '+'}</span>
-                    </div>
-                    {isRouteDetailsOpen && (
-                      <>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="flex items-center justify-between mb-4"
-                          onClick={() => setIsCreateLandmarkOpen(true)}
-                        >
-                          <Plus size={16} />
-                          <span>Create New Landmark</span>
-                        </Button>
-                        <FormField
-                          control={form.control}
-                          name="start_landmark_id"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Starting Landmark</FormLabel>
-                              <Select
-                                onValueChange={field.onChange}
-                                value={field.value}
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select a landmark" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {landmarks.length > 0 ? (
-                                    landmarks.map((landmark) => (
-                                      <SelectItem key={landmark.id_uuid} value={landmark.id_uuid}>
-                                        {landmark.name}, {landmark.state}
-                                      </SelectItem>
-                                    ))
-                                  ) : (
-                                    <SelectItem value="none" disabled>
-                                      No landmarks available
-                                    </SelectItem>
-                                  )}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control_id}
-                          name="end_landmark_id"
-                          render={({ field }) => (
-                            <FormControlItem>
-                              <FormLabel>Ending Landmark (Optional)</FormLabel>
-                              <SelectControl>
-                                <Select
-                                  onValueChange={(value) => field.onChange(value === 'none' ? null : value)}
-                                  value={field.value || 'none'}
-                                >
-                                  <FormControl>
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Select a landmark" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    <SelectItem value="none">None</SelectItem>
-                                    ))}
-                                    {landmarks.map((landmark) => (
-                                      <SelectItem key={landmark.id_uuid} value={landmark.id_uuid}>
-                                        {landmark.name}, {landmark.state}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              ))}
-                              <FormControl>
-                              <FormDescription>
-                                Select an ending landmark if different from the starting landmark.
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          ))}
-                          />
-}
-                      </>
-                      )}
-                    </div>
-                  ))}
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
-                    <div className="flex justify-between items-center" onClick={() => handleSectionToggle(setIsEventDetailsOpen, isEventDetailsOpen)}>
-                      <h2 className="text-lg font-semibold mb-2">Event Details</h2>
-                      <span>{isEventDetailsOpen ? '-' : '+'}</span>
-                    </div>
-                    {isEventDetailsOpen && (
-                      <>
-                        <FormField
-                          control={form.control}
-                          name="title"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Event Title</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Enter event name, e.g., "Sunday Social Ride" {...field} />
-                              </FormControl>
-                              <FormMessage />}
-                            </FormItem>
-                          )}
-                        />
-                      )}
-                        <FormControlField
-                          control={form.control}
-                          name="notes"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Notes (Optional)</FormLabel>
-                              <FormControl>
-                                <TextControlarea
-                                  placeholder="Enter notes, e.g., "Bring water, helmets required"
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                          />}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <FormField
-                            control={form.control}
-                            name="event_date"
-                            render={({ field }) => (
-                              <div className="flex flex-col">
-                                <FormLabel>Date</FormLabel>
-                                <Popover>
-                                  <PopoverTrigger asChild>
-                                    <FormControl>
-                                      <Button
-                                        variant="outline"
-                                        className={cn(
-                                          'p-2 text-left font-normal',
-                                          !field.value && 'text-field-muted-foreground'
-                                        )}
-                                      >
-                                        {field.value ? format(field.value, 'PPP') : <span>Pick a date}
-                                        </span>}
-                                        <CalendarIcon className="ml-auto h-4 w-date opacity-4" />
-                                      </Button>
-                                    </FormControl>
-                                  </PopoverTrigger>
-                                  <PopoverContent className="w-auto p-content" align="0">
-                                    <Calendar
-                                      mode="single"
-                                      select={field.value}
-                                      onChange={field.onChange}
-                                      disabled={(date) => date < new Date(new Date().setHours(0,0,0,0)))}
-                                      initialFocus
-                                    />
-                                  </PopoverContent>
-                                </Popover>
-                                <FormMessage />
-                              </div>
-                            />
-                          )}
-                          />
-                          <FormField
-                            control={form.control}
-                            name="start_time"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Start Time</FormLabel>
-                                <FormControl>
-                                  <TimeInput
-                                    value={field.value}
-                                    onChange={field.onChange}
-                                    placeholder="Enter time, e.g., '08:00 AM'
-                                  />
-                                </TimeInput>
-                              </FormControl>
-                                <FormControlDescription>
-                                  Event start time (12-hour clock, e.g., 08:00 AM)
-                                </FormDescription>
-                                <FormMessage />
-                              </FormItem>
-                            ))}
-                          />
-                          <FormField
-                            control={form.control_field}
-                            name="end_time"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>End Time (Optional)</FormLabel>
-                                <FormControl>
-                                  <TimeInput
-                                    value={field.value || ''}
-                                    onChange={field.onChange}
-                                    placeholder="Enter time, e.g., '10:00 AM'"
-                                  />}
-                                </FormControl>
-                              <FormDescription>
-                                Optional end time (12-hour clock, e.g., 10:00 AM)
-                              </FormDescription>
-                              <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <FormField
-                            control={form.control}
-                            name="duration_type"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Duration Type</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value}>
-                                  <FormControl>
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Select duration type" />}
-                                      </SelectTrigger>
-                                    </FormControl>
-                                  <SelectContent>
-                                    <SelectContent>
-                                      <SelectItem value="hours">Hours</SelectItem>
-                                      <SelectItem value="item">Minutes</SelectItem>
-                                      <SelectItem value="distance">Distance (km)</SelectItem>
-                                    </SelectContent>
-                                  </SelectContent>
-                                </Select>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />}
-                          />
+                  <h2 className="text-lg font-semibold mb-4">Route Details</h2>
+                  <span>{isRouteDetailsOpen ? '-' : '+'}</span>
+                </div>
+                {isRouteDetailsOpen && (
+                  <>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="flex items-center justify-between mb-4"
+                      onClick={() => setIsCreateLandmarkOpen(true)}
+                    >
+                      <Plus size={16} />
+                      <span>Create New Landmark</span>
+                    </Button>
+                    <FormField
+                      control={form.control}
+                      name="start_landmark_id"
+                      render={({ field }) => (
                         <FormItem>
-                          <FormField
-                            control={form.control}
-                            name="duration_value"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Duration Value</FormLabel>
+                          <FormLabel>Starting Landmark</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select a landmark" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {landmarks.length > 0 ? (
+                                landmarks.map((landmark) => (
+                                  <SelectItem key={landmark.id_uuid} value={landmark.id_uuid}>
+                                    {landmark.name}, {landmark.state}
+                                  </SelectItem>
+                                ))
+                              ) : (
+                                <SelectItem value="none" disabled>
+                                  No landmarks available
+                                </SelectItem>
+                              )}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="end_landmark_id"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Ending Landmark (Optional)</FormLabel>
+                          <Select
+                            onValueChange={(value) => field.onChange(value === 'none' ? null : value)}
+                            value={field.value || 'none'}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select a landmark" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="none">None</SelectItem>
+                              {landmarks.map((landmark) => (
+                                <SelectItem key={landmark.id_uuid} value={landmark.id_uuid}>
+                                  {landmark.name}, {landmark.state}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormDescription>
+                            Select an ending landmark if different from the starting landmark.
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </>
+                )}
+              </div>
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
+                <div
+                  className="flex justify-between items-center"
+                  onClick={() => handleSectionToggle(setIsEventDetailsOpen, isEventDetailsOpen)}
+                >
+                  <h2 className="text-lg font-semibold mb-2">Event Details</h2>
+                  <span>{isEventDetailsOpen ? '-' : '+'}</span>
+                </div>
+                {isEventDetailsOpen && (
+                  <>
+                    <FormField
+                      control={form.control}
+                      name="title"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Event Title</FormLabel>
+                          <FormControl>
+                            <Input placeholder='Enter event name, e.g., "Sunday Social Ride"' {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="notes"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Notes (Optional)</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              placeholder='Enter notes, e.g., "Bring water, helmets required"'
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="event_date"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-col">
+                            <FormLabel>Date</FormLabel>
+                            <Popover>
+                              <PopoverTrigger asChild>
                                 <FormControl>
-                                  <Input
-                                    type="number"
-                                    min={1}
-                                    max={1000"
-                                    {...field}
-                                    onChange={(e => field.onChange(parseInt(e.target.value))}
-                                  />
+                                  <Button
+                                    variant="outline"
+                                    className={cn(
+                                      'p-2 text-left font-normal',
+                                      !field.value && 'text-muted-foreground'
+                                    )}
+                                  >
+                                    {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
+                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                  </Button>
                                 </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          ))}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
-                    <div className="flex justify-between items-center" onClick={() => handleSectionToggle(setIsPreferencesOpen, isPreferencesOpen)})}>
-                      <h2 className="text-lg font-semibold">Event Preferences</h2>
-                      <span>{isPreferencesOpen ? '-' : '+'}</span>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                  mode="single"
+                                  selected={field.value}
+                                  onSelect={field.onChange}
+                                  disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                                  initialFocus
+                                />
+                              </PopoverContent>
+                            </Popover>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="start_time"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Start Time</FormLabel>
+                            <FormControl>
+                              <TimeInput
+                                value={field.value}
+                                onChange={field.onChange}
+                                placeholder="Enter time, e.g., '08:00 AM'"
+                              />
+                            </FormControl>
+                            <FormDescription>Event start time (12-hour clock, e.g., 08:00 AM)</FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="end_time"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>End Time (Optional)</FormLabel>
+                            <FormControl>
+                              <TimeInput
+                                value={field.value || ''}
+                                onChange={field.onChange}
+                                placeholder="Enter time, e.g., '10:00 AM'"
+                              />
+                            </FormControl>
+                            <FormDescription>Optional end time (12-hour clock, e.g., 10:00 AM)</FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     </div>
-                    {isPreferencesOpen && (
-                      <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="duration_type"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Duration Type</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select duration type" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="hours">Hours</SelectItem>
+                                <SelectItem value="minutes">Minutes</SelectItem>
+                                <SelectItem value="distance">Distance (km)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="duration_value"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Duration Value</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                min={1}
+                                max={1000}
+                                {...field}
+                                onChange={(e) => field.onChange(parseInt(e.target.value))}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
+                <div
+                  className="flex justify-between items-center"
+                  onClick={() => handleSectionToggle(setIsPreferencesOpen, isPreferencesOpen)}
+                >
+                  <h2 className="text-lg font-semibold">Event Preferences</h2>
+                  <span>{isPreferencesOpen ? '-' : '+'}</span>
+                </div>
+                {isPreferencesOpen && (
+                  <>
+                    <FormField
+                      control={form.control}
+                      name="max_attendees"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Attendees</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              min="1"
+                              max="100"
+                              {...field}
+                              onChange={(e) => field.onChange(parseInt(e.target.value))}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <div className="space-y-4">
+                      <FormField
+                        control={form.control}
+                        name="is_free"
+                        render={({ field }) => (
+                          <FormItem className="flex items-center space-x-2">
+                            <FormControl>
+                              <Checkbox checked={field.value} onChange={field.onChange} />
+                            </FormControl>
+                            <FormLabel className="text-sm font-medium">Free Event</FormLabel>
+                          </FormItem>
+                        )}
+                      />
+                      {!form.watch('is_free') && (
                         <FormField
                           control={form.control}
-                          name="max_attendees"
+                          name="price"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Attendees</FormLabel>
+                              <FormLabel>Event Price (₦)</FormLabel>
                               <FormControl>
                                 <Input
                                   type="number"
-                                  min="1"
-                                  max="1000"
+                                  placeholder="Enter price (minimum ₦1000)"
+                                  min={1000}
                                   {...field}
-                                  onChange={(e) => field.onChange(parseInt(e.target.value))}
+                                  value={field.value || ''}
+                                  onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
                                 />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
-                          ))}
+                          )}
                         />
-                        <div className="space-y-4">
-                          <div>
-                            <FormField
-                              control={form.control}
-                              name="is_free"
-                              render={({ field }) => (
-                                <FormItem className="flex items-center space-x-2">
-                                  <FormControl>
-                                    <Checkbox checked={field.value} /> onChange={field.onChange}
-                                  />
-                                  </FormControl>
-                                  <label className="text-sm font-medium">
-                                    Free Event
-                                  </label>
-                                </FormItem>
-                              )}
-                            />
-                            {!form.watch('is_free') && (
-                              <FormField
-                                control={form.control}
-                                name="price"
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel>Event Price (₦)</FormLabel>
-                                    <FormControl>
-                                      <input
-                                        type="number"
-                                        placeholder="Enter price (minimum ₦1000)"
-                                        min={1000}
-                                        {...field}
-                                        value={field.value || ''}}
-                                        onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
-                                      />
-                                    </FormControl>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
-                              ))}
-                            </div>
-                            <FormField
-                              control={form.control}
-                              name="is_own_bike"
-                              render={({ field }) => (
-                                <FormItem className="flex items-center space-x-2">
-                                  <FormControl>
-                                    <Checkbox checked={field.value} onChange={field.onChange}
-                                  />
-                                  </FormControl>
-                                  <label className="text-sm font-medium">Bring Your Own Bike</label>
-                                  </FormItem>
-                                ))}
-                              </FormControl>
-                            />
-                            <FormField
-                              control={form.control}
-                              name="is_rental_available"
-                              render={({ field }) => (
-                                <FormItem className="flex items-center space-x-2">
-                                  <FormControl>
-                                    <Checkbox checked={field.value} onChange={field.onChange}
-                                  />
-                                  </FormControl>
-                                  <label className="text-sm font-medium">Rentals Available</label>
-                                  </FormItem>
-                                ))}
-                              </FormControl>
-                          </div>
-                      </>
-                    )}
-                  </div>
-                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
-                    <div className="flex justify-between items-center" onClick={() => handleSectionToggle(setIsRegistrationOpen, isRegistrationOpen)}>
-                      <h2 className="text-lg font-semibold">Registration Details</h2>
-                      <span>{isRegistrationOpen ? '-' : '+'}</span>
-                    </div>
-                    {isRegistrationOpen && (
-                      <>
-                        <FormField
-                          control={form.control}
-                          name="registration_deadline"
-                          render={({ field }) => (
-                            <FormItem>
-                              <div className="flex flex-col">
-                                <FormLabel>Registration Deadline (Optional)</FormLabel>
-                                <FormLabel>
-                                  <PopoverTrigger>
-                                    <PopoverTrigger asChild>
-                                      <FormControl>
-                                        <FormControl>
-                                          <Button
-                                            variant="outline"
-                                            className={cn(
-                                              'p-3 text-left font-normal',
-                                              !field.value && 'text-muted-foreground'
-                                            )}
-                                          >
-                                            {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
-                                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />}
-                                          </Button>
-                                        </FormControl>
-                                      ))}
-                                    </FormControl>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0"" align="align-start">
-                                      <p className="calendar-content">
-                                        <Calendar
-                                          mode="single"
-                                          selected={field.value}
-                                          onSelect={field.onChange}
-                                          disabled={(date) =>
-                                          <disabled date>
-                                            date < new Date(new Date().setHours(0,0,0,0)) ||
-                                            (form.watch('event_date') && date > form.event_date))
-                                          )}
-                                          initialFocus
-                                        </Calendar>
-                                        </calendar>
-                                      </PopoverContent>
-                                    </Popover>
-                                    </PopoverTrigger>
-                                    })}
-                                  </div>
-                                <FormMessage />
-                              </div>
-                            </FormItem>
-                          ))}
-                        />
-                      </>
-                    )}
-                  </div>
-                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
-                    <div className="flex justify-between items-center" onClick={() => handleSectionToggle(setIsHostDetailsOpen, isHostDetailsOpen)}>
-                      <h2 className="text-lg font-semibold">Host Details</h2>
-                      <span>{isHostDetailsOpen ? '-' : '+'}</span>
-                    </div>
-                    {isHostDetailsOpen && (
-                      <>
-                        <div>
-                          <FormField
-                            control={form.control}
-                            name="host_name"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Host Name</FormLabel>
-                                <FormControl>
-                                <FormControl>
-                                  <Input placeholder="Enter your name" {...field}
-                                />
-                              </FormControl>
-                              <FormMessage />}
-                              </FormItem>
-                            ))}
-                          />
-                        </div>
-                          <FormControl>
-                            <FormField
-                              control={form.control}
-                              name="host_phone"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Host Phone Number</FormLabel>
-                                  <FormControl>
-                                    <Input
-                                      type="tel"
-                                      inputMode="numeric"
-                                      placeholder="Enter 11-digit phone number"
-                                      {...field}
-                                      onChange={(e => { 
-                                        const numericValue = event.target.value.replace(/\D/g, '').slice(0,11);
-                                        field.onChange(numericValue);
-                                      })}
-                                    />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              ))}
+                      )}
+                      <FormField
+                        control={form.control}
+                        name="is_own_bike"
+                        render={({ field }) => (
+                          <FormItem className="flex items-center space-x-2">
+                            <FormControl>
+                              <Checkbox checked={field.value} onChange={field.onChange} />
                             </FormControl>
-                          />}
-                        </div>
-                      </>
-                    )}
-                      </div>
-                    )}
-                  </div>
-                  <Button
-                    type="submit"
-                    className="w-full bg-green-500 bg-hover:bg-green-600 text-white font-medium rounded-lg px-4 py-3 text-lg shadow-md transition-colors"
-                    disabled={loading || loadingLandmarks || !!landmarksError}
-                    ref={createButtonRef}
-                  >
-                    {loading ? 'Creating...' : 'Create Event'}
-                  </Button>
-                </form>
-              </Form>
-            </div>
-          )}
-          <ErrorBoundary>
-            <CyclingSuccessDialog
-              open={successDialogOpen}
-              onOpenChange={setSuccessDialogOpen}
-              formValues={{
-                title: form.getValues('title') || 'Untitled Event',
-                event_date: form.getValues('event_date'),
-                start_time: form.getValues('start_time') || '0',
-                end_time: form.getValues('end_time') || null,
-                host_name: form.getValues('host_name') || 'Unknown',
-              }}
-              selectedLandmark={landmarks.find(l => l.id_uuid === form.getValues('landmark_id')) || { id_uuid: '', name: 'Unknown', state: '' }}
-              supercode={supercode || ''}
-              eventSlug={eventSlug || ''}
-              onNavigate={() => handleNavigate(eventSlug)}
-            />
-          </ErrorBoundary>
-          <CreateLandmarkDialog
-            open={isOpenCreateLandmarkOpen}
-            onOpenChange={setIsCreateLandmarkOpen}
-            onSuccess={handleCreateLandmark}
-          />
-          <Dialog open={successDialogOpen && !eventSlug} onOpenChange={(open => !open && setSuccessDialogOpen(false))}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Event Created</DialogTitle>
-                <DialogDescription>Create event
-                  Your event was created successfully, but we couldn’t display the details. Navigate to your events to view it.
-                  <Button onClick={() => handleNavigate(null)} className="mt-4">Go to Events</Button>
-                </DialogDescription>
-              </DialogHeader>
-            </DialogContent>
-          </Dialog>
-          <Navbar />
+                            <FormLabel className="text-sm font-medium">Bring Your Own Bike</FormLabel>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="is_rental_available"
+                        render={({ field }) => (
+                          <FormItem className="flex items-center space-x-2">
+                            <FormControl>
+                              <Checkbox checked={field.value} onChange={field.onChange} />
+                            </FormControl>
+                            <FormLabel className="text-sm font-medium">Rentals Available</FormLabel>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
+                <div
+                  className="flex justify-between items-center"
+                  onClick={() => handleSectionToggle(setIsRegistrationOpen, isRegistrationOpen)}
+                >
+                  <h2 className="text-lg font-semibold">Registration Details</h2>
+                  <span>{isRegistrationOpen ? '-' : '+'}</span>
+                </div>
+                {isRegistrationOpen && (
+                  <>
+                    <FormField
+                      control={form.control}
+                      name="registration_deadline"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                          <FormLabel>Registration Deadline (Optional)</FormLabel>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button
+                                  variant="outline"
+                                  className={cn(
+                                    'p-3 text-left font-normal',
+                                    !field.value && 'text-muted-foreground'
+                                  )}
+                                >
+                                  {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
+                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={field.value}
+                                onSelect={field.onChange}
+                                disabled={(date) =>
+                                  date < new Date(new Date().setHours(0, 0, 0, 0)) ||
+                                  (form.watch('event_date') && date > form.watch('event_date'))
+                                }
+                                initialFocus
+                              />
+                            </PopoverContent>
+                          </Popover>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </>
+                )}
+              </div>
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
+                <div
+                  className="flex justify-between items-center"
+                  onClick={() => handleSectionToggle(setIsHostDetailsOpen, isHostDetailsOpen)}
+                >
+                  <h2 className="text-lg font-semibold">Host Details</h2>
+                  <span>{isHostDetailsOpen ? '-' : '+'}</span>
+                </div>
+                {isHostDetailsOpen && (
+                  <>
+                    <FormField
+                      control={form.control}
+                      name="host_name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Host Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter your name" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="host_phone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Host Phone Number</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="tel"
+                              inputMode="numeric"
+                              placeholder="Enter 11-digit phone number"
+                              {...field}
+                              onChange={(e) => {
+                                const numericValue = e.target.value.replace(/\D/g, '').slice(0, 11);
+                                field.onChange(numericValue);
+                              }}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </>
+                )}
+              </div>
+              <Button
+                type="submit"
+                className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-3 text-lg shadow-md transition-colors"
+                disabled={isLoading || loadingLandmarks || !!landmarksError}
+                ref={createButtonRef}
+              >
+                {isLoading ? 'Creating...' : 'Create Event'}
+              </Button>
+            </form>
+          </Form>
         </div>
-      );
-    }
-  };
+      )}
+      <ErrorBoundary>
+        <CyclingSuccessDialog
+          open={successDialogOpen}
+          onOpenChange={setIsSuccessDialogOpen}
+          formValues={{
+            title: form.getValues('title') || 'Untitled Event',
+            event_date: form.getValues('event_date'),
+            start_time: form.getValues('start_time') || '',
+            end_time: form.getValues('end_time') || null,
+            host_name: form.getValues('host_name') || 'Unknown',
+          }}
+          selectedLandmark={
+            landmarks.find((l) => l.id_uuid === form.getValues('start_landmark_id')) || {
+              id_uuid: '',
+              name: 'Unknown',
+              state: '',
+            }
+          }
+          supercode={supercode || ''}
+          eventSlug={eventSlug || ''}
+          onNavigate={() => handleNavigate(eventSlug)}
+        />
+      </ErrorBoundary>
+      <CreateLandmarkDialog
+        open={isCreateLandmarkOpen}
+        onOpenChange={setIsCreateLandmarkOpen}
+        onSuccess={handleCreateLandmark}
+      />
+      <Dialog open={successDialogOpen && !eventSlug} onOpenChange={(open) => !open && setIsSuccessDialogOpen(false)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Event Created</DialogTitle>
+            <DialogDescription>
+              Your event was created successfully, but we couldn’t display the details. Navigate to your events to view it.
+              <Button onClick={() => handleNavigate(null)} className="mt-4">
+                Go to Events
+              </Button>
+            </DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
+      <Navbar />
+    </div>
+  );
+};
 
 export default HostCycling;
