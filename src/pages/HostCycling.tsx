@@ -741,7 +741,10 @@ const handleCreateLandmark = async (data: {
                         render={({ field }) => (
                           <FormItem className="flex items-center space-x-2">
                             <FormControl>
-                              <Checkbox checked={field.value} onChange={field.onChange} />
+                              <Checkbox 
+                                checked={field.value} 
+                                onCheckedChange={field.onChange}
+                              />
                             </FormControl>
                             <FormLabel className="text-sm font-medium">Free Event</FormLabel>
                           </FormItem>
@@ -775,7 +778,10 @@ const handleCreateLandmark = async (data: {
                         render={({ field }) => (
                           <FormItem className="flex items-center space-x-2">
                             <FormControl>
-                              <Checkbox checked={field.value} onChange={field.onChange} />
+                              <Checkbox 
+                                checked={field.value} 
+                                onCheckedChange={field.onChange}
+                              />
                             </FormControl>
                             <FormLabel className="text-sm font-medium">Bring Your Own Bike</FormLabel>
                           </FormItem>
@@ -787,7 +793,10 @@ const handleCreateLandmark = async (data: {
                         render={({ field }) => (
                           <FormItem className="flex items-center space-x-2">
                             <FormControl>
-                              <Checkbox checked={field.value} onChange={field.onChange} />
+                              <Checkbox 
+                                checked={field.value} 
+                                onCheckedChange={field.onChange}
+                              />
                             </FormControl>
                             <FormLabel className="text-sm font-medium">Rentals Available</FormLabel>
                           </FormItem>
