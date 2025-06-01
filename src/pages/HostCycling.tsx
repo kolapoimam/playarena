@@ -235,11 +235,11 @@ const HostCycling = () => {
       setLandmarks(prev => [...prev, newLandmark]);
       setLandmarksError(null);
       form.setValue('start_landmark_id', newLandmark.id_uuid, { shouldValidate: true });
-      toast({
-        title: 'Success',
-        description: 'Landmark created successfully!',
-        variant='success': 'default',
-      });
+toast({
+  title: 'Success',
+  description: 'Landmark created successfully!',
+  variant: 'default',
+});
     } catch (err) {
       console.error('Error:', err);
       toast({
