@@ -299,10 +299,12 @@ const AttendeesManagement = ({
     try {
       console.log('Checking in attendee:', { attendeeId, eventId: event.id_uuid, code, supercode: event.supercode });
 
+      // Verify attendee
       const { data, error } = await supabase
         .from("cycling_attendees")
         .select("id_uuid, confirmation_code, attendee_status, cycling_event_id_uuid")
         .eq("id_uuid", attendeeId)
+        .eq("cycling_event_id_uuid", event.id_uuid)
         .single();
 
       if (error || !data) {
@@ -318,10 +320,7 @@ const AttendeesManagement = ({
         throw new Error("Invalid confirmation code");
       }
 
-      if (data.cycling_event_id_uuid !== event.id_uuid) {
-        throw new Error("Attendee is not associated with this event");
-      }
-
+      // Update attendee status
       const updatePayload = {
         attendee_status: "checked_in",
         updated_at: new Date().toISOString().replace('Z', '+00:00'),
@@ -333,27 +332,37 @@ const AttendeesManagement = ({
         .update(updatePayload)
         .eq("id_uuid", attendeeId)
         .eq("cycling_event_id_uuid", event.id_uuid)
-        .select("id_uuid, attendee_status")
-        .single();
+        .select("id_uuid, attendee_status, updated_at");
 
       if (updateError) {
         console.error('Update error:', updateError);
         throw new Error(updateError.message || "Failed to update attendee status");
       }
 
-      if (!updateData) {
-        throw new Error("No data returned from update");
+      if (!updateData || updateData.length === 0) {
+        console.error('No rows updated:', { attendeeId, eventId: event.id_uuid });
+        throw new Error("No rows updated, please check event and attendee IDs");
       }
 
+      const updatedAttendee = updateData[0];
       setAttendeeStatuses((prev) =>
         prev.map((status) =>
           status.id_uuid === attendeeId
-            ? { ...status, attendee_status: updateData.attendee_status as "registered" | "checked_in" | "absent" }
+            ? { ...status, attendee_status: updatedAttendee.attendee_status as "registered" | "checked_in" | "absent" }
             : status
         )
       );
 
-      // Attempt to fetch wallet balance (if applicable)
+      // Update event attendees
+      const updatedEvent = {
+        ...event,
+        attendees: event.attendees?.map((a) =>
+          a.id_uuid === attendeeId ? { ...a, attendee_status: "checked_in" } : a
+        ),
+      };
+      await fetchEvent();
+
+      // Fetch wallet balance (non-critical)
       try {
         const { data: walletData, error: walletError } = await supabase
           .from("wallets")
@@ -363,7 +372,6 @@ const AttendeesManagement = ({
 
         if (walletError) {
           console.error('Wallet fetch error:', walletError);
-          // Log but don't fail check-in
         } else if (walletData) {
           console.log('Wallet balance:', walletData.balance);
         }
@@ -394,8 +402,6 @@ const AttendeesManagement = ({
         delete newErrors[attendeeId];
         return newErrors;
       });
-
-      await fetchEvent();
     } catch (error: any) {
       console.error('Check-in error:', error);
       if (error.message === "Attendee is already checked in or absent") {
@@ -430,7 +436,7 @@ const AttendeesManagement = ({
       } else {
         toast({
           title: "Error",
-          description: error.message || "Failed to verify code",
+          description: error.message || "Failed to check in attendee",
           variant: "destructive",
         });
       }
