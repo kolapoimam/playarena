@@ -127,9 +127,9 @@ const CyclingDetail = () => {
         ? event.duration_value * 60 * 60 * 1000
         : event.duration_value * 60 * 1000;
       const eventEndTime = new Date(eventDateTime.getTime() + durationInMs);
-      const twentyFourHoursAfterEnd = new Date(eventEndTime.getTime() + 24 * 60 * 60 * 1000);
+      const thirtyMinutesAfterStart = addMinutes(eventDateTime, 30);
 
-      if (now >= twentyFourHoursAfterEnd) {
+      if (now >= thirtyMinutesAfterStart) {
         try {
           const { error } = await supabase
             .from("cycling_attendees")
@@ -169,21 +169,17 @@ const CyclingDetail = () => {
       : event.duration_value * 60 * 1000;
     const eventEndTime = new Date(eventDateTime.getTime() + durationInMs);
     const thirtyMinutesAfterStart = addMinutes(eventDateTime, 30);
-    const twentyFourHoursAfterEnd = addHours(eventEndTime, 24);
 
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const tomorrow = new Date(today);
-    tomorrow.setDate(today.getDate() + 1);
     const eventDate = new Date(event.event_date);
 
     let status = "upcoming";
     if (eventDate.toDateString() === today.toDateString()) status = "today";
-    else if (eventDate.toDateString() === tomorrow.toDateString()) status = "tomorrow";
     else if (eventDate < today) status = "ended";
 
     const isFull = attendees.length >= event.max_attendees;
-    const isStarted = now >= thirtyMinutesAfterStart && now <= eventEndTime;
-    const isEnded = now >= twentyFourHoursAfterEnd;
+    const isStarted = now >= eventDateTime && now < thirtyMinutesAfterStart;
+    const isEnded = now >= thirtyMinutesAfterStart || eventDate < today;
 
     return { status, isEnded, isStarted, isFull };
   };
@@ -319,14 +315,6 @@ const CyclingDetail = () => {
               className="inline-block w-5 h-5"
             />
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleShare}
-            className="text-blue-600 border-blue-300 hover:bg-blue-50"
-          >
-            Share
-          </Button>
         </div>
 
         {isEnded ? (
@@ -344,10 +332,6 @@ const CyclingDetail = () => {
         ) : status === "today" ? (
           <div className="bg-green-100 border border-green-200 text-green-700 px-4 py-3 rounded mb-4">
             This event is happening today!
-          </div>
-        ) : status === "tomorrow" ? (
-          <div className="bg-blue-100 border border-blue-200 text-blue-700 px-4 py-3 rounded mb-4">
-            This event is happening tomorrow!
           </div>
         ) : null}
 
