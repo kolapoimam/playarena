@@ -1,9 +1,12 @@
 import { format, differenceInMinutes } from "date-fns";
-import { Bike, MapPin, Calendar, Clock, Users, DollarSign, Wallet } from "lucide-react";
+import { Bike, MapPin, Calendar, Clock, Users, DollarSign, Wallet, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from "@/components/ui/dialog";
+import html2canvas from "html2canvas";
+import { Loader2 } from "lucide-react";
 
 type CyclingEvent = {
   id_uuid: string;
@@ -52,225 +55,308 @@ type Cashout = {
 type CyclingDetailsProps = {
   event: CyclingEvent | null;
   cashout: Cashout | null;
-  handleCancel: () => void;
   loading: boolean;
   isEventPast: boolean;
   walletBalance: number;
 };
 
-const CyclingDetails = ({ event, cashout, handleCancel, loading, isEventPast, walletBalance }: CyclingDetailsProps) => {
+const CyclingDetails = ({
+  event,
+  cashout,
+  loading,
+  isEventPast,
+  walletBalance,
+}: CyclingDetailsProps) => {
   const { toast } = useToast();
-  const [localWalletBalance, setLocalWalletBalance] = useState<number>(walletBalance);
-
-  useEffect(() => {
-    if (!event) {
-      setLocalWalletBalance(0);
-      return;
-    }
-
-    const fetchWalletBalance = async () => {
-      try {
-        const { data: attendeesData, error } = await supabase
-          .from("cycling_attendees")
-          .select("attendee_status")
-          .eq("cycling_event_id_uuid", event.id_uuid);
-
-        if (error) throw error;
-
-        let balance = 0;
-        if (!event.is_free && event.price) {
-          const checkedInAttendees = attendeesData.filter((a) => a.attendee_status === "checked_in");
-          balance = checkedInAttendees.reduce(
-            (sum, attendee) => sum + (event.price || 0),
-            0
-          );
-        }
-
-        setLocalWalletBalance(balance < 0 ? 0 : balance);
-      } catch (error) {
-        console.error("Error fetching wallet balance:", error);
-        toast({
-          title: "Error",
-          description: "Failed to calculate wallet balance.",
-          variant: "destructive",
-        });
-        setLocalWalletBalance(0);
-      }
-    };
-
-    fetchWalletBalance();
-
-    const attendeesChannel = supabase
-      .channel(`attendees_event_${event.id_uuid}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'cycling_attendees',
-          filter: `cycling_event_id_uuid=eq.${event.id_uuid}`,
-        },
-        () => {
-          fetchWalletBalance();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(attendeesChannel);
-    };
-  }, [event, toast]);
-
-  const canCancelEvent = () => {
-    if (!event) return false;
-    const eventDateTime = new Date(`${event.event_date}T${event.start_time}`);
-    const now = new Date();
-    const minutesToStart = differenceInMinutes(eventDateTime, now);
-    const hasCheckedInAttendees = event.attendees?.some((a) => a.attendee_status === "checked_in") || false;
-    return minutesToStart > 0 && !event.cancellation_status && !hasCheckedInAttendees;
-  };
-
-  const formatDate = (dateString: string) => {
-    const options: Intl.DateTimeFormatOptions = {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    };
-    return new Date(dateString).toLocaleDateString("en-NG", options);
-  };
-
-  const formatTime = (timeString: string) => {
-    const match = timeString.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
-    if (!match) return timeString;
-    let [_, hours, minutes, period] = match;
-    return `${parseInt(hours)}:${minutes} ${period.toUpperCase()}`;
-  };
-
-  const getStatusStyles = (status: string) => {
-    switch (status) {
-      case "Successful":
-        return "bg-green-100 text-green-700 border-green-300";
-      case "Failed":
-        return "bg-red-100 text-red-700 border-red-300";
-      case "Processed":
-        return "bg-blue-100 text-blue-700 border-blue-300";
-      case "Review":
-        return "bg-yellow-100 text-yellow-700 border-yellow-300";
-      default:
-        return "bg-yellow-100 text-yellow-700 border-yellow-300";
-    }
-  };
-
-  const calculateExpectedAmount = () => {
-    if (!event) return "N/A";
-    let total = 0;
-    if (!event.is_free && event.price) {
-      const checkedInAttendees = event.attendees?.filter((a) => a.attendee_status === "checked_in") || [];
-      total = checkedInAttendees.reduce(
-        (sum, attendee) => sum + ((Number(attendee.number_of_slots) || 1) * (event.price || 0)),
-        0
-      );
-    }
-    return `₦${total.toLocaleString()}`;
-  };
-
-  const calculateTotalSlotsOccupied = () => {
-    if (!event || !event.attendees) return 0;
-    return event.attendees.reduce((sum, attendee) => sum + (Number(attendee.number_of_slots) || 1), 0);
-  };
+  const [isDownloadDialogOpen, setIsDownloadDialogOpen] = useState(false);
+  const [isImageLoaded, setIsImageLoaded] = useState(false);
+  const [backgroundOption, setBackgroundOption] = useState<"cycle" | "white" | "green">("cycle");
+  const [isDownloading, setIsDownloading] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
 
   if (!event) return null;
 
+  const formattedDate = event.event_date
+    ? new Date(event.event_date).toLocaleDateString("en-US", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      })
+    : "Unknown Date";
+
+  const formattedTime = event.start_time
+    ? new Date(`2000-01-01T${event.start_time}`).toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      })
+    : "Unknown Time";
+
+  const totalAttendees = event.attendees?.length || 0;
+  const checkedInAttendees = event.attendees?.filter(
+    (a) => a.attendee_status === "checked_in"
+  ).length || 0;
+  const absentAttendees = event.attendees?.filter(
+    (a) => a.attendee_status === "absent"
+  ).length || 0;
+
+  const handleDownload = async () => {
+    if (!cardRef.current) return;
+
+    setIsDownloading(true);
+    try {
+      const canvas = await html2canvas(cardRef.current, {
+        scale: 2,
+        backgroundColor: backgroundOption === "white" ? "#ffffff" : "transparent",
+      });
+      const image = canvas.toDataURL("image/png");
+      const link = document.createElement("a");
+      link.download = `cycling-event-${event.slug}.png`;
+      link.href = image;
+      link.click();
+    } catch (error) {
+      console.error("Error downloading image:", error);
+      toast({
+        title: "Error",
+        description: "Failed to download event card. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Cycling Event Details</h2>
-        <div className="flex items-center gap-2">
-          {event.cancellation_status && (
-            <span className="inline-block px-3 py-1 text-sm font-medium rounded border bg-red-100 text-red-700 border-red-300">
-              Cancelled
-            </span>
-          )}
-          {cashout && (
-            <span
-              className={`inline-block px-3 py-1 text-sm font-medium rounded border ${getStatusStyles(cashout.status)}`}
-            >
-              Cashout: {cashout.status}
-            </span>
-          )}
-        </div>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-        <div className="flex items-center gap-3">
-          <Bike size={20} className="text-green-500" />
+    <div className="space-y-6">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+        <div className="flex justify-between items-start mb-6">
           <div>
-            <p className="font-medium text-gray-900 dark:text-gray-100">{event.title || "Untitled Event"}</p>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Hosted by {event.host_name || "Unknown Host"}
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              {event.title}
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">
+              {formattedDate} at {formattedTime}
             </p>
           </div>
+          <Button
+            variant="outline"
+            onClick={() => setIsDownloadDialogOpen(true)}
+            className="text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300"
+          >
+            <Download size={16} className="mr-2" />
+            Download Card
+          </Button>
         </div>
-        <div className="flex items-center gap-3">
-          <MapPin size={20} className="text-green-500" />
-          <span className="text-gray-900 dark:text-gray-100">
-            {event.location?.name || "Unknown Location"}, {event.location?.city || "Unknown City"}
-          </span>
-        </div>
-        <div className="flex items-center gap-3">
-          <Calendar size={20} className="text-green-500" />
-          <span className="text-gray-900 dark:text-gray-100">
-            {event.event_date ? formatDate(event.event_date) : "Date TBD"}
-          </span>
-        </div>
-        <div className="flex items-center gap-3">
-          <Clock size={20} className="text-green-500" />
-          <span className="text-gray-900 dark:text-gray-100">
-            {event.start_time ? formatTime(event.start_time) : "Time TBD"}
-          </span>
-        </div>
-        <div className="flex items-center gap-3">
-          <Users size={20} className="text-green-500" />
-          <span className="text-gray-900 dark:text-gray-100">
-            {calculateTotalSlotsOccupied()}/{event.max_attendees || 0} slots
-          </span>
-        </div>
-        <div className="flex items-center gap-3">
-          <DollarSign size={20} className="text-green-500" />
-          <span className="text-gray-900 dark:text-gray-100">
-            {event.is_free ? "Free" : `₦${event.price?.toLocaleString() || "0"} per ticket`}
-          </span>
-        </div>
-        <div className="flex items-center gap-3">
-          <Wallet size={20} className="text-green-500" />
-          <span className="text-gray-900 dark:text-gray-100">
-            Wallet: ₦{localWalletBalance.toLocaleString() || "0"}
-          </span>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                Location
+              </h3>
+              <p className="mt-1 text-gray-900 dark:text-gray-100">
+                {event.location?.name || "Unknown Location"}
+              </p>
+              <p className="text-gray-600 dark:text-gray-400">
+                {event.location?.city || "Unknown City"}
+              </p>
+            </div>
+
+            <div>
+              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                Host
+              </h3>
+              <p className="mt-1 text-gray-900 dark:text-gray-100">
+                {event.host_name}
+              </p>
+              <p className="text-gray-600 dark:text-gray-400">
+                {event.host_phone}
+              </p>
+            </div>
+
+            <div>
+              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                Event Type
+              </h3>
+              <p className="mt-1 text-gray-900 dark:text-gray-100">
+                {event.is_free ? "Free Event" : `Paid Event - ₦${event.price}`}
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                Attendees
+              </h3>
+              <div className="mt-2 grid grid-cols-2 gap-4">
+                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                    {totalAttendees}
+                  </p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Total
+                  </p>
+                </div>
+                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                    {checkedInAttendees}
+                  </p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Checked In
+                  </p>
+                </div>
+                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                    {absentAttendees}
+                  </p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Absent
+                  </p>
+                </div>
+                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                    {event.max_attendees}
+                  </p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Max Slots
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                Status
+              </h3>
+              <div className="mt-2 flex items-center">
+                <div
+                  className={`h-2.5 w-2.5 rounded-full mr-2 ${
+                    event.cancellation_status
+                      ? "bg-red-500"
+                      : isEventPast
+                      ? "bg-gray-500"
+                      : "bg-green-500"
+                  }`}
+                />
+                <p className="text-gray-900 dark:text-gray-100">
+                  {event.cancellation_status
+                    ? "Cancelled"
+                    : isEventPast
+                    ? "Past Event"
+                    : "Upcoming"}
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-      {event.cancellation_status && !event.is_free && (
-        <div className="mt-4 p-4 rounded bg-red-100 dark:bg-red-900">
-          <p className="text-red-700 dark:text-red-300">
-            This event has been cancelled. Attendees will be contacted for a refund.
-          </p>
-        </div>
-      )}
-      {cashout && (
-        <div className="mt-4 p-4 rounded-lg bg-yellow-100 dark:bg-yellow-900">
-          <p className="text-yellow-700 dark:text-yellow-300">
-            Your cashout request is {cashout.status}. Expected amount: {calculateExpectedAmount()}
-          </p>
-        </div>
-      )}
-      <div className="flex flex-wrap gap-4 mt-4">
-        <Button
-          onClick={handleCancel}
-          className={`bg-red-500 hover:bg-red-600 text-white ${!canCancelEvent() ? 'opacity-50 cursor-not-allowed' : ''}`}
-          disabled={!canCancelEvent() || loading}
-        >
-          Cancel Event
-        </Button>
-      </div>
+
+      <Dialog open={isDownloadDialogOpen} onOpenChange={setIsDownloadDialogOpen}>
+        <DialogContent className="sm:max-w-[425px] rounded-lg">
+          <DialogTitle>Event Details</DialogTitle>
+          <DialogDescription>
+            <p className="text-gray-600 dark:text-gray-300 mb-4">
+              Download or share this card to invite friends to your cycling event.
+            </p>
+            <div className="mb-4">
+              <label className="text-sm font-medium">Background:</label>
+              <div className="flex items-center space-x-4 mt-2">
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="radio"
+                    value="cycle"
+                    checked={backgroundOption === "cycle"}
+                    onChange={() => setBackgroundOption("cycle")}
+                    disabled={isDownloading}
+                  />
+                  <span>Default</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="radio"
+                    value="white"
+                    checked={backgroundOption === "white"}
+                    onChange={() => setBackgroundOption("white")}
+                    disabled={isDownloading}
+                  />
+                  <span>White</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="radio"
+                    value="green"
+                    checked={backgroundOption === "green"}
+                    onChange={() => setBackgroundOption("green")}
+                    disabled={isDownloading}
+                  />
+                  <span>Green</span>
+                </label>
+              </div>
+            </div>
+            <div
+              ref={cardRef}
+              className={`relative rounded-lg overflow-hidden ${
+                backgroundOption === "white"
+                  ? "bg-white"
+                  : backgroundOption === "green"
+                  ? "bg-green-500"
+                  : "bg-gradient-to-br from-green-400 to-green-600"
+              }`}
+            >
+              <div
+                className={`p-6 ${
+                  backgroundOption === "green" ? "text-white" : "text-gray-900"
+                }`}
+              >
+                <h3 className="text-xl font-bold mb-2">{event.title}</h3>
+                <p className="text-sm mb-4">
+                  {formattedDate} at {formattedTime}
+                </p>
+                <div className="space-y-2">
+                  <p className="text-sm">
+                    <strong>Location:</strong> {event.location?.name}
+                  </p>
+                  <p className="text-sm">
+                    <strong>Host:</strong> {event.host_name}
+                  </p>
+                  <p className="text-sm">
+                    <strong>Type:</strong>{" "}
+                    {event.is_free ? "Free Event" : `Paid Event - ₦${event.price}`}
+                  </p>
+                </div>
+                <div className="mt-4 text-center">
+                  <p className="text-sm font-medium">Super Code: {event.supercode}</p>
+                </div>
+              </div>
+            </div>
+          </DialogDescription>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsDownloadDialogOpen(false)}
+              disabled={isDownloading}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleDownload}
+              disabled={isDownloading}
+              className="bg-green-500 hover:bg-green-600 text-white"
+            >
+              {isDownloading ? (
+                <>
+                  <Loader2 size={16} className="mr-2 animate-spin" />
+                  Downloading...
+                </>
+              ) : (
+                "Download"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
