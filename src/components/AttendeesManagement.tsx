@@ -119,7 +119,10 @@ const AttendeesManagement = ({
         setLocalTempIdentifier(newId);
       }
     }
-  }, [tempIdentifier]);
+    if (event?.supercode) {
+      localStorage.setItem('eventSupercode', event.supercode);
+    }
+  }, [tempIdentifier, event]);
 
   useEffect(() => {
     if (!event?.id_uuid) return;
@@ -294,13 +297,18 @@ const AttendeesManagement = ({
     setLoading(true);
 
     try {
+      console.log('Checking in attendee:', { attendeeId, eventId: event.id_uuid, code, supercode: event.supercode });
+
       const { data, error } = await supabase
         .from("cycling_attendees")
-        .select("id_uuid, confirmation_code, attendee_status")
+        .select("id_uuid, confirmation_code, attendee_status, cycling_event_id_uuid")
         .eq("id_uuid", attendeeId)
         .single();
 
-      if (error || !data) throw new Error(error?.message || "Attendee not found in database");
+      if (error || !data) {
+        console.error('Select error:', error);
+        throw new Error(error?.message || "Attendee not found in database");
+      }
 
       if (data.attendee_status !== "registered") {
         throw new Error("Attendee is already checked in or absent");
@@ -310,32 +318,58 @@ const AttendeesManagement = ({
         throw new Error("Invalid confirmation code");
       }
 
-      const { error: updateError } = await supabase
-        .from("cycling_attendees")
-        .update({
-          attendee_status: "checked_in",
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id_uuid", attendeeId);
+      if (data.cycling_event_id_uuid !== event.id_uuid) {
+        throw new Error("Attendee is not associated with this event");
+      }
 
-      if (updateError) throw updateError;
+      const updatePayload = {
+        attendee_status: "checked_in",
+        updated_at: new Date().toISOString().replace('Z', '+00:00'),
+      };
+      console.log('Update payload:', updatePayload);
 
-      // Fetch updated attendee data
-      const { data: updatedAttendee, error: fetchError } = await supabase
+      const { error: updateError, data: updateData } = await supabase
         .from("cycling_attendees")
-        .select("id_uuid, attendee_status")
+        .update(updatePayload)
         .eq("id_uuid", attendeeId)
+        .eq("cycling_event_id_uuid", event.id_uuid)
+        .select("id_uuid, attendee_status")
         .single();
 
-      if (fetchError || !updatedAttendee) throw new Error(fetchError?.message || "Failed to fetch updated attendee data");
+      if (updateError) {
+        console.error('Update error:', updateError);
+        throw new Error(updateError.message || "Failed to update attendee status");
+      }
+
+      if (!updateData) {
+        throw new Error("No data returned from update");
+      }
 
       setAttendeeStatuses((prev) =>
         prev.map((status) =>
           status.id_uuid === attendeeId
-            ? { ...status, attendee_status: updatedAttendee.attendee_status as "registered" | "checked_in" | "absent" }
+            ? { ...status, attendee_status: updateData.attendee_status as "registered" | "checked_in" | "absent" }
             : status
         )
       );
+
+      // Attempt to fetch wallet balance (if applicable)
+      try {
+        const { data: walletData, error: walletError } = await supabase
+          .from("wallets")
+          .select("balance")
+          .eq("organizer_id", event.host_id)
+          .single();
+
+        if (walletError) {
+          console.error('Wallet fetch error:', walletError);
+          // Log but don't fail check-in
+        } else if (walletData) {
+          console.log('Wallet balance:', walletData.balance);
+        }
+      } catch (err) {
+        console.error('Wallet fetch exception:', err);
+      }
 
       setCheckinAttendee({
         id: attendeeId,
@@ -363,6 +397,7 @@ const AttendeesManagement = ({
 
       await fetchEvent();
     } catch (error: any) {
+      console.error('Check-in error:', error);
       if (error.message === "Attendee is already checked in or absent") {
         const { data: updatedAttendee, error: fetchError } = await supabase
           .from("cycling_attendees")
