@@ -22,7 +22,7 @@ interface CyclingEvent {
   price: number | null;
   host_name: string;
   host_id: string;
-  start_landmark: { id: string; name: string; state: string; slug: string } | null;
+  start_landmark: { id_uuid: string; name: string; state: string; slug: string } | null;
   attendees: { id_uuid: string; attendee_name: string; attendee_status: string }[];
   status: string;
 }
@@ -82,7 +82,7 @@ const CyclingActivity = () => {
         .select(
           `
           id_uuid, slug, title, event_date, start_time, max_attendees, is_free, price, host_name, host_id, status,
-          start_landmark:landmarks!start_landmark_id(id, name, state, slug),
+          start_landmark:landmarks!start_landmark_id(id_uuid, name, state, slug),
           attendees:cycling_attendees!cycling_attendees_cycling_event_id_uuid_fkey(id_uuid, attendee_name, attendee_status)
         `,
           { count: "exact" }
@@ -112,7 +112,7 @@ const CyclingActivity = () => {
       // Process the data to match the CyclingEvent interface
       const processedEvents = (data || []).map(event => ({
         ...event,
-        start_landmark: event.start_landmark?.[0] || null,
+        start_landmark: event.start_landmark || null,
         attendees: event.attendees || []
       })) as CyclingEvent[];
 
@@ -123,8 +123,16 @@ const CyclingActivity = () => {
       const dayAfterTomorrow = tomorrow.plus({ days: 1 });
 
       const sortedEvents = processedEvents.map(event => {
-        const eventDateTime = DateTime.fromISO(`${event.event_date}T${event.start_time}`, { zone: LAGOS_TIMEZONE });
-        
+        // Parse event_date and start_time
+        const eventDate = DateTime.fromSQL(event.event_date, { zone: "utc" }).setZone(LAGOS_TIMEZONE);
+        const eventTime = DateTime.fromFormat(event.start_time, "hh:mm a", { zone: LAGOS_TIMEZONE });
+        const eventDateTime = eventDate.set({
+          hour: eventTime.hour,
+          minute: eventTime.minute,
+          second: 0,
+          millisecond: 0
+        });
+
         // Determine status
         let status: string;
         if (eventDateTime < now) {
@@ -157,8 +165,24 @@ const CyclingActivity = () => {
         }
 
         // Then sort by date/time within each status group
-        const aDateTime = DateTime.fromISO(`${a.event_date}T${a.start_time}`, { zone: LAGOS_TIMEZONE });
-        const bDateTime = DateTime.fromISO(`${b.event_date}T${b.start_time}`, { zone: LAGOS_TIMEZONE });
+        const aDate = DateTime.fromSQL(a.event_date, { zone: "utc" }).setZone(LAGOS_TIMEZONE);
+        const aTime = DateTime.fromFormat(a.start_time, "hh:mm a", { zone: LAGOS_TIMEZONE });
+        const aDateTime = aDate.set({
+          hour: aTime.hour,
+          minute: aTime.minute,
+          second: 0,
+          millisecond: 0
+        });
+
+        const bDate = DateTime.fromSQL(b.event_date, { zone: "utc" }).setZone(LAGOS_TIMEZONE);
+        const bTime = DateTime.fromFormat(b.start_time, "hh:mm a", { zone: LAGOS_TIMEZONE });
+        const bDateTime = bDate.set({
+          hour: bTime.hour,
+          minute: bTime.minute,
+          second: 0,
+          millisecond: 0
+        });
+
         return aDateTime.toMillis() - bDateTime.toMillis();
       });
 
@@ -188,13 +212,13 @@ const CyclingActivity = () => {
   };
 
   const formatDate = (dateString: string) => {
-    const date = DateTime.fromISO(dateString, { zone: "utc" }).setZone(LAGOS_TIMEZONE);
-    return date.toFormat("ccc, d LLL yyyy");
+    const date = DateTime.fromSQL(dateString, { zone: "utc" }).setZone(LAGOS_TIMEZONE);
+    return date.isValid ? date.toFormat("ccc, d LLL yyyy") : "Invalid Date";
   };
 
   const formatTime = (timeString: string) => {
-    const time = DateTime.fromISO(`2000-01-01T${timeString}`, { zone: "utc" }).setZone(LAGOS_TIMEZONE);
-    return time.toFormat("hh:mm a");
+    const time = DateTime.fromFormat(timeString, "hh:mm a", { zone: LAGOS_TIMEZONE });
+    return time.isValid ? time.toFormat("hh:mm a") : "Invalid Time";
   };
 
   const totalPages = Math.ceil(totalEvents / eventsPerPage);
