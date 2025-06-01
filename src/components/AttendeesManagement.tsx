@@ -21,26 +21,30 @@ type CyclingEvent = {
   title: string;
   event_date: string;
   start_time: string;
+  event_start_time?: string | null;
+  event_end_time?: string | null;
   max_attendees: number;
+  host_id: string;
   host_name: string;
   host_phone: string;
   supercode: string;
   is_free: boolean;
   price?: number;
-  cancellation_status: string | null;
+  cancellation_status: boolean;
   status: string;
+  start_landmark_id: string;
   location: {
-    name?: string | null;
-    city?: string | null;
+    name?: string;
+    city?: string;
   } | null;
   cycling_attendees: {
-id_uuid: string;
+    id_uuid: string;
     attendee_name: string;
     attendee_phone: string;
-    attendee_status: "registered" | "checked_in" | "absent";
-    confirmation_code: number;
-    payment_status: boolean;
-    number_of_slots?: string;
+    attendee_status: string;
+    confirmation_code: string;
+    details: { phone: string } | null;
+    number_of_slots?: number;
   }[] | null;
 };
 
