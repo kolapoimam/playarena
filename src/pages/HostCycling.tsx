@@ -276,15 +276,15 @@ const handleCreateLandmark = async (data: {
       description: 'Landmark created successfully!',
       variant: 'default',
     });
-  } catch (err: any) {
-    console.error('Error creating landmark:', err);
+  } catch (error) {
+    console.error('Error creating landmark:', error);
     toast({
       title: 'Error creating landmark',
-      description: err.message || 'Failed to create landmark. Try again.',
+      description: error instanceof Error ? error.message : 'Failed to create landmark. Try again.',
       variant: 'error',
     });
-    }
-  };
+  }
+};
 
   const onSubmit = async (data: FormValues) => {
     setFormIsLoading(true);
@@ -941,7 +941,7 @@ const handleCreateLandmark = async (data: {
           <DialogHeader>
             <DialogTitle>Event Created</DialogTitle>
             <DialogDescription>
-              Your event was created successfully, but we couldn’t display the details. Navigate to your events to view it.
+              Your event was created successfully, but we couldn't display the details. Navigate to your events to view it.
               <Button onClick={() => handleNavigate(null)} className="mt-4">
                 Go to Events
               </Button>
