@@ -16,8 +16,8 @@ import {
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import CyclingDetailsDialogue from "@/components/CyclingDetailsDialogue";
 import Navbar from "@/components/Navbar";
-import AttendeesTable from "@/components/AttendeesTable";
 import { addHours, addMinutes } from "date-fns";
+import { DateTime } from "luxon";
 
 type Landmark = {
   name: string;
@@ -127,9 +127,9 @@ const CyclingDetail = () => {
         ? event.duration_value * 60 * 60 * 1000
         : event.duration_value * 60 * 1000;
       const eventEndTime = new Date(eventDateTime.getTime() + durationInMs);
-      const thirtyMinutesAfterStart = addMinutes(eventDateTime, 30);
+      const thirtyMinutesAfterEnd = addMinutes(eventEndTime, 30);
 
-      if (now >= thirtyMinutesAfterStart) {
+      if (now >= thirtyMinutesAfterEnd) {
         try {
           const { error } = await supabase
             .from("cycling_attendees")
@@ -162,19 +162,25 @@ const CyclingDetail = () => {
   const getEventStatus = () => {
     if (!event) return { status: "upcoming", isStarted: false, isEnded: false, isFull: false };
 
-    const now = new Date();
-    const eventDateTime = new Date(`${event.event_date}T${event.start_time}`);
+    const now = DateTime.now().setZone("Africa/Lagos");
+    const eventDateTime = DateTime.fromISO(event.event_date, { zone: "utc" })
+      .setZone("Africa/Lagos")
+      .set({
+        hour: DateTime.fromFormat(event.start_time, "hh:mm a", { zone: "Africa/Lagos" }).hour,
+        minute: DateTime.fromFormat(event.start_time, "hh:mm a", { zone: "Africa/Lagos" }).minute,
+      });
+
     const durationInMs = event.duration_type === "hours" 
       ? event.duration_value * 60 * 60 * 1000 
       : event.duration_value * 60 * 1000;
-    const eventEndTime = new Date(eventDateTime.getTime() + durationInMs);
-    const thirtyMinutesAfterStart = addMinutes(eventDateTime, 30);
+    const eventEndTime = eventDateTime.plus({ milliseconds: durationInMs });
+    const thirtyMinutesAfterStart = eventDateTime.plus({ minutes: 30 });
 
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const eventDate = new Date(event.event_date);
+    const today = now.startOf("day");
+    const eventDate = eventDateTime.startOf("day");
 
     let status = "upcoming";
-    if (eventDate.toDateString() === today.toDateString()) status = "today";
+    if (eventDate.toISODate() === today.toISODate()) status = "today";
     else if (eventDate < today) status = "ended";
 
     const isFull = attendees.length >= event.max_attendees;
@@ -208,15 +214,21 @@ const CyclingDetail = () => {
   const addToCalendar = () => {
     if (!event) return;
 
-    const eventDateTime = new Date(`${event.event_date}T${event.start_time}`);
+    const eventDateTime = DateTime.fromISO(event.event_date, { zone: "utc" })
+      .setZone("Africa/Lagos")
+      .set({
+        hour: DateTime.fromFormat(event.start_time, "hh:mm a", { zone: "Africa/Lagos" }).hour,
+        minute: DateTime.fromFormat(event.start_time, "hh:mm a", { zone: "Africa/Lagos" }).minute,
+      });
+
     const durationInMs = event.duration_type === "hours" 
       ? event.duration_value * 60 * 60 * 1000 
       : event.duration_value * 60 * 1000;
-    const endDateTime = new Date(eventDateTime.getTime() + durationInMs);
+    const endDateTime = eventDateTime.plus({ milliseconds: durationInMs });
 
-    const formatGoogleDate = (date: Date) => {
-      const pad = (num: number) => num.toString().padStart(2, '0');
-      return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}T${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`;
+    const formatGoogleDate = (date: DateTime) => {
+      const pad = (num: number) => num.toString().padStart(2, "0");
+      return `${date.year}${pad(date.month)}${pad(date.day)}T${pad(date.hour)}${pad(date.minute)}${pad(date.second)}`;
     };
     const googleCalendarUrl = `https://www.google.com/calendar/render?action=TEMPLATE` +
       `&text=${encodeURIComponent(`Sport Cliq: ${event.title}`)}` +
@@ -226,13 +238,13 @@ const CyclingDetail = () => {
         `Cycling Event hosted by ${event.host_name}.\n\n` +
         `Event link: ${window.location.origin}/cycling-event/${event.slug}\n\n` +
         `Start: ${event.start_landmark.name}, ${event.start_landmark.state}\n` +
-        `${event.end_landmark ? `End: ${event.end_landmark.name}, ${event.end_landmark.state}\n` : ''}` +
-        `Notes: ${event.notes || 'No additional information provided'}\n\n` +
+        `${event.end_landmark ? `End: ${event.end_landmark.name}, ${event.end_landmark.state}\n` : ""}` +
+        `Notes: ${event.notes || "No additional information provided"}\n\n` +
         `Powered by @SportCliq`
       )}` +
       `&sf=true&output=xml`;
 
-    window.open(googleCalendarUrl, '_blank', 'width=600,height=600');
+    window.open(googleCalendarUrl, "_blank", "width=600,height=600");
     setTimeout(() => navigate(`/cycling-event/${slug}`), 1000);
   };
 
@@ -247,10 +259,8 @@ const CyclingDetail = () => {
   };
 
   const formatTime = (timeString: string) => {
-    const [hours, minutes] = timeString.split(':');
-    const date = new Date();
-    date.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-    return date.toLocaleTimeString("en-NG", { hour: "2-digit", minute: "2-digit", hour12: true });
+    const time = DateTime.fromFormat(timeString, "hh:mm a", { zone: "Africa/Lagos" });
+    return time.isValid ? time.toFormat("hh:mm a") : "Invalid Time";
   };
 
   if (loading) {
