@@ -130,14 +130,14 @@ const initialStatuses = event.cycling_attendees.map((attendee) => ({
     setAttendeeStatuses(initialStatuses);
 
     const channel = supabase
-      .channel(`attendees_event_${event.id}`)
+      .channel(`attendees_event_${event.id_uuid}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
           table: 'cycling_attendees',
-          filter: `cycling_event_id=eq.${event.id}`,
+          filter: `cycling_event_id_uuid=eq.${event.id_uuid}`,
         },
         () => {
           fetchEvent();
@@ -148,7 +148,7 @@ const initialStatuses = event.cycling_attendees.map((attendee) => ({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [event?.cycling_attendees, setAttendeeStatuses, checkinCodes, event?.id, fetchEvent]);
+  }, [event?.cycling_attendees, setAttendeeStatuses, checkinCodes, event?.id_uuid, fetchEvent]);
 
   const canCheckin = () => {
     if (!event || event.cancellation_status || !event.cycling_attendees?.length)
@@ -230,7 +230,7 @@ const { data: attendeeData, error: attendeeError } = await supabase
           status: "checked_in",
           updated_at: new Date().toISOString(),
         })
-        .eq("id", attendeeId);
+        .eq("id_uuid", attendeeId);
 
       if (updateError) throw updateError;
 
@@ -371,7 +371,7 @@ const { data: attendeeData, error: attendeeError } = await supabase
             ) : (
               event.cycling_attendees?.map((attendee) => (
                 <div
-                  key={attendee.id}
+                  key={attendee.id_uuid}
                   className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600"
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between">
@@ -398,27 +398,27 @@ const { data: attendeeData, error: attendeeError } = await supabase
                         <div className="flex items-center gap-2">
                           <Input
                             placeholder="6-digit code"
-                            value={checkinCodes[attendee.id] || ""}
+                            value={checkinCodes[attendee.id_uuid] || ""}
                             onChange={(e) =>
-                              handleCheckinCodeChange(attendee.id, e.target.value)
+                              handleCheckinCodeChange(attendee.id_uuid, e.target.value)
                             }
                             inputMode="numeric"
                             pattern="[0-9]*"
                             maxLength={6}
                             className="w-32 text-sm dark:bg-gray-700 dark:text-gray-100"
-                            disabled={checkingInAttendees[attendee.id] || loading}
+                            disabled={checkingInAttendees[attendee.id_uuid] || loading}
                           />
                           <Button
-                            onClick={() => validateCheckinCode(attendee.id)}
+                            onClick={() => validateCheckinCode(attendee.id_uuid)}
                             className="bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded"
                             disabled={
-                              !checkinCodes[attendee.id] ||
-                              checkinCodes[attendee.id].length !== 6 ||
-                              checkingInAttendees[attendee.id] ||
+                              !checkinCodes[attendee.id_uuid] ||
+                              checkinCodes[attendee.id_uuid].length !== 6 ||
+                              checkingInAttendees[attendee.id_uuid] ||
                               loading
                             }
                           >
-                            {checkingInAttendees[attendee.id] ? (
+                            {checkingInAttendees[attendee.id_uuid] ? (
                               <Loader2 className="h-4 w-4 animate-spin" />
                             ) : (
                               "Check In"
@@ -426,9 +426,9 @@ const { data: attendeeData, error: attendeeError } = await supabase
                           </Button>
                         </div>
                       )}
-                      {checkinCodeErrors[attendee.id] && (
+                      {checkinCodeErrors[attendee.id_uuid] && (
                         <p className="text-sm text-red-600 dark:text-red-400 mt-1">
-                          {checkinCodeErrors[attendee.id]}
+                          {checkinCodeErrors[attendee.id_uuid]}
                         </p>
                       )}
                     </div>
