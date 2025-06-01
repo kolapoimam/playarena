@@ -46,6 +46,7 @@ interface AttendeesTableProps {
   attendees: Attendee[];
   navigate: (path: string) => void;
   isEnded: boolean;
+  isStarted: boolean;
   isFull: boolean;
   totalAttendees: number;
 }
@@ -70,7 +71,7 @@ const getStatusStyles = (status: string) => {
   }
 };
 
-const AttendeesTable: React.FC<AttendeesTableProps> = ({ event, attendees, navigate, isEnded, isFull, totalAttendees }) => {
+const AttendeesTable: React.FC<AttendeesTableProps> = ({ event, attendees, navigate, isEnded, isStarted, isFull, totalAttendees }) => {
   return (
     <div className="border rounded-lg p-4 bg-card shadow-md">
       <h2 className="font-semibold mb-3">Attendees ({totalAttendees}/{event.max_attendees})</h2>
