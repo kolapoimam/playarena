@@ -81,7 +81,7 @@ const CyclingActivity = () => {
         .select(
           `
           id, slug, title, event_date, start_time, max_attendees, is_free, price, host_name, host_id, status,
-          start_landmark:landmarks(id, name, state),
+          start_landmark:landmarks!start_landmark_id(id, name, state),
           attendees:cycling_attendees(id_uuid, attendee_name, attendee_status)
         `,
           { count: "exact" }
@@ -398,16 +398,9 @@ const CyclingActivity = () => {
                       {event.start_landmark && (
                         <div className="flex items-center gap-2">
                           <MapPin size={16} className="text-gray-600 dark:text-gray-400" />
-                          <a
-                            href={`/landmark/${event.start_landmark.slug}`}
-                            className="text-primary hover:underline"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              navigate(`/landmark/${event.start_landmark.slug}`);
-                            }}
-                          >
+                          <span className="text-primary">
                             {event.start_landmark.name}, {event.start_landmark.state}
-                          </a>
+                          </span>
                         </div>
                       )}
                       <div className="flex items-center gap-2">
