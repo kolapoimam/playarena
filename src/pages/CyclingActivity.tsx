@@ -452,7 +452,7 @@ const CyclingActivity = () => {
                         size="sm"
                         onClick={() => navigate(`/cycling/${event.slug}`)}
                       >
-                        {isPast ? "Give Feedback" : "View Details"}
+                        {isPast ? "View Details" : "View Details"}
                       </Button>
                     </div>
                   </div>
