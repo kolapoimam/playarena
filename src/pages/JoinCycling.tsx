@@ -163,56 +163,52 @@ const JoinCycling = () => {
   }, []);
 
   // Verify payment with retry logic
-  useEffect(() => {
-    if (!paymentReference || !event.id_uuid) return;
+ useEffect(() => {
+  if (!paymentReference || !event?.id_uuid) return;
 
-    const verifyPayment = async (retries = 3, delay = 1000) => {
-      setVerifyingPayment(true);
-      try {
-          for(let attempt = 1; attempt <= retries; attempt++ ) {
-            try {
-              const { data, error } = await supabase.functions.invoke('verify-paystack-transaction', {
-                body: { reference: paymentReference },
-              });
-
-              if (error) throw error;
-
-              const { verified, event_id, slug: resourceSlug } = data;
-
-              if (verified && event_id === event.id_uuid && resourceSlug === event.slug) {
-                setPaymentStatus('success');
-                toast({
-                  title: 'Payment Successful',
-                  description: 'Your payment was processed successfully. Please complete your registration.',
-                });
-                return;
-              } else {
-                throw new Error('Payment verification failed: Invalid payment details');
-              }
-            } catch (error) {
-              if (attempt === retries) {
-                throw error;
-              }
-              console.warn(`Verification attempt ${attempt} failed: ${error.message}. Retrying...`);
-              await new Promise(resolve => setTimeout(resolve, delay));
-            }
+  const verifyPayment = async (retries = 3, delay = 1000) => {
+    setVerifyingPayment(true);
+    try {
+      for (let attempt = 1; attempt <= retries; attempt++) {
+        try {
+          const { data, error } = await supabase.functions.invoke('verify-paystack-transaction', {
+            body: { reference: paymentReference },
+          });
+          if (error) throw error;
+          const { verified, event_id, slug: resourceSlug } = data;
+          if (verified && event_id === event.id_uuid && resourceSlug === event.slug) {
+            setPaymentStatus('success');
+            toast({
+              title: 'Payment Successful',
+              description: 'Your payment was processed successfully. Please complete your registration.',
+            });
+            return;
+          } else {
+            throw new Error('Payment verification failed: Invalid payment details');
           }
+        } catch (error) {
+          if (attempt === retries) {
+            throw error;
+          }
+          console.warn(`Verification attempt ${attempt} failed: ${error.message}. Retrying...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
         }
-      } catch (error) {
-        console.error('Error verifying payment:', error.message);
-        setPaymentStatus('failed');
-        toast({
-          title: 'Payment Verification Error',
-          description: 'Failed to verify your payment. Please try again or contact support.',
-          variant: 'error',
-        });
-      } finally {
-        setVerifyingPayment(false);
       }
-    };
+    } catch (error) {
+      console.error('Error verifying payment:', error.message);
+      setPaymentStatus('failed');
+      toast({
+        title: 'Payment Verification Error',
+        description: 'Failed to verify your payment. Please try again or contact support.',
+        variant: 'error',
+      });
+    } finally {
+      setVerifyingPayment(false);
+    }
+  };
 
-    verifyPayment();
-  }, [paymentReference, event, toast]);
+  verifyPayment();
+}, [paymentReference, event, toast]);
 
   const handlePaymentInitiation = async () => {
     if (!event || event.is_free || !event.price) {
