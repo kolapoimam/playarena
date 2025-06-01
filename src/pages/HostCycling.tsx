@@ -217,49 +217,72 @@ const HostCycling = () => {
     }
   }, [isEndTimeEnabled, form]);
 
-  const handleCreateLandmark = async (data: {
-    new_landmark_name: string;
-    new_landmark_state: string;
-    new_landmark_description?: string;
-    new_landmark_map_link?: string | null;
-  }) => {
-    try {
-      const { data: slugData, error: slugDataError } = await supabase.rpc('generate_unique_slug', {
-        p_text_input: data.new_landmark_name,
-        p_table_name: 'landmarks',
-        p_id_uuid: null,
-      });
-      if (slugDataError || !slugData) throw new Error(`Failed to generate landmark slug: ${slugDataError?.message || 'No slug data'}`);
+const handleCreateLandmark = async (data: {
+  new_landmark_name: string;
+  new_landmark_state: string;
+  new_landmark_description?: string;
+  new_landmark_map_link?: string | null;
+}) => {
+  try {
+    // Trim input to avoid hidden characters
+    const trimmedName = data.new_landmark_name.trim();
+    if (!trimmedName) throw new Error('Landmark name cannot be empty');
 
-      const { data: newLandmark, error: landmarkError } = await supabase
-        .from('landmarks')
-        .insert({
-          name: data.new_landmark_name,
-          state: data.new_landmark_state,
-          description: data.new_landmark_description || null,
-          map_link: data.new_landmark_map_link || null,
-          slug: slugData,
-        })
-        .select('id_uuid, name, state')
-        .single();
-      if (landmarkError) throw new Error(`Failed to create landmark: ${landmarkError.message}`);
-      if (!newLandmark) throw new Error('No landmark data returned');
+    console.log('Calling generate_unique_slug with:', {
+      p_text_input: trimmedName,
+      p_table_name: 'landmarks',
+      p_id_uuid: null,
+    });
 
-      setLandmarks(prev => [...prev, newLandmark]);
-      setLandmarksError(null);
-      form.setValue('start_landmark_id', newLandmark.id_uuid, { shouldValidate: true });
-      toast({
-        title: 'Success',
-        description: 'Landmark created successfully!',
-        variant: 'default',
-      });
-    } catch (err: any) {
-      console.error('Error:', err);
-      toast({
-        title: 'Error creating landmark',
-        description: err.message || 'Failed to create landmark. Try again.',
-        variant: 'error',
-      });
+    const { data: slugData, error: slugDataError } = await supabase.rpc('generate_unique_slug', {
+      p_text_input: trimmedName,
+      p_table_name: 'landmarks',
+      p_id_uuid: null,
+    });
+
+    console.log('RPC Response:', { slugData, slugDataError });
+
+    if (slugDataError) {
+      throw new Error(`Failed to generate landmark slug: ${slugDataError.message}`);
+    }
+    if (typeof slugData !== 'string' || !slugData) {
+      throw new Error('Invalid slug response from server');
+    }
+
+    const { data: newLandmark, error: landmarkError } = await supabase
+      .from('landmarks')
+      .insert({
+        name: trimmedName,
+        state: data.new_landmark_state,
+        description: data.new_landmark_description || null,
+        map_link: data.new_landmark_map_link || null,
+        slug: slugData,
+      })
+      .select('id_uuid, name, state')
+      .single();
+
+    if (landmarkError) {
+      throw new Error(`Failed to create landmark: ${landmarkError.message}`);
+    }
+    if (!newLandmark) {
+      throw new Error('No landmark data returned');
+    }
+
+    setLandmarks(prev => [...prev, newLandmark]);
+    setLandmarksError(null);
+    form.setValue('start_landmark_id', newLandmark.id_uuid, { shouldValidate: true });
+    toast({
+      title: 'Success',
+      description: 'Landmark created successfully!',
+      variant: 'default',
+    });
+  } catch (err: any) {
+    console.error('Error creating landmark:', err);
+    toast({
+      title: 'Error creating landmark',
+      description: err.message || 'Failed to create landmark. Try again.',
+      variant: 'error',
+    });
     }
   };
 
