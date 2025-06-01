@@ -143,7 +143,7 @@ const HostCycling = () => {
   const [loadingLandmarks, setLoadingLandmarks] = useState(true);
   const [landmarksError, setLandmarksError] = useState<string | null>(null);
   const [isLoading, setFormIsLoading] = useState(false);
-  const [successDialogIsOpen, setIsSuccessDialogOpen] = useState(false);
+  const [successDialogIsOpen, setIssuccessDialogIsOpen] = useState(false);
   const [supercode, setSupercode] = useState<string | null>(null);
   const [eventSlug, setEventSlug] = useState<string | null>(null);
   const [isEventDetailsOpen, setIsEventDetailsOpen] = useState(true);
@@ -337,7 +337,7 @@ const HostCycling = () => {
 
       setSupercode(supercodeData);
       setEventSlug(apiData.slug);
-      setIsSuccessDialogOpen(true);
+      setIssuccessDialogIsOpen(true);
     } catch (err: any) {
       console.error('Error in onSubmit:', err);
       toast({
@@ -853,8 +853,8 @@ const HostCycling = () => {
       )}
       <ErrorBoundary>
         <CyclingSuccessDialog
-          open={successDialogOpen}
-          onOpenChange={setIsSuccessDialogOpen}
+          open={successDialogIsOpen}
+          onOpenChange={setIssuccessDialogIsOpen}
           formValues={{
             title: form.getValues('title') || 'Untitled Event',
             event_date: form.getValues('event_date'),
@@ -879,7 +879,7 @@ const HostCycling = () => {
         onOpenChange={setIsCreateLandmarkOpen}
         onSuccess={handleCreateLandmark}
       />
-      <Dialog open={successDialogOpen && !eventSlug} onOpenChange={(open) => !open && setIsSuccessDialogOpen(false)}>
+      <Dialog open={successDialogIsOpen && !eventSlug} onOpenChange={(open) => !open && setIssuccessDialogIsOpen(false)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Event Created</DialogTitle>
