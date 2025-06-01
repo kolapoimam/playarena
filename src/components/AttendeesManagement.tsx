@@ -41,7 +41,7 @@ type CyclingEvent = {
     id_uuid: string;
     attendee_name: string;
     attendee_phone: string;
-    status: "registered" | "checked_in" | "absent";
+    status: string; // Updated to use new status column
     confirmation_code: string;
     details: { phone: string } | null;
     number_of_slots?: number;
@@ -50,7 +50,7 @@ type CyclingEvent = {
 
 type AttendeeStatus = {
   id_uuid: string;
-  status: "registered" | "checked_in" | "absent";
+  attendee_status: "registered" | "checked_in" | "absent"; // Matches ENUM values
   checkinCode: string;
 };
 
@@ -131,14 +131,14 @@ const AttendeesManagement = ({
       try {
         const { data: attendeesData, error } = await supabase
           .from('cycling_attendees')
-          .select('id_uuid, status, confirmation_code')
+          .select('id_uuid, status, confirmation_code') // Updated to use status
           .eq('cycling_event_id_uuid', event.id_uuid);
 
         if (error) throw error;
 
         const initialStatuses = attendeesData.map(attendee => ({
           id_uuid: attendee.id_uuid,
-          status: (attendee.status || 'registered') as "registered" | "checked_in" | "absent",
+          attendee_status: (attendee.status || 'registered') as "registered" | "checked_in" | "absent",
           checkinCode: checkinCodes[attendee.id_uuid] || ''
         }));
         setAttendeeStatuses(initialStatuses);
@@ -153,18 +153,18 @@ const AttendeesManagement = ({
               const { error: updateError } = await supabase
                 .from('cycling_attendees')
                 .update({ 
-                  status: 'absent',
+                  status: 'absent', // Updated to use status
                   updated_at: new Date().toISOString()
                 })
                 .eq('cycling_event_id_uuid', event.id_uuid)
-                .eq('status', 'registered');
+                .eq('status', 'registered'); // Updated to use status
 
               if (updateError) throw updateError;
 
               setAttendeeStatuses(prev =>
                 prev.map(status =>
                   registeredAttendees.some(a => a.id_uuid === status.id_uuid)
-                    ? { ...status, status: 'absent' }
+                    ? { ...status, attendee_status: 'absent' }
                     : status
                 )
               );
@@ -190,7 +190,7 @@ const AttendeesManagement = ({
         if (event?.attendees) {
           const initialStatuses = event.attendees.map(attendee => ({
             id_uuid: attendee.id_uuid,
-            status: (attendee.status || 'registered') as "registered" | "checked_in" | "absent",
+            attendee_status: (attendee.status || 'registered') as "registered" | "checked_in" | "absent", // Updated to use status
             checkinCode: checkinCodes[attendee.id_uuid] || ''
           }));
           setAttendeeStatuses(initialStatuses);
@@ -226,7 +226,7 @@ const AttendeesManagement = ({
     if (!event || event.cancellation_status || !event.attendees?.length) return false;
     const eventDateTime = new Date(`${event.event_date}T${event.start_time}`);
     const checkTime = addDays(eventDateTime, 1);
-    const hasRegisteredAttendees = event.attendees?.some(a => a.status === "registered");
+    const hasRegisteredAttendees = event.attendees?.some(a => a.status === "registered"); // Updated to use status
     return !isPast(checkTime) && hasRegisteredAttendees;
   };
 
@@ -302,7 +302,7 @@ const AttendeesManagement = ({
       // Verify attendee and current status
       const { data, error: selectError } = await supabase
         .from("cycling_attendees")
-        .select("id_uuid, confirmation_code, status")
+        .select("id_uuid, confirmation_code, status") // Updated to use status
         .eq("id_uuid", attendeeId)
         .single();
 
@@ -319,16 +319,13 @@ const AttendeesManagement = ({
         throw new Error("Invalid confirmation code");
       }
 
-      // Update status
+      // Update attendee status with confirmation_code in WHERE
       const { error: updateError, data: updateData } = await supabase
         .from("cycling_attendees")
-        .update({ 
-          status: "checked_in",
-          updated_at: new Date().toISOString()
-        })
+        .update({ status: "checked_in" }) // Updated to use status
         .eq("id_uuid", attendeeId)
         .eq("confirmation_code", code)
-        .select("id_uuid, status")
+        .select("id_uuid, status") // Updated to use status
         .single();
 
       if (updateError) {
@@ -344,20 +341,13 @@ const AttendeesManagement = ({
       setAttendeeStatuses((prev) =>
         prev.map((status) =>
           status.id_uuid === attendeeId
-            ? { ...status, status: "checked_in" }
+            ? { ...status, attendee_status: "checked_in" }
             : status
         )
       );
 
-      // Update event attendees
-      if (event.attendees) {
-        const updatedAttendees = event.attendees.map((a) =>
-          a.id_uuid === attendeeId 
-            ? { ...a, status: "checked_in" } 
-            : a
-        );
-        event.attendees = updatedAttendees;
-      }
+      // Refresh event data to ensure consistency
+      await fetchEvent();
 
       setCheckinAttendee({
         id: attendeeId,
@@ -383,9 +373,6 @@ const AttendeesManagement = ({
         delete newErrors[attendeeId];
         return newErrors;
       });
-
-      // Refresh event data to ensure consistency
-      await fetchEvent();
     } catch (error: any) {
       console.error('Check-in error:', error);
       toast({
@@ -397,7 +384,7 @@ const AttendeesManagement = ({
       setAttendeeStatuses((prev) =>
         prev.map((status) =>
           status.id_uuid === attendeeId
-            ? { ...status, status: "registered" }
+            ? { ...status, attendee_status: data?.status || "registered" } // Updated to use status
             : status
         )
       );
@@ -484,11 +471,11 @@ const AttendeesManagement = ({
                     </div>
                     <div className="flex flex-col items-end space-y-2">
                       <span
-                        className={`inline-block px-2 py-1 text-sm font-medium rounded border ${getStatusStyles(attendee.status)}`}
+                        className={`inline-block px-2 py-1 text-sm font-medium rounded border ${getStatusStyles(attendee.status)}`} // Updated to use status
                       >
-                        {getDisplayStatus(attendee.status)}
+                        {getDisplayStatus(attendee.status)} // Updated to use status
                       </span>
-                      {mode === "checkin" && attendee.status === "registered" && canConfirmAttendees && (
+                      {mode === "checkin" && attendee.status === "registered" && canConfirmAttendees && ( // Updated to use status
                         <div className="flex items-center gap-2">
                           <Input
                             placeholder="6-digit code"
