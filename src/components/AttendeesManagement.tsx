@@ -319,11 +319,12 @@ const AttendeesManagement = ({
         throw new Error("Invalid confirmation code");
       }
 
-      // Update attendee status (one-time check-in)
+      // Update attendee status (one-time check-in), include confirmation_code in the WHERE clause
       const { error: updateError, data: updateData } = await supabase
         .from("cycling_attendees")
         .update({ attendee_status: "checked_in" })
         .eq("id_uuid", attendeeId)
+        .eq("confirmation_code", code) // Add this to satisfy RLS policy
         .select("id_uuid, attendee_status")
         .single();
 
