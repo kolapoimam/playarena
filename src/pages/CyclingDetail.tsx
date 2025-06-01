@@ -434,6 +434,7 @@ const CyclingDetail = () => {
             attendees={attendees}
             navigate={navigate}
             isEnded={isEnded}
+            isStarted={isStarted}
             isFull={isFull}
             totalAttendees={attendees.length}
           />
