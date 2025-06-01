@@ -23,7 +23,7 @@ interface CyclingEvent {
   host_name: string;
   host_id: string;
   start_landmark: { id_uuid: string; name: string; state: string; slug: string } | null;
-  attendees: { id_uuid: string; attendee_name: string; attendee_status: string }[];
+  attendees: { id_uuid: string; attendee_name: string; status: "registered" | "checked_in" | "absent" }[];
   status: string;
 }
 
@@ -83,7 +83,7 @@ const CyclingActivity = () => {
           `
           id_uuid, slug, title, event_date, start_time, max_attendees, is_free, price, host_name, host_id, status,
           start_landmark:landmarks!start_landmark_id(id_uuid, name, state, slug),
-          attendees:cycling_attendees!cycling_attendees_cycling_event_id_uuid_fkey(id_uuid, attendee_name, attendee_status)
+          attendees:cycling_attendees!cycling_attendees_cycling_event_id_uuid_fkey(id_uuid, attendee_name, status)
         `,
           { count: "exact" }
         );
