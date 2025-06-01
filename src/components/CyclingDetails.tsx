@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 
 type CyclingEvent = {
-  id: string;
+  id_uuid: string;
   slug: string;
   title: string;
   event_date: string;
@@ -40,7 +40,7 @@ type CyclingEvent = {
 
 type Cashout = {
   id: string;
-  event_id: string;
+  cycling_event_id_uuid: string;
   super_code: string;
   bank_account_number: string;
   bank_name: string;
@@ -72,8 +72,8 @@ const CyclingDetails = ({ event, cashout, handleCancel, loading, isEventPast, wa
       try {
         const { data: attendeesData, error } = await supabase
           .from("cycling_attendees")
-          .select("attendee_status, number_of_slots")
-          .eq("event_id", event.id);
+          .select("attendee_status")
+          .eq("cycling_event_id_uuid", event.id_uuid);
 
         if (error) throw error;
 
@@ -81,7 +81,7 @@ const CyclingDetails = ({ event, cashout, handleCancel, loading, isEventPast, wa
         if (!event.is_free && event.price) {
           const checkedInAttendees = attendeesData.filter((a) => a.attendee_status === "checked_in");
           balance = checkedInAttendees.reduce(
-            (sum, attendee) => sum + ((Number(attendee.number_of_slots) || 1) * (event.price || 0)),
+            (sum, attendee) => sum + (event.price || 0),
             0
           );
         }
@@ -101,14 +101,14 @@ const CyclingDetails = ({ event, cashout, handleCancel, loading, isEventPast, wa
     fetchWalletBalance();
 
     const attendeesChannel = supabase
-      .channel(`attendees_event_${event.id}`)
+      .channel(`attendees_event_${event.id_uuid}`)
       .on(
         'postgres_changes',
         {
           event: 'UPDATE',
           schema: 'public',
           table: 'cycling_attendees',
-          filter: `event_id=eq.${event.id}`,
+          filter: `cycling_event_id_uuid=eq.${event.id_uuid}`,
         },
         () => {
           fetchWalletBalance();
