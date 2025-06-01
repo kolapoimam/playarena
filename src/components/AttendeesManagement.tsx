@@ -41,7 +41,7 @@ type CyclingEvent = {
     id_uuid: string;
     attendee_name: string;
     attendee_phone: string;
-    status: string; // Updated to use new status column
+    status: string;
     confirmation_code: string;
     details: { phone: string } | null;
     number_of_slots?: number;
@@ -50,7 +50,7 @@ type CyclingEvent = {
 
 type AttendeeStatus = {
   id_uuid: string;
-  attendee_status: "registered" | "checked_in" | "absent"; // Matches ENUM values
+  attendee_status: "registered" | "checked_in" | "absent";
   checkinCode: string;
 };
 
@@ -131,7 +131,7 @@ const AttendeesManagement = ({
       try {
         const { data: attendeesData, error } = await supabase
           .from('cycling_attendees')
-          .select('id_uuid, status, confirmation_code') // Updated to use status
+          .select('id_uuid, status, confirmation_code')
           .eq('cycling_event_id_uuid', event.id_uuid);
 
         if (error) throw error;
@@ -143,7 +143,7 @@ const AttendeesManagement = ({
         }));
         setAttendeeStatuses(initialStatuses);
 
-        // Check if event is past 24 hours and update statuses
+        // Check if event is past 24 hours and update statuses to absent
         const eventDateTime = new Date(`${event.event_date}T${event.start_time}`);
         const checkTime = addDays(eventDateTime, 1);
         if (isPast(checkTime) && attendeesData.length > 0) {
@@ -153,11 +153,11 @@ const AttendeesManagement = ({
               const { error: updateError } = await supabase
                 .from('cycling_attendees')
                 .update({ 
-                  status: 'absent', // Updated to use status
+                  status: 'absent',
                   updated_at: new Date().toISOString()
                 })
                 .eq('cycling_event_id_uuid', event.id_uuid)
-                .eq('status', 'registered'); // Updated to use status
+                .eq('status', 'registered');
 
               if (updateError) throw updateError;
 
@@ -190,7 +190,7 @@ const AttendeesManagement = ({
         if (event?.attendees) {
           const initialStatuses = event.attendees.map(attendee => ({
             id_uuid: attendee.id_uuid,
-            attendee_status: (attendee.status || 'registered') as "registered" | "checked_in" | "absent", // Updated to use status
+            attendee_status: (attendee.status || 'registered') as "registered" | "checked_in" | "absent",
             checkinCode: checkinCodes[attendee.id_uuid] || ''
           }));
           setAttendeeStatuses(initialStatuses);
@@ -226,7 +226,7 @@ const AttendeesManagement = ({
     if (!event || event.cancellation_status || !event.attendees?.length) return false;
     const eventDateTime = new Date(`${event.event_date}T${event.start_time}`);
     const checkTime = addDays(eventDateTime, 1);
-    const hasRegisteredAttendees = event.attendees?.some(a => a.status === "registered"); // Updated to use status
+    const hasRegisteredAttendees = event.attendees?.some(a => a.status === "registered");
     return !isPast(checkTime) && hasRegisteredAttendees;
   };
 
@@ -296,13 +296,15 @@ const AttendeesManagement = ({
     setCheckingInAttendees((prev) => ({ ...prev, [attendeeId]: true }));
     setLoading(true);
 
+    let currentStatus: string | null = null;
+
     try {
       console.log('Checking in attendee:', { attendeeId, code });
 
       // Verify attendee and current status
       const { data, error: selectError } = await supabase
         .from("cycling_attendees")
-        .select("id_uuid, confirmation_code, status") // Updated to use status
+        .select("id_uuid, confirmation_code, status")
         .eq("id_uuid", attendeeId)
         .single();
 
@@ -310,6 +312,8 @@ const AttendeesManagement = ({
         console.error('Select error:', selectError);
         throw new Error("Attendee not found in database");
       }
+
+      currentStatus = data.status;
 
       if (data.status !== "registered") {
         throw new Error("Attendee is already checked in or marked absent");
@@ -322,10 +326,10 @@ const AttendeesManagement = ({
       // Update attendee status with confirmation_code in WHERE
       const { error: updateError, data: updateData } = await supabase
         .from("cycling_attendees")
-        .update({ status: "checked_in" }) // Updated to use status
+        .update({ status: "checked_in" })
         .eq("id_uuid", attendeeId)
         .eq("confirmation_code", code)
-        .select("id_uuid, status") // Updated to use status
+        .select("id_uuid, status")
         .single();
 
       if (updateError) {
@@ -384,7 +388,7 @@ const AttendeesManagement = ({
       setAttendeeStatuses((prev) =>
         prev.map((status) =>
           status.id_uuid === attendeeId
-            ? { ...status, attendee_status: data?.status || "registered" } // Updated to use status
+            ? { ...status, attendee_status: currentStatus || "registered" }
             : status
         )
       );
@@ -471,11 +475,11 @@ const AttendeesManagement = ({
                     </div>
                     <div className="flex flex-col items-end space-y-2">
                       <span
-                        className={`inline-block px-2 py-1 text-sm font-medium rounded border ${getStatusStyles(attendee.status)}`} // Updated to use status
+                        className={`inline-block px-2 py-1 text-sm font-medium rounded border ${getStatusStyles(attendee.status)}`}
                       >
-                        {getDisplayStatus(attendee.status)} // Updated to use status
+                        {getDisplayStatus(attendee.status)}
                       </span>
-                      {mode === "checkin" && attendee.status === "registered" && canConfirmAttendees && ( // Updated to use status
+                      {mode === "checkin" && attendee.status === "registered" && canConfirmAttendees && (
                         <div className="flex items-center gap-2">
                           <Input
                             placeholder="6-digit code"
