@@ -392,12 +392,12 @@ const CyclingActivity = () => {
           </div>
         ) : filteredEvents.length > 0 ? (
           <div className="space-y-4">
-            {filteredEvents.map((event) => {
-              const { statusLabel, statusClass } = getEventStatus(event);
-              const isPast = event.status === "passed";
-              return (
-                <div key={event.id_uuid} className="w-full border rounded-lg overflow-hidden shadow-sm bg-white dark:bg-gray-800">
-                  <div className="p-4">
+{filteredEvents.map((event) => {
+  const { statusLabel, statusClass } = getEventStatus(event);
+  const isPast = event.status === "passed";
+  return (
+    <div key={event.id_uuid} className="w-full border rounded-lg overflow-hidden shadow-sm bg-white dark:bg-gray-800">
+      <div className="p-4">
                     <div className="flex justify-between items-center">
                       <h3 className="font-bold text-lg text-gray-800 dark:text-gray-200">
                         {event.title}
