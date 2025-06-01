@@ -17,13 +17,14 @@ import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/comp
 import CyclingDetailsDialogue from "@/components/CyclingDetailsDialogue";
 import Navbar from "@/components/Navbar";
 import AttendeesTable from "@/components/AttendeesTable";
-import { addHours } from "date-fns";
+import { addHours, addMinutes } from "date-fns";
 
 type Landmark = {
   name: string;
   state: string;
   description: string;
   map_link: string;
+  slug: string;
 };
 
 type Attendee = {
@@ -52,10 +53,13 @@ type CyclingEvent = {
   cancellation_status: boolean;
   status: string;
   start_landmark_id: string;
-  location: {
-    name?: string;
-    city?: string;
-  } | null;
+  duration_type: string;
+  duration_value: number;
+  is_own_bike: boolean;
+  is_rental_available: boolean;
+  notes?: string | null;
+  start_landmark: Landmark;
+  end_landmark?: Landmark | null;
   cycling_attendees: {
     id_uuid: string;
     attendee_name: string;
@@ -83,8 +87,8 @@ const CyclingDetail = () => {
           .from("cycling_events")
           .select(`
             *,
-            start_landmark:landmarks!start_landmark_id(name, state, description, map_link),
-            end_landmark:landmarks!end_landmark_id(name, state, description, map_link)
+            start_landmark:landmarks!start_landmark_id(name, state, description, map_link, slug),
+            end_landmark:landmarks!end_landmark_id(name, state, description, map_link, slug)
           `)
           .eq("slug", slug)
           .single();
@@ -97,7 +101,8 @@ const CyclingDetail = () => {
           .select("*")
           .eq("cycling_event_id_uuid", data.id_uuid);
 
-        if (!attendeesError) setAttendees(attendeesData || []);
+        if (attendeesError) throw attendeesError;
+        setAttendees(attendeesData || []);
         setLoading(false);
       } catch (error: any) {
         console.error("Error fetching event:", error);
@@ -112,6 +117,49 @@ const CyclingDetail = () => {
     fetchEvent();
   }, [slug, navigate, toast]);
 
+  useEffect(() => {
+    if (!event || !attendees.length) return;
+
+    const updateAbsentAttendees = async () => {
+      const now = new Date();
+      const eventDateTime = new Date(`${event.event_date}T${event.start_time}`);
+      const durationInMs = event.duration_type === "hours"
+        ? event.duration_value * 60 * 60 * 1000
+        : event.duration_value * 60 * 1000;
+      const eventEndTime = new Date(eventDateTime.getTime() + durationInMs);
+      const twentyFourHoursAfterEnd = new Date(eventEndTime.getTime() + 24 * 60 * 60 * 1000);
+
+      if (now >= twentyFourHoursAfterEnd) {
+        try {
+          const { error } = await supabase
+            .from("cycling_attendees")
+            .update({ attendee_status: "Absent" })
+            .eq("cycling_event_id_uuid", event.id_uuid)
+            .neq("attendee_status", "Checked In");
+
+          if (error) {
+            console.error("Error updating attendee status:", error);
+            return;
+          }
+
+          // Refresh attendees
+          const { data: updatedAttendees, error: fetchError } = await supabase
+            .from("cycling_attendees")
+            .select("*")
+            .eq("cycling_event_id_uuid", event.id_uuid);
+
+          if (!fetchError) {
+            setAttendees(updatedAttendees || []);
+          }
+        } catch (error) {
+          console.error("Error updating attendee status:", error);
+        }
+      }
+    };
+
+    updateAbsentAttendees();
+  }, [event, attendees]);
+
   const getEventStatus = () => {
     if (!event) return { status: "upcoming", isStarted: false, isEnded: false, isFull: false };
 
@@ -121,6 +169,8 @@ const CyclingDetail = () => {
       ? event.duration_value * 60 * 60 * 1000 
       : event.duration_value * 60 * 1000;
     const eventEndTime = new Date(eventDateTime.getTime() + durationInMs);
+    const thirtyMinutesAfterStart = addMinutes(eventDateTime, 30);
+    const twentyFourHoursAfterEnd = addHours(eventEndTime, 24);
 
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const tomorrow = new Date(today);
@@ -130,13 +180,13 @@ const CyclingDetail = () => {
     let status = "upcoming";
     if (eventDate.toDateString() === today.toDateString()) status = "today";
     else if (eventDate.toDateString() === tomorrow.toDateString()) status = "tomorrow";
-    else if (eventDate < today) status = "passed";
+    else if (eventDate < today) status = "ended";
 
     const isFull = attendees.length >= event.max_attendees;
-    const isStarted = now >= eventDateTime && now < eventEndTime;
-    const isEnded = now >= eventEndTime;
+    const isStarted = now >= thirtyMinutesAfterStart && now <= eventEndTime;
+    const isEnded = now >= twentyFourHoursAfterEnd;
 
-    return { status, isStarted, isEnded, isFull };
+    return { status, isEnded, isStarted, isFull };
   };
 
   const handleShare = () => {
@@ -151,13 +201,14 @@ const CyclingDetail = () => {
         .catch(() =>
           toast({ title: "Error", description: "Failed to share event." })
         );
-    } else {
-      navigator.clipboard.writeText(url);
-      toast({
-        title: "Link Copied",
-        description: "Event link copied to clipboard.",
-      });
-    }
+      } else {
+        navigator.clipboard.writeText(url);
+        toast({
+          title: "Link Copied",
+          description: "Event link copied to clipboard.",
+        });
+      }
+    });
   };
 
   const addToCalendar = () => {
@@ -171,16 +222,15 @@ const CyclingDetail = () => {
 
     const formatGoogleDate = (date: Date) => {
       const pad = (num: number) => num.toString().padStart(2, '0');
-      return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}T${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`;
-    };
-
-    const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE` +
+      return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}T${pad(date.getHours())}}${pad(date.getMinutes())}${pad(date.getSeconds())}`;
+      };
+    const googleCalendar = `https://www.google.com/calendar/render?action=TEMPLATE` +
       `&text=${encodeURIComponent(`Sport Cliq: ${event.title}`)}` +
       `&dates=${formatGoogleDate(eventDateTime)}/${formatGoogleDate(endDateTime)}` +
       `&location=${encodeURIComponent(`${event.start_landmark.name}, ${event.start_landmark.state}`)}` +
       `&details=${encodeURIComponent(
         `Cycling Event hosted by ${event.host_name}.\n\n` +
-        `Event Link: ${window.location.origin}/cycling-event/${event.slug}\n\n` +
+        `Event link: ${window.location.origin}/cycling-event/${event.slug}\n\n` +
         `Start: ${event.start_landmark.name}, ${event.start_landmark.state}\n` +
         `${event.end_landmark ? `End: ${event.end_landmark.name}, ${event.end_landmark.state}\n` : ''}` +
         `Notes: ${event.notes || 'No additional information provided'}\n\n` +
@@ -188,8 +238,10 @@ const CyclingDetail = () => {
       )}` +
       `&sf=true&output=xml`;
 
-    window.open(googleCalendarUrl, '_blank', 'width=600,height=600');
-    setTimeout(() => navigate(`/cycling-event/${slug}`), 1000);
+      window.open(googleCalendarUrl, '_blank', 'width=600,height=600');
+      );
+      setTimeout(() => navigate(`/cycling-event/${slug}`), 1000);
+    );
   };
 
   const formatDate = (dateString: string) => {
@@ -203,16 +255,26 @@ const CyclingDetail = () => {
   };
 
   const formatTime = (timeString: string) => {
-    const [hours, minutes] = timeString.split(":");
+    const [hours, minutes] = timeString.split(':');
     const date = new Date();
     date.setHours(parseInt(hours), parseInt(minutes), 0, 0);
     return date.toLocaleTimeString("en-NG", { hour: "2-digit", minute: "2-digit", hour12: true });
+    );
   };
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-[50vh]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-playarena-500"></div>
+      <div className="p-4">
+        <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4">
+          <ArrowLeft size={18} className="mr-2" />
+          Back
+        </Button>
+      ))}
+        <div className="text-center py-8">
+          <h2 className="text-xl font-semibold mb-2">}Event Not Found</h2>
+          <p className="text-muted-foreground">The event doesn't exist or has been removed.</p>
+        </div>
+      ))}
       </div>
     );
   }
@@ -221,14 +283,15 @@ const CyclingDetail = () => {
     return (
       <div className="p-4">
         <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4">
-          <ArrowLeft size={18} className="mr-2" />
+          <ArrowLeft size={18} />
           Back
         </Button>
+      );}
         <div className="text-center py-8">
-          <h2 className="text-xl font-semibold mb-2">Event Not Found</h2>
+          <p className="h-2xl font-semibold mb-2">Event Not Found</h2>
           <p className="text-muted-foreground">The event doesn't exist or has been removed.</p>
         </div>
-      </div>
+      );}
     );
   }
 
@@ -236,149 +299,174 @@ const CyclingDetail = () => {
 
   return (
     <div className="min-h-screen pb-24">
-      <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg">
-        <div className="flex items-center justify-between">
+      <div className="min-h-screen pb-24">
+      <header className="p-4 bg-gradient-to-r from-green-500 to-green-700"> text-white rounded-b-2xl shadow-lg">
+        <div className="flex items-center justify-between items-center">
           <Button
             variant="ghost"
-            onClick={() => navigate(-1)}
-            className="text-white hover:bg-green-600"
+            onClick={() => navigate(-1)} className="text-white hover:bg-green-600"
+            class="text-white hover:bg-green-600"
           >
-            <ArrowLeft size={18} className="mr-2" />
+            <ArrowLeft size={18} className="mr-2" />}
             Back
           </Button>
           <div className="text-center">
             <h1 className="text-2xl font-bold">Event Details</h1>
           </div>
-          <div className="w-10"></div>
+          <div class="="w-10"></div>
         </div>
-      </header>
+      ))}
+    </div>
 
-      <div className="p-4">
-        <h1 className="text-2xl font-bold mb-2">{event.title}</h1>
-        <div className="flex justify-between items-center mb-4">
+    <div class="="p-4"> className="p-4">
+      <h1 class="="text-2xl font-bold mb-2">{event.title}</h1>
+      <div className="flex justify-between items-center mb-4">
+        <div class="flex items-center gap-2">
           <div className="flex items-center gap-2">
-            <p className="text-muted-foreground">Hosted by {event.host_name}</p>
-            <img
+            <p class="="text-muted-foreground" className="text-muted-foreground">Hosted by {event.host_name}</p>
+            <img 
               src="/green-verified.png"
               alt="Verified"
               className="inline-block w-5 h-5"
             />
           </div>
-        </div>
+        );}
+      </div>
+      ))}
 
-        {isEnded ? (
-          <div className="bg-gray-100 border border-gray-200 text-gray-700 px-4 py-3 rounded mb-4">
-            This event has passed
+      {isEnded ? (
+        <div class="="bg-gray-100 border border-gray-2 text-gray-700 px-4 py-3 rounded mb-4">
+          <div className="bg-gray-100 border-gray-200 border text-gray-700 px-4 py-3 rounded mb-4">
+            This is event has passed
           </div>
-        ) : isStarted ? (
-          <div className="bg-playarena-100 border border-playarena-200 text-playarena-700 px-4 py-3 rounded mb-4">
-            This event has started!
+        ))}
+      ) : isStarted ? (
+          <div class="="bg-playarena-100 border border-playarena-blue-200 text-playarena-blue-700 px-4 py-3 rounded mb-4">
+            <div className="bg-playarena-100 border-playarena-200 border text-blue-700 px-4 py-3 rounded mb-4">
+            This is event has started!
+            </div>
           </div>
         ) : isFull ? (
-          <div className="bg-red-100 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
-            This event is completely filled up!
+          <div class="="bg-red-100 border border-red-200 text-red-700 px-4 py-3 rounded" mb-4">
+            <div className="bg-red-100 border-red-200 border text-red-700 px-4 py-3 rounded mb-4">
+              This is event is completely filled up!
+            >
+            </div>
           </div>
         ) : status === "today" ? (
-          <div className="bg-green-100 border border-green-200 text-green-700 px-4 py-3 rounded mb-4">
-            This event is happening today!
-          </div>
-        ) : status === "tomorrow" ? (
-          <div className="bg-blue-100 border border-blue-200 text-blue-700 px-4 py-3 rounded mb-4">
-            This event is happening tomorrow!
-          </div>
-        ) : null}
-
-<div className="space-y-4">
-  <div className="border rounded-lg p-4 bg-card shadow-md relative">
-    <div className="absolute top-4 right-4 m-0 p-0">
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={addToCalendar}
-        className="text-playarena-600 border-playarena-300 hover:bg-playarena-50 p-2 m-0"
-      >
-        <Bell size={16} className="mr-0" />
-      </Button>
-    </div>
-    <h2 className="font-semibold mb-3">Event Details</h2>
-    <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <Calendar size={18} />
-        <span>{formatDate(event.event_date)}</span>
-      </div>
-      <div className="flex items-center gap-2">
-        <Clock size={18} />
-        <span>{formatTime(event.start_time)}</span>
-      </div>
-      <div className="flex items-start gap-2">
-        <MapPin size={18} className="mt-0.5" />
-        <div>
-          <span className="text-playarena-600">
-            {event.start_landmark.name}, {event.start_landmark.state}
-          </span>
-          {event.start_landmark.map_link && (
-            <div className="mt-1">
-              <a
-                href={event.start_landmark.map_link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs flex items-center text-playarena-600 hover:underline"
-              >
-                <ExternalLink size={12} className="mr-1" />
-                View on Google Maps
-              </a>
+            <div class="="bg-green-100 border border-green-200 Green text-green-700 px-4 py-3 rounded mb-4">
+              <div className="bg-green-100 border-green-200 border text-green-700 px-4 py-3 rounded mb-4">
+                This is event is happening today!
             </div>
-          )}
-        </div>
+          </div>
+            ) : status === "tomorrow" ? (
+              <div class="="bg-blue-100 border border-blue-200 text-blue-700 px-4 py-3 rounded mb-4">
+              <div className="bg-blue-100 border-blue-200 border text-blue-700 px-4 py-3 rounded mb-4">
+                This is event is happening tomorrow!
+              </div>
+            ) : null}
+            </div>
+          )};}
+
+      <div class="="space-y-4"> className="space-y-4">
+        <div class="border">
+          <div className="border rounded-lg p-4 bg-card shadow-md relative">
+            <div class="absolute top-4 right-4 m-0 p-0">
+            <div className="absolute top-4 right-4 m-0 p-0">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {addToCalendar;}}
+                className="text-playarena-blue-600 p-2 border-blue-300 hover:bg-blue-50 p-2 m-0"
+              >
+                <Bell size={16} className="ml-0 mr-0" />
+              )}
+              </Button>
+            </div>
+          ))}
+            <h2 className="font-semibold mb-3">Event Details</h2>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Calendar size={18} />
+                <span>{formatDate(event.event_date)}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Clock size={18} />
+                <span>{formatTime(event.start_time)}</span>
+              </div>
+              <div className="flex items-start gap-2 cursor-pointer" 
+                onClick={() => navigate(`/landmark/${event.start_landmark.slug}`)}>
+                <MapPin size={18} className="mt-0.5" />
+                <div>
+                  <span className="text-playarena-green-600 hover:underline">
+                    {event.start_landmark.name}, {event.start_landmark.state}
+                  </span>
+                  {event.start_landmark.map_link && (
+                    <div className="mt-1">
+                      <a 
+                        href={event.start_landmark.map_link} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-xs flex items-center text-green-600 hover:underline"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <ExternalLink size={12} className="mr-1" />
+                        Link to Google Maps
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Clock size={18} />
+                <span>
+                  Duration: {event.duration_value} {event.duration_type}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Users size={18} />
+                <span>
+                  {attendees.length}/{event.max_attendees} spots filled
+                  {isFull ? && "(FULL)" : ""}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Bike size={18} />
+                <span>
+                  {event.is_own_bike && "Bring Your Own Bike"}
+                  {event.is_own_bike && event.is_rental_available && " | "}
+                  {event.is_rental_available && "Rentals Available"}
+                </span>
+              </div>
+              <div className="font-semibold mt-2">
+                Cost: {event.is_free ? "Free" : `₦${event.price?.toFixed(2)}`}
+              </div>
+              {event.notes && (
+                <div className="mt-3">
+                  <h3 className="text-sm font-medium mb-1">Notes:</h3>
+                  <p className="text-sm bg-muted p-2 rounded">{event.notes}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+
+        <AttendeesTable
+          event={event}
+          attendees={attendees}
+          navigate={navigate}
+          isEnded={isEnded}
+          isFull={isFull}
+          totalAttendees={attendees.length}
+        />
+
+        <CyclingDetailsDialogue event={event} attendees={attendees} />
       </div>
-      <div className="flex items-center gap-2">
-        <Clock size={18} />
-        <span>
-          Duration: {event.duration_value} {event.duration_type}
-        </span>
-      </div>
-      <div className="flex items-center gap-2">
-        <Users size={18} />
-        <span>
-          {attendees.length}/{event.max_attendees} spots filled
-          {isFull && " (FULL)"}
-        </span>
-      </div>
-      <div className="flex items-center gap-2">
-        <Bike size={18} />
-        <span>
-          {event.is_own_bike && "Bring Your Own Bike"}
-          {event.is_own_bike && event.is_rental_available && " | "}
-          {event.is_rental_available && "Rentals Available"}
-        </span>
-      </div>
-      <div className="font-semibold mt-2">
-        Cost: {event.is_free ? "Free" : `₦${event.price?.toFixed(2)}`}
-      </div>
-      {event.notes && (
-        <div className="mt-3">
-          <h3 className="text-sm font-medium mb-1">Notes:</h3>
-          <p className="text-sm bg-muted p-2 rounded">{event.notes}</p>
-        </div>
-      )}
-    </div>
+    ))}
+    <Navbar />
   </div>
-
-          <AttendeesTable
-            event={event}
-            attendees={attendees}
-            navigate={navigate}
-            isEnded={isEnded}
-            isFull={isFull}
-            totalAttendees={attendees.length}
-          />
-
-          <CyclingDetailsDialogue event={event} attendees={attendees} />
-        </div>
-      </div>
-      <Navbar />
-    </div>
-  );
+);
+  )};
 };
 
 export default CyclingDetail;
