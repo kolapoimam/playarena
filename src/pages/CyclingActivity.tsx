@@ -114,16 +114,51 @@ const CyclingActivity = () => {
         attendees: Array.isArray(event.cycling_attendees) ? event.cycling_attendees : [],
       }));
 
-      const sortedEvents = processedEvents.sort((a, b) => {
+      // Convert and sort events
+      const now = DateTime.now().setZone(LAGOS_TIMEZONE);
+      const today = now.startOf('day');
+      const tomorrow = today.plus({ days: 1 });
+      const dayAfterTomorrow = tomorrow.plus({ days: 1 });
+
+      const sortedEvents = processedEvents.map(event => {
+        const eventDateTime = DateTime.fromFormat(
+          `${event.event_date} ${event.start_time}`,
+          "yyyy-MM-dd hh:mm a",
+          { zone: LAGOS_TIMEZONE }
+        );
+        
+        // Determine status
+        let status: string;
+        if (eventDateTime < now) {
+          status = "passed";
+        } else if (eventDateTime >= today && eventDateTime < tomorrow) {
+          status = "today";
+        } else if (eventDateTime >= tomorrow && eventDateTime < dayAfterTomorrow) {
+          status = "tomorrow";
+        } else {
+          status = "upcoming";
+        }
+
+        return {
+          ...event,
+          status
+        };
+      })
+      .sort((a, b) => {
+        // Priority: Today > Tomorrow > Upcoming > Passed
         const statusOrder = {
           today: 0,
           tomorrow: 1,
           upcoming: 2,
-          passed: 3,
+          passed: 3
         };
+
+        // First sort by status priority
         if (statusOrder[a.status] !== statusOrder[b.status]) {
           return statusOrder[a.status] - statusOrder[b.status];
         }
+
+        // Then sort by date/time within each status group
         const aDateTime = DateTime.fromFormat(
           `${a.event_date} ${a.start_time}`,
           "yyyy-MM-dd hh:mm a",
@@ -137,7 +172,6 @@ const CyclingActivity = () => {
         return aDateTime.toMillis() - bDateTime.toMillis();
       });
 
-      console.log("Processed events:", sortedEvents); // Debug log
       setEvents(sortedEvents);
       setFilteredEvents(sortedEvents);
       setTotalEvents(count || 0);
@@ -166,6 +200,11 @@ const CyclingActivity = () => {
   const formatDate = (dateString: string) => {
     const date = DateTime.fromISO(dateString, { zone: "utc" }).setZone(LAGOS_TIMEZONE);
     return date.toFormat("ccc, d LLL yyyy");
+  };
+
+  const formatTime = (timeString: string) => {
+    const time = DateTime.fromFormat(timeString, "hh:mm a", { zone: LAGOS_TIMEZONE });
+    return time.toFormat("h:mm a");
   };
 
   const totalPages = Math.ceil(totalEvents / eventsPerPage);
@@ -327,6 +366,7 @@ const CyclingActivity = () => {
           <div className="space-y-4">
             {filteredEvents.map((event) => {
               const { statusLabel, statusClass } = getEventStatus(event);
+              const isPast = event.status === "passed";
               return (
                 <div key={event.id} className="w-full border rounded-lg overflow-hidden shadow-sm bg-white dark:bg-gray-800">
                   <div className="p-4">
@@ -350,7 +390,7 @@ const CyclingActivity = () => {
                       </div>
                       <div className="flex items-center gap-2">
                         <Clock size={16} className="text-gray-600 dark:text-gray-400" />
-                        <span>{event.start_time}</span>
+                        <span>{formatTime(event.start_time)}</span>
                       </div>
                       {event.start_landmark && (
                         <div className="flex items-center gap-2">
@@ -384,7 +424,7 @@ const CyclingActivity = () => {
                         size="sm"
                         onClick={() => navigate(`/cycling/${event.slug}`)}
                       >
-                        View Details
+                        {isPast ? "Give Feedback" : "View Details"}
                       </Button>
                     </div>
                   </div>
