@@ -216,9 +216,11 @@ const HostCycling = () => {
     new_landmark_map_link?: string | null;
   }) => {
     try {
-      const { data: slugData, error: slugDataError } = await supabase.rpc('generate_unique_slug', {
-        title: data.new_landmark_name,
-      });
+const { data: slugData, error: slugDataError } = await supabase.rpc('generate_unique_slug', {
+  p_text_input: data.new_landmark_name,
+  p_table_name: 'landmarks',
+  p_id_uuid: null,
+});
       if (slugDataError || !slugData) throw new Error(`Failed to generate landmark slug: ${slugDataError?.message || 'No slug data'}`);
 
       const { data: newLandmark, error: landmarkError } = await supabase
