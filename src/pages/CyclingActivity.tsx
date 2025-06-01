@@ -203,8 +203,10 @@ const CyclingActivity = () => {
   };
 
   const formatTime = (timeString: string) => {
-    const time = DateTime.fromFormat(timeString, "hh:mm a", { zone: LAGOS_TIMEZONE });
-    return time.toFormat("h:mm a");
+    const [hours, minutes] = timeString.split(":");
+    const date = new Date();
+    date.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+    return date.toLocaleTimeString("en-NG", { hour: "2-digit", minute: "2-digit", hour12: true });
   };
 
   const totalPages = Math.ceil(totalEvents / eventsPerPage);
