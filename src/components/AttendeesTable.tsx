@@ -9,7 +9,7 @@ type Attendee = {
 };
 
 type CyclingEvent = {
-  id: string;
+  id_uuid: string;
   slug: string;
   title: string;
   event_date: string;
@@ -30,7 +30,7 @@ type CyclingEvent = {
     name?: string;
     city?: string;
   } | null;
-  cycling_attendees: {
+  attendees: {
     id_uuid: string;
     attendee_name: string;
     attendee_phone: string;
