@@ -111,7 +111,14 @@ const CyclingCodeInput = ({
   const handleCodeChange = async (value: string) => {
     const numericValue = value.replace(/[^0-9]/g, "").slice(0, 6);
     setSuperCode(numericValue);
-    setSuperCodeError(null);
+    
+    // Only show error if the code is not 6 digits and not empty
+    if (numericValue.length > 0 && numericValue.length !== 6) {
+      setSuperCodeError("Code must be exactly 6 digits");
+    } else {
+      setSuperCodeError(null);
+    }
+    
     setEventNotFound(false);
     setCyclingEvent(null);
 
