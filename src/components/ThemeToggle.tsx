@@ -39,7 +39,9 @@ export default function ThemeToggle() {
       className="p-2 rounded-full bg-secondary text-foreground hover:bg-accent transition-colors duration-200"
       aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
     >
-      {theme === "light" ? <Moon size={20} /> : <Sun size={20} />}
+      <span className={`text-2xl ${theme === "light" ? "text-green-600" : "text-gray-400"}`}>
+        ⚽
+      </span>
     </button>
   );
 }
