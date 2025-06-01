@@ -22,7 +22,7 @@ interface CyclingEvent {
   price: number | null;
   host_name: string;
   host_id: string;
-  start_landmark: { id: string; name: string; state: string } | null;
+  start_landmark: { id: string; name: string; state: string; slug: string } | null;
   attendees: { id_uuid: string; attendee_name: string; attendee_status: string }[];
   status: string;
 }
@@ -30,6 +30,7 @@ interface CyclingEvent {
 type Landmark = {
   id_uuid: string;
   name: string;
+  slug: string;
 };
 
 const CyclingActivity = () => {
@@ -59,7 +60,7 @@ const CyclingActivity = () => {
     try {
       const { data, error } = await supabase
         .from("landmarks")
-        .select("id_uuid, name")
+        .select("id_uuid, name, slug")
         .order("name", { ascending: true });
       if (error) throw error;
       setLandmarks(data as Landmark[]);
@@ -81,7 +82,7 @@ const CyclingActivity = () => {
         .select(
           `
           id_uuid, slug, title, event_date, start_time, max_attendees, is_free, price, host_name, host_id, status,
-          start_landmark:landmarks!start_landmark_id(id, name, state),
+          start_landmark:landmarks!start_landmark_id(id, name, state, slug),
           attendees:cycling_attendees!cycling_attendees_cycling_event_id_uuid_fkey(id_uuid, attendee_name, attendee_status)
         `,
           { count: "exact" }
@@ -122,11 +123,7 @@ const CyclingActivity = () => {
       const dayAfterTomorrow = tomorrow.plus({ days: 1 });
 
       const sortedEvents = processedEvents.map(event => {
-        const eventDateTime = DateTime.fromFormat(
-          `${event.event_date} ${event.start_time}`,
-          "yyyy-MM-dd hh:mm a",
-          { zone: LAGOS_TIMEZONE }
-        );
+        const eventDateTime = DateTime.fromISO(`${event.event_date}T${event.start_time}`, { zone: LAGOS_TIMEZONE });
         
         // Determine status
         let status: string;
@@ -160,16 +157,8 @@ const CyclingActivity = () => {
         }
 
         // Then sort by date/time within each status group
-        const aDateTime = DateTime.fromFormat(
-          `${a.event_date} ${a.start_time}`,
-          "yyyy-MM-dd hh:mm a",
-          { zone: LAGOS_TIMEZONE }
-        );
-        const bDateTime = DateTime.fromFormat(
-          `${b.event_date} ${b.start_time}`,
-          "yyyy-MM-dd hh:mm a",
-          { zone: LAGOS_TIMEZONE }
-        );
+        const aDateTime = DateTime.fromISO(`${a.event_date}T${a.start_time}`, { zone: LAGOS_TIMEZONE });
+        const bDateTime = DateTime.fromISO(`${b.event_date}T${b.start_time}`, { zone: LAGOS_TIMEZONE });
         return aDateTime.toMillis() - bDateTime.toMillis();
       });
 
@@ -204,10 +193,8 @@ const CyclingActivity = () => {
   };
 
   const formatTime = (timeString: string) => {
-    const [hours, minutes] = timeString.split(":");
-    const date = new Date();
-    date.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-    return date.toLocaleTimeString("en-NG", { hour: "2-digit", minute: "2-digit", hour12: true });
+    const time = DateTime.fromISO(`2000-01-01T${timeString}`, { zone: "utc" }).setZone(LAGOS_TIMEZONE);
+    return time.toFormat("hh:mm a");
   };
 
   const totalPages = Math.ceil(totalEvents / eventsPerPage);
@@ -328,7 +315,7 @@ const CyclingActivity = () => {
                   <SelectContent>
                     <SelectItem value="all">All</SelectItem>
                     <SelectItem value="hours">Hours</SelectItem>
-                    <SelectItem value="distance">Distance (km)</SelectItem>
+                    <SelectItem value="kilometer">Kilometer</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -371,7 +358,7 @@ const CyclingActivity = () => {
               const { statusLabel, statusClass } = getEventStatus(event);
               const isPast = event.status === "passed";
               return (
-                <div key={event.id} className="w-full border rounded-lg overflow-hidden shadow-sm bg-white dark:bg-gray-800">
+                <div key={event.id_uuid} className="w-full border rounded-lg overflow-hidden shadow-sm bg-white dark:bg-gray-800">
                   <div className="p-4">
                     <div className="flex justify-between items-center">
                       <h3 className="font-bold text-lg text-gray-800 dark:text-gray-200">
@@ -398,9 +385,16 @@ const CyclingActivity = () => {
                       {event.start_landmark && (
                         <div className="flex items-center gap-2">
                           <MapPin size={16} className="text-gray-600 dark:text-gray-400" />
-                          <span className="text-primary">
+                          <a
+                            href={`/landmark/${event.start_landmark.slug}`}
+                            className="text-primary hover:underline"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              navigate(`/landmark/${event.start_landmark.slug}`);
+                            }}
+                          >
                             {event.start_landmark.name}, {event.start_landmark.state}
-                          </span>
+                          </a>
                         </div>
                       )}
                       <div className="flex items-center gap-2">
