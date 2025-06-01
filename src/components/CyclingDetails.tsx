@@ -23,10 +23,12 @@ type CyclingEvent = {
   cancellation_status: boolean;
   status: string;
   start_landmark_id: string;
-  location: {
-    name?: string;
-    city?: string;
-  } | null;
+  start_landmark: {
+    name: string;
+    state: string;
+    description?: string | null;
+    map_link?: string | null;
+  };
   attendees: {
     id_uuid: string;
     attendee_name: string;
@@ -214,7 +216,7 @@ const CyclingDetails = ({ event, cashout, handleCancel, loading, isEventPast, wa
         <div className="flex items-center gap-3">
           <MapPin size={20} className="text-green-500" />
           <span className="text-gray-900 dark:text-gray-100">
-            {event.location?.name || "Unknown Location"}, {event.location?.city || "Unknown City"}
+            {event.start_landmark?.name || "Unknown Location"}, {event.start_landmark?.state || "Unknown City"}
           </span>
         </div>
         <div className="flex items-center gap-3">
