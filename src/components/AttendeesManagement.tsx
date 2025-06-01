@@ -16,7 +16,7 @@ import { z } from "zod";
 import { isPast, addHours } from "date-fns";
 
 type CyclingEvent = {
-  id: string;
+  id_uuid: string;
   slug: string;
   title: string;
   event_date: string;
@@ -37,7 +37,7 @@ type CyclingEvent = {
     name?: string;
     city?: string;
   } | null;
-  cycling_attendees: {
+  attendees: {
     id_uuid: string;
     attendee_name: string;
     attendee_phone: string;
@@ -53,6 +53,9 @@ type AttendeeStatus = {
   attendee_status: "registered" | "checked_in" | "absent";
   checkinCode: string;
 };
+
+type CheckinCodes = { [key: string]: string };
+type CheckinCodeErrors = { [key: string]: string | null };
 
 const codeSchema = z
   .string()
@@ -120,13 +123,13 @@ const AttendeesManagement = ({
   }, [tempIdentifier]);
 
   useEffect(() => {
-    if (!event?.cycling_attendees) return;
+    if (!event?.attendees) return;
 
-const initialStatuses = event.cycling_attendees.map((attendee) => ({
-  id: attendee.id_uuid,
-  status: attendee.attendee_status as "registered" | "checked_in" | "absent",
-  checkinCode: checkinCodes[attendee.id_uuid] || "",
-}));
+    const initialStatuses = event.attendees.map((attendee) => ({
+      id_uuid: attendee.id_uuid,
+      attendee_status: attendee.attendee_status as "registered" | "checked_in" | "absent",
+      checkinCode: checkinCodes[attendee.id_uuid] || "",
+    }));
     setAttendeeStatuses(initialStatuses);
 
     const channel = supabase
@@ -148,10 +151,10 @@ const initialStatuses = event.cycling_attendees.map((attendee) => ({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [event?.cycling_attendees, setAttendeeStatuses, checkinCodes, event?.id_uuid, fetchEvent]);
+  }, [event?.attendees, setAttendeeStatuses, checkinCodes, event?.id_uuid, fetchEvent]);
 
   const canCheckin = () => {
-    if (!event || event.cancellation_status || !event.cycling_attendees?.length)
+    if (!event || event.cancellation_status || !event.attendees?.length)
       return false;
     const eventDateTime = new Date(`${event.event_date}T${event.start_time}`);
     const eventEndTime = addHours(eventDateTime, 2);
@@ -160,35 +163,23 @@ const initialStatuses = event.cycling_attendees.map((attendee) => ({
 
   const handleCheckinCodeChange = (attendeeId: string, code: string) => {
     const numericCode = code.replace(/[^0-9]/g, "").slice(0, 6);
-    setCheckinCodes((prev) => ({ ...prev, [attendeeId]: numericCode }));
+    setCheckinCodes(((prev) => {
+      const newCodes = { ...prev, [attendeeId]: numericCode };
+      return newCodes;
+    }) as any);
     const validation = codeSchema.safeParse(numericCode);
-    setCheckinCodeErrors((prev) => ({
-      ...prev,
-      [attendeeId]: validation.success || numericCode === "" ? null : validation.error.errors[0].message,
-    }));
+    setCheckinCodeErrors(((prev) => {
+      return {
+        ...prev,
+        [attendeeId]: validation.success || numericCode === "" ? null : validation.error.errors[0].message,
+      };
+    }) as any);
   };
 
-  const validateCheckinCode = async (attendeeId: string) => {
-    const code = checkinCodes[attendeeId];
-    if (!code) {
-      toast({
-        title: "Invalid Code",
-        description: "Please enter a check-in code.",
-        variant: "destructive",
-      });
-      return;
-    }
+  const handleCheckin = async (attendeeId: string) => {
+    if (!event) return;
 
-    const validation = codeSchema.safeParse(code);
-    if (!validation.success) {
-      setCheckinCodeErrors((prev) => ({
-        ...prev,
-        [attendeeId]: validation.error.errors[0].message,
-      }));
-      return;
-    }
-
-    const attendee = event?.cycling_attendees?.find((p) => p.id_uuid === attendeeId);
+    const attendee = event.attendees?.find((p) => p.id_uuid === attendeeId);
     if (!attendee) {
       toast({
         title: "Error",
@@ -198,102 +189,118 @@ const initialStatuses = event.cycling_attendees.map((attendee) => ({
       return;
     }
 
-    setCheckingInAttendees((prev) => ({ ...prev, [attendeeId]: true }));
+    const code = checkinCodes[attendeeId];
+    if (!code) {
+      setCheckinCodeErrors(((prev) => ({
+        ...prev,
+        [attendeeId]: "Please enter a check-in code",
+      })) as any);
+      return;
+    }
+
+    if (code !== attendee.confirmation_code) {
+      setCheckinCodeErrors(((prev) => ({
+        ...prev,
+        [attendeeId]: "Invalid check-in code",
+      })) as any);
+      return;
+    }
+
     setLoading(true);
-
     try {
-const { data: attendeeData, error: attendeeError } = await supabase
-  .from("cycling_attendees")
-  .select("id_uuid, confirmation_code, attendee_status")
-  .eq("id_uuid", attendeeId)
-  .single();
-      
-      if (attendeeError || !attendeeData) {
-        throw new Error(attendeeError?.message || "Attendee not found.");
-      }
-
-      if (attendeeData.attendee_status === "checked_in") {
-        throw new Error("Attendee is already checked in.");
-      }
-
-      if (attendeeData.attendee_status === "absent") {
-        throw new Error("Attendee is marked as absent.");
-      }
-
-      if (attendeeData.confirmation_code !== Number(code)) {
-        throw new Error("Invalid confirmation code.");
-      }
-
-      const { error: updateError } = await supabase
+      const { error } = await supabase
         .from("cycling_attendees")
         .update({
-          status: "checked_in",
+          attendee_status: "checked_in",
           updated_at: new Date().toISOString(),
         })
         .eq("id_uuid", attendeeId);
 
-      if (updateError) throw updateError;
+      if (error) throw error;
 
-      if (!event.is_free && event.price) {
-        const slots = Number(attendee.number_of_slots) || 1;
-        const amount = slots * event.price;
-
-        const { data: userData } = await supabase.auth.getUser();
-        const userId = userData.user?.id;
-
-        if (userId) {
-          const { error: walletError } = await supabase.rpc(
-            "update_wallet_balance",
-            {
-              p_organizer_id: userId,
-              p_amount: amount,
-              p_operation: "add",
-            }
-          );
-
-          if (walletError) {
-            console.error("Wallet update error:", walletError);
-            toast({
-              title: "Warning",
-              description:
-                "Attendee checked in, but failed to update wallet balance.",
-              variant: "destructive",
-            });
-          }
-        }
-      }
-
-      setAttendeeStatuses((prev) =>
-        prev.map((s) =>
-          s.id === attendeeId ? { ...s, attendee_status: "checked_in" } : s
+      setAttendeeStatuses(((prev) =>
+        prev.map((status) =>
+          status.id_uuid === attendeeId
+            ? { ...status, attendee_status: "checked_in" }
+            : status
         )
-      );
+      ) as any);
 
-      setCheckinAttendee({
-        id: attendeeId,
-        name: attendee.attendee_name,
-        slots: Number(attendee.number_of_slots) || 1,
-      });
-      setCheckinDialogOpen(true);
+      setCheckinCodes(((prev) => {
+        const newCodes = { ...prev };
+        delete newCodes[attendeeId];
+        return newCodes;
+      }) as any);
 
-      setCheckinCodes((prev) => ({ ...prev, [attendeeId]: "" }));
-      setCheckinCodeErrors((prev) => ({ ...prev, [attendeeId]: null }));
-
-      await fetchEvent();
+      setCheckinCodeErrors(((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[attendeeId];
+        return newErrors;
+      }) as any);
 
       toast({
         title: "Success",
-        description: `${attendee.attendee_name} has been checked in.`,
+        description: "Attendee checked in successfully.",
       });
     } catch (error: any) {
-      setCheckinCodeErrors((prev) => ({ ...prev, [attendeeId]: error.message }));
+      console.error("Error checking in attendee:", error);
       toast({
         title: "Error",
         description: error.message || "Failed to check in attendee.",
         variant: "destructive",
       });
     } finally {
-      setCheckingInAttendees((prev) => ({ ...prev, [attendeeId]: false }));
+      setLoading(false);
+    }
+  };
+
+  const handleMarkAbsent = async (attendeeId: string) => {
+    if (!event) return;
+
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from("cycling_attendees")
+        .update({
+          attendee_status: "absent",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id_uuid", attendeeId);
+
+      if (error) throw error;
+
+      setAttendeeStatuses(((prev) =>
+        prev.map((status) =>
+          status.id_uuid === attendeeId
+            ? { ...status, attendee_status: "absent" }
+            : status
+        )
+      ) as any);
+
+      setCheckinCodes(((prev) => {
+        const newCodes = { ...prev };
+        delete newCodes[attendeeId];
+        return newCodes;
+      }) as any);
+
+      setCheckinCodeErrors(((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[attendeeId];
+        return newErrors;
+      }) as any);
+
+      toast({
+        title: "Success",
+        description: "Attendee marked as absent.",
+      });
+    } catch (error: any) {
+      console.error("Error marking attendee as absent:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to mark attendee as absent.",
+        variant: "destructive",
+      });
+    } finally {
       setLoading(false);
     }
   };
@@ -358,18 +365,18 @@ const { data: attendeeData, error: attendeeError } = await supabase
           onClick={() => setIsAttendeesOpen(!isAttendeesOpen)}
           className="flex items-center justify-between w-full text-left text-lg font-semibold mb-2 text-gray-900 dark:text-white"
         >
-          <span>Attendees ({event.cycling_attendees?.length || 0})</span>
+          <span>Attendees ({event.attendees?.length || 0})</span>
           {isAttendeesOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
         </button>
 
         {isAttendeesOpen && (
           <div className="space-y-4 max-h-96 overflow-y-auto">
-            {event.cycling_attendees?.length === 0 ? (
+            {event.attendees?.length === 0 ? (
               <p className="text-center text-gray-600 dark:text-gray-400">
                 No attendees registered.
               </p>
             ) : (
-              event.cycling_attendees?.map((attendee) => (
+              event.attendees?.map((attendee) => (
                 <div
                   key={attendee.id_uuid}
                   className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600"
@@ -409,7 +416,7 @@ const { data: attendeeData, error: attendeeError } = await supabase
                             disabled={checkingInAttendees[attendee.id_uuid] || loading}
                           />
                           <Button
-                            onClick={() => validateCheckinCode(attendee.id_uuid)}
+                            onClick={() => handleCheckin(attendee.id_uuid)}
                             className="bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded"
                             disabled={
                               !checkinCodes[attendee.id_uuid] ||
