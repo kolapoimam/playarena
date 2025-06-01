@@ -101,10 +101,7 @@ const CyclingActivity = () => {
         query = query.eq("status", statusFilter);
       }
 
-      const start = (currentPage - 1) * eventsPerPage;
-      const end = start + eventsPerPage - 1;
-      query = query.range(start, end);
-
+      // Fetch all events to sort them client-side
       const { data, error, count } = await query;
 
       if (error) throw error;
@@ -165,11 +162,12 @@ const CyclingActivity = () => {
         };
 
         // First sort by status priority
-        if (statusOrder[a.status] !== statusOrder[b.status]) {
-          return statusOrder[a.status] - statusOrder[b.status];
+        const statusDiff = statusOrder[a.status] - statusOrder[b.status];
+        if (statusDiff !== 0) {
+          return statusDiff;
         }
 
-        // Then sort by date/time within each status group
+        // Then sort by date/time within each status group (ascending)
         const aDate = DateTime.fromISO(a.event_date, { zone: "utc" }).setZone(LAGOS_TIMEZONE);
         const aTime = DateTime.fromFormat(a.start_time, "hh:mm a", { zone: LAGOS_TIMEZONE });
         let aDateTime = aDate;
@@ -197,8 +195,13 @@ const CyclingActivity = () => {
         return aDateTime.toMillis() - bDateTime.toMillis();
       });
 
-      setEvents(sortedEvents);
-      setFilteredEvents(sortedEvents);
+      // Apply pagination client-side
+      const start = (currentPage - 1) * eventsPerPage;
+      const end = start + eventsPerPage;
+      const paginatedEvents = sortedEvents.slice(start, end);
+
+      setEvents(paginatedEvents);
+      setFilteredEvents(paginatedEvents);
       setTotalEvents(count || 0);
     } catch (error: any) {
       console.error("Error fetching cycling events:", error);
@@ -454,7 +457,6 @@ const CyclingActivity = () => {
                     </div>
                   </div>
                 </div>
-              );
             })}
             <div className="flex justify-between items-center mt-4">
               <Button
@@ -462,7 +464,7 @@ const CyclingActivity = () => {
                 disabled={currentPage === 1}
                 onClick={handlePreviousPage}
               >
-                <ChevronLeft size={16} className="mr-2" />
+                <ChevronLeft size={16" className="mr-2"/>
                 Previous
               </Button>
               <span className="text-gray-700 dark:text-gray-200">
@@ -474,8 +476,8 @@ const CyclingActivity = () => {
                 onClick={handleNextPage}
               >
                 Next
-                <ChevronRight size={16} className="ml-2" />
-              </Button>
+                  <ChevronRight size={16} className="ml-2" />
+                </Button>
             </div>
           </div>
         ) : (
