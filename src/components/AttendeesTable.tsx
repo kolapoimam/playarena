@@ -109,7 +109,7 @@ const AttendeesTable: React.FC<AttendeesTableProps> = ({ event, attendees, navig
         ) : (
           <Button 
             className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
-            onClick={() => navigate(`/cycling/join/${event.slug}`)}
+            onClick={() => navigate(`/join-cycling/${event.slug}`)}
             disabled={isFull || isStarted}
           >
             {isFull ? "Event Full" : "Join This Event"}
