@@ -83,7 +83,7 @@ type CyclingEvent = {
     id_uuid: string;
     attendee_name: string;
     attendee_phone: string;
-    attendee_status: string;
+    status: "registered" | "checked_in" | "absent";
     confirmation_code: string;
     details: { phone: string } | null;
     number_of_slots?: number;
@@ -211,6 +211,7 @@ const ConfirmCheckin = () => {
             : null,
           attendees: Array.isArray(data.attendees) ? data.attendees.map(attendee => ({
             ...attendee,
+            status: attendee.status || "registered",
             details: attendee.details || { phone: attendee.attendee_phone || "N/A" },
           })) : [],
           cancellation_status: data.cancellation_status ?? false,
@@ -221,7 +222,7 @@ const ConfirmCheckin = () => {
         setPlayerStatuses(
           (cyclingData.attendees || []).map((attendee) => ({
             id: attendee.id_uuid,
-            status: attendee.attendee_status,
+            status: attendee.status,
             checkinCode: "",
           }))
         );
@@ -269,12 +270,12 @@ const ConfirmCheckin = () => {
         if (cyclingData.event_end_time && isPast(new Date(cyclingData.event_end_time))) {
           const updates =
             cyclingData.attendees
-              ?.filter((p) => p.attendee_status === "registered" && p.attendee_status !== "checked_in")
+              ?.filter((p) => p.status === "registered" && p.status !== "checked_in")
               .map((p) =>
                 supabase
                   .from("cycling_attendees")
                   .update({
-                    attendee_status: "absent",
+                    status: "absent",
                     updated_at: new Date().toISOString(),
                   })
                   .eq("id", p.id)
