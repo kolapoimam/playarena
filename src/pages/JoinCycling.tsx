@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Form,
   FormControl,
@@ -15,7 +16,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { ArrowLeft, Calendar, Clock, MapPin, Users, DollarSign, Loader } from "lucide-react";
+import { ArrowLeft, Calendar, Clock, MapPin, Users, Loader } from "lucide-react";
 import CyclingSuccessDialog from "@/components/CyclingSuccessDialog";
 import Navbar from "@/components/Navbar";
 
@@ -45,6 +46,8 @@ type CyclingEvent = {
   host_name: string;
   host_phone: string;
   start_landmark: Landmark;
+  is_own_bike: boolean;
+  is_rental_available: boolean;
 };
 
 type PaymentStatus = "pending" | "success" | "failed";
@@ -55,6 +58,8 @@ const formSchema = z.object({
     .min(3, "Name must be at least 3 characters")
     .max(50, "Name cannot exceed 50 characters"),
   phone: z.string().regex(/^[0-9]{11}$/, "Phone number must be exactly 11 digits"),
+  is_own_bike: z.boolean().optional(),
+  is_rental_bike: z.boolean().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -79,7 +84,7 @@ const JoinCycling = () => {
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: { name: "", phone: "" },
+    defaultValues: { name: "", phone: "", is_own_bike: false, is_rental_bike: false },
   });
 
   const defaultEmail = form.getValues("phone")
@@ -122,13 +127,14 @@ const JoinCycling = () => {
             price,
             host_name,
             host_phone,
+            is_own_bike,
+            is_rental_available,
             start_landmark:landmarks!cycling_events_start_landmark_id_fkey(name, state)
           `)
           .eq("slug", slug)
           .single();
         if (error) throw error;
 
-        // Validate event.id_uuid is a UUID
         const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
         if (!uuidRegex.test(data.id_uuid)) {
           throw new Error(`Invalid event ID format: ${data.id_uuid}`);
@@ -139,67 +145,66 @@ const JoinCycling = () => {
         const { data: attendeesData, error: attendeesError } = await supabase
           .from("cycling_attendees")
           .select("id_uuid, attendee_name, attendee_phone, confirmation_code, payment_status, cycling_event_id_uuid")
-          .eq("cycling_event_id_uuid", data.id_uuid);
+          .eq("cycling_attendee_id_uuid", data.id_uuid);
         if (!attendeesError) setAttendees(attendeesData || []);
-      } catch (error: any) {
-        console.error("Error loading event:", error);
+      } catch (err) {
+        console.error('Error:', err);
         toast({
-          title: "Error",
-          description: error.message || "Failed to load event.",
-          variant: "destructive",
+          title: 'Error',
+          description: err.message || 'Failed to load event.',
+          variant: 'error',
         });
-        navigate("/cycling-activities");
+        navigate('/cycling-activities');
       } finally {
         setLoading(false);
       }
     };
-    fetchEvent();
-  }, [slug, navigate, toast]);
+    fetchEvent(event);
+  }, []);
 
   // Verify payment with retry logic
   useEffect(() => {
-    if (!paymentReference || !event) return;
+    if (!paymentReference || !event.id_uuid) return;
 
     const verifyPayment = async (retries = 3, delay = 1000) => {
       setVerifyingPayment(true);
       try {
-        for (let attempt = 1; attempt <= retries; attempt++) {
-          try {
-            const { data, error } = await supabase.functions.invoke("verify-paystack-transaction", {
-              body: { reference: paymentReference },
-            });
-
-            if (error) {
-              throw new Error(error.message || "Verification failed");
-            }
-
-            const { verified, event_id, slug: resourceSlug } = data;
-
-            if (verified && event_id === event.id_uuid && resourceSlug === event.slug) {
-              setPaymentStatus("success");
-              toast({
-                title: "Payment Successful",
-                description: "Your payment was processed successfully. Please complete your registration.",
+          for(let attempt = 1; attempt <= retries; attempt++ ) {
+            try {
+              const { data, error } = await supabase.functions.invoke('verify-paystack-transaction', {
+                body: { reference: paymentReference },
               });
-              return;
-            } else {
-              throw new Error("Payment verification failed: Invalid payment details");
+
+              if (error) throw error;
+
+              const { verified, event_id, slug: resourceSlug } = data;
+
+              if (verified && event_id === event.id_uuid && resourceSlug === event.slug) {
+                setPaymentStatus('success');
+                toast({
+                  title: 'Payment Successful',
+                  description: 'Your payment was processed successfully. Please complete your registration.',
+                });
+                return;
+              } else {
+                throw new Error('Payment verification failed: Invalid payment details');
+              }
+            } catch (error) {
+              if (attempt === retries) {
+                throw error;
+              }
+              console.warn(`Verification attempt ${attempt} failed: ${error.message}. Retrying...`);
+              await new Promise(resolve => setTimeout(resolve, delay));
             }
-          } catch (error: any) {
-            if (attempt === retries) {
-              throw error;
-            }
-            console.warn(`Verification attempt ${attempt} failed: ${error.message}. Retrying...`);
-            await new Promise((resolve) => setTimeout(resolve, delay));
           }
         }
-      } catch (error: any) {
-        console.error("Error verifying payment:", error.message);
-        setPaymentStatus("failed");
+      } catch (error) {
+        console.error('Error verifying payment:', error.message);
+        setPaymentStatus('failed');
         toast({
-          title: "Payment Verification Error",
-          description: "Failed to verify your payment. Please try again or contact support.",
-          variant: "destructive",
+          title: 'Payment Verification Error',
+          description: 'Failed to verify your payment. Please try again or contact support.',
+          variant: 'error',
         });
       } finally {
         setVerifyingPayment(false);
@@ -212,18 +217,18 @@ const JoinCycling = () => {
   const handlePaymentInitiation = async () => {
     if (!event || event.is_free || !event.price) {
       toast({
-        title: "Error",
-        description: "Event not configured for payment.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Event not configured for payment.',
+        variant: 'error',
       });
       return;
     }
 
     if (!paystackLoaded || !window.PaystackPop) {
       toast({
-        title: "Error",
-        description: "Paystack not available.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Paystack not available.',
+        variant: 'error',
       });
       return;
     }
@@ -231,30 +236,29 @@ const JoinCycling = () => {
     const amountInNaira = event.price; // Send amount in naira
     if (!Number.isInteger(amountInNaira * 100) || amountInNaira * 100 < 100) {
       toast({
-        title: "Invalid Amount",
-        description: "Minimum payment is ₦1.00.",
-        variant: "destructive",
+        title: 'Invalid Amount',
+        description: 'Minimum payment is ₦1.00.',
+        variant: 'error',
       });
       return;
     }
 
-    if (!defaultEmail.includes("@") || defaultEmail.length < 5) {
+    if (!defaultEmail.includes('@') || defaultEmail.length < 5) {
       toast({
-        title: "Invalid Email",
-        description: "Enter a valid phone number.",
-        variant: "destructive",
+        title: 'Invalid Email',
+        description: 'Enter a valid phone number.',
+        variant: 'error',
       });
       return;
     }
 
-    // Validate event.id_uuid is a UUID
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(event.id_uuid)) {
-      console.error("Invalid event_id format:", event.id_uuid);
+      console.error('Invalid event_id format:', event.id_uuid);
       toast({
-        title: "Error",
-        description: "Invalid event configuration.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Invalid event configuration.',
+        variant: 'error',
       });
       return;
     }
@@ -262,139 +266,140 @@ const JoinCycling = () => {
     try {
       setJoining(true);
 
-      const response = await supabase.functions.invoke("initialize-paystack-transaction", {
+      const response = await supabase.functions.invoke('initialize-paystack-transaction', {
         body: {
           email: defaultEmail,
           amount: amountInNaira,
           event_id: event.id_uuid,
-          resource_type: "cycling",
+          resource_type: 'cycling',
           slug: event.slug,
           title: event.title,
           callback_url: `${window.location.origin}/join-cycling/${event.slug}`,
           metadata: {
             event_id: event.id_uuid,
-            resource_type: "cycling",
-            user_phone: form.getValues("phone") || "unknown",
+            resource_type: 'cycling',
+            user_phone: form.getValues('phone') || 'unknown',
           },
         },
       });
 
       if (response.error) {
-        throw new Error(response.error.message || "Failed to initialize payment");
+        throw new Error(response.error.message || 'Failed to initialize payment');
       }
 
       const { access_code } = response.data;
 
       if (!access_code) {
-        throw new Error("No access code returned");
+        throw new Error('No access code returned');
       }
 
       const paystack = new window.PaystackPop();
       paystack.resumeTransaction(access_code, {
-        onSuccess: (transaction: any) => {
+        onSuccess: (transaction) => {
           setPaymentReference(transaction.reference);
-          setPaymentStatus("success");
+          setPaymentStatus('success');
           toast({
-            title: "Payment Initiated",
-            description: "Complete your registration.",
+            title: 'Payment Initiated',
+            description: 'Complete your registration.',
           });
           setJoining(false);
         },
         onCancel: () => {
           toast({
-            title: "Payment Cancelled",
-            description: "Payment process cancelled.",
-            variant: "destructive",
+            title: 'Payment Cancelled',
+            description: 'Payment process cancelled.',
+            variant: 'error',
           });
           setJoining(false);
         },
       });
-    } catch (error: any) {
-      console.error("Error initiating payment:", error);
+    } catch (error) {
+      console.error('Error initiating payment:', error);
       toast({
-        title: "Payment Error",
-        description: error.message || "Failed to initiate payment.",
-        variant: "destructive",
+        title: 'Payment Error',
+        description: error.message || 'Failed to initiate payment.',
+        variant: 'error',
       });
       setJoining(false);
     }
   };
 
-const onSubmit = async (data: FormValues) => {
-  if (!event || !event.id_uuid) {
-    toast({
-      title: "Error",
-      description: "Event not loaded or invalid.",
-      variant: "destructive",
-    });
-    return;
-  }
-
-  if (attendees.length >= event.max_attendees) {
-    toast({
-      title: "Error",
-      description: "Event is full.",
-      variant: "destructive",
-    });
-    return;
-  }
-
-  setJoining(true);
-  try {
-    // Generate a unique 6-digit numeric confirmation code
-    const { data: confirmationCode, error: codeError } = await supabase.rpc(
-      "generate_unique_confirmation_code",
-      { event_id: event.id_uuid }
-    );
-    if (codeError || !confirmationCode) {
-      throw new Error(`Failed to generate confirmation code: ${codeError?.message || "No code data"}`);
+  const onSubmit = async (data: FormValues) => {
+    if (!event || !event.id_uuid) {
+      toast({
+        title: 'Error',
+        description: 'Event not loaded or invalid.',
+        variant: 'error',
+      });
+      return;
     }
 
-    const attendeeData = {
-      id_uuid: crypto.randomUUID(),
-      cycling_event_id_uuid: event.id_uuid,
-      attendee_name: data.name,
-      attendee_phone: data.phone,
-      confirmation_code: confirmationCode,
-      payment_status: event.is_free || paymentStatus === "success",
-    };
+    if (attendees.length >= event.max_attendees) {
+      toast({
+        title: 'Error',
+        description: 'Event is full.',
+        variant: 'error',
+      });
+      return;
+    }
 
-    const { error } = await supabase.from("cycling_attendees").insert(attendeeData);
+    setJoining(true);
+    try {
+      const { data: confirmationCode, error: codeError } = await supabase.rpc(
+        'generate_unique_confirmation_code',
+        { event_id: event.id_uuid }
+      );
+      if (codeError || !confirmationCode) {
+        throw new Error(`Failed to generate confirmation code: ${codeError?.message || 'No code data'}`);
+      }
 
-    if (error) throw error;
+      const attendeeData = {
+        id_uuid: crypto.randomUUID(),
+        cycling_event_id_uuid: event.id_uuid,
+        attendee_name: data.name,
+        attendee_phone: data.phone,
+        confirmation_code: confirmationCode,
+        payment_status: event.is_free || paymentStatus === 'success',
+        is_own_bike: event.is_own_bike ? data.is_own_bike : null,
+        is_rental_bike: event.is_rental_available ? data.is_rental_bike : null,
+      };
 
-    setConfirmationCode(confirmationCode);
-    setSuccessDialogOpen(true);
-    toast({
-      title: "Success",
-      description: "Joined event successfully.",
-    });
+      const { error } = await supabase.from('cycling_attendees').insert(attendeeData);
 
-    const { data: updatedAttendees } = await supabase
-      .from("cycling_attendees")
-      .select("id_uuid, attendee_name, attendee_phone, confirmation_code, payment_status, cycling_event_id_uuid")
-      .eq("cycling_event_id_uuid", event.id_uuid);
-    if (updatedAttendees) setAttendees(updatedAttendees);
-  } catch (error: any) {
-    console.error("Error joining event:", error);
-    toast({
-      title: "Error",
-      description: error.message || "Failed to join event.",
-      variant: "destructive",
-    });
-  } finally {
-    setJoining(false);
-  }
-};
+      if (error) throw error;
+
+      setConfirmationCode(confirmationCode);
+      setSuccessDialogOpen(true);
+      toast({
+        title: 'Success',
+        description: 'Joined event successfully.',
+      });
+
+      const { data: updatedAttendees } = await supabase
+        .from('cycling_attendees')
+        .select('id_uuid, attendee_name, attendee_phone, confirmation_code, payment_status, cycling_event_id_uuid')
+        .eq('cycling_event_id_uuid', event.id_uuid);
+      if (updatedAttendees) setAttendees(updatedAttendees);
+    } catch (error) {
+      console.error('Error joining event:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to join event.',
+        variant: 'error',
+      });
+    } finally {
+      setJoining(false);
+    }
+  };
 
   const formatDate = (dateString: string) => {
     const options: Intl.DateTimeFormatOptions = {
-      weekday: "short",
-      day: "numeric",
-      month: "short",
-      year: "numeric",
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
     };
-    return new Date(dateString).toLocaleDateString("en-NG", options);
+    return new Date(dateString).toLocaleDateString('en-NG', options);
   };
 
   if (loading || verifyingPayment) {
@@ -460,7 +465,6 @@ const onSubmit = async (data: FormValues) => {
             </div>
             {!event.is_free && (
               <div className="flex items-center gap-2 mt-2 font-medium text-green-600">
-                <DollarSign size={16} />
                 <span>Price: ₦{(event.price || 0).toFixed(2)}</span>
               </div>
             )}
@@ -526,6 +530,44 @@ const onSubmit = async (data: FormValues) => {
                         </FormItem>
                       )}
                     />
+                    {(event.is_own_bike || event.is_rental_available) && (
+                      <div className="space-y-2">
+                        {event.is_own_bike && (
+                          <FormField
+                            control={form.control}
+                            name="is_own_bike"
+                            render={({ field }) => (
+                              <FormItem className="flex items-center space-x-2">
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                  />
+                                </FormControl>
+                                <label className="text-sm font-medium">Bring Own Bike</label>
+                              </FormItem>
+                            )}
+                          />
+                        )}
+                        {event.is_rental_available && (
+                          <FormField
+                            control={form.control}
+                            name="is_rental_bike"
+                            render={({ field }) => (
+                              <FormItem className="flex items-center space-x-2">
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                  />
+                                </FormControl>
+                                <label className="text-sm font-medium">Rent a Bike</label>
+                              </FormItem>
+                            )}
+                          />
+                        )}
+                      </div>
+                    )}
                     {event.is_free && (
                       <Button
                         type="submit"
@@ -577,7 +619,6 @@ const onSubmit = async (data: FormValues) => {
                     This is a paid event. Please complete the payment to join.
                   </p>
                   <div className="flex items-center gap-2 text-sm font-medium mt-2">
-                    <DollarSign size={16} />
                     <span>Total: ₦{(event.price || 0).toFixed(2)}</span>
                   </div>
                   <Button
