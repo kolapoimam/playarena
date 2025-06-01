@@ -116,22 +116,16 @@ const CyclingCodeInput = ({
     setCyclingEvent(null);
 
     if (numericValue.length === 6) {
-      const validation = codeSchema.safeParse(numericValue);
-      if (!validation.success) {
-        setSuperCodeError(validation.error.errors[0].message);
-        return;
-      }
-
       setLoading(true);
       try {
-const { data: cyclingData, error: cyclingError } = await supabase
-.from("cycling_events_view")
-.select(`
-  id, supercode, slug, title, event_date, start_time, max_attendees, is_free, price, host_name, host_phone, start_landmark_id, status, start_landmark, attendees),
-  cycling_attendees(id_uuid, attendee_name, attendee_phone, attendee_status, confirmation_code, payment_status, number_of_slots)
-`)
-  .eq("supercode", numericValue)
-  .maybeSingle();
+        const { data: cyclingData, error: cyclingError } = await supabase
+          .from("cycling_events_view")
+          .select(`
+            id, supercode, slug, title, event_date, start_time, max_attendees, is_free, price, host_name, host_phone, start_landmark_id, status, start_landmark, attendees),
+            cycling_attendees(id_uuid, attendee_name, attendee_phone, attendee_status, confirmation_code, payment_status, number_of_slots)
+          `)
+          .eq("supercode", numericValue)
+          .maybeSingle();
 
         if (cyclingError) {
           console.error("Cycling event query error:", cyclingError);
@@ -176,10 +170,9 @@ const { data: cyclingData, error: cyclingError } = await supabase
   };
 
   const handleFetchEvent = async () => {
-    const validation = codeSchema.safeParse(superCode);
-    if (!validation.success) {
-      setSuperCodeError(validation.error.errors[0].message);
-      return; 
+    if (superCode.length !== 6) {
+      setSuperCodeError("Code must be exactly 6 digits");
+      return;
     }
 
     setSuperCodeError(null);
