@@ -137,7 +137,7 @@ const initialStatuses = event.cycling_attendees.map((attendee) => ({
           event: '*',
           schema: 'public',
           table: 'cycling_attendees',
-          filter: `event_id=eq.${event.id}`,
+          filter: `cycling_event_id=eq.${event.id}`,
         },
         () => {
           fetchEvent();
