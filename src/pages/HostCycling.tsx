@@ -64,9 +64,9 @@ const formSchema = z.object({
     .max(100000, { message: 'Maximum price is ₦100,000' })
     .optional()
     .nullable()
-    .refine(val => val === null || val === undefined || val >= 1000), {
-      message: 'Price must be at least ₦1000 if provided',
-    }),
+.refine(val => val === null || val === undefined || val >= 1000, {
+  message: 'Price must be at least ₦1000 if provided',
+}),
   is_own_bike: z.boolean().default(false),
   is_rental_available: z.boolean().default(false),
   registration_deadline: z.date().optional().nullable(),
