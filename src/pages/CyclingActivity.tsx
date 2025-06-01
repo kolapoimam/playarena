@@ -12,7 +12,7 @@ import Navbar from "@/components/Navbar";
 import { DateTime } from "luxon";
 
 interface CyclingEvent {
-  id: string;
+  id_uuid: string;
   slug: string;
   title: string;
   event_date: string;
@@ -80,9 +80,9 @@ const CyclingActivity = () => {
         .from("cycling_events")
         .select(
           `
-          id, slug, title, event_date, start_time, max_attendees, is_free, price, host_name, host_id, status,
+          id_uuid, slug, title, event_date, start_time, max_attendees, is_free, price, host_name, host_id, status,
           start_landmark:landmarks!start_landmark_id(id, name, state),
-          attendees:cycling_attendees(id_uuid, attendee_name, attendee_status)
+          attendees:cycling_attendees!cycling_attendees_cycling_event_id_uuid_fkey(id_uuid, attendee_name, attendee_status)
         `,
           { count: "exact" }
         );
