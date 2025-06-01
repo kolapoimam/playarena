@@ -22,7 +22,7 @@ interface CyclingEvent {
   price: number | null;
   host_name: string;
   host_id: string;
-  start_landmark: { id_uuid: string; name: string; state: string; slug: string } | null;
+  start_landmark: { id: string; name: string; state: string } | null;
   attendees: { id_uuid: string; attendee_name: string; attendee_status: string }[];
   status: string;
 }
@@ -81,8 +81,8 @@ const CyclingActivity = () => {
         .select(
           `
           id, slug, title, event_date, start_time, max_attendees, is_free, price, host_name, host_id, status,
-          start_landmark:landmarks!cycling_events_start_landmark_id_fkey(id_uuid, name, state, slug),
-          cycling_attendees!cycling_attendees_cycling_event_id_uuid_fkey(id_uuid, attendee_name, attendee_status)
+          start_landmark:landmarks(id, name, state),
+          attendees:cycling_attendees(id_uuid, attendee_name, attendee_status)
         `,
           { count: "exact" }
         );
@@ -108,11 +108,12 @@ const CyclingActivity = () => {
 
       if (error) throw error;
 
-      // Ensure attendees is always an array
-      const processedEvents = (data as CyclingEvent[]).map(event => ({
+      // Process the data to match the CyclingEvent interface
+      const processedEvents = (data || []).map(event => ({
         ...event,
-        attendees: Array.isArray(event.cycling_attendees) ? event.cycling_attendees : [],
-      }));
+        start_landmark: event.start_landmark?.[0] || null,
+        attendees: event.attendees || []
+      })) as CyclingEvent[];
 
       // Convert and sort events
       const now = DateTime.now().setZone(LAGOS_TIMEZONE);
