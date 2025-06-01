@@ -6,224 +6,241 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
-export type Database = {
+export interface Database {
   public: {
     Tables: {
-      matches: {
+      cycling_events: {
         Row: {
-          created_at: string
           id: string
-          is_paid: boolean
-          match_date: string
-          match_time: string
-          notes: string | null
-          organizer_name: string
-          organizer_phone: string | null
-          player_number_required: boolean | null
+          slug: string
+          title: string
+          event_date: string
+          start_time: string
+          event_start_time: string | null
+          event_end_time: string | null
+          max_attendees: number
+          host_id: string
+          host_name: string
+          host_phone: string
+          supercode: string
+          is_free: boolean
           price: number | null
-          required_fields: Json | null
-          slug: string | null
-          super_code: string | null
-          title: string
-          total_slots: number
-          venue_id: string
+          cancellation_status: boolean
+          status: string
+          start_landmark_id: string
+          created_at: string
+          updated_at: string
         }
         Insert: {
-          created_at?: string
           id?: string
-          is_paid?: boolean
-          match_date: string
-          match_time: string
-          notes?: string | null
-          organizer_name: string
-          organizer_phone?: string | null
-          player_number_required?: boolean | null
-          price?: number | null
-          required_fields?: Json | null
-          slug?: string | null
-          super_code?: string | null
+          slug: string
           title: string
-          total_slots: number
-          venue_id: string
+          event_date: string
+          start_time: string
+          event_start_time?: string | null
+          event_end_time?: string | null
+          max_attendees: number
+          host_id: string
+          host_name: string
+          host_phone: string
+          supercode: string
+          is_free: boolean
+          price?: number | null
+          cancellation_status?: boolean
+          status?: string
+          start_landmark_id: string
+          created_at?: string
+          updated_at?: string
         }
         Update: {
-          created_at?: string
           id?: string
-          is_paid?: boolean
-          match_date?: string
-          match_time?: string
-          notes?: string | null
-          organizer_name?: string
-          organizer_phone?: string | null
-          player_number_required?: boolean | null
-          price?: number | null
-          required_fields?: Json | null
-          slug?: string | null
-          super_code?: string | null
+          slug?: string
           title?: string
-          total_slots?: number
-          venue_id?: string
+          event_date?: string
+          start_time?: string
+          event_start_time?: string | null
+          event_end_time?: string | null
+          max_attendees?: number
+          host_id?: string
+          host_name?: string
+          host_phone?: string
+          supercode?: string
+          is_free?: boolean
+          price?: number | null
+          cancellation_status?: boolean
+          status?: string
+          start_landmark_id?: string
+          created_at?: string
+          updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "matches_venue_id_fkey"
-            columns: ["venue_id"]
-            isOneToOne: false
-            referencedRelation: "venues"
-            referencedColumns: ["id"]
-          },
-        ]
       }
-      players: {
+      cycling_attendees: {
         Row: {
-          confirmation_code: string | null
-          created_at: string
+          id_uuid: string
+          event_id: string
+          attendee_name: string
+          attendee_phone: string
+          attendee_status: string
+          confirmation_code: string
           details: Json | null
-          id: string
-          match_id: string
-          payment_status: string | null
-          player_name: string
-          status: string | null
-        }
-        Insert: {
-          confirmation_code?: string | null
-          created_at?: string
-          details?: Json | null
-          id?: string
-          match_id: string
-          payment_status?: string | null
-          player_name: string
-          status?: string | null
-        }
-        Update: {
-          confirmation_code?: string | null
-          created_at?: string
-          details?: Json | null
-          id?: string
-          match_id?: string
-          payment_status?: string | null
-          player_name?: string
-          status?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "players_match_id_fkey"
-            columns: ["match_id"]
-            isOneToOne: false
-            referencedRelation: "matches"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      venue_images: {
-        Row: {
-          created_at: string | null
-          id: string
-          image_url: string
-          venue_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          image_url: string
-          venue_id: string
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          image_url?: string
-          venue_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "venue_images_venue_id_fkey"
-            columns: ["venue_id"]
-            isOneToOne: false
-            referencedRelation: "venues"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      venues: {
-        Row: {
-          address: string
-          city: string
+          number_of_slots: number
           created_at: string
-          description: string | null
-          id: string
-          image_url: string | null
-          map_link: string | null
-          name: string
-          slug: string | null
-          state: string
+          updated_at: string
         }
         Insert: {
-          address: string
-          city: string
+          id_uuid?: string
+          event_id: string
+          attendee_name: string
+          attendee_phone: string
+          attendee_status?: string
+          confirmation_code: string
+          details?: Json | null
+          number_of_slots?: number
           created_at?: string
-          description?: string | null
-          id?: string
-          image_url?: string | null
-          map_link?: string | null
-          name: string
-          slug?: string | null
-          state: string
+          updated_at?: string
         }
         Update: {
-          address?: string
-          city?: string
+          id_uuid?: string
+          event_id?: string
+          attendee_name?: string
+          attendee_phone?: string
+          attendee_status?: string
+          confirmation_code?: string
+          details?: Json | null
+          number_of_slots?: number
           created_at?: string
-          description?: string | null
-          id?: string
-          image_url?: string | null
-          map_link?: string | null
-          name?: string
-          slug?: string | null
-          state?: string
+          updated_at?: string
         }
-        Relationships: []
+      }
+      cashouts: {
+        Row: {
+          id: string
+          cycling_event_id_uuid: string
+          match_id: string | null
+          super_code: string
+          amount: number
+          bank_account_number: string
+          bank_name: string
+          account_name: string
+          status: "Review" | "Processed" | "Failed" | "Successful"
+          temp_identifier: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          cycling_event_id_uuid: string
+          match_id?: string | null
+          super_code: string
+          amount: number
+          bank_account_number: string
+          bank_name: string
+          account_name: string
+          status?: "Review" | "Processed" | "Failed" | "Successful"
+          temp_identifier?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          cycling_event_id_uuid?: string
+          match_id?: string | null
+          super_code?: string
+          amount?: number
+          bank_account_number?: string
+          bank_name?: string
+          account_name?: string
+          status?: "Review" | "Processed" | "Failed" | "Successful"
+          temp_identifier?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      wallets: {
+        Row: {
+          id: string
+          organizer_id: string
+          balance: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          organizer_id: string
+          balance: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          organizer_id?: string
+          balance?: number
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      landmarks: {
+        Row: {
+          id: string
+          name: string
+          state: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          state?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          state?: string | null
+          created_at?: string
+          updated_at?: string
+        }
       }
     }
     Views: {
-      [_ in never]: never
+      cycling_events_view: {
+        Row: {
+          id: string
+          slug: string
+          title: string
+          event_date: string
+          start_time: string
+          event_start_time: string | null
+          event_end_time: string | null
+          max_attendees: number
+          host_id: string
+          host_name: string
+          host_phone: string
+          supercode: string
+          is_free: boolean
+          price: number | null
+          cancellation_status: boolean
+          status: string
+          start_landmark_id: string
+          start_landmark: {
+            name: string | null
+            state: string | null
+          } | null
+          created_at: string
+          updated_at: string
+        }
+      }
     }
     Functions: {
-      generate_slug: {
-        Args: { input_text: string }
-        Returns: string
+      update_wallet_balance: {
+        Args: {
+          p_organizer_id: string
+          p_amount: number
+          p_operation: "add" | "subtract"
+        }
+        Returns: void
       }
-      search_matches: {
-        Args: { search_term: string }
-        Returns: {
-          id: string
-          title: string
-          match_date: string
-          match_time: string
-          is_paid: boolean
-          price: number
-          total_slots: number
-          venue: Json
-          players: Json
-        }[]
-      }
-      unaccent: {
-        Args: { "": string }
-        Returns: string
-      }
-      unaccent_init: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      update_existing_slugs: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
     }
   }
 }
