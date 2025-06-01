@@ -123,19 +123,24 @@ const CyclingActivity = () => {
       const dayAfterTomorrow = tomorrow.plus({ days: 1 });
 
       const sortedEvents = processedEvents.map(event => {
-        // Parse event_date and start_time
-        const eventDate = DateTime.fromSQL(event.event_date, { zone: "utc" }).setZone(LAGOS_TIMEZONE);
+        // Parse event_date (YYYY-MM-DD HH:mm:ss+00) and start_time (hh:mm a)
+        const eventDate = DateTime.fromISO(event.event_date, { zone: "utc" }).setZone(LAGOS_TIMEZONE);
         const eventTime = DateTime.fromFormat(event.start_time, "hh:mm a", { zone: LAGOS_TIMEZONE });
-        const eventDateTime = eventDate.set({
-          hour: eventTime.hour,
-          minute: eventTime.minute,
-          second: 0,
-          millisecond: 0
-        });
+        
+        // Combine date and time, fallback if invalid
+        let eventDateTime = eventDate;
+        if (eventTime.isValid) {
+          eventDateTime = eventDate.set({
+            hour: eventTime.hour,
+            minute: eventTime.minute,
+            second: 0,
+            millisecond: 0
+          });
+        }
 
         // Determine status
         let status: string;
-        if (eventDateTime < now) {
+        if (!eventDateTime.isValid || eventDateTime < now) {
           status = "passed";
         } else if (eventDateTime >= today && eventDateTime < tomorrow) {
           status = "today";
@@ -165,23 +170,29 @@ const CyclingActivity = () => {
         }
 
         // Then sort by date/time within each status group
-        const aDate = DateTime.fromSQL(a.event_date, { zone: "utc" }).setZone(LAGOS_TIMEZONE);
+        const aDate = DateTime.fromISO(a.event_date, { zone: "utc" }).setZone(LAGOS_TIMEZONE);
         const aTime = DateTime.fromFormat(a.start_time, "hh:mm a", { zone: LAGOS_TIMEZONE });
-        const aDateTime = aDate.set({
-          hour: aTime.hour,
-          minute: aTime.minute,
-          second: 0,
-          millisecond: 0
-        });
+        let aDateTime = aDate;
+        if (aTime.isValid) {
+          aDateTime = aDate.set({
+            hour: aTime.hour,
+            minute: aTime.minute,
+            second: 0,
+            millisecond: 0
+          });
+        }
 
-        const bDate = DateTime.fromSQL(b.event_date, { zone: "utc" }).setZone(LAGOS_TIMEZONE);
+        const bDate = DateTime.fromISO(b.event_date, { zone: "utc" }).setZone(LAGOS_TIMEZONE);
         const bTime = DateTime.fromFormat(b.start_time, "hh:mm a", { zone: LAGOS_TIMEZONE });
-        const bDateTime = bDate.set({
-          hour: bTime.hour,
-          minute: bTime.minute,
-          second: 0,
-          millisecond: 0
-        });
+        let bDateTime = bDate;
+        if (bTime.isValid) {
+          bDateTime = bDate.set({
+            hour: bTime.hour,
+            minute: bTime.minute,
+            second: 0,
+            millisecond: 0
+          });
+        }
 
         return aDateTime.toMillis() - bDateTime.toMillis();
       });
@@ -212,7 +223,7 @@ const CyclingActivity = () => {
   };
 
   const formatDate = (dateString: string) => {
-    const date = DateTime.fromSQL(dateString, { zone: "utc" }).setZone(LAGOS_TIMEZONE);
+    const date = DateTime.fromISO(dateString, { zone: "utc" }).setZone(LAGOS_TIMEZONE);
     return date.isValid ? date.toFormat("ccc, d LLL yyyy") : "Invalid Date";
   };
 
