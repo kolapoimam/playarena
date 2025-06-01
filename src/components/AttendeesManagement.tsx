@@ -300,18 +300,18 @@ const AttendeesManagement = ({
       console.log('Checking in attendee:', { attendeeId, code });
 
       // Verify attendee and current status
-      const { data, error } = await supabase
+      const { data, error: selectError } = await supabase
         .from("cycling_attendees")
-        .select("id_uuid, confirmation_code, attendee_status")
+        .select("id_uuid, confirmation_code, status")
         .eq("id_uuid", attendeeId)
         .single();
 
-      if (error || !data) {
-        console.error('Select error:', error);
+      if (selectError || !data) {
+        console.error('Select error:', selectError);
         throw new Error("Attendee not found in database");
       }
 
-      if (data.attendee_status !== "registered") {
+      if (data.status !== "registered") {
         throw new Error("Attendee is already checked in or marked absent");
       }
 
@@ -319,22 +319,28 @@ const AttendeesManagement = ({
         throw new Error("Invalid confirmation code");
       }
 
-      // Update attendee status
-      const { error: updateError } = await supabase
+      // Update status
+      const { error: updateError, data: updateData } = await supabase
         .from("cycling_attendees")
         .update({ 
-          attendee_status: "checked_in",
+          status: "checked_in",
           updated_at: new Date().toISOString()
         })
         .eq("id_uuid", attendeeId)
-        .eq("confirmation_code", code);
+        .eq("confirmation_code", code)
+        .select("id_uuid, status")
+        .single();
 
       if (updateError) {
         console.error('Update error:', updateError);
         throw new Error("Failed to update attendee status");
       }
 
-      // Update local state immediately
+      if (!updateData) {
+        throw new Error("No rows updated");
+      }
+
+      // Sync UI with updated data
       setAttendeeStatuses((prev) =>
         prev.map((status) =>
           status.id_uuid === attendeeId
@@ -346,7 +352,9 @@ const AttendeesManagement = ({
       // Update event attendees
       if (event.attendees) {
         const updatedAttendees = event.attendees.map((a) =>
-          a.id_uuid === attendeeId ? { ...a, attendee_status: "checked_in" } : a
+          a.id_uuid === attendeeId 
+            ? { ...a, status: "checked_in" } 
+            : a
         );
         event.attendees = updatedAttendees;
       }
@@ -376,7 +384,7 @@ const AttendeesManagement = ({
         return newErrors;
       });
 
-      // Refresh event data
+      // Refresh event data to ensure consistency
       await fetchEvent();
     } catch (error: any) {
       console.error('Check-in error:', error);
@@ -385,6 +393,14 @@ const AttendeesManagement = ({
         description: error.message || "Failed to check in attendee",
         variant: "destructive",
       });
+      // Revert UI state if update failed
+      setAttendeeStatuses((prev) =>
+        prev.map((status) =>
+          status.id_uuid === attendeeId
+            ? { ...status, attendee_status: "registered" }
+            : status
+        )
+      );
     } finally {
       setCheckingInAttendees((prev) => ({ ...prev, [attendeeId]: false }));
       setLoading(false);
