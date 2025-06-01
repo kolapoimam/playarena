@@ -11,16 +11,32 @@ import { v4 as uuidv4 } from 'uuid';
 
 type CyclingEvent = {
   id: string;
-  name: string;
+  slug: string;
+  title: string;
+  event_date: string;
+  start_time: string;
+  event_start_time?: string | null;
+  event_end_time?: string | null;
+  max_attendees: number;
+  host_id: string;
+  host_name: string;
+  host_phone: string;
   supercode: string;
   is_free: boolean;
   price?: number;
-  cancellation_status: string;
-  attendees: {
-    id: string;
+  cancellation_status: boolean;
+  status: string;
+  start_landmark_id: string;
+  location: {
+    name?: string;
+    city?: string;
+  } | null;
+  cycling_attendees: {
+    id_uuid: string;
     attendee_name: string;
-    status: string;
-    confirmation_code: number;
+    attendee_phone: string;
+    attendee_status: string;
+    confirmation_code: string;
     details: { phone: string } | null;
     number_of_slots?: number;
   }[] | null;
@@ -93,14 +109,14 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
     try {
       const { data: attendeesData, error } = await supabase
         .from('cycling_attendees')
-        .select('status, number_of_slots')
+        .select('attendee_status, number_of_slots')
         .eq('event_id', event.id);
 
       if (error) throw error;
 
       let balance = 0;
       if (!event.is_free && event.price) {
-        const checkedInAttendees = attendeesData.filter(a => a.status === 'checked_in');
+        const checkedInAttendees = attendeesData.filter(a => a.attendee_status === 'checked_in');
         balance = checkedInAttendees.reduce(
           (sum, attendee) => sum + ((Number(attendee.number_of_slots) || 1) * (event.price || 0)),
           0
