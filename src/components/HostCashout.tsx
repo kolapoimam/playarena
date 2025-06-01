@@ -44,7 +44,7 @@ type CyclingEvent = {
 
 type Cashout = {
   id: string;
-  event_id: string;
+  cycling_event_id_uuid: string;
   super_code: string;
   amount: number;
   bank_account_number: string;
@@ -126,7 +126,7 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
       const { data: cashoutData, error: cashoutError } = await supabase
         .from('cashouts')
         .select('amount')
-        .eq('event_id', event.id)
+        .eq('cycling_event_id_uuid', event.id)
         .in('status', ['Review', 'Processed', 'Pending', 'Successful']);
 
       if (cashoutError) throw cashoutError;
@@ -156,7 +156,7 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
       const { data, error } = await supabase
         .from('cashouts')
         .select('*')
-        .eq('event_id', event.id)
+        .eq('cycling_event_id_uuid', event.id)
         .eq('temp_identifier', localTempIdentifier)
         .order('created_at', { ascending: false });
 
@@ -188,7 +188,7 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
           event: '*',
           schema: 'public',
           table: 'cashouts',
-          filter: `event_id=eq.${event.id}`,
+          filter: `cycling_event_id_uuid=eq.${event.id}`,
         },
         () => {
           fetchWalletBalance();
@@ -290,7 +290,7 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
       const { error: cashoutError } = await supabase
         .from('cashouts')
         .insert({
-          event_id: event.id,
+          cycling_event_id_uuid: event.id,
           super_code: event.supercode,
           amount,
           bank_account_number: bankAccountNumber,
