@@ -34,7 +34,7 @@ type CyclingEvent = {
     id_uuid: string;
     attendee_name: string;
     attendee_phone: string;
-    attendee_status: string;
+    status: "registered" | "checked_in" | "absent";
     confirmation_code: string;
     details: { phone: string } | null;
     number_of_slots?: number;
