@@ -316,7 +316,8 @@ const AttendeesManagement = ({
           attendee_status: "checked_in",
           updated_at: new Date().toISOString(),
         })
-        .eq("id_uuid", attendeeId);
+        .eq("id_uuid", attendeeId)
+        .eq("cycling_event_id_uuid", event.id_uuid);
 
       if (updateError) throw updateError;
 
