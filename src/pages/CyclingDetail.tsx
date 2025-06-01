@@ -16,6 +16,7 @@ import {
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import CyclingDetailsDialogue from "@/components/CyclingDetailsDialogue";
 import Navbar from "@/components/Navbar";
+import AttendeesTable from "@/components/AttendeesTable";
 import { addHours, addMinutes } from "date-fns";
 import { DateTime } from "luxon";
 
@@ -127,9 +128,9 @@ const CyclingDetail = () => {
         ? event.duration_value * 60 * 60 * 1000
         : event.duration_value * 60 * 1000;
       const eventEndTime = new Date(eventDateTime.getTime() + durationInMs);
-      const thirtyMinutesAfterEnd = addMinutes(eventEndTime, 30);
+      const thirtyMinutesAfterStart = addMinutes(eventDateTime, 30);
 
-      if (now >= thirtyMinutesAfterEnd) {
+      if (now >= thirtyMinutesAfterStart) {
         try {
           const { error } = await supabase
             .from("cycling_attendees")
