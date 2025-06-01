@@ -92,7 +92,7 @@ cycling_attendees: {
 
 type Cashout = {
   id: string;
-  event_id: string;
+  cycling_event_id_uuid: string;
   super_code: string;
   amount: number;
   bank_account_number: string;
@@ -232,7 +232,7 @@ setPlayerStatuses(
             .from("cashouts")
             .select("*")
             .eq("super_code", superCode)
-            .eq("event_id", cyclingData.id)
+            .eq("cycling_event_id_uuid", cyclingData.id_uuid)
             .eq("temp_identifier", tempIdentifier)
             .maybeSingle();
 
