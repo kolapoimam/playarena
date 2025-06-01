@@ -326,32 +326,30 @@ const AttendeesManagement = ({
           attendee_status: "checked_in",
           updated_at: new Date().toISOString()
         })
-        .eq("id_uuid", attendeeId);
+        .eq("id_uuid", attendeeId)
+        .eq("confirmation_code", code);
 
       if (updateError) {
         console.error('Update error:', updateError);
         throw new Error("Failed to update attendee status");
       }
 
-      // Fetch the updated attendee data
-      const { data: updatedAttendee, error: fetchError } = await supabase
-        .from("cycling_attendees")
-        .select("id_uuid, attendee_status")
-        .eq("id_uuid", attendeeId)
-        .single();
-
-      if (fetchError || !updatedAttendee) {
-        throw new Error("Failed to fetch updated attendee data");
-      }
-
-      // Update local state
+      // Update local state immediately
       setAttendeeStatuses((prev) =>
         prev.map((status) =>
           status.id_uuid === attendeeId
-            ? { ...status, attendee_status: updatedAttendee.attendee_status as "registered" | "checked_in" | "absent" }
+            ? { ...status, attendee_status: "checked_in" }
             : status
         )
       );
+
+      // Update event attendees
+      if (event.attendees) {
+        const updatedAttendees = event.attendees.map((a) =>
+          a.id_uuid === attendeeId ? { ...a, attendee_status: "checked_in" } : a
+        );
+        event.attendees = updatedAttendees;
+      }
 
       setCheckinAttendee({
         id: attendeeId,
@@ -378,45 +376,15 @@ const AttendeesManagement = ({
         return newErrors;
       });
 
+      // Refresh event data
       await fetchEvent();
     } catch (error: any) {
       console.error('Check-in error:', error);
-      if (error.message === "Attendee is already checked in or marked absent") {
-        const { data: updatedAttendee, error: fetchError } = await supabase
-          .from("cycling_attendees")
-          .select("id_uuid, attendee_status")
-          .eq("id_uuid", attendeeId)
-          .single();
-
-        if (fetchError || !updatedAttendee) {
-          toast({
-            title: "Error",
-            description: "Failed to fetch updated attendee status.",
-            variant: "destructive",
-          });
-          return;
-        }
-
-        setAttendeeStatuses((prev) =>
-          prev.map((status) =>
-            status.id_uuid === attendeeId
-              ? { ...status, attendee_status: updatedAttendee.attendee_status as "registered" | "checked_in" | "absent" }
-              : status
-          )
-        );
-
-        toast({
-          title: "Error",
-          description: error.message,
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Error",
-          description: error.message || "Failed to check in attendee",
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Error",
+        description: error.message || "Failed to check in attendee",
+        variant: "destructive",
+      });
     } finally {
       setCheckingInAttendees((prev) => ({ ...prev, [attendeeId]: false }));
       setLoading(false);
