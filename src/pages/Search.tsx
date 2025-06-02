@@ -20,7 +20,6 @@ interface Match {
   price: number | null;
   total_slots: number;
   status: string;
-  cancellation_status?: boolean;
   venue: {
     slug: string;
     name: string;
@@ -44,47 +43,6 @@ interface Venue {
   aggregated_rating: number | null;
   match_count: number;
   match_dates: string[];
-  is_verified?: boolean;
-}
-
-interface CyclingEvent {
-  id_uuid: string;
-  slug: string;
-  title: string;
-  event_date: string;
-  start_time: string;
-  event_start_time?: string | null;
-  event_end_time?: string | null;
-  max_attendees: number;
-  host_id: string;
-  host_name: string;
-  host_phone: string;
-  supercode: string;
-  is_free: boolean;
-  price?: number;
-  status: string;
-  start_landmark_id: string;
-  start_landmark: {
-    name?: string;
-    state?: string;
-  } | null;
-  cycling_attendees: {
-    id_uuid: string;
-    attendee_name: string;
-    attendee_phone: string;
-    status: "registered" | "checked_in" | "absent";
-    confirmation_code: string;
-    details: { phone: string } | null;
-  }[];
-}
-
-interface Landmark {
-  id_uuid: string;
-  name: string;
-  state: string;
-  description: string | null;
-  map_link: string | null;
-  cycling_events_count: number;
 }
 
 const ITEMS_PER_PAGE = 4;
@@ -94,30 +52,28 @@ const SearchPage = () => {
   const navigate = useNavigate();
   const [matches, setMatches] = useState<Match[]>([]);
   const [venues, setVenues] = useState<Venue[]>([]);
-  const [cyclingEvents, setCyclingEvents] = useState<CyclingEvent[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
-  const [activeTab, setActiveTab] = useState<"matches" | "venues" | "cycling">("matches");
+  const [activeTab, setActiveTab] = useState<"matches" | "venues">("matches");
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     const query = searchParams.get("q")?.trim();
     if (query && query.length >= 3) {
-      searchAll(query);
+      searchMatchesAndVenues(query);
       setHasSearched(true);
       setCurrentPage(1);
     } else {
       setHasSearched(false);
       setMatches([]);
       setVenues([]);
-      setCyclingEvents([]);
     }
   }, [searchParams]);
 
-  const searchAll = async (query: string) => {
+  const searchMatchesAndVenues = async (query: string) => {
     setLoading(true);
     try {
-      // Search for venues
+      // Search for venues matching the query in name, city, or state
       const { data: venueData, error: venueError } = await supabase
         .from("venues")
         .select(`
@@ -135,30 +91,29 @@ const SearchPage = () => {
       if (venueError) throw venueError;
 
       // Convert venue data to proper Venue type and fetch match counts/dates separately
-      const venuesWithDetails = await Promise.all(
-        (venueData || []).map(async (venue: any) => {
-          const { data: matchData } = await supabase
-            .from("matches")
-            .select("match_date")
-            .eq("venue_id", venue.id);
-          return {
-            id: venue.id,
-            slug: venue.slug,
-            name: venue.name,
-            city: venue.city,
-            state: venue.state,
-            is_verified: venue.is_verified,
-            image_urls: venue.image_urls,
-            aggregated_rating: venue.aggregated_rating,
-            match_count: matchData ? matchData.length : 0,
-            match_dates: matchData ? matchData.map((m: any) => m.match_date).filter((date: string) => date) : [],
-          };
-        })
-      );
+      const venuesWithDetails = venueData?.map((venue: any) => {
+        const matchResponse = supabase
+          .from("matches")
+          .select("match_date")
+          .eq("venue_id", venue.id);
+        const { data: matchData } = matchResponse;
+        return {
+          id: venue.id,
+          slug: venue.slug,
+          name: venue.name,
+          city: venue.city,
+          state: venue.state,
+          is_verified: venue.is_verified,
+          image_urls: venue.image_urls,
+          aggregated_rating: venue.aggregated_rating,
+          match_count: matchData ? matchData.length : 0,
+          match_dates: matchData ? matchData.map((m: any) => m.match_date).filter((date: string) => date) : [],
+        };
+      }) as Venue[] || [];
 
       const venueIds = venuesWithDetails.map((venue) => venue.id);
 
-      // Search for matches
+      // Search for matches by title
       const { data: titleMatches, error: titleMatchError } = await supabase
         .from("matches")
         .select(`
@@ -171,7 +126,6 @@ const SearchPage = () => {
           price,
           total_slots,
           status,
-          cancellation_status,
           venue:venues(id, slug, name, city, state),
           players(player_name, number_of_slots, cancellation_status)
         `)
@@ -179,7 +133,7 @@ const SearchPage = () => {
 
       if (titleMatchError) throw titleMatchError;
 
-      // Search for matches by associated venue
+      // Search for matches by associated venue (if any venues were found)
       let venueMatches: any[] = [];
       if (venueIds.length > 0) {
         const { data: venueMatchesData, error: venueMatchError } = await supabase
@@ -194,7 +148,6 @@ const SearchPage = () => {
             price,
             total_slots,
             status,
-            cancellation_status,
             venue:venues(id, slug, name, city, state),
             players(player_name, number_of_slots, cancellation_status)
           `)
@@ -204,13 +157,13 @@ const SearchPage = () => {
         venueMatches = venueMatchesData || [];
       }
 
-      // Combine and deduplicate matches
+      // Combine and deduplicate matches (by id)
       const combinedMatches = [...(titleMatches || []), ...(venueMatches || [])];
       const uniqueMatches = Array.from(
         new Map(combinedMatches.map((match) => [match.id, match])).values()
       );
 
-      // Convert match data to proper Match type and sort by status
+      // Convert match data to proper Match type and sort by status (upcoming first)
       const matchesWithDetails = uniqueMatches.map((match: any) => ({
         id: match.id,
         slug: match.slug,
@@ -221,63 +174,31 @@ const SearchPage = () => {
         price: match.price,
         total_slots: match.total_slots,
         status: match.status,
-        cancellation_status: match.cancellation_status,
         venue: match.venue,
         players: match.players,
+        cancellation_status: match.players.some((p: any) => p.cancellation_status),
       })) as Match[];
 
-      // Sort matches: upcoming first, then past
+      // Filter and sort matches: upcoming first, then past
       const now = DateTime.now();
       const sortedMatches = matchesWithDetails.sort((a, b) => {
         const aDateTime = DateTime.fromISO(`${a.match_date}T${a.match_time}`);
         const bDateTime = DateTime.fromISO(`${b.match_date}T${b.match_time}`);
 
+        // Upcoming matches first
         if (aDateTime > now && bDateTime <= now) return -1;
         if (aDateTime <= now && bDateTime > now) return 1;
 
+        // Then sort by date/time within each group
         return aDateTime.toMillis() - bDateTime.toMillis();
       });
 
-      // Search for cycling events
-      const { data: cyclingData, error: cyclingError } = await supabase
-        .from("cycling_events")
-        .select(`
-          id_uuid,
-          slug,
-          title,
-          event_date,
-          start_time,
-          max_attendees,
-          host_id,
-          host_name,
-          host_phone,
-          supercode,
-          is_free,
-          price,
-          status,
-          start_landmark_id,
-          start_landmark:landmarks!cycling_events_start_landmark_id_fkey(id_uuid, name, state),
-          cycling_attendees(
-            id_uuid,
-            attendee_name,
-            attendee_phone,
-            status,
-            confirmation_code,
-            details
-          )
-        `)
-        .or(`title.ilike.%${query}%,host_name.ilike.%${query}%`);
-
-      if (cyclingError) throw cyclingError;
-
       setMatches(sortedMatches);
       setVenues(venuesWithDetails);
-      setCyclingEvents(cyclingData || []);
     } catch (error) {
       console.error("Error searching:", error);
       setMatches([]);
       setVenues([]);
-      setCyclingEvents([]);
     } finally {
       setLoading(false);
     }
@@ -345,22 +266,14 @@ const SearchPage = () => {
 
   const totalMatches = matches.length;
   const totalVenues = venues.length;
-  const totalCycling = cyclingEvents.length;
   const totalPages = Math.ceil(
-    activeTab === "matches" ? totalMatches / ITEMS_PER_PAGE :
-    activeTab === "venues" ? totalVenues / ITEMS_PER_PAGE :
-    totalCycling / ITEMS_PER_PAGE
+    activeTab === "matches" ? totalMatches / ITEMS_PER_PAGE : totalVenues / ITEMS_PER_PAGE
   );
-
   const paginatedMatches = matches.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
   );
   const paginatedVenues = venues.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
-  );
-  const paginatedCycling = cyclingEvents.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
   );
@@ -385,7 +298,9 @@ const SearchPage = () => {
               Search Summary
             </h2>
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              Found {matches.length} {matches.length === 1 ? "match" : "matches"}, {venues.length} {venues.length === 1 ? "venue" : "venues"}, and {cyclingEvents.length} {cyclingEvents.length === 1 ? "cycling event" : "cycling events"} for "{searchParams.get("q")}" 
+              Found {matches.length} {matches.length === 1 ? "match" : "matches"} and{" "}
+              {venues.length} {venues.length === 1 ? "venue" : "venues"} for "
+              {searchParams.get("q")}"
             </p>
           </div>
         )}
@@ -394,12 +309,12 @@ const SearchPage = () => {
           <Tabs
             value={activeTab}
             onValueChange={(value) => {
-              setActiveTab(value as "matches" | "venues" | "cycling");
+              setActiveTab(value as "matches" | "venues");
               setCurrentPage(1);
             }}
             className="w-full"
           >
-            <TabsList className="grid w-full grid-cols-3 bg-gray-200 dark:bg-gray-700 rounded-lg p-1">
+            <TabsList className="grid w-full grid-cols-2 bg-gray-200 dark:bg-gray-700 rounded-lg p-1">
               <TabsTrigger
                 value="matches"
                 className="rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-gray-600 data-[state=active]:shadow-sm"
@@ -411,12 +326,6 @@ const SearchPage = () => {
                 className="rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-gray-600 data-[state=active]:shadow-sm"
               >
                 Venues ({venues.length})
-              </TabsTrigger>
-              <TabsTrigger
-                value="cycling"
-                className="rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-gray-600 data-[state=active]:shadow-sm"
-              >
-                Cycling ({cyclingEvents.length})
               </TabsTrigger>
             </TabsList>
           </Tabs>
@@ -592,87 +501,6 @@ const SearchPage = () => {
                 </div>
               )}
             </TabsContent>
-
-            <TabsContent value="cycling">
-              {paginatedCycling.length > 0 ? (
-                <div className="space-y-4">
-                  {paginatedCycling.map((event) => {
-                    const totalAttendees = event.cycling_attendees?.length || 0;
-                    const isFull = totalAttendees >= event.max_attendees;
-                    const isPast = DateTime.fromISO(event.event_date) < DateTime.now();
-
-                    return (
-                      <div
-                        key={event.id_uuid}
-                        className="border rounded-lg p-4 bg-white dark:bg-gray-800 hover:border-green-500 transition-colors cursor-pointer shadow-sm"
-                        onClick={() => navigate(`/cycling/${event.slug}`)}
-                      >
-                        <div className="flex justify-between items-start">
-                          <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100">
-                            {event.title}
-                          </h3>
-                          <Badge className={event.status === "cancelled" ? "bg-red-100 text-red-800" : isPast ? "bg-gray-200 text-gray-600" : "bg-blue-100 text-blue-800"}>
-                            {event.status === "cancelled" ? "Cancelled" : isPast ? "Passed" : "Upcoming"}
-                          </Badge>
-                        </div>
-
-                        <div className="mt-2 space-y-2">
-                          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                            <Calendar size={16} />
-                            <span>
-                              {formatDate(event.event_date)} at{" "}
-                              {formatTime(event.start_time)}
-                            </span>
-                          </div>
-
-                          {event.start_landmark && (
-                            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                              <MapPin size={16} />
-                              <span>
-                                {event.start_landmark.name}, {event.start_landmark.state}
-                              </span>
-                            </div>
-                          )}
-
-                          <div className="flex items-center justify-between mt-2">
-                            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                              <Users size={16} />
-                              <span>
-                                {totalAttendees}/{event.max_attendees} cyclists
-                              </span>
-                            </div>
-
-                            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                              {event.is_free ? "Free" : `₦${event.price?.toFixed(2)}`}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="mt-4">
-                          <Button
-                            className="w-full bg-green-500 hover:bg-green-600 text-white rounded-lg"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/cycling/${event.slug}`);
-                            }}
-                            disabled={event.status === "cancelled" || isFull || isPast}
-                          >
-                            {event.status === "cancelled" ? "Cancelled" : isFull ? "Full" : isPast ? "Passed" : "Join Event"}
-                          </Button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground">
-                    No cycling events found for "{searchParams.get("q")}".
-                  </p>
-                  <p className="mt-2">Try searching with different keywords.</p>
-                </div>
-              )}
-            </TabsContent>
           </Tabs>
         ) : (
           <div className="flex items-center justify-center h-[50vh]">
@@ -682,18 +510,27 @@ const SearchPage = () => {
           </div>
         )}
 
-        {hasSearched && totalPages > 1 && (
-          <div className="mt-6 flex justify-center gap-2">
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-              <Button
-                key={page}
-                variant={page === currentPage ? "default" : "outline"}
-                onClick={() => handlePageChange(page)}
-                className="w-10 h-10"
-              >
-                {page}
-              </Button>
-            ))}
+        {hasSearched && (paginatedMatches.length > 0 || paginatedVenues.length > 0) && (
+          <div className="mt-6 flex justify-center items-center gap-2">
+            <Button
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+              variant="outline"
+              size="sm"
+            >
+              Previous
+            </Button>
+            <span className="text-sm text-gray-600 dark:text-gray-400">
+              Page {currentPage} of {totalPages}
+            </span>
+            <Button
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              variant="outline"
+              size="sm"
+            >
+              Next
+            </Button>
           </div>
         )}
       </div>
