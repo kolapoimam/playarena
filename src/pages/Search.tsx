@@ -20,6 +20,7 @@ interface Match {
   price: number | null;
   total_slots: number;
   status: string;
+  cancellation_status?: boolean;
   venue: {
     slug: string;
     name: string;
@@ -43,6 +44,7 @@ interface Venue {
   aggregated_rating: number | null;
   match_count: number;
   match_dates: string[];
+  is_verified?: boolean;
 }
 
 interface CyclingEvent {
@@ -60,7 +62,6 @@ interface CyclingEvent {
   supercode: string;
   is_free: boolean;
   price?: number;
-  cancellation_status: boolean;
   status: string;
   start_landmark_id: string;
   start_landmark: {
@@ -94,10 +95,9 @@ const SearchPage = () => {
   const [matches, setMatches] = useState<Match[]>([]);
   const [venues, setVenues] = useState<Venue[]>([]);
   const [cyclingEvents, setCyclingEvents] = useState<CyclingEvent[]>([]);
-  const [landmarks, setLandmarks] = useState<Landmark[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
-  const [activeTab, setActiveTab] = useState<"matches" | "venues" | "cycling" | "landmarks">("matches");
+  const [activeTab, setActiveTab] = useState<"matches" | "venues" | "cycling">("matches");
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
@@ -111,7 +111,6 @@ const SearchPage = () => {
       setMatches([]);
       setVenues([]);
       setCyclingEvents([]);
-      setLandmarks([]);
     }
   }, [searchParams]);
 
@@ -136,25 +135,26 @@ const SearchPage = () => {
       if (venueError) throw venueError;
 
       // Convert venue data to proper Venue type and fetch match counts/dates separately
-      const venuesWithDetails = venueData?.map((venue: any) => {
-        const matchResponse = supabase
-          .from("matches")
-          .select("match_date")
-          .eq("venue_id", venue.id);
-        const { data: matchData } = matchResponse;
-        return {
-          id: venue.id,
-          slug: venue.slug,
-          name: venue.name,
-          city: venue.city,
-          state: venue.state,
-          is_verified: venue.is_verified,
-          image_urls: venue.image_urls,
-          aggregated_rating: venue.aggregated_rating,
-          match_count: matchData ? matchData.length : 0,
-          match_dates: matchData ? matchData.map((m: any) => m.match_date).filter((date: string) => date) : [],
-        };
-      }) as Venue[] || [];
+      const venuesWithDetails = await Promise.all(
+        (venueData || []).map(async (venue: any) => {
+          const { data: matchData } = await supabase
+            .from("matches")
+            .select("match_date")
+            .eq("venue_id", venue.id);
+          return {
+            id: venue.id,
+            slug: venue.slug,
+            name: venue.name,
+            city: venue.city,
+            state: venue.state,
+            is_verified: venue.is_verified,
+            image_urls: venue.image_urls,
+            aggregated_rating: venue.aggregated_rating,
+            match_count: matchData ? matchData.length : 0,
+            match_dates: matchData ? matchData.map((m: any) => m.match_date).filter((date: string) => date) : [],
+          };
+        })
+      );
 
       const venueIds = venuesWithDetails.map((venue) => venue.id);
 
@@ -171,6 +171,7 @@ const SearchPage = () => {
           price,
           total_slots,
           status,
+          cancellation_status,
           venue:venues(id, slug, name, city, state),
           players(player_name, number_of_slots, cancellation_status)
         `)
@@ -193,6 +194,7 @@ const SearchPage = () => {
             price,
             total_slots,
             status,
+            cancellation_status,
             venue:venues(id, slug, name, city, state),
             players(player_name, number_of_slots, cancellation_status)
           `)
@@ -201,70 +203,6 @@ const SearchPage = () => {
         if (venueMatchError) throw venueMatchError;
         venueMatches = venueMatchesData || [];
       }
-
-      // Search for cycling events
-      const { data: cyclingData, error: cyclingError } = await supabase
-        .from("cycling_events")
-        .select(`
-          id_uuid,
-          slug,
-          title,
-          event_date,
-          start_time,
-          event_start_time,
-          event_end_time,
-          max_attendees,
-          host_id,
-          host_name,
-          host_phone,
-          supercode,
-          is_free,
-          price,
-          cancellation_status,
-          status,
-          start_landmark_id,
-          start_landmark:landmarks(id_uuid, name, state),
-          cycling_attendees(
-            id_uuid,
-            attendee_name,
-            attendee_phone,
-            status,
-            confirmation_code,
-            details
-          )
-        `)
-        .or(`title.ilike.%${query}%,host_name.ilike.%${query}%`);
-
-      if (cyclingError) throw cyclingError;
-
-      // Search for landmarks
-      const { data: landmarkData, error: landmarkError } = await supabase
-        .from("landmarks")
-        .select(`
-          id_uuid,
-          name,
-          state,
-          description,
-          map_link
-        `)
-        .or(`name.ilike.%${query}%,state.ilike.%${query}%`);
-
-      if (landmarkError) throw landmarkError;
-
-      // Get cycling event counts for landmarks
-      const landmarksWithCounts = await Promise.all(
-        (landmarkData || []).map(async (landmark: any) => {
-          const { data: cyclingCount } = await supabase
-            .from("cycling_events")
-            .select("id_uuid", { count: "exact" })
-            .eq("start_landmark_id", landmark.id_uuid);
-          
-          return {
-            ...landmark,
-            cycling_events_count: cyclingCount?.length || 0
-          };
-        })
-      );
 
       // Combine and deduplicate matches
       const combinedMatches = [...(titleMatches || []), ...(venueMatches || [])];
@@ -283,9 +221,9 @@ const SearchPage = () => {
         price: match.price,
         total_slots: match.total_slots,
         status: match.status,
+        cancellation_status: match.cancellation_status,
         venue: match.venue,
         players: match.players,
-        cancellation_status: match.players.some((p: any) => p.cancellation_status),
       })) as Match[];
 
       // Sort matches: upcoming first, then past
@@ -300,16 +238,46 @@ const SearchPage = () => {
         return aDateTime.toMillis() - bDateTime.toMillis();
       });
 
+      // Search for cycling events
+      const { data: cyclingData, error: cyclingError } = await supabase
+        .from("cycling_events")
+        .select(`
+          id_uuid,
+          slug,
+          title,
+          event_date,
+          start_time,
+          max_attendees,
+          host_id,
+          host_name,
+          host_phone,
+          supercode,
+          is_free,
+          price,
+          status,
+          start_landmark_id,
+          start_landmark:landmarks!cycling_events_start_landmark_id_fkey(id_uuid, name, state),
+          cycling_attendees(
+            id_uuid,
+            attendee_name,
+            attendee_phone,
+            status,
+            confirmation_code,
+            details
+          )
+        `)
+        .or(`title.ilike.%${query}%,host_name.ilike.%${query}%`);
+
+      if (cyclingError) throw cyclingError;
+
       setMatches(sortedMatches);
       setVenues(venuesWithDetails);
       setCyclingEvents(cyclingData || []);
-      setLandmarks(landmarksWithCounts);
     } catch (error) {
       console.error("Error searching:", error);
       setMatches([]);
       setVenues([]);
       setCyclingEvents([]);
-      setLandmarks([]);
     } finally {
       setLoading(false);
     }
@@ -378,12 +346,10 @@ const SearchPage = () => {
   const totalMatches = matches.length;
   const totalVenues = venues.length;
   const totalCycling = cyclingEvents.length;
-  const totalLandmarks = landmarks.length;
   const totalPages = Math.ceil(
     activeTab === "matches" ? totalMatches / ITEMS_PER_PAGE :
     activeTab === "venues" ? totalVenues / ITEMS_PER_PAGE :
-    activeTab === "cycling" ? totalCycling / ITEMS_PER_PAGE :
-    totalLandmarks / ITEMS_PER_PAGE
+    totalCycling / ITEMS_PER_PAGE
   );
 
   const paginatedMatches = matches.slice(
@@ -395,10 +361,6 @@ const SearchPage = () => {
     currentPage * ITEMS_PER_PAGE
   );
   const paginatedCycling = cyclingEvents.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
-  );
-  const paginatedLandmarks = landmarks.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
   );
@@ -423,11 +385,7 @@ const SearchPage = () => {
               Search Summary
             </h2>
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              Found {matches.length} {matches.length === 1 ? "match" : "matches"},{" "}
-              {venues.length} {venues.length === 1 ? "venue" : "venues"},{" "}
-              {cyclingEvents.length} {cyclingEvents.length === 1 ? "cycling event" : "cycling events"}, and{" "}
-              {landmarks.length} {landmarks.length === 1 ? "landmark" : "landmarks"} for "
-              {searchParams.get("q")}"
+              Found {matches.length} {matches.length === 1 ? "match" : "matches"}, {venues.length} {venues.length === 1 ? "venue" : "venues"}, and {cyclingEvents.length} {cyclingEvents.length === 1 ? "cycling event" : "cycling events"} for "{searchParams.get("q")}" 
             </p>
           </div>
         )}
@@ -436,12 +394,12 @@ const SearchPage = () => {
           <Tabs
             value={activeTab}
             onValueChange={(value) => {
-              setActiveTab(value as "matches" | "venues" | "cycling" | "landmarks");
+              setActiveTab(value as "matches" | "venues" | "cycling");
               setCurrentPage(1);
             }}
             className="w-full"
           >
-            <TabsList className="grid w-full grid-cols-4 bg-gray-200 dark:bg-gray-700 rounded-lg p-1">
+            <TabsList className="grid w-full grid-cols-3 bg-gray-200 dark:bg-gray-700 rounded-lg p-1">
               <TabsTrigger
                 value="matches"
                 className="rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-gray-600 data-[state=active]:shadow-sm"
@@ -459,12 +417,6 @@ const SearchPage = () => {
                 className="rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-gray-600 data-[state=active]:shadow-sm"
               >
                 Cycling ({cyclingEvents.length})
-              </TabsTrigger>
-              <TabsTrigger
-                value="landmarks"
-                className="rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-gray-600 data-[state=active]:shadow-sm"
-              >
-                Landmarks ({landmarks.length})
               </TabsTrigger>
             </TabsList>
           </Tabs>
@@ -659,8 +611,8 @@ const SearchPage = () => {
                           <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100">
                             {event.title}
                           </h3>
-                          <Badge className={event.cancellation_status ? "bg-red-100 text-red-800" : isPast ? "bg-gray-200 text-gray-600" : "bg-blue-100 text-blue-800"}>
-                            {event.cancellation_status ? "Cancelled" : isPast ? "Passed" : "Upcoming"}
+                          <Badge className={event.status === "cancelled" ? "bg-red-100 text-red-800" : isPast ? "bg-gray-200 text-gray-600" : "bg-blue-100 text-blue-800"}>
+                            {event.status === "cancelled" ? "Cancelled" : isPast ? "Passed" : "Upcoming"}
                           </Badge>
                         </div>
 
@@ -703,9 +655,9 @@ const SearchPage = () => {
                               e.stopPropagation();
                               navigate(`/cycling/${event.slug}`);
                             }}
-                            disabled={event.cancellation_status || isFull || isPast}
+                            disabled={event.status === "cancelled" || isFull || isPast}
                           >
-                            {event.cancellation_status ? "Cancelled" : isFull ? "Full" : isPast ? "Passed" : "Join Event"}
+                            {event.status === "cancelled" ? "Cancelled" : isFull ? "Full" : isPast ? "Passed" : "Join Event"}
                           </Button>
                         </div>
                       </div>
@@ -716,61 +668,6 @@ const SearchPage = () => {
                 <div className="text-center py-8">
                   <p className="text-muted-foreground">
                     No cycling events found for "{searchParams.get("q")}".
-                  </p>
-                  <p className="mt-2">Try searching with different keywords.</p>
-                </div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="landmarks">
-              {paginatedLandmarks.length > 0 ? (
-                <div className="space-y-4">
-                  {paginatedLandmarks.map((landmark) => (
-                    <div
-                      key={landmark.id_uuid}
-                      className="border rounded-lg p-4 bg-white dark:bg-gray-800 hover:border-green-500 transition-colors cursor-pointer shadow-sm"
-                      onClick={() => navigate(`/landmark/${landmark.id_uuid}`)}
-                    >
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100">
-                          {landmark.name}
-                        </h3>
-                      </div>
-                      <div className="mt-2 space-y-2">
-                        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                          <MapPin size={16} />
-                          <span>{landmark.state}</span>
-                        </div>
-                        {landmark.description && (
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
-                            {landmark.description}
-                          </p>
-                        )}
-                        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                          <Users size={16} />
-                          <span>{landmark.cycling_events_count} cycling events</span>
-                        </div>
-                      </div>
-                      {landmark.map_link && (
-                        <div className="mt-4">
-                          <Button
-                            className="w-full bg-green-500 hover:bg-green-600 text-white rounded-lg"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              window.open(landmark.map_link!, "_blank");
-                            }}
-                          >
-                            View on Map
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground">
-                    No landmarks found for "{searchParams.get("q")}".
                   </p>
                   <p className="mt-2">Try searching with different keywords.</p>
                 </div>
