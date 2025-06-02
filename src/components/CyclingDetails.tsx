@@ -69,7 +69,8 @@ const CyclingDetails = ({ event: initialEvent, cashout, handleCancel, loading, i
   const fetchEventDetails = async () => {
     if (!initialEvent?.id_uuid) return;
     try {
-      const { data, error } = await supabase
+      // First fetch the event data
+      const { data: eventData, error: eventError } = await supabase
         .from("cycling_events")
         .select(`
           id_uuid,
@@ -89,12 +90,6 @@ const CyclingDetails = ({ event: initialEvent, cashout, handleCancel, loading, i
           cancellation_status,
           status,
           start_landmark_id,
-          start_landmark:landmarks (
-            name,
-            state,
-            description,
-            map_link
-          ),
           attendees (
             id_uuid,
             attendee_name,
@@ -109,9 +104,30 @@ const CyclingDetails = ({ event: initialEvent, cashout, handleCancel, loading, i
         .single()
         .throwOnError();
 
-      if (error) throw error;
+      if (eventError) throw eventError;
 
-      setEvent(data as CyclingEvent);
+      // Then fetch the landmark data if start_landmark_id exists
+      let landmarkData = null;
+      if (eventData?.start_landmark_id) {
+        const { data: landmark, error: landmarkError } = await supabase
+          .from("landmarks")
+          .select("name, state, description, map_link")
+          .eq("id_uuid", eventData.start_landmark_id)
+          .single()
+          .throwOnError();
+
+        if (!landmarkError) {
+          landmarkData = landmark;
+        }
+      }
+
+      // Combine the data
+      const combinedData = {
+        ...eventData,
+        start_landmark: landmarkData
+      } as CyclingEvent;
+
+      setEvent(combinedData);
     } catch (error) {
       console.error("Error fetching event details:", error);
       toast({
