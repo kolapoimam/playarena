@@ -37,11 +37,11 @@ type CyclingEvent = {
     name?: string;
     city?: string;
   } | null;
-  attendees: {
+  cycling_attendees: {
     id_uuid: string;
     attendee_name: string;
     attendee_phone: string;
-    status: string;
+    status: "registered" | "checked_in" | "absent";
     confirmation_code: string;
     details: { phone: string } | null;
     number_of_slots?: number;
@@ -187,8 +187,8 @@ const AttendeesManagement = ({
           description: "Failed to load attendee statuses.",
           variant: "destructive",
         });
-        if (event?.attendees) {
-          const initialStatuses = event.attendees.map(attendee => ({
+        if (event?.cycling_attendees) {
+          const initialStatuses = event.cycling_attendees.map(attendee => ({
             id_uuid: attendee.id_uuid,
             attendee_status: (attendee.status || 'registered') as "registered" | "checked_in" | "absent",
             checkinCode: checkinCodes[attendee.id_uuid] || ''
@@ -223,10 +223,10 @@ const AttendeesManagement = ({
   }, [event, setAttendeeStatuses, checkinCodes, fetchEvent, toast]);
 
   const canCheckin = () => {
-    if (!event || event.cancellation_status || !event.attendees?.length) return false;
+    if (!event || event.cancellation_status || !event.cycling_attendees?.length) return false;
     const eventDateTime = new Date(`${event.event_date}T${event.start_time}`);
     const checkTime = addDays(eventDateTime, 1);
-    const hasRegisteredAttendees = event.attendees?.some(a => a.status === "registered");
+    const hasRegisteredAttendees = event.cycling_attendees?.some(a => a.status === "registered");
     return !isPast(checkTime) && hasRegisteredAttendees;
   };
 
@@ -241,7 +241,7 @@ const AttendeesManagement = ({
     }
 
     if (!canCheckin()) {
-      const reason = !event.attendees?.length
+      const reason = !event.cycling_attendees?.length
         ? "No attendees are registered for this event."
         : "The event has ended or check-in is no longer available.";
       toast({
@@ -269,7 +269,7 @@ const AttendeesManagement = ({
   const handleCheckin = async (attendeeId: string) => {
     if (!event) return;
 
-    const attendee = event.attendees?.find((p) => p.id_uuid === attendeeId);
+    const attendee = event.cycling_attendees?.find((p) => p.id_uuid === attendeeId);
     if (!attendee) {
       toast({
         title: "Error",
@@ -448,18 +448,18 @@ const AttendeesManagement = ({
           onClick={() => setIsAttendeesOpen(!isAttendeesOpen)}
           className="flex items-center justify-between w-full text-left text-lg font-semibold mb-2 text-gray-900 dark:text-white"
         >
-          <span>Attendees ({event.attendees?.length || 0})</span>
+          <span>Attendees ({event.cycling_attendees?.length || 0})</span>
           {isAttendeesOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
         </button>
 
         {isAttendeesOpen && (
           <div className="space-y-4 max-h-96 overflow-y-auto">
-            {event.attendees?.length === 0 ? (
+            {event.cycling_attendees?.length === 0 ? (
               <p className="text-center text-gray-600 dark:text-gray-400">
                 No attendees registered.
               </p>
             ) : (
-              event.attendees?.map((attendee) => (
+              event.cycling_attendees?.map((attendee) => (
                 <div
                   key={attendee.id_uuid}
                   className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600"
