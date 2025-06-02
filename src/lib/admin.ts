@@ -84,7 +84,7 @@ export const adminOperations = {
     let query = supabase
       .from('profiles')
       .select(
-        '*,events_organized:cycling_events(count),events_participated:cycling_attendees(count),user_badges(badge_id!inner(badges(name)))',
+        '*,events_organized:matches(count),events_participated:cycling_attendees(count),user_badges(badge_id!inner(badges(name)))',
         { count: 'exact' }
       );
 
