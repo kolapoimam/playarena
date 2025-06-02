@@ -5,13 +5,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 
-type Landmark = {
-  name: string;
-  state: string;
-  description?: string | null;
-  map_link?: string | null;
-};
-
 type CyclingEvent = {
   id_uuid: string;
   slug: string;
@@ -27,16 +20,22 @@ type CyclingEvent = {
   supercode: string;
   is_free: boolean;
   price?: number;
-  cancellation_status?: boolean;
+  cancellation_status: boolean;
   status: string;
   start_landmark_id: string;
-  start_landmark: Landmark | null;
+  start_landmark: {
+    name: string;
+    state: string;
+    description?: string | null;
+    map_link?: string | null;
+  } | null;
   attendees: {
     id_uuid: string;
     attendee_name: string;
     attendee_phone: string;
     status: "registered" | "checked_in" | "absent";
     confirmation_code: string;
+    details: { phone: string } | null;
     number_of_slots?: number;
   }[] | null;
 };
@@ -83,6 +82,8 @@ const CyclingDetails = ({ event: initialEvent, cashout, handleCancel, loading, i
           title,
           event_date,
           start_time,
+          event_start_time,
+          event_end_time,
           max_attendees,
           host_id,
           host_name,
@@ -90,6 +91,7 @@ const CyclingDetails = ({ event: initialEvent, cashout, handleCancel, loading, i
           supercode,
           is_free,
           price,
+          cancellation_status,
           status,
           start_landmark_id,
           start_landmark:landmarks!start_landmark_id (
@@ -98,12 +100,13 @@ const CyclingDetails = ({ event: initialEvent, cashout, handleCancel, loading, i
             description,
             map_link
           ),
-          attendees:cycling_attendees!cycling_attendees_cycling_event_id_fkey (
+          attendees (
             id_uuid,
             attendee_name,
             attendee_phone,
             status,
             confirmation_code,
+            details,
             number_of_slots
           )
         `)
@@ -113,13 +116,7 @@ const CyclingDetails = ({ event: initialEvent, cashout, handleCancel, loading, i
 
       if (eventError) throw eventError;
 
-      console.log('Fetched event data:', {
-        id: eventData.id_uuid,
-        landmark: eventData.start_landmark,
-        landmarkId: eventData.start_landmark_id
-      });
-
-      setEvent(eventData as unknown as CyclingEvent);
+      setEvent(eventData as CyclingEvent);
     } catch (error) {
       console.error("Error fetching event details:", error);
       toast({
@@ -300,9 +297,7 @@ const CyclingDetails = ({ event: initialEvent, cashout, handleCancel, loading, i
         <div className="flex items-center gap-3">
           <MapPin size={20} className="text-green-500" />
           <span className="text-gray-900 dark:text-gray-100">
-            {event.start_landmark && (event.start_landmark.name || event.start_landmark.state)
-              ? `${event.start_landmark.name || ''}${event.start_landmark.name && event.start_landmark.state ? ', ' : ''}${event.start_landmark.state || ''}`
-              : 'Unknown Location'}
+            {event.start_landmark?.name || "Unknown Location"}, {event.start_landmark?.state || "Unknown City"}
           </span>
         </div>
         <div className="flex items-center gap-3">
