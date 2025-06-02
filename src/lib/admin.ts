@@ -18,11 +18,12 @@ export interface AdminUser {
   id: string;
   name: string;
   email: string;
-  phone: string;
+  phone: string | null; // Updated to allow null, matching schema
   status: 'active' | 'suspended';
   created_at: string;
   events_organized: number;
   events_participated: number;
+  matches?: number; // Added for potential matches count
   badges: string[];
 }
 
@@ -83,7 +84,10 @@ export const adminOperations = {
   async getUsers(page: number = 1, limit: number = 10, status?: string): Promise<{ users: AdminUser[], total: number }> {
     let query = supabase
       .from('profiles')
-      .select('*, events_organized:matches(count), events_participated:cycling_attendees(count)', { count: 'exact' });
+      .select(
+        '*,events_organized:cycling_events(count),events_participated:cycling_attendees(count),matches(count),user_badges(badge_id!inner(badges(name)))',
+        { count: 'exact' }
+      );
 
     if (status) {
       query = query.eq('status', status);
@@ -92,18 +96,22 @@ export const adminOperations = {
     const { data, error, count } = await query
       .range((page - 1) * limit, page * limit - 1);
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase query error in getUsers:', error);
+      throw new Error(`Failed to fetch users: ${error.message}`);
+    }
 
     const users = data.map(user => ({
       id: user.id,
-      name: user.full_name,
+      name: user.full_name || 'Unknown', // Fallback for null full_name
       email: user.email,
-      phone: user.phone,
-      status: user.status,
+      phone: user.phone || null,
+      status: user.status || 'active', // Fallback for null status
       created_at: user.created_at,
       events_organized: user.events_organized?.[0]?.count || 0,
       events_participated: user.events_participated?.[0]?.count || 0,
-      badges: user.badges || []
+      matches: user.matches?.[0]?.count || 0, // Include matches count
+      badges: user.user_badges?.map((ub: any) => ub.badges.name) || [],
     }));
 
     return { users, total: count || 0 };
@@ -113,13 +121,10 @@ export const adminOperations = {
   async getEvents(page: number = 1, limit: number = 10, status?: string, sport?: string): Promise<{ events: AdminEvent[], total: number }> {
     let query = supabase
       .from('matches')
-      .select(`
-        *,
-        organizer:profiles(full_name),
-        venue:venues(name),
-        tickets_sold:tickets(count),
-        feedback:match_feedback(avg(rating))
-      `, { count: 'exact' });
+      .select(
+        '*,organizer:profiles(full_name),venue:venues(name),tickets_sold:tickets(count),feedback:match_feedback(avg(rating))',
+        { count: 'exact' }
+      );
 
     if (status) {
       query = query.eq('status', status);
@@ -131,19 +136,22 @@ export const adminOperations = {
     const { data, error, count } = await query
       .range((page - 1) * limit, page * limit - 1);
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase query error in getEvents:', error);
+      throw new Error(`Failed to fetch events: ${error.message}`);
+    }
 
     const events = data.map(event => ({
       id: event.id,
       title: event.title,
       sport: event.sport,
-      organizer: event.organizer?.full_name,
+      organizer: event.organizer?.full_name || 'Unknown',
       date: event.date,
       status: event.status,
-      participants: event.participants,
-      venue: event.venue?.name,
+      participants: event.participants || 0,
+      venue: event.venue?.name || 'Unknown',
       tickets_sold: event.tickets_sold?.[0]?.count || 0,
-      feedback: event.feedback?.[0]?.avg || 0
+      feedback: event.feedback?.[0]?.avg || 0,
     }));
 
     return { events, total: count || 0 };
@@ -153,11 +161,10 @@ export const adminOperations = {
   async getCashouts(page: number = 1, limit: number = 10, status?: string): Promise<{ cashouts: AdminCashout[], total: number }> {
     let query = supabase
       .from('venue_booking_cashout')
-      .select(`
-        *,
-        organizer:profiles(full_name, bank_details),
-        venue:venues(name)
-      `, { count: 'exact' });
+      .select(
+        '*,organizer:profiles(full_name, bank_details),venue:venues(name)',
+        { count: 'exact' }
+      );
 
     if (status) {
       query = query.eq('status', status);
@@ -166,19 +173,26 @@ export const adminOperations = {
     const { data, error, count } = await query
       .range((page - 1) * limit, page * limit - 1);
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase query error in getCashouts:', error);
+      throw new Error(`Failed to fetch cashouts: ${error.message}`);
+    }
 
     const cashouts = data.map(cashout => ({
       id: cashout.id,
-      organizer_name: cashout.organizer?.full_name,
-      organizer_type: cashout.type,
-      amount: cashout.amount,
+      organizer_name: cashout.organizer?.full_name || 'Unknown',
+      organizer_type: cashout.type || 'Unknown',
+      amount: cashout.amount || 0,
       status: cashout.status,
       requested_at: cashout.created_at,
-      event_details: cashout.venue?.name,
-      checked_in_participants: cashout.checked_in_participants,
-      bank_details: cashout.organizer?.bank_details,
-      rejection_reason: cashout.rejection_reason
+      event_details: cashout.venue?.name || 'Unknown',
+      checked_in_participants: cashout.checked_in_participants || 0,
+      bank_details: cashout.organizer?.bank_details || {
+        account_name: '',
+        bank_name: '',
+        account_number: '',
+      },
+      rejection_reason: cashout.rejection_reason,
     }));
 
     return { cashouts, total: count || 0 };
@@ -186,94 +200,112 @@ export const adminOperations = {
 
   // Update cashout status
   async updateCashoutStatus(id: string, status: string, rejectionReason?: string): Promise<void> {
+    const updateData: { status: string; updated_at: string; rejection_reason?: string } = {
+      status,
+      updated_at: new Date().toISOString(),
+    };
+    if (rejectionReason) {
+      updateData.rejection_reason = rejectionReason;
+    }
+
     const { error } = await supabase
       .from('venue_booking_cashout')
-      .update({ 
-        status,
-        rejection_reason: rejectionReason,
-        updated_at: new Date().toISOString()
-      })
+      .update(updateData)
       .eq('id', id);
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase error in updateCashoutStatus:', error);
+      throw new Error(`Failed to update cashout status: ${error.message}`);
+    }
   },
 
   // Update user status
   async updateUserStatus(id: string, status: string): Promise<void> {
     const { error } = await supabase
       .from('profiles')
-      .update({ 
+      .update({
         status,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       })
       .eq('id', id);
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase error in updateUserStatus:', error);
+      throw new Error(`Failed to update user status: ${error.message}`);
+    }
   },
 
   // Update event status
   async updateEventStatus(id: string, status: string): Promise<void> {
     const { error } = await supabase
       .from('matches')
-      .update({ 
+      .update({
         status,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       })
       .eq('id', id);
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase error in updateEventStatus:', error);
+      throw new Error(`Failed to update event status: ${error.message}`);
+    }
   },
 
-  createFirstAdmin: async (email: string, password: string, secretKey: string) => {
+  // Create first admin
+  async createFirstAdmin(email: string, password: string, secretKey: string): Promise<any> {
     try {
-      // Debug log
       console.log('Received secret key:', secretKey);
       console.log('Expected secret key:', import.meta.env.VITE_FIRST_ADMIN_SECRET);
 
-      // Verify the secret key matches the environment variable
       if (secretKey !== import.meta.env.VITE_FIRST_ADMIN_SECRET) {
         throw new Error('Invalid secret key');
       }
 
-      // Check if any admin exists
       const { data: existingAdmins, error: checkError } = await supabase
         .from('admins')
         .select('id')
         .limit(1);
 
-      if (checkError) throw checkError;
+      if (checkError) {
+        console.error('Supabase error checking existing admins:', checkError);
+        throw new Error(`Failed to check existing admins: ${checkError.message}`);
+      }
 
       if (existingAdmins && existingAdmins.length > 0) {
         throw new Error('Admin already exists');
       }
 
-      // Create the user in Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
       });
 
-      if (authError) throw authError;
+      if (authError) {
+        console.error('Supabase auth error:', authError);
+        throw new Error(`Failed to create admin user: ${authError.message}`);
+      }
 
-      // Create the admin record
       const { data: adminData, error: adminError } = await supabase
         .from('admins')
         .insert({
           user_id: authData.user?.id,
-          email: email,
+          email,
           role: 'super_admin',
           permissions: ['*'],
-          is_active: true
+          is_active: true,
         })
         .select()
         .single();
 
-      if (adminError) throw adminError;
+      if (adminError) {
+        console.error('Supabase error creating admin record:', adminError);
+        throw new Error(`Failed to create admin record: ${adminError.message}`);
+      }
 
       return adminData;
     } catch (error: any) {
       console.error('Admin creation error:', error);
-      throw new Error(error.message);
+      throw new Error(`Failed to create admin: ${error.message}`);
     }
-  }
+  },
 };
