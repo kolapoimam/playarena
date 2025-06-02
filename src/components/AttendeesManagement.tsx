@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -66,11 +65,11 @@ type AttendeesManagementProps = {
   event: CyclingEvent | null;
   tempIdentifier: string;
   attendeeStatuses: AttendeeStatus[];
-  setAttendeeStatuses: React.Dispatch<React.SetStateAction<AttendeeStatus[]>>;
+  setAttendeeStatuses: (statuses: AttendeeStatus[]) => void;
   checkinCodes: { [key: string]: string };
-  setCheckinCodes: React.Dispatch<React.SetStateAction<{ [key: string]: string }>>;
+  setCheckinCodes: (codes: { [key: string]: string }) => void;
   checkinCodeErrors: { [key: string]: string | null };
-  setCheckinCodeErrors: React.Dispatch<React.SetStateAction<{ [key: string]: string | null }>>;
+  setCheckinCodeErrors: (errors: { [key: string]: string | null }) => void;
   fetchEvent: () => void;
   loading: boolean;
   setLoading: (value: boolean) => void;
@@ -137,7 +136,7 @@ const AttendeesManagement = ({
 
         if (error) throw error;
 
-        const initialStatuses: AttendeeStatus[] = attendeesData.map(attendee => ({
+        const initialStatuses = attendeesData.map(attendee => ({
           id_uuid: attendee.id_uuid,
           attendee_status: (attendee.status || 'registered') as "registered" | "checked_in" | "absent",
           checkinCode: checkinCodes[attendee.id_uuid] || ''
@@ -162,7 +161,7 @@ const AttendeesManagement = ({
 
               if (updateError) throw updateError;
 
-              setAttendeeStatuses((prev) =>
+              setAttendeeStatuses(prev =>
                 prev.map(status =>
                   registeredAttendees.some(a => a.id_uuid === status.id_uuid)
                     ? { ...status, attendee_status: 'absent' }
@@ -189,7 +188,7 @@ const AttendeesManagement = ({
           variant: "destructive",
         });
         if (event?.attendees) {
-          const initialStatuses: AttendeeStatus[] = event.attendees.map(attendee => ({
+          const initialStatuses = event.attendees.map(attendee => ({
             id_uuid: attendee.id_uuid,
             attendee_status: (attendee.status || 'registered') as "registered" | "checked_in" | "absent",
             checkinCode: checkinCodes[attendee.id_uuid] || ''
@@ -346,7 +345,7 @@ const AttendeesManagement = ({
       setAttendeeStatuses((prev) =>
         prev.map((status) =>
           status.id_uuid === attendeeId
-            ? { ...status, attendee_status: "checked_in" }
+            ? { ...status, status: "checked_in" }
             : status
         )
       );
@@ -389,7 +388,7 @@ const AttendeesManagement = ({
       setAttendeeStatuses((prev) =>
         prev.map((status) =>
           status.id_uuid === attendeeId
-            ? { ...status, attendee_status: currentStatus || "registered" }
+            ? { ...status, status: currentStatus || "registered" }
             : status
         )
       );
@@ -526,29 +525,43 @@ const AttendeesManagement = ({
         )}
       </div>
 
+      {mode === "checkin" && (
+        <Button
+          onClick={() => setMode(null)}
+          className="mt-4 bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700 text-white"
+          disabled={loading}
+        >
+          {loading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            "Done"
+          )}
+        </Button>
+      )}
+
       <Dialog open={checkinDialogOpen} onOpenChange={setCheckinDialogOpen}>
         <DialogContent className="sm:max-w-md rounded-lg">
           <DialogHeader>
-            <DialogTitle>Check-in Successful!</DialogTitle>
+            <DialogTitle>Check-in Successful</DialogTitle>
             <DialogDescription>
               {checkinAttendee && (
-                <div className="text-center py-4">
-                  <p className="text-lg font-semibold text-green-600 dark:text-green-400">
-                    {checkinAttendee.name}
-                  </p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    has been successfully checked in for {checkinAttendee.slots} slot(s).
-                  </p>
-                </div>
+                <>
+                  {checkinAttendee.name} has been checked in with{" "}
+                  {checkinAttendee.slots} slot
+                  {checkinAttendee.slots !== 1 ? "s" : ""}.
+                </>
               )}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button
               onClick={() => setCheckinDialogOpen(false)}
-              className="bg-green-500 hover:bg-green-600 text-white w-full"
+              className="bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700 text-white rounded-md"
             >
-              Continue
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>
