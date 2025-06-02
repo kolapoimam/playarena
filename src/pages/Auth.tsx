@@ -1,3 +1,4 @@
+```tsx
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -260,7 +261,7 @@ const Auth = () => {
       }
 
       const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
-        redirectTo: `${window.location.origin}/reset-password`,
+        redirectTo: `https://app.sportcliq.com/reset-password`,
       });
       if (error) throw error;
 
@@ -283,56 +284,39 @@ const Auth = () => {
     }
   };
 
-  if (!sitekey) {
-    console.error("reCAPTCHA Site Key is missing. Check environment variables.");
+  if (!sitekey || !supabaseAnonKey) {
+    console.error("Missing required environment variables:", { sitekey, supabaseAnonKey });
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-b from-[#e6f3f5] to-[#d3e8eb] dark:from-gray-900 dark:to-gray-800">
-        <p className="text-red-500">Error: reCAPTCHA configuration is missing. Please contact support.</p>
-      </div>
-    );
-  }
-
-  if (!supabaseAnonKey) {
-    console.error("Supabase anon key is missing. Check environment variables.");
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-4 p-4 bg-gradient-to-b from-[#e6f3f5] to-[#d1e8eb] dark:from-gray-900 dark:to-gray-800">
-        <p className="text-red-500">Error: Server configuration is incomplete. Please contact support.</p>
+      <div className="min-h-screen flex flex-col items-center p-4 bg-gradient-to-b from-[#e6f3f5] to-[#d1e8eb] dark:from-gray-900 dark:to-gray-800">
+        <p className="text-red-500">Error: Server configuration is missing. Please contact support.</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-between p-4 bg-gradient-to-b from-[#e6f3f5] to-[#d1e8eb] dark:from-gray-900 dark:to-gray-800 relative">
-      <div className="absolute top-10 left-1/2 transform-x-1/2">
-        <img src="/images/navlogo.png" alt="PlayArena Logo" className="h-16 w-auto" />
+    <div className="min-h-screen flex flex-col items-center justify-between p-6 bg-gradient-to-b from-[#e6f3f5] to-[#ffffff] dark:from-gray-900 dark:to-gray-200 relative">
+      <div className="absolute top-10 left-1/2 transform -translate-x-1/2">
+        <img src="/images/nav-logo.png" alt="Play Logo" className="h-16 w-auto" />
       </div>
 
-      <div className="w-full max-w-md mt-12 mb-32">
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-8">
-          <div className="flex border-b border-b border-gray-200 dark:border-gray-700 mb-6">
+      <div className="w-full max-w-md mt-24 mb-32">
+        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-8">
+          <div className="flex justify-between items-center border-b border-gray-200 dark:border-gray-600 mb-6">
             <button
-              className={`flex-1 flex items-center py-2 text-center text-sm font-medium ${
-                !isSignUp
-                  ? "border-b-2 border-[#17a2b3] text-[#17a2b3]"
-                  : "text-gray-500 dark:text-gray-400"
-              }`}
+              className={`flex-1 py-2 text-center text-sm font-medium ${!isSignUp ? "border-b-2 border-[#17a2b3] text-[#17a2b3]" : "text-gray-500 dark:text-gray-400"}`}
               onClick={() => setIsSignUp(false)}
             >
               Sign In
             </button>
             <button
-              className={`flex-1 py-2 text-center text-sm font-medium ${
-                isSignUp
-                  ? "border-b-2 border-[#17a2b3] text-[#17a2b3]"
-                  : "text-gray-500 dark:text-gray-400"
-              }`}
+              className={`flex-1 py-2 text-center text-sm font-medium ${isSignUp ? "border-b-2 border-[#17a2b3] text-[#17a2b3]" : "text-gray-500 dark:text-gray-400"}`}
               onClick={() => setIsSignUp(true)}
             >
               Sign Up
             </button>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-6">
             {isSignUp && (
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -342,12 +326,7 @@ const Auth = () => {
                   <Input
                     type="text"
                     placeholder="Your First Name"
-                    value=""
-                    value=""
-                  placeholder=""
-Your First Name"
-                    placeholder="Your First Name"
-                    value="firstName"
+                    value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
                     required
                     className="w-full"
@@ -360,25 +339,23 @@ Your First Name"
                   <Input
                     type="text"
                     placeholder="Your Last Name"
-                    value=""
-                    value=""
+                    value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
                     required
-                    className=""
-                  >
+                    className="w-full"
+                  />
                 </div>
               </div>
             )}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Email"
-              >
+                Email
+              </label>
               <Input
                 type="email"
                 placeholder="Your Email"
-                value=""
-                email"
+                value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 className="w-full"
@@ -393,7 +370,7 @@ Your First Name"
                 <Input
                   type={showPassword ? "text" : "password"}
                   placeholder="Your Password"
-                  value="password"
+                  value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   className="w-full pr-10"
@@ -432,38 +409,38 @@ Your First Name"
 
             <div className="flex gap-2">
               <Button
-                className="flex-1 bg-[#17a2b3] hover:bg-[#138d3a] text-white font-medium py-2"
+                className="flex-1 bg-[#17a2b3] hover:bg-[#138d9a] text-white font-medium py-2"
                 onClick={handleEmailAuth}
                 disabled={loading || (isSignUp && (!firstName.trim() || !lastName.trim())) || !recaptchaToken}
               >
                 {loading ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : isSignUp ? (
-                    "Join Sport Cliq"
-                  ) : (
-                    "Sign In"
-                  )}
+                ) : isSignUp ? (
+                  "Join Sport Cliq"
+                ) : (
+                  "Sign In"
+                )}
               </Button>
 
               <Button
                 variant="outline"
-                className="flex items-center justify-center gap-2"
+                className="flex-1 flex items-center justify-center gap-2"
                 onClick={handleGoogleAuth}
                 disabled={loading}
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   width="16"
-                  height="48"
+                  height="16"
                   viewBox="0 0 24 24"
+                  fill="none"
                 >
-                  fill="currentColor"
                   <path
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-3.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
                     fill="#4285F4"
                   />
                   <path
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98 0.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
                     fill="#34A853"
                   />
                   <path
@@ -481,7 +458,6 @@ Your First Name"
 
             {isSignUp && (
               <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
-                >
                 By signing up, you agree to our{" "}
                 <NavLink
                   to="/terms-privacy"
@@ -489,15 +465,15 @@ Your First Name"
                 >
                   Terms & Privacy Policy
                 </NavLink>
-              </div>
+              </p>
             )}
           </div>
         </div>
       </div>
 
       {showForgotPassword && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 z-4">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 w-full max-w-xs">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl p-6 w-full max-w-xs">
             <div className="text-center mb-5">
               <h2 className="text-xl font-bold text-gray-800 dark:text-white">
                 Reset Password
@@ -527,7 +503,6 @@ Your First Name"
             </div>
 
             <div className="flex justify-end gap-3">
-              <div>
               <Button
                 variant="outline"
                 className="px-4 rounded-lg"
@@ -541,25 +516,25 @@ Your First Name"
                 Cancel
               </Button>
               <Button
-                className="bg-[#17a2b3] hover:bg-[#138d3a] text-white px-4 rounded-lg"
+                className="bg-[#17a2b3] hover:bg-[#138d9a] text-white px-4 rounded-lg"
                 onClick={handleForgotPassword}
                 disabled={loading || !recaptchaToken}
               >
                 {loading ? (
-                  <Loader2 className="mr-2 h-4 w-400 animate-spin" />
-                ) : "Send Link"}
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  "Send Link"
+                )}
               </Button>
             </div>
           </div>
         </div>
-      ))}
-
-      </div>
+      )}
 
       <div className="absolute bottom-16 left-0 w-full">
-        <div className="w-full h-48 bg-gradient-to-t from-[#e6e6f3f5] to-[#d1e8eb] dark:from-gray-900 dark:to-gray-800 flex justify-center items-center">
-        <img src="/images/AuthFooter.png" alt="Auth Footer" className="w-full h-full object-contain" />
-      </div>
+        <div className="w-full h-48 bg-gradient-to-t from-[#e6f3f5] to-[#d1e8eb] dark:from-gray-900 dark:to-gray-800 flex justify-center items-center">
+          <img src="/images/AuthFooter.png" alt="Auth Footer" className="w-full h-full object-contain" />
+        </div>
       </div>
 
       <Navbar />
