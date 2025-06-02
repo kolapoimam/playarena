@@ -531,11 +531,11 @@ const Auth = () => {
         </div>
       )}
 
-      <div className="absolute bottom-16 left-0 w-full">
-        <div className="w-full h-48 bg-gradient-to-t from-[#e6f3f5] to-[#d1e8eb] dark:from-gray-900 dark:to-gray-800 flex justify-center items-center">
-          <img src="/images/AuthFooter.png" alt="Auth Footer" className="w-full h-full object-contain" />
-        </div>
-      </div>
+<div className="absolute bottom-16 left-0 w-full">
+  <div className="w-full h-48 bg-gradient-to-t from-[#e6f3f5] to-[#d1e8eb] dark:from-gray-900 dark:to-gray-800 flex justify-center items-center">
+    <img src="/AuthFooter.png" alt="Auth Footer" className="w-full h-full object-contain" />
+  </div>
+</div>
 
       <Navbar />
     </div>
