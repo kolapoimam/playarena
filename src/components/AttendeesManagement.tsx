@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -65,11 +66,11 @@ type AttendeesManagementProps = {
   event: CyclingEvent | null;
   tempIdentifier: string;
   attendeeStatuses: AttendeeStatus[];
-  setAttendeeStatuses: (statuses: AttendeeStatus[]) => void;
+  setAttendeeStatuses: React.Dispatch<React.SetStateAction<AttendeeStatus[]>>;
   checkinCodes: { [key: string]: string };
-  setCheckinCodes: (codes: { [key: string]: string }) => void;
+  setCheckinCodes: React.Dispatch<React.SetStateAction<{ [key: string]: string }>>;
   checkinCodeErrors: { [key: string]: string | null };
-  setCheckinCodeErrors: (errors: { [key: string]: string | null }) => void;
+  setCheckinCodeErrors: React.Dispatch<React.SetStateAction<{ [key: string]: string | null }>>;
   fetchEvent: () => void;
   loading: boolean;
   setLoading: (value: boolean) => void;
@@ -136,7 +137,7 @@ const AttendeesManagement = ({
 
         if (error) throw error;
 
-        const initialStatuses = attendeesData.map(attendee => ({
+        const initialStatuses: AttendeeStatus[] = attendeesData.map(attendee => ({
           id_uuid: attendee.id_uuid,
           attendee_status: (attendee.status || 'registered') as "registered" | "checked_in" | "absent",
           checkinCode: checkinCodes[attendee.id_uuid] || ''
@@ -161,7 +162,7 @@ const AttendeesManagement = ({
 
               if (updateError) throw updateError;
 
-              setAttendeeStatuses((prev: AttendeeStatus[]) =>
+              setAttendeeStatuses((prev) =>
                 prev.map(status =>
                   registeredAttendees.some(a => a.id_uuid === status.id_uuid)
                     ? { ...status, attendee_status: 'absent' }
@@ -188,7 +189,7 @@ const AttendeesManagement = ({
           variant: "destructive",
         });
         if (event?.attendees) {
-          const initialStatuses = event.attendees.map(attendee => ({
+          const initialStatuses: AttendeeStatus[] = event.attendees.map(attendee => ({
             id_uuid: attendee.id_uuid,
             attendee_status: (attendee.status || 'registered') as "registered" | "checked_in" | "absent",
             checkinCode: checkinCodes[attendee.id_uuid] || ''
@@ -258,9 +259,9 @@ const AttendeesManagement = ({
 
   const handleCheckinCodeChange = (attendeeId: string, code: string) => {
     const numericCode = code.replace(/[^0-9]/g, "").slice(0, 6);
-    setCheckinCodes((prev: CheckinCodes) => ({ ...prev, [attendeeId]: numericCode }));
+    setCheckinCodes((prev) => ({ ...prev, [attendeeId]: numericCode }));
     const validation = codeSchema.safeParse(numericCode);
-    setCheckinCodeErrors((prev: CheckinCodeErrors) => ({
+    setCheckinCodeErrors((prev) => ({
       ...prev,
       [attendeeId]: validation.success ? null : validation.error?.errors[0].message,
     }));
@@ -281,7 +282,7 @@ const AttendeesManagement = ({
 
     const code = checkinCodes[attendeeId];
     if (!code || code.length !== 6) {
-      setCheckinCodeErrors((prev: CheckinCodeErrors) => ({
+      setCheckinCodeErrors((prev) => ({
         ...prev,
         [attendeeId]: "Please enter a 6-digit code",
       }));
@@ -342,7 +343,7 @@ const AttendeesManagement = ({
       }
 
       // Sync UI with updated data
-      setAttendeeStatuses((prev: AttendeeStatus[]) =>
+      setAttendeeStatuses((prev) =>
         prev.map((status) =>
           status.id_uuid === attendeeId
             ? { ...status, attendee_status: "checked_in" }
@@ -366,13 +367,13 @@ const AttendeesManagement = ({
       });
 
       // Clear check-in code and errors
-      setCheckinCodes((prev: CheckinCodes) => {
+      setCheckinCodes((prev) => {
         const newCodes = { ...prev };
         delete newCodes[attendeeId];
         return newCodes;
       });
 
-      setCheckinCodeErrors((prev: CheckinCodeErrors) => {
+      setCheckinCodeErrors((prev) => {
         const newErrors = { ...prev };
         delete newErrors[attendeeId];
         return newErrors;
@@ -385,7 +386,7 @@ const AttendeesManagement = ({
         variant: "destructive",
       });
       // Revert UI state if update failed
-      setAttendeeStatuses((prev: AttendeeStatus[]) =>
+      setAttendeeStatuses((prev) =>
         prev.map((status) =>
           status.id_uuid === attendeeId
             ? { ...status, attendee_status: currentStatus || "registered" }

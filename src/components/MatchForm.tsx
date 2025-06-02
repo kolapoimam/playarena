@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -27,6 +28,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
 import { Switch } from "@/components/ui/switch";
 import { useForm } from "react-hook-form";
@@ -159,7 +161,8 @@ const MatchForm = ({ isPreFilled = false, preSelectedVenueSlug = "" }: MatchForm
     try {
       const { data: slugData, error: slugError } = await supabase
         .rpc('generate_unique_slug', { 
-          p_title: title 
+          p_text_input: title,
+          p_table_name: 'matches'
         });
 
       if (slugError) throw slugError;
@@ -170,15 +173,15 @@ const MatchForm = ({ isPreFilled = false, preSelectedVenueSlug = "" }: MatchForm
         .from("matches")
         .insert({
           title,
-          slug, // Add the required slug field
+          slug,
           venue_id: venueId,
           match_date: matchDate,
           match_time: matchTime,
-          start_time: startTime,
-          end_time: endTime,
-          total_slots: totalSlots,
+          start_time: startTime || null,
+          end_time: endTime || null,
+          total_slots: parseInt(totalSlots),
           is_paid: isPaid,
-          price: isPaid ? price : null,
+          price: isPaid ? parseFloat(price) : null,
           notes,
           organizer_name: organizerName,
           organizer_phone: organizerPhone,
@@ -186,15 +189,15 @@ const MatchForm = ({ isPreFilled = false, preSelectedVenueSlug = "" }: MatchForm
           skill_level: skillLevel,
           match_type: matchType,
           sell_tickets: sellTickets,
-          ticket_price: sellTickets ? ticketPrice : null,
-          max_tickets: sellTickets ? maxTickets : null,
+          ticket_price: sellTickets ? parseFloat(ticketPrice) : null,
+          max_tickets: sellTickets ? parseInt(maxTickets) : null,
           allow_bulk_tickets: allowBulkTickets,
           access_password: isPrivate ? accessPassword : null,
           is_private: isPrivate,
           disclose_phone: disclosePhone,
           player_number_required: playerNumberRequired,
           required_fields: requiredFields,
-          total_tickets_available: sellTickets ? maxTickets : 0,
+          total_tickets_available: sellTickets ? parseInt(maxTickets) : 0,
         })
         .select("id, slug")
         .single();
@@ -239,7 +242,10 @@ const MatchForm = ({ isPreFilled = false, preSelectedVenueSlug = "" }: MatchForm
                     placeholder="Match Title"
                     {...field}
                     value={title}
-                    onChange={(e) => setTitle(e.target.value)}
+                    onChange={(e) => {
+                      setTitle(e.target.value);
+                      field.onChange(e);
+                    }}
                   />
                 </FormControl>
                 <FormMessage />
@@ -266,7 +272,10 @@ const MatchForm = ({ isPreFilled = false, preSelectedVenueSlug = "" }: MatchForm
                     type="date"
                     {...field}
                     value={matchDate}
-                    onChange={(e) => setMatchDate(e.target.value)}
+                    onChange={(e) => {
+                      setMatchDate(e.target.value);
+                      field.onChange(e);
+                    }}
                   />
                 </FormControl>
                 <FormMessage />
@@ -285,7 +294,10 @@ const MatchForm = ({ isPreFilled = false, preSelectedVenueSlug = "" }: MatchForm
                     type="time"
                     {...field}
                     value={matchTime}
-                    onChange={(e) => setMatchTime(e.target.value)}
+                    onChange={(e) => {
+                      setMatchTime(e.target.value);
+                      field.onChange(e);
+                    }}
                   />
                 </FormControl>
                 <FormMessage />
@@ -305,7 +317,10 @@ const MatchForm = ({ isPreFilled = false, preSelectedVenueSlug = "" }: MatchForm
                       type="time"
                       {...field}
                       value={startTime}
-                      onChange={(e) => setStartTime(e.target.value)}
+                      onChange={(e) => {
+                        setStartTime(e.target.value);
+                        field.onChange(e);
+                      }}
                     />
                   </FormControl>
                   <FormMessage />
@@ -324,7 +339,10 @@ const MatchForm = ({ isPreFilled = false, preSelectedVenueSlug = "" }: MatchForm
                       type="time"
                       {...field}
                       value={endTime}
-                      onChange={(e) => setEndTime(e.target.value)}
+                      onChange={(e) => {
+                        setEndTime(e.target.value);
+                        field.onChange(e);
+                      }}
                     />
                   </FormControl>
                   <FormMessage />
@@ -345,7 +363,10 @@ const MatchForm = ({ isPreFilled = false, preSelectedVenueSlug = "" }: MatchForm
                     placeholder="Total Slots"
                     {...field}
                     value={totalSlots}
-                    onChange={(e) => setTotalSlots(e.target.value)}
+                    onChange={(e) => {
+                      setTotalSlots(e.target.value);
+                      field.onChange(e);
+                    }}
                   />
                 </FormControl>
                 <FormMessage />
@@ -369,8 +390,8 @@ const MatchForm = ({ isPreFilled = false, preSelectedVenueSlug = "" }: MatchForm
                     checked={isPaid}
                     onCheckedChange={(checked) => {
                       setIsPaid(checked);
+                      field.onChange(checked);
                     }}
-                    {...field}
                   />
                 </FormControl>
               </FormItem>
@@ -390,7 +411,10 @@ const MatchForm = ({ isPreFilled = false, preSelectedVenueSlug = "" }: MatchForm
                       placeholder="Price"
                       {...field}
                       value={price}
-                      onChange={(e) => setPrice(e.target.value)}
+                      onChange={(e) => {
+                        setPrice(e.target.value);
+                        field.onChange(e);
+                      }}
                     />
                   </FormControl>
                   <FormMessage />
@@ -410,7 +434,10 @@ const MatchForm = ({ isPreFilled = false, preSelectedVenueSlug = "" }: MatchForm
                     placeholder="Notes"
                     {...field}
                     value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
+                    onChange={(e) => {
+                      setNotes(e.target.value);
+                      field.onChange(e);
+                    }}
                   />
                 </FormControl>
                 <FormMessage />
@@ -430,7 +457,10 @@ const MatchForm = ({ isPreFilled = false, preSelectedVenueSlug = "" }: MatchForm
                       placeholder="Organizer Name"
                       {...field}
                       value={organizerName}
-                      onChange={(e) => setOrganizerName(e.target.value)}
+                      onChange={(e) => {
+                        setOrganizerName(e.target.value);
+                        field.onChange(e);
+                      }}
                     />
                   </FormControl>
                   <FormMessage />
@@ -449,7 +479,10 @@ const MatchForm = ({ isPreFilled = false, preSelectedVenueSlug = "" }: MatchForm
                       placeholder="Organizer Phone"
                       {...field}
                       value={organizerPhone}
-                      onChange={(e) => setOrganizerPhone(e.target.value)}
+                      onChange={(e) => {
+                        setOrganizerPhone(e.target.value);
+                        field.onChange(e);
+                      }}
                     />
                   </FormControl>
                   <FormMessage />
@@ -466,9 +499,11 @@ const MatchForm = ({ isPreFilled = false, preSelectedVenueSlug = "" }: MatchForm
                 <FormItem>
                   <FormLabel>Gender</FormLabel>
                   <Select
-                    onValueChange={field.onChange}
                     value={gender}
-                    onValueChange={(value) => setGender(value)}
+                    onValueChange={(value) => {
+                      setGender(value);
+                      field.onChange(value);
+                    }}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select gender" />
@@ -494,9 +529,11 @@ const MatchForm = ({ isPreFilled = false, preSelectedVenueSlug = "" }: MatchForm
                 <FormItem>
                   <FormLabel>Skill Level</FormLabel>
                   <Select
-                    onValueChange={field.onChange}
                     value={skillLevel}
-                    onValueChange={(value) => setSkillLevel(value)}
+                    onValueChange={(value) => {
+                      setSkillLevel(value);
+                      field.onChange(value);
+                    }}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select skill level" />
@@ -524,7 +561,10 @@ const MatchForm = ({ isPreFilled = false, preSelectedVenueSlug = "" }: MatchForm
                     placeholder="Match Type"
                     {...field}
                     value={matchType}
-                    onChange={(e) => setMatchType(e.target.value)}
+                    onChange={(e) => {
+                      setMatchType(e.target.value);
+                      field.onChange(e);
+                    }}
                   />
                 </FormControl>
                 <FormMessage />
@@ -548,8 +588,8 @@ const MatchForm = ({ isPreFilled = false, preSelectedVenueSlug = "" }: MatchForm
                     checked={sellTickets}
                     onCheckedChange={(checked) => {
                       setSellTickets(checked);
+                      field.onChange(checked);
                     }}
-                    {...field}
                   />
                 </FormControl>
               </FormItem>
@@ -570,7 +610,10 @@ const MatchForm = ({ isPreFilled = false, preSelectedVenueSlug = "" }: MatchForm
                         placeholder="Ticket Price"
                         {...field}
                         value={ticketPrice}
-                        onChange={(e) => setTicketPrice(e.target.value)}
+                        onChange={(e) => {
+                          setTicketPrice(e.target.value);
+                          field.onChange(e);
+                        }}
                       />
                     </FormControl>
                     <FormMessage />
@@ -590,7 +633,10 @@ const MatchForm = ({ isPreFilled = false, preSelectedVenueSlug = "" }: MatchForm
                         placeholder="Max Tickets"
                         {...field}
                         value={maxTickets}
-                        onChange={(e) => setMaxTickets(e.target.value)}
+                        onChange={(e) => {
+                          setMaxTickets(e.target.value);
+                          field.onChange(e);
+                        }}
                       />
                     </FormControl>
                     <FormMessage />
@@ -606,7 +652,7 @@ const MatchForm = ({ isPreFilled = false, preSelectedVenueSlug = "" }: MatchForm
                     <div className="space-y-0.5">
                       <FormLabel>Allow Bulk Tickets</FormLabel>
                       <FormDescription>
-                        Do you want to allow bulk tickets for this match?
+                        Allow users to purchase multiple tickets?
                       </FormDescription>
                     </div>
                     <FormControl>
@@ -614,8 +660,8 @@ const MatchForm = ({ isPreFilled = false, preSelectedVenueSlug = "" }: MatchForm
                         checked={allowBulkTickets}
                         onCheckedChange={(checked) => {
                           setAllowBulkTickets(checked);
+                          field.onChange(checked);
                         }}
-                        {...field}
                       />
                     </FormControl>
                   </FormItem>
@@ -630,9 +676,9 @@ const MatchForm = ({ isPreFilled = false, preSelectedVenueSlug = "" }: MatchForm
             render={({ field }) => (
               <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                 <div className="space-y-0.5">
-                  <FormLabel>Is Private</FormLabel>
+                  <FormLabel>Private Match</FormLabel>
                   <FormDescription>
-                    Do you want to make this match private?
+                    Require a password to join this match?
                   </FormDescription>
                 </div>
                 <FormControl>
@@ -640,8 +686,8 @@ const MatchForm = ({ isPreFilled = false, preSelectedVenueSlug = "" }: MatchForm
                     checked={isPrivate}
                     onCheckedChange={(checked) => {
                       setIsPrivate(checked);
+                      field.onChange(checked);
                     }}
-                    {...field}
                   />
                 </FormControl>
               </FormItem>
@@ -661,7 +707,10 @@ const MatchForm = ({ isPreFilled = false, preSelectedVenueSlug = "" }: MatchForm
                       placeholder="Access Password"
                       {...field}
                       value={accessPassword}
-                      onChange={(e) => setAccessPassword(e.target.value)}
+                      onChange={(e) => {
+                        setAccessPassword(e.target.value);
+                        field.onChange(e);
+                      }}
                     />
                   </FormControl>
                   <FormMessage />
@@ -678,7 +727,7 @@ const MatchForm = ({ isPreFilled = false, preSelectedVenueSlug = "" }: MatchForm
                 <div className="space-y-0.5">
                   <FormLabel>Disclose Phone</FormLabel>
                   <FormDescription>
-                    Do you want to disclose your phone number to players?
+                    Show your phone number to match participants?
                   </FormDescription>
                 </div>
                 <FormControl>
@@ -686,8 +735,8 @@ const MatchForm = ({ isPreFilled = false, preSelectedVenueSlug = "" }: MatchForm
                     checked={disclosePhone}
                     onCheckedChange={(checked) => {
                       setDisclosePhone(checked);
+                      field.onChange(checked);
                     }}
-                    {...field}
                   />
                 </FormControl>
               </FormItem>
@@ -702,7 +751,7 @@ const MatchForm = ({ isPreFilled = false, preSelectedVenueSlug = "" }: MatchForm
                 <div className="space-y-0.5">
                   <FormLabel>Player Number Required</FormLabel>
                   <FormDescription>
-                    Do you want to require players to enter their number?
+                    Require players to provide their jersey number?
                   </FormDescription>
                 </div>
                 <FormControl>
@@ -710,76 +759,67 @@ const MatchForm = ({ isPreFilled = false, preSelectedVenueSlug = "" }: MatchForm
                     checked={playerNumberRequired}
                     onCheckedChange={(checked) => {
                       setPlayerNumberRequired(checked);
+                      field.onChange(checked);
                     }}
-                    {...field}
                   />
                 </FormControl>
               </FormItem>
             )}
           />
 
-          <div>
-            <FormLabel className="text-base font-semibold">
-              Required Fields
-            </FormLabel>
-            <FormDescription>
-              Select which fields are required for players to enter.
-            </FormDescription>
-            <div className="flex flex-col space-y-2">
-              <FormField
-                control={form.control}
-                name="requiredFields.player_name"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                    <FormControl>
-                      <Checkbox
-                        checked={requiredFields.player_name}
-                        onCheckedChange={(checked) => {
-                          setRequiredFields({
-                            ...requiredFields,
-                            player_name: checked || false,
-                          });
-                        }}
-                        {...field}
-                      />
-                    </FormControl>
-                    <div className="space-y-1 leading-none">
-                      <FormLabel>Player Name</FormLabel>
-                      <FormDescription>Require player name.</FormDescription>
-                    </div>
-                  </FormItem>
-                )}
-              />
+          <div className="space-y-4">
+            <FormLabel>Required Fields</FormLabel>
+            <FormField
+              control={form.control}
+              name="requiredFields.player_name"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                  <FormControl>
+                    <Checkbox
+                      checked={requiredFields.player_name}
+                      onCheckedChange={(checked) => {
+                        const newValue = checked === true;
+                        setRequiredFields(prev => ({ ...prev, player_name: newValue }));
+                        field.onChange(newValue);
+                      }}
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>
+                      Player Name Required
+                    </FormLabel>
+                  </div>
+                </FormItem>
+              )}
+            />
 
-              <FormField
-                control={form.control}
-                name="requiredFields.player_phone"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                    <FormControl>
-                      <Checkbox
-                        checked={requiredFields.player_phone}
-                        onCheckedChange={(checked) => {
-                          setRequiredFields({
-                            ...requiredFields,
-                            player_phone: checked || false,
-                          });
-                        }}
-                        {...field}
-                      />
-                    </FormControl>
-                    <div className="space-y-1 leading-none">
-                      <FormLabel>Player Phone</FormLabel>
-                      <FormDescription>Require player phone.</FormDescription>
-                    </div>
-                  </FormItem>
-                )}
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="requiredFields.player_phone"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                  <FormControl>
+                    <Checkbox
+                      checked={requiredFields.player_phone}
+                      onCheckedChange={(checked) => {
+                        const newValue = checked === true;
+                        setRequiredFields(prev => ({ ...prev, player_phone: newValue }));
+                        field.onChange(newValue);
+                      }}
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>
+                      Player Phone Required
+                    </FormLabel>
+                  </div>
+                </FormItem>
+              )}
+            />
           </div>
 
-          <Button disabled={isSubmitting}>
-            {isSubmitting ? "Submitting..." : "Submit"}
+          <Button type="submit" disabled={isSubmitting} className="w-full">
+            {isSubmitting ? "Creating..." : "Create Match"}
           </Button>
         </form>
       </Form>
@@ -788,5 +828,3 @@ const MatchForm = ({ isPreFilled = false, preSelectedVenueSlug = "" }: MatchForm
 };
 
 export default MatchForm;
-
-import { FormDescription } from "@/components/ui/form";
