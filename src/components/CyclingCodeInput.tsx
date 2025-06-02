@@ -48,23 +48,13 @@ type CyclingEvent = {
 
 type CyclingEventResponse = {
   id_uuid: string;
-  slug: string;
-  title: string;
+  event_name: string;
   event_date: string;
-  start_time: string;
-  max_attendees: number;
+  event_start_time: string;
+  event_end_time: string;
   host_id: string;
   host_name: string;
   host_phone: string;
-  supercode: string;
-  is_free: boolean;
-  price?: number;
-  status: string;
-  start_landmark_id: string;
-  start_landmark: {
-    name?: string;
-    state?: string;
-  } | null;
   cycling_attendees: {
     id_uuid: string;
     attendee_name: string;
@@ -72,8 +62,7 @@ type CyclingEventResponse = {
     status: "registered" | "checked_in" | "absent";
     confirmation_code: string;
     details: { phone: string } | null;
-    number_of_slots?: number;
-  }[] | null;
+  }[];
 };
 
 const codeSchema = z
