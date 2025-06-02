@@ -52,7 +52,9 @@ type Cashout = {
   account_name: string;
   status: 'Review' | 'Processed' | 'Failed' | 'Successful';
   temp_identifier?: string;
+  host_id: string;
   created_at: string;
+  updated_at: string;
 };
 
 const bankAccountSchema = z.string().regex(/^\d{10}$/, { message: "Bank account number must be exactly 10 digits" });
