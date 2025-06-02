@@ -18,12 +18,11 @@ export interface AdminUser {
   id: string;
   name: string;
   email: string;
-  phone: string | null; // Updated to allow null, matching schema
+  phone: string | null;
   status: 'active' | 'suspended';
   created_at: string;
   events_organized: number;
   events_participated: number;
-  matches?: number; // Added for potential matches count
   badges: string[];
 }
 
@@ -85,7 +84,7 @@ export const adminOperations = {
     let query = supabase
       .from('profiles')
       .select(
-        '*,events_organized:cycling_events(count),events_participated:cycling_attendees(count),matches(count),user_badges(badge_id!inner(badges(name)))',
+        '*,events_organized:cycling_events(count),events_participated:cycling_attendees(count),user_badges(badge_id!inner(badges(name)))',
         { count: 'exact' }
       );
 
@@ -103,14 +102,13 @@ export const adminOperations = {
 
     const users = data.map(user => ({
       id: user.id,
-      name: user.full_name || 'Unknown', // Fallback for null full_name
+      name: user.full_name || 'Unknown',
       email: user.email,
       phone: user.phone || null,
-      status: user.status || 'active', // Fallback for null status
+      status: user.status || 'active',
       created_at: user.created_at,
       events_organized: user.events_organized?.[0]?.count || 0,
       events_participated: user.events_participated?.[0]?.count || 0,
-      matches: user.matches?.[0]?.count || 0, // Include matches count
       badges: user.user_badges?.map((ub: any) => ub.badges.name) || [],
     }));
 
