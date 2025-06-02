@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Shield, AlertTriangle } from 'lucide-react';
 import { adminOperations } from '@/lib/admin';
+import { supabase } from '@/lib/supabase';
 
 const FirstTimeSetup = () => {
   const navigate = useNavigate();
@@ -58,13 +59,15 @@ const FirstTimeSetup = () => {
 
   if (!isSetupAvailable) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800 p-4">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-playarena-50 to-playarena-100 dark:from-gray-900 dark:to-gray-800 p-4">
         <Card className="w-full max-w-md bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-none shadow-xl">
           <CardHeader>
-            <CardTitle className="flex items-center justify-center space-x-2">
-              <Shield className="h-8 w-8 text-blue-600 dark:text-blue-400" />
-              <span>Setup Not Available</span>
-            </CardTitle>
+            <div className="flex items-center justify-center space-x-3 mb-4">
+              <img src="/playarenalight.png" alt="Sport Cliq" className="h-12" />
+              <CardTitle className="text-2xl font-bold text-playarena-600 dark:text-playarena-400">
+                Setup Not Available
+              </CardTitle>
+            </div>
           </CardHeader>
           <CardContent>
             <Alert variant="destructive">
@@ -75,7 +78,7 @@ const FirstTimeSetup = () => {
               </AlertDescription>
             </Alert>
             <Button 
-              className="w-full mt-4" 
+              className="w-full mt-4 bg-playarena-500 hover:bg-playarena-600 dark:bg-playarena-400 dark:hover:bg-playarena-500" 
               onClick={() => navigate('/admin/login')}
             >
               Go to Login
@@ -87,15 +90,17 @@ const FirstTimeSetup = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-playarena-50 to-playarena-100 dark:from-gray-900 dark:to-gray-800 p-4">
       <Card className="w-full max-w-md bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-none shadow-xl">
         <CardHeader className="space-y-2">
-          <div className="flex items-center justify-center space-x-2 mb-4">
-            <Shield className="h-8 w-8 text-blue-600 dark:text-blue-400" />
-            <CardTitle className="text-2xl font-bold">First-Time Setup</CardTitle>
+          <div className="flex items-center justify-center space-x-3 mb-4">
+            <img src="/playarenalight.png" alt="Sport Cliq" className="h-12" />
+            <CardTitle className="text-2xl font-bold text-playarena-600 dark:text-playarena-400">
+              First-Time Setup
+            </CardTitle>
           </div>
-          <CardDescription className="text-center">
-            Create the first admin account for the PlayArena platform
+          <CardDescription className="text-center text-gray-600 dark:text-gray-300">
+            Create the first admin account for the Sport Cliq platform
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -105,7 +110,7 @@ const FirstTimeSetup = () => {
               <Input
                 id="email"
                 type="email"
-                placeholder="admin@example.com"
+                placeholder="admin@sportcliq.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -146,13 +151,15 @@ const FirstTimeSetup = () => {
               />
             </div>
             {error && (
-              <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
-                <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-              </div>
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
             )}
             <Button 
               type="submit" 
-              className="w-full bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600" 
+              className="w-full bg-playarena-500 hover:bg-playarena-600 dark:bg-playarena-400 dark:hover:bg-playarena-500" 
               disabled={loading}
             >
               {loading ? 'Creating Admin...' : 'Create Admin Account'}
