@@ -326,10 +326,13 @@ const AttendeesManagement = ({
       // Update attendee status with confirmation_code in WHERE
       const { error: updateError, data: updateData } = await supabase
         .from("cycling_attendees")
-        .update({ status: "checked_in" })
+        .update({ 
+          status: "checked_in",
+          updated_at: new Date().toISOString()
+        })
         .eq("id_uuid", attendeeId)
         .eq("confirmation_code", code)
-        .select("id_uuid, status")
+        .select()
         .single();
 
       if (updateError) {
