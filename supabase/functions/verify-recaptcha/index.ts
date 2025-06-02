@@ -1,37 +1,77 @@
-import { serve } from "https://deno.land/std@0.131.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 
-serve(async (req) => {
+serve(async (req: Request) => {
+  // Handle CORS preflight request
+  if (req.method === "OPTIONS") {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        "Access-Control-Allow-Origin": "https://app.sportcliq.com",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Max-Age": "86400",
+      },
+    });
+  }
+
+  // Handle POST request
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+      status: 405,
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "https://app.sportcliq.com",
+      },
+    });
+  }
+
   try {
     const { token } = await req.json();
-    const secretKey = Deno.env.get("RECAPTCHA_SECRET_KEY");
-
-    if (!token || !secretKey) {
-      return new Response(
-        JSON.stringify({ success: false, error: "Missing token or secret key" }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
-      );
-    }
-
-    const response = await fetch(
-      `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${token}`,
-      { method: "POST" }
-    );
-    const result = await response.json();
-
-    if (result.success && result.score >= 0.5) { // Adjust threshold as needed
-      return new Response(JSON.stringify({ success: true, score: result.score }), {
-        headers: { "Content-Type": "application/json" },
+    if (!token) {
+      return new Response(JSON.stringify({ error: "Missing token" }), {
+        status: 400,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "https://app.sportcliq.com",
+        },
       });
-    } else {
-      return new Response(
-        JSON.stringify({ success: false, error: "reCAPTCHA verification failed", details: result["error-codes"] }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
-      );
     }
+
+    const secretKey = Deno.env.get("RECAPTCHA_SECRET_KEY");
+    if (!secretKey) {
+      return new Response(JSON.stringify({ error: "Server configuration error" }), {
+        status: 500,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "https://app.sportcliq.com",
+        },
+      });
+    }
+
+    const response = await fetch("https://www.google.com/recaptcha/api/siteverify", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        secret: secretKey,
+        response: token,
+      }).toString(),
+    });
+
+    const result = await response.json();
+    return new Response(JSON.stringify(result), {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "https://app.sportcliq.com",
+      },
+    });
   } catch (error) {
-    return new Response(
-      JSON.stringify({ success: false, error: error.message }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: "Internal server error" }), {
+      status: 500,
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "https://app.sportcliq.com",
+      },
+    });
   }
 });
