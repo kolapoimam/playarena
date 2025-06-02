@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,16 +26,14 @@ const Auth = () => {
   const recaptchaRef = useRef<ReCAPTCHA>(null);
   const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
 
-  // Access environment variables
+  // Access environment variable
   const sitekey = import.meta.env.VITE_RECAPTCHA_SITE_KEY || process.env.REACT_APP_RECAPTCHA_SITE_KEY;
-  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-  // Debug environment variables
+  // Debug environment variable
   useEffect(() => {
     console.log("Environment Variables:", {
       VITE_RECAPTCHA_SITE_KEY: import.meta.env.VITE_RECAPTCHA_SITE_KEY,
       REACT_APP_RECAPTCHA_SITE_KEY: process.env.REACT_APP_RECAPTCHA_SITE_KEY,
-      VITE_SUPABASE_ANON_KEY: supabaseAnonKey,
       sitekey,
     });
   }, []);
@@ -47,28 +44,15 @@ const Auth = () => {
   };
 
   const verifyRecaptcha = async (token: string) => {
-    if (!supabaseAnonKey) {
-      console.error("Supabase anon key is missing.");
-      toast({
-        title: "Configuration Error",
-        description: "Server configuration is incomplete. Please contact support.",
-        variant: "destructive",
-      });
-      return false;
-    }
-
     try {
       const response = await fetch("https://qxafigbrfpxdklwoqkxj.supabase.co/functions/v1/verify-recaptcha", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${supabaseAnonKey}`,
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token }),
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error: ${response.status} ${response.statusText}`);
+        throw new Error(`HTTP error: ${response.status}`);
       }
 
       const result = await response.json();
@@ -261,7 +245,7 @@ const Auth = () => {
       }
 
       const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
-        redirectTo: `https://app.sportcliq.com/reset-password`,
+        redirectTo: `${window.location.origin}/reset-password`,
       });
       if (error) throw error;
 
@@ -284,39 +268,47 @@ const Auth = () => {
     }
   };
 
-  if (!sitekey || !supabaseAnonKey) {
-    console.error("Missing required environment variables:", { sitekey, supabaseAnonKey });
+  if (!sitekey) {
+    console.error("reCAPTCHA Site Key is missing. Check environment variables.");
     return (
-      <div className="min-h-screen flex flex-col items-center p-4 bg-gradient-to-b from-[#e6f3f5] to-[#d1e8eb] dark:from-gray-900 dark:to-gray-800">
-        <p className="text-red-500">Error: Server configuration is missing. Please contact support.</p>
+      <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-b from-[#e6f3f5] to-[#d1e8eb] dark:from-gray-900 dark:to-gray-800">
+        <p className="text-red-500">Error: reCAPTCHA configuration is missing. Please contact support.</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-between p-6 bg-gradient-to-b from-[#e6f3f5] to-[#ffffff] dark:from-gray-900 dark:to-gray-200 relative">
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-b from-[#e6f3f5] to-[#d1e8eb] dark:from-gray-900 dark:to-gray-800 relative pb-20">
       <div className="absolute top-10 left-1/2 transform -translate-x-1/2">
-        <img src="/images/nav-logo.png" alt="Play Logo" className="h-16 w-auto" />
+        <img src="/navlogo.png" alt="PlayArena Logo" className="h-16 w-auto" />
       </div>
 
-      <div className="w-full max-w-md mt-24 mb-32">
-        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-8">
-          <div className="flex justify-between items-center border-b border-gray-200 dark:border-gray-600 mb-6">
+      <div className="w-full max-w-md mt-12 mb-32">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-8">
+          <div className="flex border-b border-gray-200 dark:border-gray-700 mb-6">
             <button
-              className={`flex-1 py-2 text-center text-sm font-medium ${!isSignUp ? "border-b-2 border-[#17a2b3] text-[#17a2b3]" : "text-gray-500 dark:text-gray-400"}`}
+              className={`flex-1 py-2 text-center text-sm font-medium ${
+                !isSignUp
+                  ? "border-b-2 border-[#17a34a] text-[#17a34a]"
+                  : "text-gray-500 dark:text-gray-400"
+              }`}
               onClick={() => setIsSignUp(false)}
             >
               Sign In
             </button>
             <button
-              className={`flex-1 py-2 text-center text-sm font-medium ${isSignUp ? "border-b-2 border-[#17a2b3] text-[#17a2b3]" : "text-gray-500 dark:text-gray-400"}`}
+              className={`flex-1 py-2 text-center text-sm font-medium ${
+                isSignUp
+                  ? "border-b-2 border-[#17a34a] text-[#17a34a]"
+                  : "text-gray-500 dark:text-gray-400"
+              }`}
               onClick={() => setIsSignUp(true)}
             >
               Sign Up
             </button>
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-4">
             {isSignUp && (
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -389,7 +381,7 @@ const Auth = () => {
               <div className="text-right">
                 <button
                   onClick={() => setShowForgotPassword(true)}
-                  className="text-sm text-[#17a2b3] hover:underline"
+                  className="text-sm text-[#17a34a] hover:underline"
                 >
                   Forgot password?
                 </button>
@@ -409,7 +401,7 @@ const Auth = () => {
 
             <div className="flex gap-2">
               <Button
-                className="flex-1 bg-[#17a2b3] hover:bg-[#138d9a] text-white font-medium py-2"
+                className="flex-1 bg-[#17a34a] hover:bg-[#138d3a] text-white font-medium py-2"
                 onClick={handleEmailAuth}
                 disabled={loading || (isSignUp && (!firstName.trim() || !lastName.trim())) || !recaptchaToken}
               >
@@ -433,7 +425,7 @@ const Auth = () => {
                   width="16"
                   height="16"
                   viewBox="0 0 24 24"
-                  fill="none"
+                  fill="currentColor"
                 >
                   <path
                     d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -461,7 +453,7 @@ const Auth = () => {
                 By signing up, you agree to our{" "}
                 <NavLink
                   to="/terms-privacy"
-                  className="text-blue-500 hover:text-blue-600 hover:underline transition-colors"
+                  className="text-green-500 hover:text-green-600 underline transition-colors"
                 >
                   Terms & Privacy Policy
                 </NavLink>
@@ -473,12 +465,12 @@ const Auth = () => {
 
       {showForgotPassword && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl p-6 w-full max-w-xs">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 w-full max-w-xs">
             <div className="text-center mb-5">
               <h2 className="text-xl font-bold text-gray-800 dark:text-white">
                 Reset Password
               </h2>
-              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
                 Enter your email to receive a password reset link.
               </p>
             </div>
@@ -516,26 +508,22 @@ const Auth = () => {
                 Cancel
               </Button>
               <Button
-                className="bg-[#17a2b3] hover:bg-[#138d9a] text-white px-4 rounded-lg"
+                className="bg-[#17a34a] hover:bg-[#138d3a] text-white px-4 rounded-lg"
                 onClick={handleForgotPassword}
                 disabled={loading || !recaptchaToken}
               >
-                {loading ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  "Send Link"
-                )}
+                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Send Link"}
               </Button>
             </div>
           </div>
         </div>
       )}
 
-<div className="absolute bottom-16 left-0 w-full">
-  <div className="w-full h-48 bg-gradient-to-t from-[#e6f3f5] to-[#d1e8eb] dark:from-gray-900 dark:to-gray-800 flex justify-center items-center">
-    <img src="/AuthFooter.png" alt="Auth Footer" className="w-full h-full object-contain" />
-  </div>
-</div>
+      <div className="absolute bottom-16 left-0 w-full">
+        <div className="w-full h-48 bg-gradient-to-t from-[#e6f3f5] to-[#d1e8eb] dark:from-gray-900 dark:to-gray-800 flex justify-center items-center">
+          <img src="/AuthFooter.png" alt="Auth Footer" className="w-full h-full object-contain" />
+        </div>
+      </div>
 
       <Navbar />
     </div>
