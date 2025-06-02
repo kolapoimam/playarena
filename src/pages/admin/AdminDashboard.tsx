@@ -23,9 +23,30 @@ const AdminDashboard = () => {
     const fetchMetrics = async () => {
       try {
         const data = await adminOperations.getMetrics();
-        setMetrics(data);
+        if (data) {
+          setMetrics(data);
+        } else {
+          // Fallback to default metrics if no data is returned
+          setMetrics({
+            total_users: 0,
+            total_events: 0,
+            pending_cashouts: 0,
+            total_revenue: 0,
+            active_venues: 0,
+            new_notifications: 0
+          });
+        }
       } catch (error) {
         console.error('Error fetching metrics:', error);
+        // Set default metrics on error to prevent UI from breaking
+        setMetrics({
+          total_users: 0,
+          total_events: 0,
+          pending_cashouts: 0,
+          total_revenue: 0,
+          active_venues: 0,
+          new_notifications: 0
+        });
       }
     };
 
