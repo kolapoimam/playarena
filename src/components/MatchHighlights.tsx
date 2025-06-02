@@ -79,17 +79,7 @@ const MatchHighlights = () => {
           return;
         }
 
-        // Type cast the JSON data properly
-        const highlightData = data[0] as any;
-        setHighlight({
-          match_id: highlightData.match_id,
-          title: highlightData.title,
-          match_date: highlightData.match_date,
-          match_time: highlightData.match_time,
-          venue: highlightData.venue,
-          teams: Array.isArray(highlightData.teams) ? highlightData.teams : [],
-          events: Array.isArray(highlightData.events) ? highlightData.events : []
-        });
+        setHighlight(data[0]);
       } catch (error) {
         console.error("Error fetching highlights:", error);
         toast({
@@ -164,7 +154,7 @@ const MatchHighlights = () => {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 21h10M7 7h10"
+                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
                   />
                 </svg>
               </div>
