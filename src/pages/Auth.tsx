@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -8,6 +8,7 @@ import { Loader2, Eye, EyeOff } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { useTheme } from "next-themes";
 import { NavLink } from "react-router-dom";
+import ReCAPTCHA from "react-google-recaptcha";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -22,8 +23,9 @@ const Auth = () => {
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const { theme } = useTheme();
+  const recaptchaRef = useRef<ReCAPTCHA>(null);
 
-  const validateEmail = (email) => {
+  const validateEmail = (email: string) => {
     const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
     return emailRegex.test(email);
   };
@@ -38,19 +40,43 @@ const Auth = () => {
       return;
     }
 
-    if (isSignUp) {
-      if (!firstName.trim() || !lastName.trim()) {
-        toast({
-          title: "Missing Information",
-          description: "Please provide both first name and last name.",
-          variant: "destructive",
-        });
-        return;
-      }
+    if (isSignUp && (!firstName.trim() || !lastName.trim())) {
+      toast({
+        title: "Missing Information",
+        description: "Please provide both first name and last name.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!recaptchaRef.current) {
+      toast({
+        title: "Error",
+        description: "reCAPTCHA not loaded. Please try again.",
+        variant: "destructive",
+      });
+      return;
     }
 
     setLoading(true);
     try {
+      const recaptchaToken = await recaptchaRef.current.executeAsync();
+      if (!recaptchaToken) {
+        throw new Error("reCAPTCHA verification failed.");
+      }
+
+      // Send token to backend for verification
+      const verifyResponse = await fetch("/api/verify-recaptcha", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: recaptchaToken }),
+      });
+
+      const verifyResult = await verifyResponse.json();
+      if (!verifyResult.success || verifyResult.score < 0.5) {
+        throw new Error("reCAPTCHA verification failed. Please try again.");
+      }
+
       if (isSignUp) {
         const { data, error } = await supabase.auth.signUp({
           email,
@@ -92,7 +118,7 @@ const Auth = () => {
           navigate("/profile");
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Oops, Something Went Wrong!",
         description: error.message,
@@ -100,6 +126,7 @@ const Auth = () => {
       });
     } finally {
       setLoading(false);
+      recaptchaRef.current?.reset();
     }
   };
 
@@ -111,8 +138,8 @@ const Auth = () => {
         options: {
           redirectTo: `${window.location.origin}/profile`,
           queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
+            access_type: "offline",
+            prompt: "consent",
           },
         },
       });
@@ -122,28 +149,29 @@ const Auth = () => {
       if (userError) throw userError;
 
       if (userData.user) {
-        const identity = userData.user.identities?.find(id => id.provider === 'google');
-        const firstName = identity?.identity_data?.first_name || identity?.identity_data?.name || userData.user.email?.split('@')[0] || 'Unknown';
-        const lastName = identity?.identity_data?.last_name || identity?.identity_data?.family_name || 'User';
+        const identity = userData.user.identities?.find((id) => id.provider === "google");
+        const firstName = identity?.identity_data?.first_name || identity?.identity_data?.name || userData.user.email?.split("@")[0] || "Unknown";
+        const lastName = identity?.identity_data?.last_name || identity?.identity_data?.family_name || "User";
 
         const { error: profileError } = await supabase
           .from("profiles")
-          .upsert({
-            id: userData.user.id,
-            email: userData.user.email,
-            first_name: firstName,
-            last_name: lastName,
-            is_initial_setup: true,
-            updated_at: new Date().toISOString(),
-          }, {
-            onConflict: 'id',
-          });
+          .upsert(
+            {
+              id: userData.user.id,
+              email: userData.user.email,
+              first_name: firstName,
+              last_name: lastName,
+              is_initial_setup: true,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "id" }
+          );
 
         if (profileError) throw profileError;
 
         navigate("/profile");
       }
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Oops, Out of Bounds!",
         description: error.message,
@@ -164,8 +192,33 @@ const Auth = () => {
       return;
     }
 
+    if (!recaptchaRef.current) {
+      toast({
+        title: "Error",
+        description: "reCAPTCHA not loaded. Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
     try {
+      const recaptchaToken = await recaptchaRef.current.executeAsync();
+      if (!recaptchaToken) {
+        throw new Error("reCAPTCHA verification failed.");
+      }
+
+      const verifyResponse = await fetch("/api/verify-recaptcha", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: recaptchaToken }),
+      });
+
+      const verifyResult = await verifyResponse.json();
+      if (!verifyResult.success || verifyResult.score < 0.5) {
+        throw new Error("reCAPTCHA verification failed. Please try again.");
+      }
+
       const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
         redirectTo: `${window.location.origin}/reset-password`,
       });
@@ -177,7 +230,7 @@ const Auth = () => {
       });
       setShowForgotPassword(false);
       setResetEmail("");
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Error",
         description: error.message,
@@ -185,6 +238,7 @@ const Auth = () => {
       });
     } finally {
       setLoading(false);
+      recaptchaRef.current?.reset();
     }
   };
 
@@ -299,6 +353,12 @@ const Auth = () => {
               </div>
             )}
 
+            <ReCAPTCHA
+              ref={recaptchaRef}
+              sitekey={process.env.REACT_APP_RECAPTCHA_SITE_KEY || ""}
+              size="invisible"
+            />
+
             <div className="flex gap-2">
               <Button
                 className="flex-1 bg-[#17a34a] hover:bg-[#138d3a] text-white font-medium py-2"
@@ -350,7 +410,7 @@ const Auth = () => {
 
             {isSignUp && (
               <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
-                By signing up, you agree to our{' '}
+                By signing up, you agree to our{" "}
                 <NavLink
                   to="/terms-privacy"
                   className="text-green-500 hover:text-green-600 underline transition-colors"
