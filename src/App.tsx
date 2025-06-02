@@ -54,6 +54,18 @@ import HostCycling from "@/pages/HostCycling";
 import LandmarkDirectory from "@/pages/LandmarkDirectory";
 import LandmarkDetail from "@/pages/LandmarkDetail";
 
+// Import admin components
+import AdminLogin from "@/pages/admin/AdminLogin";
+import AdminDashboard from "@/pages/admin/AdminDashboard";
+import AdminUserManagement from "@/pages/admin/AdminUserManagement";
+import EventManagement from "@/pages/admin/EventManagement";
+import CashoutManagement from "@/pages/admin/CashoutManagement";
+import VenueManagement from "@/pages/admin/VenueManagement";
+import AnalyticsDashboard from "@/pages/admin/AnalyticsDashboard";
+import AdminManagement from "@/pages/admin/AdminManagement";
+import NotificationManagement from "@/pages/admin/NotificationManagement";
+import AuditLog from "@/pages/admin/AuditLog";
+
 const queryClient = new QueryClient();
 
 const AppRoutes = () => {
