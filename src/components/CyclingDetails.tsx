@@ -28,7 +28,7 @@ type CyclingEvent = {
     state: string;
     description?: string | null;
     map_link?: string | null;
-  };
+  } | null;
   attendees: {
     id_uuid: string;
     attendee_name: string;
@@ -60,9 +60,71 @@ type CyclingDetailsProps = {
   walletBalance: number;
 };
 
-const CyclingDetails = ({ event, cashout, handleCancel, loading, isEventPast, walletBalance }: CyclingDetailsProps) => {
+const CyclingDetails = ({ event: initialEvent, cashout, handleCancel, loading, isEventPast, walletBalance }: CyclingDetailsProps) => {
   const { toast } = useToast();
   const [localWalletBalance, setLocalWalletBalance] = useState<number>(walletBalance || 0);
+  const [event, setEvent] = useState<CyclingEvent | null>(initialEvent);
+
+  // Fetch event details with landmark data
+  const fetchEventDetails = async () => {
+    if (!initialEvent?.id_uuid) return;
+    try {
+      const { data, error } = await supabase
+        .from("cycling_events")
+        .select(`
+          id_uuid,
+          slug,
+          title,
+          event_date,
+          start_time,
+          event_start_time,
+          event_end_time,
+          max_attendees,
+          host_id,
+          host_name,
+          host_phone,
+          supercode,
+          is_free,
+          price,
+          cancellation_status,
+          status,
+          start_landmark_id,
+          start_landmark:landmarks (
+            name,
+            state,
+            description,
+            map_link
+          ),
+          attendees (
+            id_uuid,
+            attendee_name,
+            attendee_phone,
+            status,
+            confirmation_code,
+            details,
+            number_of_slots
+          )
+        `)
+        .eq("id_uuid", initialEvent.id_uuid)
+        .single()
+        .throwOnError();
+
+      if (error) throw error;
+
+      setEvent(data as CyclingEvent);
+    } catch (error) {
+      console.error("Error fetching event details:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch event details.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  useEffect(() => {
+    fetchEventDetails();
+  }, [initialEvent]);
 
   useEffect(() => {
     if (!event) {
@@ -89,7 +151,6 @@ const CyclingDetails = ({ event, cashout, handleCancel, loading, isEventPast, wa
           );
         }
 
-        // Fetch wallet balance with proper headers
         const { data: walletData, error: walletError } = await supabase
           .from("wallets")
           .select("balance")
@@ -99,7 +160,6 @@ const CyclingDetails = ({ event, cashout, handleCancel, loading, isEventPast, wa
 
         if (walletError) {
           console.error("Wallet fetch error:", walletError);
-          // Continue with attendee-based balance if wallet fetch fails
         } else if (walletData) {
           balance = walletData.balance;
         }
