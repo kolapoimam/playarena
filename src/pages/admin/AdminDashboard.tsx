@@ -42,7 +42,7 @@ const AdminDashboard = () => {
         if (data) {
           setMetrics(data);
         } else {
-          // Fallback to default metrics if no data is returned
+          console.warn('No metrics data returned');
           setMetrics({
             total_organizers: 0,
             total_hosts: 0,
