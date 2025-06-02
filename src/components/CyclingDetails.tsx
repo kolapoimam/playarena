@@ -23,9 +23,12 @@ type CyclingEvent = {
   cancellation_status: boolean;
   status: string;
   start_landmark_id: string;
-  location: {
-    name?: string;
-    city?: string;
+  start_landmark: {
+    id_uuid: string;
+    name: string;
+    state: string;
+    description?: string;
+    map_link?: string;
   } | null;
   cycling_attendees: {
     id_uuid: string;
@@ -92,7 +95,13 @@ const CyclingDetails = ({ event: initialEvent, cashout, handleCancel, loading, i
           cancellation_status,
           status,
           start_landmark_id,
-          location,
+          start_landmark:landmarks!start_landmark_id (
+            id_uuid,
+            name,
+            state,
+            description,
+            map_link
+          ),
           cycling_attendees (
             id_uuid,
             attendee_name,
@@ -104,8 +113,7 @@ const CyclingDetails = ({ event: initialEvent, cashout, handleCancel, loading, i
           )
         `)
         .eq("id_uuid", initialEvent.id_uuid)
-        .single()
-        .throwOnError();
+        .single();
 
       if (eventError) throw eventError;
 
@@ -150,9 +158,9 @@ const CyclingDetails = ({ event: initialEvent, cashout, handleCancel, loading, i
         }
 
         const { data: walletData, error: walletError } = await supabase
-          .from("wallets")
+          .from("cycling_wallets")
           .select("balance")
-          .eq("organizer_id", event.host_id)
+          .eq("host_id", event.host_id)
           .single()
           .throwOnError();
 
@@ -290,7 +298,7 @@ const CyclingDetails = ({ event: initialEvent, cashout, handleCancel, loading, i
         <div className="flex items-center gap-3">
           <MapPin size={20} className="text-green-500" />
           <span className="text-gray-900 dark:text-gray-100">
-            {event.location?.name || "Unknown Location"}, {event.location?.city || "Unknown City"}
+            {event.start_landmark?.name || "Unknown Location"}, {event.start_landmark?.state || "Unknown City"}
           </span>
         </div>
         <div className="flex items-center gap-3">
