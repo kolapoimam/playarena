@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { useState, useEffect } from 'react';
+import { supabase } from '@integrations/supabase';
+import { useToast } from '@/hooks/useToast';
+import { Button } from "@/common/components/Button";
+import { Input } from '@/components/common/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@components/common/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@components/common/dialog';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
@@ -100,7 +100,7 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
     }
   }, [tempIdentifier]);
 
-  const fetchWalletBalance = useCallback(async () => {
+  const fetchWalletBalance = async () => {
     if (!event) {
       setWalletBalance(0);
       return;
@@ -138,9 +138,9 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
       });
       setWalletBalance(0);
     }
-  }, [event, toast]);
+  };
 
-  const fetchCashoutRequests = useCallback(async () => {
+  const fetchCashoutRequests = async () => {
     if (!event || !localTempIdentifier) {
       setCashoutRequests([]);
       return;
@@ -166,7 +166,7 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
       });
       setCashoutRequests([]);
     }
-  }, [event, localTempIdentifier, toast]);
+  };
 
   useEffect(() => {
     if (!event || !localTempIdentifier) return;
@@ -194,7 +194,7 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [event, localTempIdentifier, fetchWalletBalance, fetchCashoutRequests]);
+  }, [event, localTempIdentifier]);
 
   const handleInputChange = (field: string, value: string) => {
     if (field === 'bankAccountNumber') {
@@ -374,7 +374,7 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
       case 'Processed':
         return 'bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-200 border-blue-300 dark:border-blue-600';
       case 'Review':
-        return 'bg-yellow-100 dark:bg-yellow-800 dark:text-yellow-200 border-yellow-300 dark:border-yellow-600';
+        return 'bg-yellow-100 dark:bg-yellow-800 text-yellow-700 dark:text-yellow-200 border-yellow-300 dark:border-yellow-600';
       default:
         return 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600';
     }
@@ -407,7 +407,7 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
       <Button
         onClick={() => walletBalance > 0 ? setCashoutDialogOpen(true) : toast({
           title: "Error",
-          description: "No cash available for cashout.",
+          description: "No funds available for cashout.",
           variant: "destructive",
         })}
         className="bg-green-500 dark:bg-green-600 hover:bg-green-600 dark:hover:bg-green-700 text-white dark:text-gray-100 mb-6"
@@ -486,12 +486,12 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
             <div>
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Account Name</label>
               <Input
-                value={accountName
+                value={accountName}
                 onChange={(e) => handleInputChange('accountName', e.target.value)}
                 placeholder="Enter account name"
                 className="mt-1"
               />
-              {errors.account_name && <p className="text-sm text-red-600 mt-1">{errors.accountName}</p>}
+              {errors.accountName && <p className="text-sm text-red-600 mt-1">{errors.accountName}</p>}
             </div>
           </div>
           <DialogFooter className="mt-6">
@@ -504,12 +504,12 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
             </Button>
             <Button
               onClick={handleCashoutSubmit}
-              className="bg-green-500 hover:bg-green-600 text-white dark:text-gray-800 rounded-md"
+              className="bg-green-500 hover:bg-green-600 text-white rounded-md"
               disabled={loading}
             >
               {loading ? (
                 <>
-                  <Loader2 className="mr-2 h-2 w-2 animate-spin" />
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Processing
                 </>
               ) : (
@@ -517,8 +517,8 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
               )}
             </Button>
           </DialogFooter>
-        </Dialog>
-      </DialogContent>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
