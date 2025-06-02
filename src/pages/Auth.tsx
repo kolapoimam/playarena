@@ -1,5 +1,4 @@
-
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -17,7 +16,7 @@ const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState(""); // Fixed: Changed setFirstName to setLastName
+  const [lastName, setLastName] = useState("");
   const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
@@ -26,6 +25,18 @@ const Auth = () => {
   const { theme } = useTheme();
   const recaptchaRef = useRef<ReCAPTCHA>(null);
   const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
+
+  // Access environment variable (Vite uses import.meta.env)
+  const sitekey = import.meta.env.VITE_RECAPTCHA_SITE_KEY || process.env.REACT_APP_RECAPTCHA_SITE_KEY;
+
+  // Debug environment variable
+  useEffect(() => {
+    console.log("Environment Variables:", {
+      VITE_RECAPTCHA_SITE_KEY: import.meta.env.VITE_RECAPTCHA_SITE_KEY,
+      REACT_APP_RECAPTCHA_SITE_KEY: process.env.REACT_APP_RECAPTCHA_SITE_KEY,
+      sitekey,
+    });
+  }, []);
 
   const validateEmail = (email: string) => {
     const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
@@ -251,6 +262,15 @@ const Auth = () => {
     }
   };
 
+  if (!sitekey) {
+    console.error("reCAPTCHA Site Key is missing. Check environment variables.");
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-b from-[#e6f3f5] to-[#d1e8eb] dark:from-gray-900 dark:to-gray-800">
+        <p className="text-red-500">Error: reCAPTCHA configuration is missing. Please contact support.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-b from-[#e6f3f5] to-[#d1e8eb] dark:from-gray-900 dark:to-gray-800 relative pb-20">
       <div className="absolute top-10 left-1/2 transform -translate-x-1/2">
@@ -342,8 +362,8 @@ const Auth = () => {
                   className="w-full pr-10"
                 />
                 <button
-                  type="button"
                   onClick={() => setShowPassword(!showPassword)}
+                  type="button"
                   className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
                 >
                   {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
@@ -365,7 +385,7 @@ const Auth = () => {
             <div className="flex justify-center">
               <ReCAPTCHA
                 ref={recaptchaRef}
-                sitekey={process.env.REACT_APP_RECAPTCHA_SITE_KEY || ""}
+                sitekey={sitekey}
                 size="normal"
                 theme={theme === "dark" ? "dark" : "light"}
                 onChange={(token) => setRecaptchaToken(token)}
@@ -460,7 +480,7 @@ const Auth = () => {
             <div className="flex justify-center mb-5">
               <ReCAPTCHA
                 ref={recaptchaRef}
-                sitekey={process.env.REACT_APP_RECAPTCHA_SITE_KEY || ""}
+                sitekey={sitekey}
                 size="normal"
                 theme={theme === "dark" ? "dark" : "light"}
                 onChange={(token) => setRecaptchaToken(token)}
