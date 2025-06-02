@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Search, Eye, Ban, Trash2, UserCheck } from 'lucide-react';
+import { Search, Eye, Ban, UserCheck } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { adminOperations, AdminUser } from '@/lib/admin';
 
@@ -24,14 +24,14 @@ const AdminUserManagement = () => {
       try {
         setLoading(true);
         const { users } = await adminOperations.getUsers(
-          1, 
-          50, 
+          1,
+          50,
           statusFilter === 'all' ? undefined : statusFilter
         );
         setUsers(users);
         setError(null);
-      } catch (err) {
-        setError('Failed to fetch users');
+      } catch (err: any) {
+        setError(err.message || 'Failed to fetch users. Please check the database schema and try again.');
         console.error('Error fetching users:', err);
       } finally {
         setLoading(false);
@@ -142,6 +142,7 @@ const AdminUserManagement = () => {
                   <TableHead>Phone</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Joined</TableHead>
+                  <TableHead>Matches</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -158,6 +159,7 @@ const AdminUserManagement = () => {
                       </Badge>
                     </TableCell>
                     <TableCell>{new Date(user.created_at).toLocaleDateString()}</TableCell>
+                    <TableCell>{user.matches[0]?.count || 0}</TableCell>
                     <TableCell>
                       <div className="flex items-center space-x-2">
                         <Dialog>
@@ -182,11 +184,15 @@ const AdminUserManagement = () => {
                                 <div className="grid grid-cols-2 gap-4">
                                   <div>
                                     <p className="text-sm font-medium">Events Organized</p>
-                                    <p className="text-2xl font-bold">{selectedUser.events_organized}</p>
+                                    <p className="text-2xl font-bold">{selectedUser.events_organized[0]?.count || 0}</p>
                                   </div>
                                   <div>
                                     <p className="text-sm font-medium">Events Participated</p>
-                                    <p className="text-2xl font-bold">{selectedUser.events_participated}</p>
+                                    <p className="text-2xl font-bold">{selectedUser.events_participated[0]?.count || 0}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-medium">Matches</p>
+                                    <p className="text-2xl font-bold">{selectedUser.matches[0]?.count || 0}</p>
                                   </div>
                                 </div>
                                 <div>
@@ -197,7 +203,6 @@ const AdminUserManagement = () => {
                                     ))}
                                   </div>
                                 </div>
-
                                 {selectedUser.status === 'active' ? (
                                   <Button
                                     variant="destructive"
@@ -221,7 +226,6 @@ const AdminUserManagement = () => {
                             )}
                           </DialogContent>
                         </Dialog>
-
                         {user.status === 'active' ? (
                           <Button
                             variant="ghost"
