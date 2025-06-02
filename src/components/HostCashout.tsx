@@ -332,6 +332,22 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
 
       if (cashoutError) throw cashoutError;
 
+      const { error: walletError } = await supabase
+        .rpc('update_wallet_balance', {
+          p_organizer_id: userId,
+          p_amount: amount,
+          p_operation: 'subtract',
+        });
+
+      if (walletError) {
+        console.error('Wallet update error:', walletError);
+        toast({
+          title: "Warning",
+          description: "Cashout requested, but failed to update wallet balance.",
+          variant: "destructive",
+        });
+      }
+
       await fetchCashoutRequests();
       setCashoutDialogOpen(false);
       setBankAccountNumber('');
