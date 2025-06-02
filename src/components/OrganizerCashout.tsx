@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -175,7 +176,19 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
 
       if (error) throw error;
 
-      setCashoutRequests(data || []);
+      // Transform the data to match our CashoutRequest type
+      const transformedData: CashoutRequest[] = (data || []).map((item: any) => ({
+        id: item.id,
+        match_id: item.match_id,
+        super_code: item.super_code || '',
+        amount: item.amount,
+        account_details: item.account_details,
+        status: item.status,
+        temp_identifier: item.temp_identifier,
+        created_at: item.created_at,
+      }));
+
+      setCashoutRequests(transformedData);
     } catch (error) {
       console.error("Error fetching cashout requests:", error);
       toast({

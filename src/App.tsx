@@ -1,3 +1,4 @@
+
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -109,11 +110,13 @@ const AppRoutes = () => {
         }
 
         console.log("Tagging OneSignal with user_id:", userId);
-        OneSignal.push(() => {
-          OneSignal.login(userId);
-          console.log("OneSignal login triggered for user_id:", userId);
-          OneSignal.User.addTag("user_id", userId);
-          console.log("Tag added to OneSignal: user_id =", userId);
+        window.OneSignal.push(() => {
+          if (window.OneSignal) {
+            window.OneSignal.login(userId);
+            console.log("OneSignal login triggered for user_id:", userId);
+            window.OneSignal.User.addTag("user_id", userId);
+            console.log("Tag added to OneSignal: user_id =", userId);
+          }
         });
       } else {
         console.log("No user session or OneSignal not loaded:", { userId, OneSignal: !!window.OneSignal });
@@ -139,9 +142,9 @@ const AppRoutes = () => {
       <Route path="/profile/notifications" element={<Notifications />} />
       <Route
         path="/profile/account-details"
-        element={<AccountDetails profile={profile} setProfile={setProfile} />}
+        element={<AccountDetails />}
       />
-      <Route path="/profile/my-matches" element={<MyMatches profile={profile} />} />
+      <Route path="/profile/my-matches" element={<MyMatches />} />
       <Route path="/profile/match-preferences" element={<MatchPreferences />} />
       <Route path="/profile/wallet" element={<Wallet />} />
       <Route path="/profile/my-venue" element={<MyVenue />} />
@@ -171,6 +174,19 @@ const AppRoutes = () => {
       <Route path="/venuemanager/dashboard/:venueId" element={<VenueManagerDashboard />} />
       <Route path="/venues-bookings/:venueSlug" element={<VenueBookings />} />
       <Route path="/venue/:slug/book" element={<VenueBookingForm />} />
+      
+      {/* Admin Routes */}
+      <Route path="/admin/login" element={<AdminLogin />} />
+      <Route path="/admin/dashboard" element={<AdminDashboard />} />
+      <Route path="/admin/users" element={<AdminUserManagement />} />
+      <Route path="/admin/events" element={<EventManagement />} />
+      <Route path="/admin/cashouts" element={<CashoutManagement />} />
+      <Route path="/admin/venues" element={<VenueManagement />} />
+      <Route path="/admin/analytics" element={<AnalyticsDashboard />} />
+      <Route path="/admin/admins" element={<AdminManagement />} />
+      <Route path="/admin/notifications" element={<NotificationManagement />} />
+      <Route path="/admin/audit" element={<AuditLog />} />
+      
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
