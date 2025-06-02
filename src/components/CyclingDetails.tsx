@@ -23,13 +23,11 @@ type CyclingEvent = {
   cancellation_status: boolean;
   status: string;
   start_landmark_id: string;
-  start_landmark: {
-    name: string;
-    state: string;
-    description?: string | null;
-    map_link?: string | null;
+  location: {
+    name?: string;
+    city?: string;
   } | null;
-  attendees: {
+  cycling_attendees: {
     id_uuid: string;
     attendee_name: string;
     attendee_phone: string;
@@ -73,7 +71,7 @@ const CyclingDetails = ({ event: initialEvent, cashout, handleCancel, loading, i
   const fetchEventDetails = async () => {
     if (!initialEvent?.id_uuid) return;
     try {
-      // First fetch the event data
+      // Fetch the event data with landmark data using a join
       const { data: eventData, error: eventError } = await supabase
         .from("cycling_events")
         .select(`
@@ -94,7 +92,8 @@ const CyclingDetails = ({ event: initialEvent, cashout, handleCancel, loading, i
           cancellation_status,
           status,
           start_landmark_id,
-          attendees (
+          location,
+          cycling_attendees (
             id_uuid,
             attendee_name,
             attendee_phone,
@@ -110,28 +109,7 @@ const CyclingDetails = ({ event: initialEvent, cashout, handleCancel, loading, i
 
       if (eventError) throw eventError;
 
-      // Then fetch the landmark data if start_landmark_id exists
-      let landmarkData = null;
-      if (eventData?.start_landmark_id) {
-        const { data: landmark, error: landmarkError } = await supabase
-          .from("landmarks")
-          .select("name, state, description, map_link")
-          .eq("id_uuid", eventData.start_landmark_id)
-          .single()
-          .throwOnError();
-
-        if (!landmarkError) {
-          landmarkData = landmark;
-        }
-      }
-
-      // Combine the data
-      const combinedData = {
-        ...eventData,
-        start_landmark: landmarkData
-      } as CyclingEvent;
-
-      setEvent(combinedData);
+      setEvent(eventData as CyclingEvent);
     } catch (error) {
       console.error("Error fetching event details:", error);
       toast({
@@ -224,7 +202,7 @@ const CyclingDetails = ({ event: initialEvent, cashout, handleCancel, loading, i
     const eventDateTime = new Date(`${event.event_date}T${event.start_time}`);
     const now = new Date();
     const minutesToStart = differenceInMinutes(eventDateTime, now);
-    const hasCheckedInAttendees = event.attendees?.some((a) => a.status === "checked_in") || false;
+    const hasCheckedInAttendees = event.cycling_attendees?.some((a) => a.status === "checked_in") || false;
     return minutesToStart > 0 && !event.cancellation_status && !hasCheckedInAttendees;
   };
 
@@ -264,7 +242,7 @@ const CyclingDetails = ({ event: initialEvent, cashout, handleCancel, loading, i
     if (!event) return "N/A";
     let total = 0;
     if (!event.is_free && event.price) {
-      const checkedInAttendees = event.attendees?.filter((a) => a?.status === "checked_in") || [];
+      const checkedInAttendees = event.cycling_attendees?.filter((a) => a?.status === "checked_in") || [];
       total = checkedInAttendees.reduce(
         (sum, attendee) => sum + ((Number(attendee?.number_of_slots) || 1) * (event.price || 0)),
         0
@@ -274,8 +252,8 @@ const CyclingDetails = ({ event: initialEvent, cashout, handleCancel, loading, i
   };
 
   const calculateTotalSlotsOccupied = () => {
-    if (!event || !event.attendees) return 0;
-    return event.attendees.reduce((sum, attendee) => sum + (Number(attendee?.number_of_slots) || 1), 0);
+    if (!event || !event.cycling_attendees) return 0;
+    return event.cycling_attendees.reduce((sum, attendee) => sum + (Number(attendee?.number_of_slots) || 1), 0);
   };
 
   if (!event) return null;
@@ -312,7 +290,7 @@ const CyclingDetails = ({ event: initialEvent, cashout, handleCancel, loading, i
         <div className="flex items-center gap-3">
           <MapPin size={20} className="text-green-500" />
           <span className="text-gray-900 dark:text-gray-100">
-            {event.start_landmark?.name || "Unknown Location"}, {event.start_landmark?.state || "Unknown City"}
+            {event.location?.name || "Unknown Location"}, {event.location?.city || "Unknown City"}
           </span>
         </div>
         <div className="flex items-center gap-3">
