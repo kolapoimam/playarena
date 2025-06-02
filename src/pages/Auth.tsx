@@ -26,7 +26,7 @@ const Auth = () => {
   const recaptchaRef = useRef<ReCAPTCHA>(null);
   const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
 
-  // Access environment variable (Vite uses import.meta.env)
+  // Access environment variable
   const sitekey = import.meta.env.VITE_RECAPTCHA_SITE_KEY || process.env.REACT_APP_RECAPTCHA_SITE_KEY;
 
   // Debug environment variable
@@ -50,15 +50,21 @@ const Auth = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token }),
       });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error: ${response.status}`);
+      }
+
       const result = await response.json();
       if (!result.success) {
         throw new Error(result.error || "reCAPTCHA verification failed");
       }
       return true;
     } catch (error: any) {
+      console.error("reCAPTCHA verification error:", error);
       toast({
         title: "reCAPTCHA Verification Failed",
-        description: error.message || "Please verify you are not a bot.",
+        description: error.message || "Unable to verify reCAPTCHA. Please try again or contact support.",
         variant: "destructive",
       });
       return false;
@@ -149,7 +155,7 @@ const Auth = () => {
     } catch (error: any) {
       toast({
         title: "Oops, Something Went Wrong!",
-        description: error.message,
+        description: error.message || "An error occurred during authentication.",
         variant: "destructive",
       });
     } finally {
@@ -254,7 +260,7 @@ const Auth = () => {
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || "An error occurred while sending the reset link.",
         variant: "destructive",
       });
     } finally {
@@ -362,8 +368,8 @@ const Auth = () => {
                   className="w-full pr-10"
                 />
                 <button
-                  onClick={() => setShowPassword(!showPassword)}
                   type="button"
+                  onClick={() => setShowPassword(!showPassword)}
                   className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
                 >
                   {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
