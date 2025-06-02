@@ -79,7 +79,7 @@ type CyclingEvent = {
     name?: string;
     city?: string;
   } | null;
-  attendees: {
+  cycling_attendees: {
     id_uuid: string;
     attendee_name: string;
     attendee_phone: string;
@@ -173,7 +173,7 @@ const ConfirmCheckin = () => {
         const { data, error } = await supabase
           .from("cycling_events_view")
           .select(`
-            id_uuid, slug, title, event_date, start_time, max_attendees, host_id, host_name, host_phone, supercode, is_free, price, status, start_landmark_id, start_landmark, attendees
+            id_uuid, slug, title, event_date, start_time, max_attendees, host_id, host_name, host_phone, supercode, is_free, price, status, start_landmark_id, start_landmark, cycling_attendees
           `)
           .eq("supercode", superCode)
           .single();
@@ -211,7 +211,7 @@ const ConfirmCheckin = () => {
                 city: data.start_landmark.state ?? "Unknown City",
               }
             : null,
-          attendees: Array.isArray(data.attendees) ? data.attendees.map(attendee => ({
+          cycling_attendees: Array.isArray(data.cycling_attendees) ? data.cycling_attendees.map(attendee => ({
             ...attendee,
             status: attendee.status || "registered",
             details: attendee.details || { phone: attendee.attendee_phone || "N/A" },
@@ -222,7 +222,7 @@ const ConfirmCheckin = () => {
 
         setCyclingEvent(cyclingData);
         setPlayerStatuses(
-          (cyclingData.attendees || []).map((attendee) => ({
+          (cyclingData.cycling_attendees || []).map((attendee) => ({
             id: attendee.id_uuid,
             status: attendee.status,
             checkinCode: "",
@@ -271,7 +271,7 @@ const ConfirmCheckin = () => {
 
         if (cyclingData.event_end_time && isPast(new Date(cyclingData.event_end_time))) {
           const updates =
-            cyclingData.attendees
+            cyclingData.cycling_attendees
               ?.filter((p) => p.status === "registered" && p.status !== "checked_in")
               .map((p) =>
                 supabase
@@ -430,7 +430,7 @@ const ConfirmCheckin = () => {
   const canConfirmAttendees = () => {
     if (isCyclingEvent && cyclingEvent) {
       if (cyclingEvent.cancellation_status || isEventPast()) return false;
-      return !!cyclingEvent.attendees?.length;
+      return !!cyclingEvent.cycling_attendees?.length;
     }
     if (!match || match.cancellation_status || isEventPast()) return false;
     return !!match.players?.length;
