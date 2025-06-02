@@ -1,25 +1,33 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { NavigateFunction } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import { z } from "zod";
+import { differenceInMinutes, isPast, addHours } from "date-fns";
 
 type Match = {
   id: string;
+  slug: string;
+  title: string;
+  match_date: string;
+  match_time: string;
+  match_start_time?: string | null;
+  match_end_time?: string | null;
+  total_slots: number;
+  organizer_name: string;
   super_code: string;
   is_paid: boolean;
   price?: number;
   cancellation_status: boolean;
+  status: string;
+  venue: {
+    name?: string;
+    city?: string;
+  } | null;
   players: {
     id: string;
     player_name: string;
@@ -32,43 +40,65 @@ type Match = {
   ticket_price?: number;
 };
 
-type PlayerStatus = {
+const codeSchema = z.string().regex(/^\d{6}$/, { message: "Code must be exactly 6 digits" });
+
+type ConfirmedTicket = {
   id: string;
-  status: "Registered" | "Checked In" | "Absent";
-  checkinCode: string;
+  buyer_name: string;
+  number_of_tickets: number;
+  ticket_code: string;
 };
-
-type CheckinCodes = { [key: string]: string };
-type CheckinCodeErrors = { [key: string]: string | null };
-
-const codeSchema = z
-  .string()
-  .regex(/^\d{6}$/, { message: "Code must be exactly 6 digits" });
 
 type PlayerManagementProps = {
   match: Match | null;
+  tempIdentifier: string;
+  playerStatuses: { id: string; status: 'Registered' | 'Checked In' | 'Absent'; checkinCode: string }[];
+  setPlayerStatuses: (statuses: { id: string; status: 'Registered' | 'Checked In' | 'Absent'; checkinCode: string }[]) => void;
+  checkinCodes: { [key: string]: string };
+  setCheckinCodes: (codes: { [key: string]: string }) => void;
+  checkinCodeErrors: { [key: string]: string | null };
+  setCheckinCodeErrors: (errors: { [key: string]: string | null }) => void;
   fetchMatch: () => void;
+  loading: boolean;
+  setLoading: (value: boolean) => void;
+  isMatchPast: boolean;
+  canConfirmPlayers: boolean;
+  handleCancelMatch: () => void;
+  navigate: NavigateFunction;
 };
 
 const PlayerManagement = ({
   match,
+  tempIdentifier,
+  playerStatuses,
+  setPlayerStatuses,
+  checkinCodes,
+  setCheckinCodes,
+  checkinCodeErrors,
+  setCheckinCodeErrors,
   fetchMatch,
+  loading,
+  setLoading,
+  isMatchPast,
+  canConfirmPlayers,
+  handleCancelMatch,
+  navigate,
 }: PlayerManagementProps) => {
   const { toast } = useToast();
-  const [playerStatuses, setPlayerStatuses] = useState<PlayerStatus[]>([]);
+  const [mode, setMode] = useState<"checkin" | "ticket" | null>(null);
   const [checkinDialogOpen, setCheckinDialogOpen] = useState(false);
-  const [checkinPlayer, setCheckinPlayer] = useState<{
-    id: string;
-    name: string;
-    slots: number;
-  } | null>(null);
+  const [checkinPlayer, setCheckinPlayer] = useState<{ name: string; slots: number } | null>(null);
   const [isPlayersOpen, setIsPlayersOpen] = useState(false);
-  const [checkingInPlayers, setCheckingInPlayers] = useState<{
-    [key: string]: boolean;
-  }>({});
-  const [checkinCodes, setCheckinCodes] = useState<CheckinCodes>({});
-  const [checkinCodeErrors, setCheckinCodeErrors] = useState<CheckinCodeErrors>({});
+  const [checkingInPlayers, setCheckingInPlayers] = useState<{ [key: string]: boolean }>({});
+  const [ticketDialogOpen, setTicketDialogOpen] = useState(false);
+  const [ticketInput, setTicketInput] = useState("");
+  const [ticketError, setTicketError] = useState<string | null>(null);
+  const [confirmedTickets, setConfirmedTickets] = useState<ConfirmedTicket[]>([]);
+  const [isTicketsOpen, setIsTicketsOpen] = useState(false);
+  const [verifyingTicket, setVerifyingTicket] = useState(false);
+  const [verifiedTicket, setVerifiedTicket] = useState<{ buyer_name: string; number_of_tickets: number } | null>(null);
 
+  // Initialize playerStatuses with fresh data from Supabase
   useEffect(() => {
     if (!match?.id) return;
 
@@ -76,19 +106,19 @@ const PlayerManagement = ({
       try {
         const { data: playersData, error } = await supabase
           .from('players')
-          .select('id, player_status, number_of_slots')
+          .select('id, player_status, confirmation_code')
           .eq('match_id', match.id);
 
         if (error) throw error;
 
         const initialStatuses = playersData.map(player => ({
           id: player.id,
-          status: player.player_status as "Registered" | "Checked In" | "Absent",
+          status: (player.player_status || 'Registered') as 'Registered' | 'Checked In' | 'Absent',
           checkinCode: checkinCodes[player.id] || ''
         }));
         setPlayerStatuses(initialStatuses);
       } catch (error) {
-        console.error("Error fetching player statuses:", error);
+        console.error("Error fetching player statuses from Supabase:", error);
         toast({
           title: "Error",
           description: "Failed to load player statuses.",
@@ -97,7 +127,7 @@ const PlayerManagement = ({
         if (match?.players) {
           const initialStatuses = match.players.map(player => ({
             id: player.id,
-            status: player.player_status,
+            status: (player.player_status || 'Registered') as 'Registered' | 'Checked In' | 'Absent',
             checkinCode: checkinCodes[player.id] || ''
           }));
           setPlayerStatuses(initialStatuses);
@@ -106,67 +136,251 @@ const PlayerManagement = ({
     };
 
     fetchPlayerStatuses();
+  }, [match, setPlayerStatuses, checkinCodes, toast]);
 
-    const channel = supabase
-      .channel(`players_match_${match.id}`)
+  // Fetch confirmed tickets
+  useEffect(() => {
+    if (!match?.id || !match.sell_tickets) {
+      setConfirmedTickets([]);
+      return;
+    }
+
+    const fetchConfirmedTickets = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('tickets')
+          .select('id, buyer_name, number_of_tickets, ticket_code')
+          .eq('match_id', match.id)
+          .eq('checked_in', true);
+
+        if (error) throw error;
+
+        setConfirmedTickets(data || []);
+      } catch (error) {
+        console.error("Error fetching confirmed tickets:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load confirmed tickets.",
+          variant: "destructive",
+        });
+        setConfirmedTickets([]);
+      }
+    };
+
+    fetchConfirmedTickets();
+
+    // Set up real-time subscription for tickets
+    const ticketChannel = supabase
+      .channel(`tickets_match_${match.id}`)
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'UPDATE',
           schema: 'public',
-          table: 'players',
+          table: 'tickets',
           filter: `match_id=eq.${match.id}`,
         },
         () => {
-          fetchPlayerStatuses();
-          fetchMatch();
+          fetchConfirmedTickets();
         }
       )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(ticketChannel);
     };
-  }, [match, setPlayerStatuses, checkinCodes, fetchMatch, toast]);
+  }, [match, toast]);
 
-  const handleCheckinMode = (player: any) => {
-    setCheckinPlayer({
-      id: player.id,
-      name: player.player_name,
-      slots: player.number_of_slots || 1,
-    });
-    setCheckinDialogOpen(true);
-  };
+  const fetchWalletData = useCallback(async () => {
+    if (!match || !match.id) return;
 
-  const handleCheckinCodeChange = (playerId: string, code: string) => {
-    const numericCode = code.replace(/[^0-9]/g, "").slice(0, 6);
-    setCheckinCodes((prev: { [key: string]: string }) => ({ ...prev, [playerId]: numericCode }));
-    const validation = codeSchema.safeParse(numericCode);
-    setCheckinCodeErrors((prev: { [key: string]: string | null }) => ({
-      ...prev,
-      [playerId]: validation.success ? null : validation.error?.errors[0].message,
-    }));
-  };
+    try {
+      // Fetch fresh player data from Supabase for wallet balance calculation
+      const { data: playersData, error: playersError } = await supabase
+        .from('players')
+        .select('player_status, number_of_slots')
+        .eq('match_id', match.id);
 
-  const handleCheckin = async (playerId: string) => {
-    if (!match) return;
+      if (playersError) throw playersError;
 
-    const player = match.players?.find((p) => p.id === playerId);
-    if (!player) {
+      // Check if match has ended and update players to Absent if necessary
+      const now = new Date();
+      let matchEndTime: Date;
+      try {
+        if (match.match_end_time) {
+          matchEndTime = new Date(match.match_end_time);
+        } else {
+          matchEndTime = addHours(new Date(`${match.match_date}T${match.match_time}`), 2);
+        }
+        if (isNaN(matchEndTime.getTime())) {
+          matchEndTime = new Date("2025-05-17T15:00:00+01:00");
+        }
+      } catch (error) {
+        matchEndTime = new Date("2025-05-17T15:00:00+01:00");
+      }
+
+      if (isPast(matchEndTime) && playersData.length > 0) {
+        const registeredPlayers = playersData.filter(p => p.player_status === 'Registered');
+        if (registeredPlayers.length > 0) {
+          try {
+            const { error: updateError } = await supabase
+              .from('players')
+              .update({ 
+                player_status: 'Absent',
+                updated_at: new Date().toISOString()
+              })
+              .eq('match_id', match.id)
+              .eq('player_status', 'Registered');
+
+            if (updateError) throw updateError;
+
+            setPlayerStatuses(prev =>
+              prev.map(p => 
+                registeredPlayers.some(rp => rp.id === p.id) 
+                  ? { ...p, status: 'Absent' } 
+                  : p
+              )
+            );
+
+            await fetchMatch();
+          } catch (error) {
+            console.error("Error updating players to Absent:", error);
+            toast({
+              title: "Error",
+              description: "Failed to update player statuses to Absent.",
+              variant: "destructive",
+            });
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching data for wallet balance:", error);
       toast({
         title: "Error",
-        description: "Player not found.",
+        description: "Failed to calculate wallet balance.",
+        variant: "destructive",
+      });
+    }
+  }, [match, fetchMatch, setPlayerStatuses, toast]);
+
+  useEffect(() => {
+    if (!match) return;
+    fetchWalletData();
+  }, [match, fetchWalletData]);
+
+  const hasCheckedInPlayers = () => {
+    return playerStatuses.some(p => p.status === 'Checked In') || false;
+  };
+
+  const canCheckin = () => {
+    if (!match || match.cancellation_status || !match.players?.length) return false;
+    const now = new Date();
+    let matchEndTime: Date;
+    try {
+      if (match.match_end_time) {
+        matchEndTime = new Date(match.match_end_time);
+      } else {
+        matchEndTime = addHours(new Date(`${match.match_date}T${match.match_time}`), 2);
+      }
+      if (isNaN(matchEndTime.getTime())) {
+        matchEndTime = new Date("2025-05-17T15:00:00+01:00");
+      }
+    } catch (error) {
+      matchEndTime = new Date("2025-05-17T15:00:00+01:00");
+      console.error("Error parsing match end time:", error);
+    }
+    const isEndTimeFuture = !isPast(matchEndTime);
+    return match.players.length > 0 && isEndTimeFuture;
+  };
+
+  const canManageTickets = () => {
+    if (!match || !match.sell_tickets || match.cancellation_status) return false;
+    const now = new Date();
+    let matchEndTime: Date;
+    try {
+      if (match.match_end_time) {
+        matchEndTime = new Date(match.match_end_time);
+      } else {
+        matchEndTime = addHours(new Date(`${match.match_date}T${match.match_time}`), 2);
+      }
+      if (isNaN(matchEndTime.getTime())) {
+        matchEndTime = new Date("2025-05-17T15:00:00+01:00");
+      }
+    } catch (error) {
+      matchEndTime = new Date("2025-05-17T15:00:00+01:00");
+      console.error("Error parsing match end time:", error);
+    }
+    const isEndTimeFuture = !isPast(matchEndTime);
+    return isEndTimeFuture;
+  };
+
+  const handleCheckinMode = () => {
+    if (!match || match.cancellation_status) {
+      toast({
+        title: "Check-in Not Available",
+        description: "Match data is unavailable or the match is canceled.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!canCheckin()) {
+      const reason = !match.players?.length
+        ? "No players are registered for this match."
+        : "The match has ended or check-in is no longer available.";
+      toast({
+        title: "Check-in Not Available",
+        description: reason,
         variant: "destructive",
       });
       return;
     }
 
+    setMode("checkin");
+  };
+
+  const handleTicketMode = () => {
+    if (!match || match.cancellation_status || !match.sell_tickets) {
+      toast({
+        title: "Ticket Management Not Available",
+        description: "Match data is unavailable, the match is canceled, or tickets are not being sold.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!canManageTickets()) {
+      toast({
+        title: "Ticket Management Not Available",
+        description: "The match has ended or ticket management is no longer available.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setMode("ticket");
+  };
+
+  const handleCheckinCodeChange = (playerId: string, code: string) => {
+    const numericCode = code.replace(/[^0-9]/g, "").slice(0, 6);
+    setCheckinCodes((prev) => ({ ...prev, [playerId]: numericCode }));
+    const validation = codeSchema.safeParse(numericCode);
+    setCheckinCodeErrors((prev) => ({
+      ...prev,
+      [playerId]: validation.success ? null : validation.error?.errors[0].message,
+    }));
+  };
+
+  const handleTicketCodeChange = (code: string) => {
+    const numericCode = code.replace(/[^0-9]/g, "").slice(0, 6);
+    setTicketInput(numericCode);
+    const validation = codeSchema.safeParse(numericCode);
+    setTicketError(validation.success ? null : validation.error?.errors[0].message);
+  };
+
+  const validateCheckinCode = async (playerId: string) => {
     const code = checkinCodes[playerId];
     if (!code || code.length !== 6) {
-      setCheckinCodeErrors((prev: { [key: string]: string | null }) => ({
-        ...prev,
-        [playerId]: "Please enter a 6-digit code",
-      }));
       toast({
         title: "Invalid Code",
         description: "Please enter a 6-digit code",
@@ -175,209 +389,455 @@ const PlayerManagement = ({
       return;
     }
 
-    setCheckingInPlayers((prev) => ({ ...prev, [playerId]: true }));
+    const player = match?.players?.find(p => p.id === playerId);
+    if (!player) {
+      toast({
+        title: "Error",
+        description: "Player not found",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    let currentStatus: "Registered" | "Checked In" | "Absent" | null = null;
+    setCheckingInPlayers(prev => ({ ...prev, [playerId]: true }));
 
     try {
       const { data, error } = await supabase
-        .from("players")
-        .update({ player_status: "Checked In" })
-        .eq("id", playerId)
-        .eq("confirmation_code", code)
-        .select("id, player_status")
+        .from('players')
+        .select('id, confirmation_code, player_status')
+        .eq('id', playerId)
         .single();
 
-      if (error) throw error;
+      if (error || !data) throw new Error(error?.message || "Player not found in database");
 
-      currentStatus = player.player_status;
+      if (data.player_status !== 'Registered') throw new Error("Player is already checked in or absent");
+      if (data.confirmation_code !== code) throw new Error("Invalid confirmation code");
 
-      // Sync UI with updated data
-      setPlayerStatuses((prev: { id: string; status: "Registered" | "Checked In" | "Absent"; checkinCode: string; }[]) =>
-        prev.map((status) =>
-          status.id === playerId
-            ? { ...status, status: "Checked In" }
-            : status
+      const { error: updateError } = await supabase
+        .from('players')
+        .update({ 
+          player_status: 'Checked In',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', playerId);
+
+      if (updateError) throw updateError;
+
+      // Fetch the updated player data directly from Supabase
+      const { data: updatedPlayerData, error: fetchError } = await supabase
+        .from('players')
+        .select('id, player_status')
+        .eq('id', playerId)
+        .single();
+
+      if (fetchError || !updatedPlayerData) throw new Error(fetchError?.message || "Failed to fetch updated player data");
+
+      setPlayerStatuses(prev =>
+        prev.map(p =>
+          p.id === playerId
+            ? { ...p, status: updatedPlayerData.player_status as 'Registered' | 'Checked In' | 'Absent' }
+            : p
         )
       );
 
-      fetchMatch();
-
-      setCheckinPlayer({
-        id: playerId,
-        name: player.player_name,
-        slots: player.number_of_slots || 1,
-      });
+      setCheckinPlayer({ name: player.player_name, slots: player.number_of_slots || 1 });
       setCheckinDialogOpen(true);
 
       toast({
         title: "Success",
-        description: `${player.player_name} has been checked in successfully.`,
+        description: `${player.player_name} has been checked in successfully`,
       });
 
-      // Clear check-in code and errors
-      setCheckinCodes((prev: { [key: string]: string }) => {
-        const newCodes = { ...prev };
-        delete newCodes[playerId];
-        return newCodes;
-      });
-
-      setCheckinCodeErrors((prev: { [key: string]: string | null }) => {
-        const newErrors = { ...prev };
-        delete newErrors[playerId];
-        return newErrors;
-      });
+      setCheckinCodes(prev => ({ ...prev, [playerId]: "" }));
+      setCheckinCodeErrors(prev => ({ ...prev, [playerId]: null }));
+      
+      await fetchMatch();
     } catch (error: any) {
-      console.error("Check-in error:", error);
+      if (error.message === "Player is already checked in or absent") {
+        const { data: updatedPlayerData, error: fetchError } = await supabase
+          .from('players')
+          .select('id, player_status')
+          .eq('id', playerId)
+          .single();
+
+        if (fetchError || !updatedPlayerData) {
+          toast({
+            title: "Error",
+            description: "Failed to fetch updated player status.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        setPlayerStatuses(prev =>
+          prev.map(p =>
+            p.id === playerId
+              ? { ...p, status: updatedPlayerData.player_status as 'Registered' | 'Checked In' | 'Absent' }
+              : p
+          )
+        );
+
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to verify code",
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setCheckingInPlayers(prev => ({ ...prev, [playerId]: false }));
+    }
+  };
+
+  const validateTicketCode = async () => {
+    if (!ticketInput || ticketInput.length !== 6) {
       toast({
-        title: "Error",
-        description: error.message || "Failed to check in player",
+        title: "Invalid Code",
+        description: "Please enter a 6-digit ticket code",
         variant: "destructive",
       });
-      setPlayerStatuses((prev: { id: string; status: "Registered" | "Checked In" | "Absent"; checkinCode: string; }[]) =>
-        prev.map((status) =>
-          status.id === playerId
-            ? { ...status, status: currentStatus || "Registered" }
-            : status
-        )
-      );
+      return;
+    }
+
+    if (!match || !match.id) {
+      toast({
+        title: "Error",
+        description: "Match data not available",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setVerifyingTicket(true);
+
+    try {
+      const { data, error } = await supabase
+        .from('tickets')
+        .select('id, buyer_name, number_of_tickets, ticket_code, checked_in')
+        .eq('match_id', match.id)
+        .eq('ticket_code', ticketInput)
+        .single();
+
+      if (error || !data) throw new Error(error?.message || "Ticket not found");
+
+      if (data.checked_in) throw new Error("Ticket has already been checked in");
+
+      const { error: updateError } = await supabase
+        .from('tickets')
+        .update({ 
+          checked_in: true,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', data.id);
+
+      if (updateError) throw updateError;
+
+      const newTicket: ConfirmedTicket = {
+        id: data.id,
+        buyer_name: data.buyer_name,
+        number_of_tickets: data.number_of_tickets,
+        ticket_code: data.ticket_code,
+      };
+
+      setConfirmedTickets(prev => [...prev.filter(t => t.id !== data.id), newTicket]);
+      setVerifiedTicket({ buyer_name: data.buyer_name, number_of_tickets: data.number_of_tickets });
+      setTicketDialogOpen(true);
+
+      toast({
+        title: "Success",
+        description: `Ticket for ${data.buyer_name} with ${data.number_of_tickets} ticket${data.number_of_tickets !== 1 ? 's' : ''} checked in successfully`,
+      });
+
+      setTicketInput("");
+      setTicketError(null);
+
+      // Trigger wallet balance update
+      await fetchWalletData();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to verify ticket code",
+        variant: "destructive",
+      });
     } finally {
-      setCheckingInPlayers((prev) => ({ ...prev, [playerId]: false }));
+      setVerifyingTicket(false);
     }
   };
 
   const getStatusStyles = (status: string) => {
     switch (status) {
-      case "Registered":
-        return "bg-yellow-100 text-yellow-700 border-yellow-300 dark:bg-yellow-800 dark:text-yellow-200 dark:border-yellow-600";
-      case "Checked In":
-        return "bg-green-100 text-green-700 border-green-300 dark:bg-green-800 dark:text-green-200 dark:border-green-600";
-      case "Absent":
-        return "bg-red-100 text-red-700 border-red-300 dark:bg-red-800 dark:text-red-200 dark:border-red-600";
-      default:
-        return "bg-gray-100 text-gray-700 border-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600";
+      case 'Registered': return "bg-yellow-500 text-white border-yellow-600";
+      case 'Checked In': return "bg-green-500 text-white border-green-600";
+      case 'Absent': return "bg-red-500 text-white border-red-600";
+      case "Successful": return "bg-green-100 text-green-700 border-green-300";
+      case "Failed": return "bg-red-100 text-red-700 border-red-300";
+      case "Processed": return "bg-blue-100 text-blue-700 border-blue-300";
+      case "Review": return "bg-yellow-100 text-yellow-700 border-yellow-300";
+      default: return "bg-gray-500 text-white border-gray-600";
     }
   };
 
-  const getDisplayStatus = (status: string) => {
-    return status.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  const calculateTotalAmount = () => {
+    if (!match?.ticket_price) return 0;
+    return confirmedTickets.reduce((sum, ticket) => sum + ticket.number_of_tickets * match.ticket_price, 0);
   };
 
   if (!match) return null;
-
+  
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-600">
-      <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
-        Manage Players
-      </h2>
-
-      <div className="space-y-4">
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700">
+      <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Manage Players</h2>
+      
+      <div className="flex gap-3 mb-4">
+        <Button
+          onClick={handleCheckinMode}
+          className="bg-blue-500 hover:bg-blue-600 text-white flex-1"
+          disabled={!canCheckin() || match.cancellation_status}
+        >
+          Check-in Players
+        </Button>
+        <Button
+          onClick={() => navigate(`/match/${match.slug}/team-management`, { state: { isVerified: true } })}
+          className="bg-green-500 hover:bg-green-600 text-white flex-1"
+          disabled={match.cancellation_status}
+        >
+          Manage Teams
+        </Button>
+        {match.sell_tickets && (
+          <Button
+            onClick={handleTicketMode}
+            className="bg-purple-500 hover:bg-purple-600 text-white flex-1"
+            disabled={!canManageTickets() || match.cancellation_status}
+          >
+            Manage Tickets
+          </Button>
+        )}
+      </div>
+      
+      <div className="max-h-[400px] overflow-y-auto">
         <button
           onClick={() => setIsPlayersOpen(!isPlayersOpen)}
-          className="flex items-center justify-between w-full text-left text-lg font-semibold mb-2 text-gray-900 dark:text-white"
+          className="flex items-center gap-2 w-full text-left text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4"
         >
-          <span>Players ({match.players?.length || 0})</span>
+          Players
           {isPlayersOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
         </button>
-
         {isPlayersOpen && (
-          <div className="space-y-4 max-h-96 overflow-y-auto">
-            {match.players?.length === 0 ? (
-              <p className="text-center text-gray-600 dark:text-gray-400">
-                No players registered.
-              </p>
+          <div className="space-y-4">
+            {(match.players || []).length === 0 ? (
+              <p className="text-gray-600 dark:text-gray-400">No players registered for this match.</p>
             ) : (
-              match.players?.map((player) => (
-                <div
-                  key={player.id}
-                  className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600"
-                >
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between">
-                    <div className="mb-2 sm:mb-0">
-                      <p className="font-medium text-gray-900 dark:text-white">
-                        {player.player_name}
-                      </p>
+              match.players?.map((player) => {
+                const playerStatusEntry = playerStatuses.find(p => p.id === player.id);
+                const displayStatus = playerStatusEntry?.status || player.player_status || 'Registered';
+
+                return (
+                  <div
+                    key={player.id}
+                    className="relative flex flex-col sm:flex-row gap-4 items-start sm:items-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg"
+                  >
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-900 dark:text-gray-100">{player.player_name}</p>
                       <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Phone: {player.details?.phone || "N/A"}
+                        Phone: {player.details?.phone || "Not provided"}
                       </p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Slots: {player.number_of_slots || 1}
-                      </p>
-                    </div>
-                    <div className="flex flex-col items-end space-y-2">
-                      <span
-                        className={`inline-block px-2 py-1 text-sm font-medium rounded border ${getStatusStyles(player.player_status)}`}
-                      >
-                        {getDisplayStatus(player.player_status)}
-                      </span>
-                      {player.player_status === "Registered" && (
-                        <div className="flex items-center gap-2">
-                          <Input
-                            placeholder="6-digit code"
-                            value={checkinCodes[player.id] || ""}
-                            onChange={(e) =>
-                              handleCheckinCodeChange(player.id, e.target.value)
-                            }
-                            inputMode="numeric"
-                            pattern="[0-9]*"
-                            maxLength={6}
-                            className="w-32 text-sm dark:bg-gray-700 dark:text-gray-100"
-                            disabled={checkingInPlayers[player.id]}
-                          />
-                          <Button
-                            onClick={() => handleCheckin(player.id)}
-                            className="bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded"
-                            disabled={
-                              !checkinCodes[player.id] ||
-                              checkinCodes[player.id].length !== 6 ||
-                              checkingInPlayers[player.id]
-                            }
-                          >
-                            {checkingInPlayers[player.id] ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              "Verify"
-                            )}
-                          </Button>
-                        </div>
-                      )}
-                      {checkinCodeErrors[player.id] && (
-                        <p className="text-sm text-red-600 dark:text-red-400 mt-1">
-                          {checkinCodeErrors[player.id]}
+                      {displayStatus === 'Checked In' && (
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          Slots: {player.number_of_slots || 1}
                         </p>
                       )}
                     </div>
+                    <span
+                      className={`absolute top-2 right-2 px-2 py-1 text-xs font-medium rounded border ${getStatusStyles(displayStatus)}`}
+                    >
+                      {displayStatus}
+                    </span>
+                    {mode === "checkin" && displayStatus !== 'Checked In' && (
+                      <div className="flex gap-2 w-full sm:w-auto">
+                        <Input
+                          placeholder="Enter check-in code"
+                          value={checkinCodes[player.id] || ""}
+                          onChange={(e) => handleCheckinCodeChange(player.id, e.target.value)}
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          maxLength={6}
+                          className="w-full sm:w-[150px]"
+                          disabled={checkingInPlayers[player.id]}
+                        />
+                        <Button
+                          onClick={() => validateCheckinCode(player.id)}
+                          className="bg-blue-500 hover:bg-blue-600 text-white"
+                          disabled={
+                            !checkinCodes[player.id] ||
+                            checkinCodes[player.id].length !== 6 ||
+                            checkingInPlayers[player.id]
+                          }
+                        >
+                          {checkingInPlayers[player.id] ? (
+                            <Loader2 size={16} className="mr-2 animate-spin" />
+                          ) : (
+                            "Verify"
+                          )}
+                        </Button>
+                      </div>
+                    )}
+                    {checkinCodeErrors[player.id] && (
+                      <p className="text-sm text-red-600 mt-1">{checkinCodeErrors[player.id]}</p>
+                    )}
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         )}
       </div>
 
+      {match.sell_tickets && (
+        <div className="max-h-[400px] overflow-y-auto mt-6">
+          <button
+            onClick={() => setIsTicketsOpen(!isTicketsOpen)}
+            className="flex items-center gap-2 w-full text-left text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4"
+          >
+            Tickets - Total: ₦{calculateTotalAmount().toLocaleString()}
+            {isTicketsOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+          </button>
+          {isTicketsOpen && (
+            <div className="space-y-4">
+              {mode === "ticket" && (
+                <div className="flex gap-2 w-full">
+                  <Input
+                    placeholder="Enter ticket code"
+                    value={ticketInput}
+                    onChange={(e) => handleTicketCodeChange(e.target.value)}
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={6}
+                    className="w-full sm:w-[150px]"
+                    disabled={verifyingTicket}
+                  />
+                  <Button
+                    onClick={validateTicketCode}
+                    className="bg-purple-500 hover:bg-purple-600 text-white"
+                    disabled={!ticketInput || ticketInput.length !== 6 || verifyingTicket}
+                  >
+                    {verifyingTicket ? (
+                      <Loader2 size={16} className="mr-2 animate-spin" />
+                    ) : (
+                      "Verify"
+                    )}
+                  </Button>
+                </div>
+              )}
+              {ticketError && (
+                <p className="text-sm text-red-600 mt-1">{ticketError}</p>
+              )}
+              {confirmedTickets.length === 0 ? (
+                <p className="text-gray-600 dark:text-gray-400">No tickets confirmed for this match.</p>
+              ) : (
+                confirmedTickets.map((ticket) => (
+                  <div
+                    key={ticket.id}
+                    className="relative flex flex-col sm:flex-row gap-4 items-start sm:items-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg"
+                  >
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-900 dark:text-gray-100">{ticket.buyer_name}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        Tickets: {ticket.number_of_tickets}
+                      </p>
+                    </div>
+                    <span
+                      className={`absolute top-2 right-2 px-2 py-1 text-xs font-medium rounded border bg-green-500 text-white border-green-600`}
+                    >
+                      Checked In
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {mode === "checkin" && (
+        <Button
+          onClick={() => setMode(null)}
+          className="mt-4 bg-green-500 hover:bg-green-600 text-white"
+          disabled={loading}
+        >
+          {loading ? (
+            <>
+              <Loader2 size={16} className="mr-2 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            "Done"
+          )}
+        </Button>
+      )}
+
+      {mode === "ticket" && (
+        <Button
+          onClick={() => setMode(null)}
+          className="mt-4 bg-purple-500 hover:bg-purple-600 text-white"
+          disabled={verifyingTicket}
+        >
+          {verifyingTicket ? (
+            <>
+              <Loader2 size={16} className="mr-2 animate-spin" />
+              Verifying...
+            </>
+          ) : (
+            "Done"
+          )}
+        </Button>
+      )}
+
       <Dialog open={checkinDialogOpen} onOpenChange={setCheckinDialogOpen}>
-        <DialogContent className="sm:max-w-md rounded-lg">
+        <DialogContent className="max-w-md rounded-lg">
           <DialogHeader>
-            <DialogTitle>Check-in Successful!</DialogTitle>
+            <DialogTitle>Check-in Successful</DialogTitle>
             <DialogDescription>
               {checkinPlayer && (
-                <div className="text-center py-4">
-                  <p className="text-lg font-semibold text-green-600 dark:text-green-400">
-                    {checkinPlayer.name}
-                  </p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    has been successfully checked in for {checkinPlayer.slots} slot(s).
-                  </p>
-                </div>
+                <>
+                  Successfully checked in {checkinPlayer.name} with {checkinPlayer.slots} slot{checkinPlayer.slots !== 1 ? 's' : ''}.
+                </>
               )}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button
               onClick={() => setCheckinDialogOpen(false)}
-              className="bg-green-500 hover:bg-green-600 text-white w-full"
+              className="bg-green-500 hover:bg-green-600 text-white"
             >
-              Continue
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={ticketDialogOpen} onOpenChange={setTicketDialogOpen}>
+        <DialogContent className="max-w-md rounded-lg">
+          <DialogHeader>
+            <DialogTitle>Ticket Check-in Successful</DialogTitle>
+            <DialogDescription>
+              {verifiedTicket && (
+                <>
+                  Successfully checked in ticket for {verifiedTicket.buyer_name} with {verifiedTicket.number_of_tickets} ticket{verifiedTicket.number_of_tickets !== 1 ? 's' : ''}.
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              onClick={() => setTicketDialogOpen(false)}
+              className="bg-purple-500 hover:bg-purple-600 text-white"
+            >
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>

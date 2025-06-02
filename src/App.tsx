@@ -71,6 +71,7 @@ const queryClient = new QueryClient();
 
 const AppRoutes = () => {
   const location = useLocation();
+  const [profile, setProfile] = useState(null);
 
   useEffect(() => {
     console.log("Current path:", location.pathname);

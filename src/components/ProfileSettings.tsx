@@ -698,18 +698,6 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
                           >
                             Female
                           </SelectItem>
-                          <SelectItem
-                            value="other"
-                            className="text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                          >
-                            Other
-                          </SelectItem>
-                          <SelectItem
-                            value="prefer_not_to_say"
-                            className="text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                          >
-                            Prefer not to say
-                          </SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />

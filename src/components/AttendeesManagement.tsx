@@ -161,7 +161,7 @@ const AttendeesManagement = ({
 
               if (updateError) throw updateError;
 
-              setAttendeeStatuses((prev: AttendeeStatus[]) =>
+              setAttendeeStatuses(prev =>
                 prev.map(status =>
                   registeredAttendees.some(a => a.id_uuid === status.id_uuid)
                     ? { ...status, attendee_status: 'absent' }
@@ -258,9 +258,9 @@ const AttendeesManagement = ({
 
   const handleCheckinCodeChange = (attendeeId: string, code: string) => {
     const numericCode = code.replace(/[^0-9]/g, "").slice(0, 6);
-    setCheckinCodes((prev: CheckinCodes) => ({ ...prev, [attendeeId]: numericCode }));
+    setCheckinCodes((prev) => ({ ...prev, [attendeeId]: numericCode }));
     const validation = codeSchema.safeParse(numericCode);
-    setCheckinCodeErrors((prev: CheckinCodeErrors) => ({
+    setCheckinCodeErrors((prev) => ({
       ...prev,
       [attendeeId]: validation.success ? null : validation.error?.errors[0].message,
     }));
@@ -281,7 +281,7 @@ const AttendeesManagement = ({
 
     const code = checkinCodes[attendeeId];
     if (!code || code.length !== 6) {
-      setCheckinCodeErrors((prev: CheckinCodeErrors) => ({
+      setCheckinCodeErrors((prev) => ({
         ...prev,
         [attendeeId]: "Please enter a 6-digit code",
       }));
@@ -342,10 +342,10 @@ const AttendeesManagement = ({
       }
 
       // Sync UI with updated data
-      setAttendeeStatuses((prev: AttendeeStatus[]) =>
+      setAttendeeStatuses((prev) =>
         prev.map((status) =>
           status.id_uuid === attendeeId
-            ? { ...status, attendee_status: "checked_in" }
+            ? { ...status, status: "checked_in" }
             : status
         )
       );
@@ -366,13 +366,13 @@ const AttendeesManagement = ({
       });
 
       // Clear check-in code and errors
-      setCheckinCodes((prev: CheckinCodes) => {
+      setCheckinCodes((prev) => {
         const newCodes = { ...prev };
         delete newCodes[attendeeId];
         return newCodes;
       });
 
-      setCheckinCodeErrors((prev: CheckinCodeErrors) => {
+      setCheckinCodeErrors((prev) => {
         const newErrors = { ...prev };
         delete newErrors[attendeeId];
         return newErrors;
@@ -385,10 +385,10 @@ const AttendeesManagement = ({
         variant: "destructive",
       });
       // Revert UI state if update failed
-      setAttendeeStatuses((prev: AttendeeStatus[]) =>
+      setAttendeeStatuses((prev) =>
         prev.map((status) =>
           status.id_uuid === attendeeId
-            ? { ...status, attendee_status: currentStatus || "registered" }
+            ? { ...status, status: currentStatus || "registered" }
             : status
         )
       );
@@ -525,29 +525,43 @@ const AttendeesManagement = ({
         )}
       </div>
 
+      {mode === "checkin" && (
+        <Button
+          onClick={() => setMode(null)}
+          className="mt-4 bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700 text-white"
+          disabled={loading}
+        >
+          {loading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            "Done"
+          )}
+        </Button>
+      )}
+
       <Dialog open={checkinDialogOpen} onOpenChange={setCheckinDialogOpen}>
         <DialogContent className="sm:max-w-md rounded-lg">
           <DialogHeader>
-            <DialogTitle>Check-in Successful!</DialogTitle>
+            <DialogTitle>Check-in Successful</DialogTitle>
             <DialogDescription>
               {checkinAttendee && (
-                <div className="text-center py-4">
-                  <p className="text-lg font-semibold text-green-600 dark:text-green-400">
-                    {checkinAttendee.name}
-                  </p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    has been successfully checked in for {checkinAttendee.slots} slot(s).
-                  </p>
-                </div>
+                <>
+                  {checkinAttendee.name} has been checked in with{" "}
+                  {checkinAttendee.slots} slot
+                  {checkinAttendee.slots !== 1 ? "s" : ""}.
+                </>
               )}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button
               onClick={() => setCheckinDialogOpen(false)}
-              className="bg-green-500 hover:bg-green-600 text-white w-full"
+              className="bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700 text-white rounded-md"
             >
-              Continue
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>
