@@ -32,7 +32,7 @@ const AdminDashboard = () => {
 
   const quickActions = [
     { label: 'View Users', path: '/admin/users', icon: Users, color: 'bg-blue-500' },
-    { label: 'View Events', path: '/admin/events', icon: Calendar, color: 'bg-green-500' },
+    { label: 'View Events', path: '/admin/events', icon: Calendar, color: 'bg-primary-light' },
     { label: 'Review Cashouts', path: '/admin/cashouts', icon: DollarSign, color: 'bg-yellow-500' },
     { label: 'View Analytics', path: '/admin/analytics', icon: TrendingUp, color: 'bg-purple-500' },
     { label: 'Manage Venues', path: '/admin/venues', icon: Building2, color: 'bg-indigo-500' }
@@ -96,7 +96,7 @@ const AdminDashboard = () => {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-              <DollarSign className="h-4 w-4 text-green-500" />
+              <DollarSign className="h-4 w-4 text-primary-light" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">₦{metrics.totalRevenue.toLocaleString()}</div>
@@ -128,7 +128,7 @@ const AdminDashboard = () => {
                 <Button
                   key={index}
                   variant="outline"
-                  className="h-auto p-4 flex flex-col items-center space-y-2"
+                  className="h-auto p-4 flex flex-col items-center space-y-2 hover:bg-primary-light/10 hover:border-primary-light"
                   onClick={() => navigate(action.path)}
                 >
                   <div className={`p-2 rounded-md ${action.color}`}>
