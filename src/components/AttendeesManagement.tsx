@@ -50,7 +50,7 @@ type CyclingEvent = {
 
 type AttendeeStatus = {
   id_uuid: string;
-  attendee_status: "registered" | "checked_in" | "absent";
+  status: "registered" | "checked_in" | "absent";
   checkinCode: string;
 };
 
@@ -138,7 +138,7 @@ const AttendeesManagement = ({
 
         const initialStatuses = attendeesData.map(attendee => ({
           id_uuid: attendee.id_uuid,
-          attendee_status: attendee.status as "registered" | "checked_in" | "absent",
+          status: attendee.status as "registered" | "checked_in" | "absent",
           checkinCode: checkinCodes[attendee.id_uuid] || ''
         }));
         setAttendeeStatuses(initialStatuses);
@@ -164,7 +164,7 @@ const AttendeesManagement = ({
               setAttendeeStatuses(prev =>
                 prev.map(status =>
                   registeredAttendees.some(a => a.id_uuid === status.id_uuid)
-                    ? { ...status, attendee_status: 'absent' }
+                    ? { ...status, status: 'absent' }
                     : status
                 )
               );
@@ -190,7 +190,7 @@ const AttendeesManagement = ({
         if (event?.cycling_attendees) {
           const initialStatuses = event.cycling_attendees.map(attendee => ({
             id_uuid: attendee.id_uuid,
-            attendee_status: attendee.status,
+            status: attendee.status,
             checkinCode: checkinCodes[attendee.id_uuid] || ''
           }));
           setAttendeeStatuses(initialStatuses);
@@ -358,7 +358,7 @@ const AttendeesManagement = ({
       setAttendeeStatuses((prev) =>
         prev.map((status) =>
           status.id_uuid === attendeeId
-            ? { ...status, attendee_status: "checked_in" }
+            ? { ...status, status: "checked_in" }
             : status
         )
       );
@@ -401,7 +401,7 @@ const AttendeesManagement = ({
       setAttendeeStatuses((prev) =>
         prev.map((status) =>
           status.id_uuid === attendeeId
-            ? { ...status, attendee_status: currentStatus || "registered" }
+            ? { ...status, status: currentStatus || "registered" }
             : status
         )
       );
