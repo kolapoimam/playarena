@@ -138,7 +138,7 @@ const AttendeesManagement = ({
 
         const initialStatuses = attendeesData.map(attendee => ({
           id_uuid: attendee.id_uuid,
-          attendee_status: (attendee.status || 'registered') as "registered" | "checked_in" | "absent",
+          attendee_status: attendee.status as "registered" | "checked_in" | "absent",
           checkinCode: checkinCodes[attendee.id_uuid] || ''
         }));
         setAttendeeStatuses(initialStatuses);
@@ -190,7 +190,7 @@ const AttendeesManagement = ({
         if (event?.cycling_attendees) {
           const initialStatuses = event.cycling_attendees.map(attendee => ({
             id_uuid: attendee.id_uuid,
-            attendee_status: (attendee.status || 'registered') as "registered" | "checked_in" | "absent",
+            attendee_status: attendee.status,
             checkinCode: checkinCodes[attendee.id_uuid] || ''
           }));
           setAttendeeStatuses(initialStatuses);
@@ -279,6 +279,16 @@ const AttendeesManagement = ({
       return;
     }
 
+    // Check if attendee is already checked in
+    if (attendee.status === "checked_in") {
+      toast({
+        title: "Already Checked In",
+        description: "This attendee has already been checked in.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const code = checkinCodes[attendeeId];
     if (!code || code.length !== 6) {
       setCheckinCodeErrors((prev) => ({
@@ -323,7 +333,7 @@ const AttendeesManagement = ({
         throw new Error("Invalid confirmation code");
       }
 
-      // Update attendee status with confirmation_code in WHERE
+      // Update attendee status
       const { error: updateError, data: updateData } = await supabase
         .from("cycling_attendees")
         .update({ 
@@ -344,11 +354,11 @@ const AttendeesManagement = ({
         throw new Error("No rows updated");
       }
 
-      // Sync UI with updated data
+      // Update local state
       setAttendeeStatuses((prev) =>
         prev.map((status) =>
           status.id_uuid === attendeeId
-            ? { ...status, status: "checked_in" }
+            ? { ...status, attendee_status: "checked_in" }
             : status
         )
       );
@@ -391,7 +401,7 @@ const AttendeesManagement = ({
       setAttendeeStatuses((prev) =>
         prev.map((status) =>
           status.id_uuid === attendeeId
-            ? { ...status, status: currentStatus || "registered" }
+            ? { ...status, attendee_status: currentStatus || "registered" }
             : status
         )
       );
