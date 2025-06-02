@@ -45,7 +45,7 @@ type CyclingEvent = {
 type Cashout = {
   id: string;
   cycling_event_id_uuid: string;
-  super_code: string;
+  supercode: string;
   total_amount_paid: number;
   bank_account_number: string;
   bank_name: string;
@@ -107,34 +107,28 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
     }
 
     try {
-      const { data: attendeesData, error } = await supabase
-        .from('cycling_attendees')
-        .select('attendee_status, number_of_slots')
-        .eq('cycling_event_id_uuid', event.id_uuid);
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData.user?.id;
 
-      if (error) throw error;
-
-      let balance = 0;
-      if (!event.is_free && event.price) {
-        const checkedInAttendees = attendeesData.filter(a => a.attendee_status === 'checked_in');
-        balance = checkedInAttendees.reduce(
-          (sum, attendee) => sum + ((Number(attendee.number_of_slots) || 1) * (event.price || 0)),
-          0
-        );
+      if (!userId || userId !== event.host_id) {
+        toast({
+          title: "Error",
+          description: "You are not authorized to view this event's balance.",
+          variant: "destructive",
+        });
+        setWalletBalance(0);
+        return;
       }
 
-      const { data: cashoutData, error: cashoutError } = await supabase
-        .from('cashouts')
-        .select('total_amount_paid')
-        .eq('cycling_event_id_uuid', event.id_uuid)
-        .in('status', ['Review', 'Processed', 'Successful']);
+      const { data: walletData, error: walletError } = await supabase
+        .from('cycling_wallets')
+        .select('balance')
+        .eq('host_id', userId)
+        .maybeSingle();
 
-      if (cashoutError) throw cashoutError;
+      if (walletError) throw walletError;
 
-      const cashoutTotal = cashoutData.reduce((sum, request) => sum + (request.total_amount_paid || 0), 0);
-      balance -= cashoutTotal;
-
-      setWalletBalance(balance < 0 ? 0 : balance);
+      setWalletBalance(walletData?.balance || 0);
     } catch (error: any) {
       console.error('Error fetching wallet balance:', error);
       toast({
@@ -147,14 +141,14 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
   }, [event, toast]);
 
   const fetchCashoutRequests = useCallback(async () => {
-    if (!event) {
+    if (!event || !localTempIdentifier) {
       setCashoutRequests([]);
       return;
     }
 
     try {
       const { data, error } = await supabase
-        .from('cashouts')
+        .from('cycling_cashouts')
         .select('*')
         .eq('cycling_event_id_uuid', event.id_uuid)
         .eq('temp_identifier', localTempIdentifier)
@@ -181,13 +175,13 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
     fetchCashoutRequests();
 
     const channel = supabase
-      .channel(`cashouts_event_${event.id_uuid}`)
+      .channel(`cycling_cashouts_event_${event.id_uuid}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'cashouts',
+          table: 'cycling_cashouts',
           filter: `cycling_event_id_uuid=eq.${event.id_uuid}`,
         },
         () => {
@@ -311,30 +305,30 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
       const { data: userData } = await supabase.auth.getUser();
       const userId = userData.user?.id;
 
-      if (!userId) {
-        throw new Error("User not authenticated.");
+      if (!userId || userId !== event.host_id) {
+        throw new Error("You are not authorized to request a cashout for this event.");
       }
 
       const { error: cashoutError } = await supabase
-        .from('cashouts')
+        .from('cycling_cashouts')
         .insert({
           cycling_event_id_uuid: event.id_uuid,
-          super_code: event.supercode,
+          supercode: event.supercode,
           total_amount_paid: amount,
           bank_account_number: bankAccountNumber,
           bank_name: bankName,
           account_name: accountName,
           status: 'Review',
           temp_identifier: localTempIdentifier,
-          organizer_id: userId,
+          host_id: userId,
           created_at: new Date().toISOString(),
         });
 
       if (cashoutError) throw cashoutError;
 
       const { error: walletError } = await supabase
-        .rpc('update_wallet_balance', {
-          p_organizer_id: userId,
+        .rpc('update_cycling_wallet_balance', {
+          p_host_id: userId,
           p_amount: amount,
           p_operation: 'subtract',
         });
@@ -380,7 +374,7 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
       case 'Processed':
         return 'bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-200 border-blue-300 dark:border-blue-600';
       case 'Review':
-        return 'bg-yellow-100 dark:bg-yellow-800 text-yellow-700 dark:text-yellow-200 border-yellow-300 dark:border-yellow-600';
+        return 'bg-yellow-100 dark:bg-yellow-800 dark:text-yellow-200 border-yellow-300 dark:border-yellow-600';
       default:
         return 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600';
     }
@@ -413,7 +407,7 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
       <Button
         onClick={() => walletBalance > 0 ? setCashoutDialogOpen(true) : toast({
           title: "Error",
-          description: "No funds available for cashout.",
+          description: "No cash available for cashout.",
           variant: "destructive",
         })}
         className="bg-green-500 dark:bg-green-600 hover:bg-green-600 dark:hover:bg-green-700 text-white dark:text-gray-100 mb-6"
@@ -492,12 +486,12 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
             <div>
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Account Name</label>
               <Input
-                value={accountName}
+                value={accountName
                 onChange={(e) => handleInputChange('accountName', e.target.value)}
                 placeholder="Enter account name"
                 className="mt-1"
               />
-              {errors.accountName && <p className="text-sm text-red-600 mt-1">{errors.accountName}</p>}
+              {errors.account_name && <p className="text-sm text-red-600 mt-1">{errors.accountName}</p>}
             </div>
           </div>
           <DialogFooter className="mt-6">
@@ -510,12 +504,12 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
             </Button>
             <Button
               onClick={handleCashoutSubmit}
-              className="bg-green-500 hover:bg-green-600 text-white rounded-md"
+              className="bg-green-500 hover:bg-green-600 text-white dark:text-gray-800 rounded-md"
               disabled={loading}
             >
               {loading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="mr-2 h-2 w-2 animate-spin" />
                   Processing
                 </>
               ) : (
@@ -523,8 +517,8 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
               )}
             </Button>
           </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </Dialog>
+      </DialogContent>
     </div>
   );
 };
