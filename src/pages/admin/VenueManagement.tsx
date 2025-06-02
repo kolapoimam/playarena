@@ -204,12 +204,12 @@ const VenueManagement = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-col md:flex-row gap-4">
-              <Input
+                <Input
                 placeholder="Search venues..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                 className="md:w-64"
-              />
+                />
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-full md:w-48">
                   <SelectValue placeholder="Filter by status" />
@@ -312,9 +312,9 @@ const VenueManagement = () => {
                                     <p className="text-sm font-medium">Location</p>
                                     <p className="text-lg">{selectedVenue.city}, {selectedVenue.state}</p>
                                   </div>
-                                </div>
+                                  </div>
 
-                                <div>
+                                  <div>
                                   <p className="text-sm font-medium mb-2">Owner Details</p>
                                   <div className="bg-muted p-4 rounded-lg space-y-2">
                                     <p><span className="font-medium">Name:</span> {selectedVenue.owner_name}</p>
@@ -322,21 +322,21 @@ const VenueManagement = () => {
                                     <p><span className="font-medium">Phone:</span> {selectedVenue.owner_phone}</p>
                                   </div>
                                 </div>
-
+                                
                                 <div className="grid grid-cols-2 gap-4">
                                   <div>
                                     <p className="text-sm font-medium">Total Events</p>
                                     <p className="text-2xl font-bold">{selectedVenue.events_count}</p>
                                   </div>
-                                  <div>
+                                <div>
                                     <p className="text-sm font-medium">Total Revenue</p>
                                     <p className="text-2xl font-bold">₦{selectedVenue.revenue.toLocaleString()}</p>
                                   </div>
                                 </div>
 
                                 {selectedVenue.status === 'pending' && (
-                                  <div className="flex space-x-4">
-                                    <Button
+                                <div className="flex space-x-4">
+                                  <Button
                                       onClick={() => handleVerifyVenue(selectedVenue.id)}
                                       className="flex-1"
                                     >
@@ -346,12 +346,12 @@ const VenueManagement = () => {
                                     <Button
                                       variant="destructive"
                                       onClick={() => handleRejectVenue(selectedVenue.id)}
-                                      className="flex-1"
-                                    >
+                                    className="flex-1"
+                                  >
                                       <X className="h-4 w-4 mr-2" />
                                       Reject Venue
-                                    </Button>
-                                  </div>
+                                  </Button>
+                                </div>
                                 )}
                               </div>
                             )}
@@ -360,22 +360,22 @@ const VenueManagement = () => {
 
                         {venue.status === 'pending' && (
                           <>
-                            <Button
-                              variant="ghost"
-                              size="sm"
+                        <Button
+                          variant="ghost"
+                          size="sm"
                               onClick={() => handleVerifyVenue(venue.id)}
                               className="text-green-600 hover:text-green-700"
                             >
                               <Check className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
                               onClick={() => handleRejectVenue(venue.id)}
-                              className="text-red-600 hover:text-red-700"
-                            >
+                          className="text-red-600 hover:text-red-700"
+                        >
                               <X className="h-4 w-4" />
-                            </Button>
+                        </Button>
                           </>
                         )}
                       </div>
