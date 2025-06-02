@@ -131,7 +131,7 @@ const AttendeesManagement = ({
       try {
         const { data: attendeesData, error } = await supabase
           .from('cycling_attendees')
-          .select('id_uuid, status')
+          .select('id_uuid, status, confirmation_code')
           .eq('cycling_event_id_uuid', event.id_uuid);
 
         if (error) throw error;
@@ -187,6 +187,7 @@ const AttendeesManagement = ({
           description: "Failed to load attendee statuses.",
           variant: "destructive",
         });
+        // Fallback to event data if available
         if (event?.cycling_attendees) {
           const initialStatuses = event.cycling_attendees.map(attendee => ({
             id_uuid: attendee.id_uuid,
@@ -205,15 +206,24 @@ const AttendeesManagement = ({
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'UPDATE',
           schema: 'public',
           table: 'cycling_attendees',
           filter: `cycling_event_id_uuid=eq.${event.id_uuid}`,
         },
-        (payload) => {
+        async (payload) => {
           console.log('Received real-time update:', payload);
-          fetchAttendeeStatuses();
-          fetchEvent();
+          // Update attendeeStatuses based on the payload
+          const updatedAttendee = payload.new as { id_uuid: string; status: "registered" | "checked_in" | "absent"; confirmation_code: string };
+          setAttendeeStatuses(prev =>
+            prev.map(status =>
+              status.id_uuid === updatedAttendee.id_uuid
+                ? { ...status, status: updatedAttendee.status }
+                : status
+            )
+          );
+          // Fetch the latest event data to ensure consistency
+          await fetchEvent();
         }
       )
       .subscribe();
@@ -307,8 +317,6 @@ const AttendeesManagement = ({
     setCheckingInAttendees((prev) => ({ ...prev, [attendeeId]: true }));
     setLoading(true);
 
-    let currentStatus: "registered" | "checked_in" | "absent" | null = null;
-
     try {
       console.log('Checking in attendee:', { attendeeId, code });
 
@@ -323,8 +331,6 @@ const AttendeesManagement = ({
         console.error('Select error:', selectError);
         throw new Error("Attendee not found in database");
       }
-
-      currentStatus = data.status as "registered" | "checked_in" | "absent";
 
       if (data.status !== "registered") {
         throw new Error("Attendee is already checked in or marked absent");
@@ -355,7 +361,7 @@ const AttendeesManagement = ({
         throw new Error("No rows updated");
       }
 
-      // Update local state
+      // Update local state to reflect the new status
       setAttendeeStatuses((prev) =>
         prev.map((status) =>
           status.id_uuid === attendeeId
@@ -364,7 +370,7 @@ const AttendeesManagement = ({
         )
       );
 
-      // Refresh event data
+      // Refresh event data to ensure UI reflects the latest state
       await fetchEvent();
 
       setCheckinAttendee({
@@ -398,14 +404,6 @@ const AttendeesManagement = ({
         description: error.message || "Failed to check in attendee",
         variant: "destructive",
       });
-      // Revert UI state if update failed
-      setAttendeeStatuses((prev) =>
-        prev.map((status) =>
-          status.id_uuid === attendeeId
-            ? { ...status, status: currentStatus || "registered" }
-            : status
-        )
-      );
     } finally {
       setCheckingInAttendees((prev) => ({ ...prev, [attendeeId]: false }));
       setLoading(false);
