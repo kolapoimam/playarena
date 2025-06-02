@@ -1,10 +1,11 @@
+
 import { useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Share2,
   Download,
   ChevronDown,
-  Bike, // Replace Bicycle with Bike
+  Bike,
   MapPin,
   Calendar,
   DollarSignIcon,
@@ -57,6 +58,7 @@ type Event = {
   cancellation_status: boolean;
   status: string;
   start_landmark_id: string;
+  start_landmark: Landmark;
   location: {
     name?: string;
     city?: string;
@@ -100,7 +102,7 @@ const CyclingDetailsDialogue: React.FC<CyclingDetailsDialogueProps> = ({
 
   const shareEvent = async () => {
     const url = `${window.location.origin}/cycling/${event.slug}`;
-    const shareText = `Join my cycling event: ${event.title} at ${event.start_landmark.name}, ${event.start_landmark.state} on ${formatDate(event.event_date)} at ${event.start_time}. ${attendees.length}/${event.max_attendees} spots taken. Powered by SportCliq. ${url}`;
+    const shareText = `Join my cycling event: ${event.title} at ${event.start_landmark?.name || 'TBD'}, ${event.start_landmark?.state || 'TBD'} on ${formatDate(event.event_date)} at ${event.start_time}. ${attendees.length}/${event.max_attendees} spots taken. Powered by SportCliq. ${url}`;
 
     if (navigator.share) {
       try {
@@ -131,21 +133,21 @@ const CyclingDetailsDialogue: React.FC<CyclingDetailsDialogueProps> = ({
 
   const shareToWhatsApp = () => {
     const url = `${window.location.origin}/cycling/${event.slug}`;
-    const shareText = `Join my cycling event: ${event.title} at ${event.start_landmark.name}, ${event.start_landmark.state} on ${formatDate(event.event_date)} at ${event.start_time}. ${attendees.length}/${event.max_attendees} spots. Powered by SportCliq. ${url}`;
+    const shareText = `Join my cycling event: ${event.title} at ${event.start_landmark?.name || 'TBD'}, ${event.start_landmark?.state || 'TBD'} on ${formatDate(event.event_date)} at ${event.start_time}. ${attendees.length}/${event.max_attendees} spots. Powered by SportCliq. ${url}`;
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
     window.open(whatsappUrl, "_blank");
   };
 
   const shareToTwitter = () => {
     const url = `${window.location.origin}/cycling/${event.slug}`;
-    const shareText = `Join my cycling event: ${event.title} at ${event.start_landmark.name}, ${event.start_landmark.state} on ${formatDate(event.event_date)} at ${event.start_time}. ${attendees.length}/${event.max_attendees} spots. Powered by SportCliq. ${url}`;
+    const shareText = `Join my cycling event: ${event.title} at ${event.start_landmark?.name || 'TBD'}, ${event.start_landmark?.state || 'TBD'} on ${formatDate(event.event_date)} at ${event.start_time}. ${attendees.length}/${event.max_attendees} spots. Powered by SportCliq. ${url}`;
     const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
     window.open(twitterUrl, "_blank");
   };
 
   const shareToFacebook = () => {
     const url = `${window.location.origin}/cycling/${event.slug}`;
-    const shareText = `Join my cycling event: ${event.title} at ${event.start_landmark.name}, ${event.start_landmark.state} on ${formatDate(event.event_date)} at ${event.start_time}. ${attendees.length}/${event.max_attendees} spots taken. Powered by SportCliq.`;
+    const shareText = `Join my cycling event: ${event.title} at ${event.start_landmark?.name || 'TBD'}, ${event.start_landmark?.state || 'TBD'} on ${formatDate(event.event_date)} at ${event.start_time}. ${attendees.length}/${event.max_attendees} spots taken. Powered by SportCliq.`;
     const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(shareText)}`;
     window.open(facebookUrl, "_blank");
   };
@@ -216,7 +218,7 @@ const CyclingDetailsDialogue: React.FC<CyclingDetailsDialogueProps> = ({
           await navigator.share({
             files: [new File([blob], filename, { type: "image/png" })],
             title: event.title,
-            text: `Join my cycling event at ${event.start_landmark.name}!`,
+            text: `Join my cycling event at ${event.start_landmark?.name || 'TBD'}!`,
           });
           URL.revokeObjectURL(url);
           return;
@@ -364,7 +366,7 @@ const CyclingDetailsDialogue: React.FC<CyclingDetailsDialogueProps> = ({
                       setIsImageLoaded(true);
                     }}
                   />
-<Bike className={`h-6 w-6 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
+                  <Bike className={`h-6 w-6 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
                 </div>
                 <h2
                   className={`text-xl font-bold ${
@@ -383,7 +385,7 @@ const CyclingDetailsDialogue: React.FC<CyclingDetailsDialogueProps> = ({
                     <span
                       className={backgroundOption === "white" ? "text-black" : "text-white"}
                     >
-                      {event.start_landmark.name}, {event.start_landmark.state}
+                      {event.start_landmark?.name || 'TBD'}, {event.start_landmark?.state || 'TBD'}
                     </span>
                   </div>
                   <div className="flex items-center">
