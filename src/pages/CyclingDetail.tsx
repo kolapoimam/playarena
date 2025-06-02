@@ -1,40 +1,9 @@
-import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { format, differenceInMinutes } from "date-fns";
+import { Bike, MapPin, Calendar, Clock, Users, DollarSign, Wallet } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Button } from "@/components/ui/button";
-import { 
-  Calendar, 
-  Clock, 
-  MapPin, 
-  Users, 
-  ArrowLeft, 
-  ExternalLink, 
-  Bike, 
-  Bell 
-} from "lucide-react";
-import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import CyclingDetailsDialogue from "@/components/CyclingDetailsDialogue";
-import Navbar from "@/components/Navbar";
-import AttendeesTable from "@/components/AttendeesTable";
-import { addHours, addMinutes } from "date-fns";
-import { DateTime } from "luxon";
-
-type Landmark = {
-  name: string;
-  state: string;
-  description: string;
-  map_link: string;
-  slug: string;
-};
-
-type Attendee = {
-  id: string;
-  attendee_name: string;
-  attendee_phone: string;
-  status: "registered" | "checked_in" | "absent";
-  cycling_event_id: string;
-};
+import { useState, useEffect } from "react";
 
 type CyclingEvent = {
   id_uuid: string;
@@ -54,14 +23,13 @@ type CyclingEvent = {
   cancellation_status: boolean;
   status: string;
   start_landmark_id: string;
-  duration_type: string;
-  duration_value: number;
-  is_own_bike: boolean;
-  is_rental_available: boolean;
-  notes?: string | null;
-  start_landmark: Landmark;
-  end_landmark?: Landmark | null;
-  cycling_attendees: {
+  start_landmark: {
+    name: string;
+    state: string;
+    description?: string | null;
+    map_link?: string | null;
+  } | null;
+  attendees: {
     id_uuid: string;
     attendee_name: string;
     attendee_phone: string;
@@ -72,374 +40,322 @@ type CyclingEvent = {
   }[] | null;
 };
 
-const CyclingDetail = () => {
-  const { slug } = useParams<{ slug: string }>();
-  const navigate = useNavigate();
+type Cashout = {
+  id: string;
+  cycling_event_id_uuid: string;
+  supercode: string;
+  total_amount_paid: number;
+  bank_account_number: string;
+  bank_name: string;
+  account_name: string;
+  status: "Review" | "Processed" | "Failed" | "Successful";
+  temp_identifier?: string;
+  host_id: string;
+  created_at: string;
+  updated_at: string;
+};
+
+type CyclingDetailsProps = {
+  event: CyclingEvent | null;
+  cashout: Cashout | null;
+  handleCancel: () => void;
+  loading: boolean;
+  isEventPast: boolean;
+  walletBalance: number;
+};
+
+const CyclingDetails = ({ event: initialEvent, cashout, handleCancel, loading, isEventPast, walletBalance }: CyclingDetailsProps) => {
   const { toast } = useToast();
-  const [event, setEvent] = useState<CyclingEvent | null>(null);
-  const [attendees, setAttendees] = useState<Attendee[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [localWalletBalance, setLocalWalletBalance] = useState<number>(walletBalance || 0);
+  const [event, setEvent] = useState<CyclingEvent | null>(initialEvent);
 
-  useEffect(() => {
-    if (!slug) return;
-    const fetchEvent = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("cycling_events")
-          .select(`
-            *,
-            start_landmark:landmarks!start_landmark_id(name, state, description, map_link, slug),
-            end_landmark:landmarks!end_landmark_id(name, state, description, map_link, slug)
-          `)
-          .eq("slug", slug)
-          .single();
+  // Fetch event details with landmark data
+  const fetchEventDetails = async () => {
+    if (!initialEvent?.id_uuid) return;
+    try {
+      // Fetch the event data with landmark data using a join
+      const { data: eventData, error: eventError } = await supabase
+        .from("cycling_events")
+        .select(`
+          id_uuid,
+          slug,
+          title,
+          event_date,
+          start_time,
+          event_start_time,
+          event_end_time,
+          max_attendees,
+          host_id,
+          host_name,
+          host_phone,
+          supercode,
+          is_free,
+          price,
+          cancellation_status,
+          status,
+          start_landmark_id,
+          start_landmark:landmarks!start_landmark_id (
+            name,
+            state,
+            description,
+            map_link
+          ),
+          attendees (
+            id_uuid,
+            attendee_name,
+            attendee_phone,
+            status,
+            confirmation_code,
+            details,
+            number_of_slots
+          )
+        `)
+        .eq("id_uuid", initialEvent.id_uuid)
+        .single()
+        .throwOnError();
 
-        if (error) throw error;
-        setEvent(data);
+      if (eventError) throw eventError;
 
-        const { data: attendeesData, error: attendeesError } = await supabase
-          .from("cycling_attendees")
-          .select("*")
-          .eq("cycling_event_id_uuid", data.id_uuid);
-
-        if (attendeesError) throw attendeesError;
-        setAttendees(attendeesData || []);
-        setLoading(false);
-      } catch (error: any) {
-        console.error("Error fetching event:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load event details.",
-          variant: "destructive",
-        });
-        navigate("/cycling");
-      }
-    };
-    fetchEvent();
-  }, [slug, navigate, toast]);
-
-  useEffect(() => {
-    if (!event || !attendees.length) return;
-
-    const updateAbsentAttendees = async () => {
-      const now = new Date();
-      const eventDateTime = new Date(`${event.event_date}T${event.start_time}`);
-      const durationInMs = event.duration_type === "hours"
-        ? event.duration_value * 60 * 60 * 1000
-        : event.duration_value * 60 * 1000;
-      const eventEndTime = new Date(eventDateTime.getTime() + durationInMs);
-      const thirtyMinutesAfterStart = addMinutes(eventDateTime, 30);
-
-      if (now >= thirtyMinutesAfterStart) {
-        try {
-          const { error } = await supabase
-            .from("cycling_attendees")
-            .update({ status: "absent" })
-            .eq("cycling_event_id_uuid", event.id_uuid)
-            .neq("status", "checked_in");
-
-          if (error) {
-            console.error("Error updating attendee status:", error);
-            return;
-          }
-
-          const { data: updatedAttendees, error: fetchError } = await supabase
-            .from("cycling_attendees")
-            .select("*")
-            .eq("cycling_event_id_uuid", event.id_uuid);
-
-          if (!fetchError) {
-            setAttendees(updatedAttendees || []);
-          }
-        } catch (error) {
-          console.error("Error updating attendee status:", error);
-        }
-      }
-    };
-
-    updateAbsentAttendees();
-  }, [event, attendees]);
-
-  const getEventStatus = () => {
-    if (!event) return { status: "upcoming", isStarted: false, isEnded: false, isFull: false };
-
-    const now = DateTime.now().setZone("Africa/Lagos");
-    const eventDateTime = DateTime.fromISO(event.event_date, { zone: "utc" })
-      .setZone("Africa/Lagos")
-      .set({
-        hour: DateTime.fromFormat(event.start_time, "hh:mm a", { zone: "Africa/Lagos" }).hour,
-        minute: DateTime.fromFormat(event.start_time, "hh:mm a", { zone: "Africa/Lagos" }).minute,
-      });
-
-    const durationInMs = event.duration_type === "hours" 
-      ? event.duration_value * 60 * 60 * 1000 
-      : event.duration_value * 60 * 1000;
-    const eventEndTime = eventDateTime.plus({ milliseconds: durationInMs });
-    const thirtyMinutesAfterStart = eventDateTime.plus({ minutes: 30 });
-
-    const today = now.startOf("day");
-    const eventDate = eventDateTime.startOf("day");
-
-    let status = "upcoming";
-    if (eventDate.toISODate() === today.toISODate()) status = "today";
-    else if (eventDate < today) status = "ended";
-
-    const isFull = attendees.length >= event.max_attendees;
-    const isStarted = now >= eventDateTime && now < thirtyMinutesAfterStart;
-    const isEnded = now >= thirtyMinutesAfterStart || eventDate < today;
-
-    return { status, isEnded, isStarted, isFull };
-  };
-
-  const handleShare = () => {
-    const url = `${window.location.origin}/cycling-event/${slug}`;
-    if (navigator.share) {
-      navigator
-        .share({
-          title: event?.title,
-          text: `Join my cycling event: ${event?.title} at ${event?.start_landmark.name}!`,
-          url,
-        })
-        .catch(() =>
-          toast({ title: "Error", description: "Failed to share event." })
-        );
-    } else {
-      navigator.clipboard.writeText(url);
+      setEvent(eventData as CyclingEvent);
+    } catch (error) {
+      console.error("Error fetching event details:", error);
       toast({
-        title: "Link Copied",
-        description: "Event link copied to clipboard.",
+        title: "Error",
+        description: "Failed to fetch event details.",
+        variant: "destructive",
       });
     }
   };
 
-  const addToCalendar = () => {
-    if (!event) return;
+  useEffect(() => {
+    fetchEventDetails();
+  }, [initialEvent]);
 
-    const eventDateTime = DateTime.fromISO(event.event_date, { zone: "utc" })
-      .setZone("Africa/Lagos")
-      .set({
-        hour: DateTime.fromFormat(event.start_time, "hh:mm a", { zone: "Africa/Lagos" }).hour,
-        minute: DateTime.fromFormat(event.start_time, "hh:mm a", { zone: "Africa/Lagos" }).minute,
-      });
+  useEffect(() => {
+    if (!event) {
+      setLocalWalletBalance(0);
+      return;
+    }
 
-    const durationInMs = event.duration_type === "hours" 
-      ? event.duration_value * 60 * 60 * 1000 
-      : event.duration_value * 60 * 1000;
-    const endDateTime = eventDateTime.plus({ milliseconds: durationInMs });
+    const fetchWalletBalance = async () => {
+      try {
+        const { data: attendeesData, error } = await supabase
+          .from("cycling_attendees")
+          .select("status")
+          .eq("cycling_event_id_uuid", event.id_uuid)
+          .throwOnError();
 
-    const formatGoogleDate = (date: DateTime) => {
-      const pad = (num: number) => num.toString().padStart(2, "0");
-      return `${date.year}${pad(date.month)}${pad(date.day)}T${pad(date.hour)}${pad(date.minute)}${pad(date.second)}`;
+        if (error) throw error;
+
+        let balance = 0;
+        if (!event.is_free && event.price) {
+          const checkedInAttendees = attendeesData?.filter((a) => a?.status === "checked_in") || [];
+          balance = checkedInAttendees.reduce(
+            (sum, attendee) => sum + (event.price || 0),
+            0
+          );
+        }
+
+        const { data: walletData, error: walletError } = await supabase
+          .from("wallets")
+          .select("balance")
+          .eq("organizer_id", event.host_id)
+          .single()
+          .throwOnError();
+
+        if (walletError) {
+          console.error("Wallet fetch error:", walletError);
+        } else if (walletData) {
+          balance = walletData.balance;
+        }
+
+        setLocalWalletBalance(balance < 0 ? 0 : balance);
+      } catch (error) {
+        console.error("Error fetching wallet balance:", error);
+        toast({
+          title: "Error",
+          description: "Failed to calculate wallet balance.",
+          variant: "destructive",
+        });
+        setLocalWalletBalance(0);
+      }
     };
-    const googleCalendarUrl = `https://www.google.com/calendar/render?action=TEMPLATE` +
-      `&text=${encodeURIComponent(`Sport Cliq: ${event.title}`)}` +
-      `&dates=${formatGoogleDate(eventDateTime)}/${formatGoogleDate(endDateTime)}` +
-      `&location=${encodeURIComponent(`${event.start_landmark.name}, ${event.start_landmark.state}`)}` +
-      `&details=${encodeURIComponent(
-        `Cycling Event hosted by ${event.host_name}.\n\n` +
-        `Event link: ${window.location.origin}/cycling-event/${event.slug}\n\n` +
-        `Start: ${event.start_landmark.name}, ${event.start_landmark.state}\n` +
-        `${event.end_landmark ? `End: ${event.end_landmark.name}, ${event.end_landmark.state}\n` : ""}` +
-        `Notes: ${event.notes || "No additional information provided"}\n\n` +
-        `Powered by @SportCliq`
-      )}` +
-      `&sf=true&output=xml`;
 
-    window.open(googleCalendarUrl, "_blank", "width=600,height=600");
-    setTimeout(() => navigate(`/cycling-event/${slug}`), 1000);
+    fetchWalletBalance();
+
+    const attendeesChannel = supabase
+      .channel(`attendees_event_${event.id_uuid}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'cycling_attendees',
+          filter: `cycling_event_id_uuid=eq.${event.id_uuid}`,
+        },
+        () => {
+          fetchWalletBalance();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(attendeesChannel);
+    };
+  }, [event, toast]);
+
+  const canCancelEvent = () => {
+    if (!event) return false;
+    const eventDateTime = new Date(`${event.event_date}T${event.start_time}`);
+    const now = new Date();
+    const minutesToStart = differenceInMinutes(eventDateTime, now);
+    const hasCheckedInAttendees = event.attendees?.some((a) => a.status === "checked_in") || false;
+    return minutesToStart > 0 && !event.cancellation_status && !hasCheckedInAttendees;
   };
 
   const formatDate = (dateString: string) => {
     const options: Intl.DateTimeFormatOptions = {
-      weekday: "short",
+      weekday: "long",
       day: "numeric",
-      month: "short",
+      month: "long",
       year: "numeric",
     };
     return new Date(dateString).toLocaleDateString("en-NG", options);
   };
 
   const formatTime = (timeString: string) => {
-    const time = DateTime.fromFormat(timeString, "hh:mm a", { zone: "Africa/Lagos" });
-    return time.isValid ? time.toFormat("hh:mm a") : "Invalid Time";
+    const match = timeString.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+    if (!match) return timeString;
+    let [_, hours, minutes, period] = match;
+    return `${parseInt(hours)}:${minutes} ${period.toUpperCase()}`;
   };
 
-  if (loading) {
-    return (
-      <div className="p-4">
-        <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4">
-          <ArrowLeft size={18} className="mr-2" />
-          Back
-        </Button>
-        <div className="text-center py-8">
-          <h2 className="text-xl font-semibold mb-2">Loading...</h2>
-          <p className="text-muted-foreground">Fetching event details...</p>
-        </div>
-      </div>
-    );
-  }
+  const getStatusStyles = (status: string) => {
+    switch (status) {
+      case "Successful":
+        return "bg-green-100 text-green-700 border-green-300";
+      case "Failed":
+        return "bg-red-100 text-red-700 border-red-300";
+      case "Processed":
+        return "bg-blue-100 text-blue-700 border-blue-300";
+      case "Review":
+        return "bg-yellow-100 text-yellow-700 border-yellow-300";
+      default:
+        return "bg-yellow-100 text-yellow-700 border-yellow-300";
+    }
+  };
 
-  if (!event) {
-    return (
-      <div className="p-4">
-        <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4">
-          <ArrowLeft size={18} className="mr-2" />
-          Back
-        </Button>
-        <div className="text-center py-8">
-          <h2 className="text-2xl font-semibold mb-2">Event Not Found</h2>
-          <p className="text-muted-foreground">The event doesn't exist or has been removed.</p>
-        </div>
-      </div>
-    );
-  }
+  const calculateExpectedAmount = () => {
+    if (!event) return "N/A";
+    let total = 0;
+    if (!event.is_free && event.price) {
+      const checkedInAttendees = event.attendees?.filter((a) => a?.status === "checked_in") || [];
+      total = checkedInAttendees.reduce(
+        (sum, attendee) => sum + ((Number(attendee?.number_of_slots) || 1) * (event.price || 0)),
+        0
+      );
+    }
+    return `₦${total.toLocaleString()}`;
+  };
 
-  const { status, isStarted, isEnded, isFull } = getEventStatus();
+  const calculateTotalSlotsOccupied = () => {
+    if (!event || !event.attendees) return 0;
+    return event.attendees.reduce((sum, attendee) => sum + (Number(attendee?.number_of_slots) || 1), 0);
+  };
+
+  if (!event) return null;
 
   return (
-    <div className="min-h-screen pb-24">
-      <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg">
-        <div className="flex items-center justify-between">
-          <Button
-            variant="ghost"
-            onClick={() => navigate(-1)}
-            className="text-white hover:bg-green-600"
-          >
-            <ArrowLeft size={18} className="mr-2" />
-            Back
-          </Button>
-          <div className="text-center">
-            <h1 className="text-2xl font-bold">Event Details</h1>
-          </div>
-          <div className="w-10"></div>
-        </div>
-      </header>
-
-      <div className="p-4">
-        <h1 className="text-2xl font-bold mb-2">{event.title}</h1>
-        <div className="flex justify-between items-center mb-4">
-          <div className="flex items-center gap-2">
-            <p className="text-muted-foreground">Hosted by {event.host_name}</p>
-            <img 
-              src="/green-verified.png"
-              alt="Verified"
-              className="inline-block w-5 h-5"
-            />
-          </div>
-        </div>
-
-        {isEnded ? (
-          <div className="bg-gray-100 border border-gray-200 text-gray-700 px-4 py-3 rounded mb-4">
-            This event has passed
-          </div>
-        ) : isStarted ? (
-          <div className="bg-blue-100 border border-blue-200 text-blue-700 px-4 py-3 rounded mb-4">
-            This event has started!
-          </div>
-        ) : isFull ? (
-          <div className="bg-red-100 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
-            This event is completely filled up!
-          </div>
-        ) : status === "today" ? (
-          <div className="bg-green-100 border border-green-200 text-green-700 px-4 py-3 rounded mb-4">
-            This event is happening today!
-          </div>
-        ) : null}
-
-        <div className="space-y-4">
-          <div className="border rounded-lg p-4 bg-card shadow-md relative">
-            <div className="absolute top-4 right-4 m-0 p-0">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={addToCalendar}
-                className="text-blue-600 p-2 border-blue-300 hover:bg-blue-50 m-0"
-              >
-                <Bell size={16} className="m-0" />
-              </Button>
-            </div>
-            <h2 className="font-semibold mb-3">Event Details</h2>
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Calendar size={18} />
-                <span>{formatDate(event.event_date)}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Clock size={18} />
-                <span>{formatTime(event.start_time)}</span>
-              </div>
-              <div className="flex items-start gap-2 cursor-pointer" 
-                onClick={() => navigate(`/landmark/${event.start_landmark.slug}`)}>
-                <MapPin size={18} className="mt-0.5" />
-                <div>
-                  <span className="text-green-600 hover:underline">
-                    {event.start_landmark.name}, {event.start_landmark.state}
-                  </span>
-                  {event.start_landmark.map_link && (
-                    <div className="mt-1">
-                      <a 
-                        href={event.start_landmark.map_link} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-xs flex items-center text-green-600 hover:underline"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <ExternalLink size={12} className="mr-1" />
-                        Link to Google Maps
-                      </a>
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Clock size={18} />
-                <span>
-                  Duration: {event.duration_value} {event.duration_type}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Users size={18} />
-                <span>
-                  {attendees.length}/{event.max_attendees} spots filled
-                  {isFull && " (FULL)"}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Bike size={18} />
-                <span>
-                  {event.is_own_bike && "Bring Your Own Bike"}
-                  {event.is_own_bike && event.is_rental_available && " | "}
-                  {event.is_rental_available && "Rentals Available"}
-                </span>
-              </div>
-              <div className="font-semibold mt-2">
-                Cost: {event.is_free ? "Free" : `₦${event.price?.toFixed(2)}`}
-              </div>
-              {event.notes && (
-                <div className="mt-3">
-                  <h3 className="text-sm font-medium mb-1">Notes:</h3>
-                  <p className="text-sm bg-muted p-2 rounded">{event.notes}</p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <AttendeesTable
-            event={event}
-            attendees={attendees}
-            navigate={navigate}
-            isEnded={isEnded}
-            isStarted={isStarted}
-            isFull={isFull}
-            totalAttendees={attendees.length}
-          />
-
-          <CyclingDetailsDialogue event={event} attendees={attendees} />
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Cycling Event Details</h2>
+        <div className="flex items-center gap-2">
+          {event.cancellation_status && (
+            <span className="inline-block px-3 py-1 text-sm font-medium rounded border bg-red-100 text-red-700 border-red-300">
+              Cancelled
+            </span>
+          )}
+          {cashout && (
+            <span
+              className={`inline-block px-3 py-1 text-sm font-medium rounded border ${getStatusStyles(cashout.status)}`}
+            >
+              Cashout: {cashout.status}
+            </span>
+          )}
         </div>
       </div>
-      <Navbar />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+        <div className="flex items-center gap-3">
+          <Bike size={20} className="text-green-500" />
+          <div>
+            <p className="font-medium text-gray-900 dark:text-gray-100">{event.title || "Untitled Event"}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Hosted by {event.host_name || "Unknown Host"}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <MapPin size={20} className="text-green-500" />
+          <span className="text-gray-900 dark:text-gray-100">
+            {event.start_landmark?.name || "Unknown Location"}, {event.start_landmark?.state || "Unknown City"}
+          </span>
+        </div>
+        <div className="flex items-center gap-3">
+          <Calendar size={20} className="text-green-500" />
+          <span className="text-gray-900 dark:text-gray-100">
+            {event.event_date ? formatDate(event.event_date) : "Date TBD"}
+          </span>
+        </div>
+        <div className="flex items-center gap-3">
+          <Clock size={20} className="text-green-500" />
+          <span className="text-gray-900 dark:text-gray-100">
+            {event.start_time ? formatTime(event.start_time) : "Time TBD"}
+          </span>
+        </div>
+        <div className="flex items-center gap-3">
+          <Users size={20} className="text-green-500" />
+          <span className="text-gray-900 dark:text-gray-100">
+            {calculateTotalSlotsOccupied()}/{event.max_attendees || 0} slots
+          </span>
+        </div>
+        <div className="flex items-center gap-3">
+          <DollarSign size={20} className="text-green-500" />
+          <span className="text-gray-900 dark:text-gray-100">
+            {event.is_free ? "Free" : `₦${event.price?.toLocaleString() || "0"} per ticket`}
+          </span>
+        </div>
+        <div className="flex items-center gap-3">
+          <Wallet size={20} className="text-green-500" />
+          <span className="text-gray-900 dark:text-gray-100">
+            Wallet: ₦{localWalletBalance.toLocaleString() || "0"}
+          </span>
+        </div>
+      </div>
+      {event.cancellation_status && !event.is_free && (
+        <div className="mt-4 p-4 rounded bg-red-100 dark:bg-red-900">
+          <p className="text-red-700 dark:text-red-300">
+            This event has been cancelled. Attendees will be contacted for a refund.
+          </p>
+        </div>
+      )}
+      {cashout && (
+        <div className="mt-4 p-4 rounded-lg bg-yellow-100 dark:bg-yellow-900">
+          <p className="text-yellow-700 dark:text-yellow-300">
+            Your cashout request is {cashout.status}. Expected amount: {calculateExpectedAmount()}
+          </p>
+        </div>
+      )}
+      <div className="flex flex-wrap gap-4 mt-4">
+        <Button
+          onClick={handleCancel}
+          className={`bg-red-500 hover:bg-red-600 text-white ${!canCancelEvent() ? 'opacity-50 cursor-not-allowed' : ''}`}
+          disabled={!canCancelEvent() || loading}
+        >
+          Cancel Event
+        </Button>
+      </div>
     </div>
   );
 };
 
-export default CyclingDetail;
+export default CyclingDetails;
