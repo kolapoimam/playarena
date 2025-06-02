@@ -1,3 +1,4 @@
+
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,7 +17,7 @@ const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
+  const [lastName, setFirstName] = useState("");
   const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
@@ -24,10 +25,33 @@ const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
   const { theme } = useTheme();
   const recaptchaRef = useRef<ReCAPTCHA>(null);
+  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
 
   const validateEmail = (email: string) => {
     const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
     return emailRegex.test(email);
+  };
+
+  const verifyRecaptcha = async (token: string) => {
+    try {
+      const response = await fetch("https://qxafigbrfpxdklwoqkxj.supabase.co/functions/v1/verify-recaptcha", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token }),
+      });
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error || "reCAPTCHA verification failed");
+      }
+      return true;
+    } catch (error: any) {
+      toast({
+        title: "reCAPTCHA Verification Failed",
+        description: error.message || "Please verify you are not a bot.",
+        variant: "destructive",
+      });
+      return false;
+    }
   };
 
   const handleEmailAuth = async () => {
@@ -49,10 +73,10 @@ const Auth = () => {
       return;
     }
 
-    if (!recaptchaRef.current) {
+    if (!recaptchaToken) {
       toast({
-        title: "Error",
-        description: "reCAPTCHA not loaded. Please try again.",
+        title: "reCAPTCHA Required",
+        description: "Please complete the reCAPTCHA verification.",
         variant: "destructive",
       });
       return;
@@ -60,21 +84,12 @@ const Auth = () => {
 
     setLoading(true);
     try {
-      const recaptchaToken = await recaptchaRef.current.executeAsync();
-      if (!recaptchaToken) {
-        throw new Error("reCAPTCHA verification failed.");
-      }
-
-      // Send token to backend for verification
-      const verifyResponse = await fetch("/api/verify-recaptcha", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: recaptchaToken }),
-      });
-
-      const verifyResult = await verifyResponse.json();
-      if (!verifyResult.success || verifyResult.score < 0.5) {
-        throw new Error("reCAPTCHA verification failed. Please try again.");
+      const isRecaptchaValid = await verifyRecaptcha(recaptchaToken);
+      if (!isRecaptchaValid) {
+        recaptchaRef.current?.reset();
+        setRecaptchaToken(null);
+        setLoading(false);
+        return;
       }
 
       if (isSignUp) {
@@ -101,6 +116,8 @@ const Auth = () => {
           setFirstName("");
           setLastName("");
           setIsSignUp(false);
+          setRecaptchaToken(null);
+          recaptchaRef.current?.reset();
         }
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -126,7 +143,6 @@ const Auth = () => {
       });
     } finally {
       setLoading(false);
-      recaptchaRef.current?.reset();
     }
   };
 
@@ -192,10 +208,10 @@ const Auth = () => {
       return;
     }
 
-    if (!recaptchaRef.current) {
+    if (!recaptchaToken) {
       toast({
-        title: "Error",
-        description: "reCAPTCHA not loaded. Please try again.",
+        title: "reCAPTCHA Required",
+        description: "Please complete the reCAPTCHA verification.",
         variant: "destructive",
       });
       return;
@@ -203,20 +219,12 @@ const Auth = () => {
 
     setLoading(true);
     try {
-      const recaptchaToken = await recaptchaRef.current.executeAsync();
-      if (!recaptchaToken) {
-        throw new Error("reCAPTCHA verification failed.");
-      }
-
-      const verifyResponse = await fetch("/api/verify-recaptcha", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: recaptchaToken }),
-      });
-
-      const verifyResult = await verifyResponse.json();
-      if (!verifyResult.success || verifyResult.score < 0.5) {
-        throw new Error("reCAPTCHA verification failed. Please try again.");
+      const isRecaptchaValid = await verifyRecaptcha(recaptchaToken);
+      if (!isRecaptchaValid) {
+        recaptchaRef.current?.reset();
+        setRecaptchaToken(null);
+        setLoading(false);
+        return;
       }
 
       const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
@@ -230,6 +238,8 @@ const Auth = () => {
       });
       setShowForgotPassword(false);
       setResetEmail("");
+      setRecaptchaToken(null);
+      recaptchaRef.current?.reset();
     } catch (error: any) {
       toast({
         title: "Error",
@@ -238,7 +248,6 @@ const Auth = () => {
       });
     } finally {
       setLoading(false);
-      recaptchaRef.current?.reset();
     }
   };
 
@@ -353,17 +362,22 @@ const Auth = () => {
               </div>
             )}
 
-            <ReCAPTCHA
-              ref={recaptchaRef}
-              sitekey={process.env.REACT_APP_RECAPTCHA_SITE_KEY || ""}
-              size="invisible"
-            />
+            <div className="flex justify-center">
+              <ReCAPTCHA
+                ref={recaptchaRef}
+                sitekey={process.env.REACT_APP_RECAPTCHA_SITE_KEY || ""}
+                size="normal"
+                theme={theme === "dark" ? "dark" : "light"}
+                onChange={(token) => setRecaptchaToken(token)}
+                onExpired={() => setRecaptchaToken(null)}
+              />
+            </div>
 
             <div className="flex gap-2">
               <Button
                 className="flex-1 bg-[#17a34a] hover:bg-[#138d3a] text-white font-medium py-2"
                 onClick={handleEmailAuth}
-                disabled={loading || (isSignUp && (!firstName.trim() || !lastName.trim()))}
+                disabled={loading || (isSignUp && (!firstName.trim() || !lastName.trim())) || !recaptchaToken}
               >
                 {loading ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -443,11 +457,26 @@ const Auth = () => {
               className="w-full mb-5"
             />
 
+            <div className="flex justify-center mb-5">
+              <ReCAPTCHA
+                ref={recaptchaRef}
+                sitekey={process.env.REACT_APP_RECAPTCHA_SITE_KEY || ""}
+                size="normal"
+                theme={theme === "dark" ? "dark" : "light"}
+                onChange={(token) => setRecaptchaToken(token)}
+                onExpired={() => setRecaptchaToken(null)}
+              />
+            </div>
+
             <div className="flex justify-end gap-3">
               <Button
                 variant="outline"
                 className="px-4 rounded-lg"
-                onClick={() => setShowForgotPassword(false)}
+                onClick={() => {
+                  setShowForgotPassword(false);
+                  setRecaptchaToken(null);
+                  recaptchaRef.current?.reset();
+                }}
                 disabled={loading}
               >
                 Cancel
@@ -455,7 +484,7 @@ const Auth = () => {
               <Button
                 className="bg-[#17a34a] hover:bg-[#138d3a] text-white px-4 rounded-lg"
                 onClick={handleForgotPassword}
-                disabled={loading}
+                disabled={loading || !recaptchaToken}
               >
                 {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Send Link"}
               </Button>
