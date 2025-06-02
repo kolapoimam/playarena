@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from '@/hooks/useToast';
-import { Button } from "@/common/components/Button";
-import { Input } from '@/components/common/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@components/common/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@components/common/dialog';
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
