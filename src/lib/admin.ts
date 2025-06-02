@@ -1,8 +1,12 @@
+import { createClient } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 
 // Types
 export interface AdminMetrics {
-  total_users: number;
+  total_organizers: number;
+  total_hosts: number;
+  total_players: number;
+  total_attendees: number;
   total_events: number;
   pending_cashouts: number;
   total_revenue: number;
@@ -59,10 +63,20 @@ export const adminOperations = {
     const { data, error } = await supabase
       .from('admin_metrics')
       .select('*')
+      .eq('id', '509ef956-c36a-4b62-bdec-af565785c220')
       .single();
 
-    if (error) throw error;
-    return data;
+    if (error) {
+      console.error('Supabase error fetching admin_metrics:', error);
+      throw new Error(`Failed to fetch metrics: ${error.message}`);
+    }
+
+    if (!data) {
+      console.warn('No admin_metrics data found for id: 509ef956-c36a-4b62-bdec-af565785c220');
+      throw new Error('No metrics data found');
+    }
+
+    return data as AdminMetrics;
   },
 
   // Get users with pagination and filters
@@ -262,4 +276,4 @@ export const adminOperations = {
       throw new Error(error.message);
     }
   }
-}; 
+};
