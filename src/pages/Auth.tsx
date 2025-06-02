@@ -109,47 +109,24 @@ const Auth = () => {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/profile`,
+          redirectTo: `${window.location.origin}/auth/callback`,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
           },
         },
       });
+      
       if (error) throw error;
-
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      if (userError) throw userError;
-
-      if (userData.user) {
-        const identity = userData.user.identities?.find(id => id.provider === 'google');
-        const firstName = identity?.identity_data?.first_name || identity?.identity_data?.name || userData.user.email?.split('@')[0] || 'Unknown';
-        const lastName = identity?.identity_data?.last_name || identity?.identity_data?.family_name || 'User';
-
-        const { error: profileError } = await supabase
-          .from("profiles")
-          .upsert({
-            id: userData.user.id,
-            email: userData.user.email,
-            first_name: firstName,
-            last_name: lastName,
-            is_initial_setup: true,
-            updated_at: new Date().toISOString(),
-          }, {
-            onConflict: 'id',
-          });
-
-        if (profileError) throw profileError;
-
-        navigate("/profile");
-      }
+      
+      // The OAuth flow will handle the redirect
+      // The callback route will handle profile creation
     } catch (error) {
       toast({
         title: "Oops, Out of Bounds!",
         description: error.message,
         variant: "destructive",
       });
-    } finally {
       setLoading(false);
     }
   };

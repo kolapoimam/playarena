@@ -131,7 +131,7 @@ const AttendeesManagement = ({
       try {
         const { data: attendeesData, error } = await supabase
           .from('cycling_attendees')
-          .select('id_uuid, status, confirmation_code')
+          .select('id_uuid, status')
           .eq('cycling_event_id_uuid', event.id_uuid);
 
         if (error) throw error;
@@ -187,7 +187,6 @@ const AttendeesManagement = ({
           description: "Failed to load attendee statuses.",
           variant: "destructive",
         });
-        // Fallback to event data if available
         if (event?.cycling_attendees) {
           const initialStatuses = event.cycling_attendees.map(attendee => ({
             id_uuid: attendee.id_uuid,
@@ -206,24 +205,15 @@ const AttendeesManagement = ({
       .on(
         'postgres_changes',
         {
-          event: 'UPDATE',
+          event: '*',
           schema: 'public',
           table: 'cycling_attendees',
           filter: `cycling_event_id_uuid=eq.${event.id_uuid}`,
         },
-        async (payload) => {
+        (payload) => {
           console.log('Received real-time update:', payload);
-          // Update attendeeStatuses based on the payload
-          const updatedAttendee = payload.new as { id_uuid: string; status: "registered" | "checked_in" | "absent"; confirmation_code: string };
-          setAttendeeStatuses(prev =>
-            prev.map(status =>
-              status.id_uuid === updatedAttendee.id_uuid
-                ? { ...status, status: updatedAttendee.status }
-                : status
-            )
-          );
-          // Fetch the latest event data to ensure consistency
-          await fetchEvent();
+          fetchAttendeeStatuses();
+          fetchEvent();
         }
       )
       .subscribe();
@@ -317,6 +307,8 @@ const AttendeesManagement = ({
     setCheckingInAttendees((prev) => ({ ...prev, [attendeeId]: true }));
     setLoading(true);
 
+    let currentStatus: "registered" | "checked_in" | "absent" | null = null;
+
     try {
       console.log('Checking in attendee:', { attendeeId, code });
 
@@ -331,6 +323,8 @@ const AttendeesManagement = ({
         console.error('Select error:', selectError);
         throw new Error("Attendee not found in database");
       }
+
+      currentStatus = data.status as "registered" | "checked_in" | "absent";
 
       if (data.status !== "registered") {
         throw new Error("Attendee is already checked in or marked absent");
@@ -361,7 +355,7 @@ const AttendeesManagement = ({
         throw new Error("No rows updated");
       }
 
-      // Update local state to reflect the new status
+      // Update local state
       setAttendeeStatuses((prev) =>
         prev.map((status) =>
           status.id_uuid === attendeeId
@@ -370,7 +364,7 @@ const AttendeesManagement = ({
         )
       );
 
-      // Refresh event data to ensure UI reflects the latest state
+      // Refresh event data
       await fetchEvent();
 
       setCheckinAttendee({
@@ -404,6 +398,14 @@ const AttendeesManagement = ({
         description: error.message || "Failed to check in attendee",
         variant: "destructive",
       });
+      // Revert UI state if update failed
+      setAttendeeStatuses((prev) =>
+        prev.map((status) =>
+          status.id_uuid === attendeeId
+            ? { ...status, status: currentStatus || "registered" }
+            : status
+        )
+      );
     } finally {
       setCheckingInAttendees((prev) => ({ ...prev, [attendeeId]: false }));
       setLoading(false);
@@ -468,7 +470,9 @@ const AttendeesManagement = ({
                 No attendees registered.
               </p>
             ) : (
-              event.cycling_attendees?.map((attendee) => (
+              event.cycling_attendees?.map((attendee) => {
+                const currentStatus = attendeeStatuses.find(s => s.id_uuid === attendee.id_uuid)?.status || attendee.status;
+                return (
                 <div
                   key={attendee.id_uuid}
                   className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600"
@@ -487,11 +491,11 @@ const AttendeesManagement = ({
                     </div>
                     <div className="flex flex-col items-end space-y-2">
                       <span
-                        className={`inline-block px-2 py-1 text-sm font-medium rounded border ${getStatusStyles(attendee.status)}`}
+                        className={`inline-block px-2 py-1 text-sm font-medium rounded border ${getStatusStyles(currentStatus)}`}
                       >
-                        {getDisplayStatus(attendee.status)}
+                        {getDisplayStatus(currentStatus)}
                       </span>
-                      {mode === "checkin" && attendee.status === "registered" && canConfirmAttendees && (
+                      {mode === "checkin" && currentStatus === "registered" && canConfirmAttendees && (
                         <div className="flex items-center gap-2">
                           <Input
                             placeholder="6-digit code"
@@ -531,7 +535,7 @@ const AttendeesManagement = ({
                     </div>
                   </div>
                 </div>
-              ))
+              )})
             )}
           </div>
         )}

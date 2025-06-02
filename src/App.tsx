@@ -53,6 +53,7 @@ import JoinCycling from "@/pages/JoinCycling";
 import HostCycling from "@/pages/HostCycling";
 import LandmarkDirectory from "@/pages/LandmarkDirectory";
 import LandmarkDetail from "@/pages/LandmarkDetail";
+import AuthCallback from "@/pages/AuthCallback";
 
 // Import admin components
 import AdminLogin from "@/pages/admin/AdminLogin";
@@ -149,6 +150,7 @@ const AppRoutes = () => {
       <Route path="/profile/my-bookings" element={<MyBookings />} />
       <Route path="/profile/booking-code" element={<BookingCode />} />
       <Route path="/auth" element={<Auth />} />
+      <Route path="/auth/callback" element={<AuthCallback />} />
       <Route path="/confirm" element={<Confirm />} />
       <Route path="/organize" element={<Organize />} />
       <Route path="/host-cycling" element={<HostCycling />} />
