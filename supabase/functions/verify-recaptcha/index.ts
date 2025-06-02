@@ -1,23 +1,37 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 
 serve(async (req: Request) => {
-  // Handle CORS preflight request
+  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, {
       status: 204,
       headers: {
         "Access-Control-Allow-Origin": "https://app.sportcliq.com",
         "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
         "Access-Control-Max-Age": "86400",
       },
     });
   }
 
-  // Handle POST request
+  // Validate POST request
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Method not allowed" }), {
       status: 405,
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "https://app.sportcliq.com",
+      },
+    });
+  }
+
+  // Check Authorization header
+  const authHeader = req.headers.get("Authorization");
+  const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY");
+  if (!authHeader || !authHeader.startsWith("Bearer ") || authHeader.split(" ")[1] !== supabaseKey) {
+    console.log("Authorization failed: Invalid or missing anon key");
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
       headers: {
         "Content-Type": "application/json",
         "Access-Control-Allow-Origin": "https://app.sportcliq.com",
@@ -39,7 +53,8 @@ serve(async (req: Request) => {
 
     const secretKey = Deno.env.get("RECAPTCHA_SECRET_KEY");
     if (!secretKey) {
-      return new Response(JSON.stringify({ error: "Server configuration error" }), {
+      console.error("RECAPTCHA_SECRET_KEY not set");
+      return new Response(JSON.stringify({ error: "Internal server error" }), {
         status: 500,
         headers: {
           "Content-Type": "application/json",
@@ -58,6 +73,9 @@ serve(async (req: Request) => {
     });
 
     const result = await response.json();
+    if (!result.success) {
+      console.log("RECAPTCHA verification failed:", result);
+    }
     return new Response(JSON.stringify(result), {
       status: 200,
       headers: {
@@ -66,6 +84,7 @@ serve(async (req: Request) => {
       },
     });
   } catch (error) {
+    console.error("Error in verify-recaptcha:", error);
     return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500,
       headers: {
