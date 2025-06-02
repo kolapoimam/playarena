@@ -93,14 +93,16 @@ type CyclingEvent = {
 type Cashout = {
   id: string;
   cycling_event_id_uuid: string;
-  super_code: string;
-  amount: number;
+  supercode: string;
+  total_amount_paid: number;
   bank_account_number: string;
   bank_name: string;
   account_name: string;
   status: "Review" | "Processed" | "Failed" | "Successful";
   temp_identifier?: string;
+  host_id: string;
   created_at: string;
+  updated_at: string;
 };
 
 const codeSchema = z
