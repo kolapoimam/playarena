@@ -131,14 +131,14 @@ const AttendeesManagement = ({
       try {
         const { data: attendeesData, error } = await supabase
           .from('cycling_attendees')
-          .select('id_uuid, status, confirmation_code')
+          .select('id_uuid, status')
           .eq('cycling_event_id_uuid', event.id_uuid);
 
         if (error) throw error;
 
         const initialStatuses = attendeesData.map(attendee => ({
           id_uuid: attendee.id_uuid,
-          status: attendee.status as "registered" | "checked_in" | "absent",
+          status: attendee.status,
           checkinCode: checkinCodes[attendee.id_uuid] || ''
         }));
         setAttendeeStatuses(initialStatuses);
@@ -210,7 +210,8 @@ const AttendeesManagement = ({
           table: 'cycling_attendees',
           filter: `cycling_event_id_uuid=eq.${event.id_uuid}`,
         },
-        () => {
+        (payload) => {
+          console.log('Received real-time update:', payload);
           fetchAttendeeStatuses();
           fetchEvent();
         }
