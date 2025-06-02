@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,95 +8,110 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Search, Eye, Ban, Trash2, UserCheck } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
+import { adminOperations, AdminUser } from '@/lib/admin';
 
 const AdminUserManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock user data
-  const users = [
-    {
-      id: 'USR-001',
-      name: 'John Doe',
-      email: 'john@example.com',
-      phone: '+234-801-234-5678',
-      status: 'active',
-      createdAt: '2024-01-15',
-      eventsOrganized: 12,
-      eventsParticipated: 28,
-      badges: ['First Kickoff', 'Match Maestro', 'Deca-Free Star']
-    },
-    {
-      id: 'USR-002',
-      name: 'Jane Smith',
-      email: 'jane@example.com',
-      phone: '+234-802-345-6789',
-      status: 'suspended',
-      createdAt: '2024-02-20',
-      eventsOrganized: 5,
-      eventsParticipated: 15,
-      badges: ['First Kickoff', 'Venue Visionary']
-    },
-    {
-      id: 'USR-003',
-      name: 'Mike Johnson',
-      email: 'mike@example.com',
-      phone: '+234-803-456-7890',
-      status: 'active',
-      createdAt: '2024-03-10',
-      eventsOrganized: 8,
-      eventsParticipated: 22,
-      badges: ['First Kickoff', 'Match Maestro']
+  // Fetch users
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        setLoading(true);
+        const { users } = await adminOperations.getUsers(
+          1, 
+          50, 
+          statusFilter === 'all' ? undefined : statusFilter
+        );
+        setUsers(users);
+        setError(null);
+      } catch (err) {
+        setError('Failed to fetch users');
+        console.error('Error fetching users:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUsers();
+  }, [statusFilter]);
+
+  const handleSuspendUser = async (userId: string) => {
+    try {
+      await adminOperations.updateUserStatus(userId, 'suspended');
+      setUsers(users.map(u => 
+        u.id === userId ? { ...u, status: 'suspended' } : u
+      ));
+    } catch (err) {
+      console.error('Error suspending user:', err);
+      setError('Failed to suspend user');
     }
-  ];
+  };
+
+  const handleActivateUser = async (userId: string) => {
+    try {
+      await adminOperations.updateUserStatus(userId, 'active');
+      setUsers(users.map(u => 
+        u.id === userId ? { ...u, status: 'active' } : u
+      ));
+    } catch (err) {
+      console.error('Error activating user:', err);
+      setError('Failed to activate user');
+    }
+  };
 
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          user.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || user.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    return matchesSearch;
   });
 
-  const handleSuspendUser = (userId: string) => {
-    console.log('Suspending user:', userId);
-    // Implementation would update user status in database
-  };
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center h-full">
+          <p>Loading users...</p>
+        </div>
+      </AdminLayout>
+    );
+  }
 
-  const handleDeleteUser = (userId: string) => {
-    console.log('Deleting user:', userId);
-    // Implementation would delete user from database
-  };
-
-  const handleActivateUser = (userId: string) => {
-    console.log('Activating user:', userId);
-    // Implementation would activate user in database
-  };
+  if (error) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center h-full">
+          <p className="text-red-500">{error}</p>
+        </div>
+      </AdminLayout>
+    );
+  }
 
   return (
     <AdminLayout>
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold">User Management</h1>
-          <p className="text-muted-foreground">Manage user accounts and permissions</p>
+          <p className="text-muted-foreground">Manage and monitor user accounts</p>
         </div>
 
-        {/* Search and Filters */}
+        {/* Filters */}
         <Card>
           <CardHeader>
-            <CardTitle>Search Users</CardTitle>
+            <CardTitle>Filter Users</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <div className="flex flex-col md:flex-row gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search by name or email..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
+              <Input
+                placeholder="Search users..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="md:w-64"
+              />
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-full md:w-48">
                   <SelectValue placeholder="Filter by status" />
@@ -116,7 +130,7 @@ const AdminUserManagement = () => {
         <Card>
           <CardHeader>
             <CardTitle>Users ({filteredUsers.length})</CardTitle>
-            <CardDescription>All registered users on the platform</CardDescription>
+            <CardDescription>View and manage all user accounts</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
@@ -127,7 +141,7 @@ const AdminUserManagement = () => {
                   <TableHead>Email</TableHead>
                   <TableHead>Phone</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Created</TableHead>
+                  <TableHead>Joined</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -139,11 +153,11 @@ const AdminUserManagement = () => {
                     <TableCell>{user.email}</TableCell>
                     <TableCell>{user.phone}</TableCell>
                     <TableCell>
-                      <Badge variant={user.status === 'active' ? 'default' : 'destructive'}>
+                      <Badge variant={user.status === 'active' ? 'secondary' : 'destructive'}>
                         {user.status}
                       </Badge>
                     </TableCell>
-                    <TableCell>{user.createdAt}</TableCell>
+                    <TableCell>{new Date(user.created_at).toLocaleDateString()}</TableCell>
                     <TableCell>
                       <div className="flex items-center space-x-2">
                         <Dialog>
@@ -156,33 +170,53 @@ const AdminUserManagement = () => {
                               <Eye className="h-4 w-4" />
                             </Button>
                           </DialogTrigger>
-                          <DialogContent>
+                          <DialogContent className="max-w-2xl">
                             <DialogHeader>
                               <DialogTitle>User Details</DialogTitle>
                               <DialogDescription>
-                                Detailed information about {selectedUser?.name}
+                                View details for user {selectedUser?.id}
                               </DialogDescription>
                             </DialogHeader>
                             {selectedUser && (
-                              <div className="space-y-4">
+                              <div className="space-y-6">
                                 <div className="grid grid-cols-2 gap-4">
                                   <div>
                                     <p className="text-sm font-medium">Events Organized</p>
-                                    <p className="text-2xl font-bold">{selectedUser.eventsOrganized}</p>
+                                    <p className="text-2xl font-bold">{selectedUser.events_organized}</p>
                                   </div>
                                   <div>
                                     <p className="text-sm font-medium">Events Participated</p>
-                                    <p className="text-2xl font-bold">{selectedUser.eventsParticipated}</p>
+                                    <p className="text-2xl font-bold">{selectedUser.events_participated}</p>
                                   </div>
                                 </div>
                                 <div>
                                   <p className="text-sm font-medium mb-2">Badges Earned</p>
                                   <div className="flex flex-wrap gap-2">
-                                    {selectedUser.badges.map((badge: string, index: number) => (
+                                    {selectedUser.badges.map((badge, index) => (
                                       <Badge key={index} variant="outline">{badge}</Badge>
                                     ))}
                                   </div>
                                 </div>
+
+                                {selectedUser.status === 'active' ? (
+                                  <Button
+                                    variant="destructive"
+                                    onClick={() => handleSuspendUser(selectedUser.id)}
+                                    className="w-full"
+                                  >
+                                    <Ban className="h-4 w-4 mr-2" />
+                                    Suspend User
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    variant="secondary"
+                                    onClick={() => handleActivateUser(selectedUser.id)}
+                                    className="w-full"
+                                  >
+                                    <UserCheck className="h-4 w-4 mr-2" />
+                                    Activate User
+                                  </Button>
+                                )}
                               </div>
                             )}
                           </DialogContent>
@@ -207,15 +241,6 @@ const AdminUserManagement = () => {
                             <UserCheck className="h-4 w-4" />
                           </Button>
                         )}
-
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteUser(user.id)}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>

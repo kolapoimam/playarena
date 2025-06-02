@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,26 +5,33 @@ import { Badge } from '@/components/ui/badge';
 import { Users, Calendar, DollarSign, AlertCircle, TrendingUp, Building2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '@/components/admin/AdminLayout';
+import { adminOperations, AdminMetrics } from '@/lib/admin';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const [metrics, setMetrics] = useState({
-    totalUsers: 2847,
-    totalEvents: 156,
-    pendingCashouts: 8,
-    totalRevenue: 45678.90,
-    activeVenues: 89,
-    newNotifications: 12
+  const [metrics, setMetrics] = useState<AdminMetrics>({
+    total_users: 0,
+    total_events: 0,
+    pending_cashouts: 0,
+    total_revenue: 0,
+    active_venues: 0,
+    new_notifications: 0
   });
 
-  // Mock real-time updates
+  // Fetch metrics
   useEffect(() => {
-    const interval = setInterval(() => {
-      setMetrics(prev => ({
-        ...prev,
-        newNotifications: Math.floor(Math.random() * 20) + 1
-      }));
-    }, 30000);
+    const fetchMetrics = async () => {
+      try {
+        const data = await adminOperations.getMetrics();
+        setMetrics(data);
+      } catch (error) {
+        console.error('Error fetching metrics:', error);
+      }
+    };
+
+    fetchMetrics();
+    // Refresh metrics every 5 minutes
+    const interval = setInterval(fetchMetrics, 300000);
 
     return () => clearInterval(interval);
   }, []);
@@ -66,8 +72,8 @@ const AdminDashboard = () => {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{metrics.totalUsers.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground">+12% from last month</p>
+              <div className="text-2xl font-bold">{metrics.total_users.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground">Active users</p>
             </CardContent>
           </Card>
 
@@ -77,8 +83,8 @@ const AdminDashboard = () => {
               <Calendar className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{metrics.totalEvents}</div>
-              <p className="text-xs text-muted-foreground">+8% from last month</p>
+              <div className="text-2xl font-bold">{metrics.total_events}</div>
+              <p className="text-xs text-muted-foreground">Active events</p>
             </CardContent>
           </Card>
 
@@ -88,7 +94,7 @@ const AdminDashboard = () => {
               <AlertCircle className="h-4 w-4 text-yellow-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{metrics.pendingCashouts}</div>
+              <div className="text-2xl font-bold">{metrics.pending_cashouts}</div>
               <p className="text-xs text-muted-foreground">Requires attention</p>
             </CardContent>
           </Card>
@@ -99,8 +105,8 @@ const AdminDashboard = () => {
               <DollarSign className="h-4 w-4 text-primary-light" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">₦{metrics.totalRevenue.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground">+15% from last month</p>
+              <div className="text-2xl font-bold">₦{metrics.total_revenue.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground">Total platform revenue</p>
             </CardContent>
           </Card>
 
@@ -110,69 +116,26 @@ const AdminDashboard = () => {
               <Building2 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{metrics.activeVenues}</div>
-              <p className="text-xs text-muted-foreground">+5% from last month</p>
+              <div className="text-2xl font-bold">{metrics.active_venues}</div>
+              <p className="text-xs text-muted-foreground">Verified venues</p>
             </CardContent>
           </Card>
         </div>
 
         {/* Quick Actions */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-            <CardDescription>Perform common administrative tasks</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {quickActions.map((action, index) => (
-                <Button
-                  key={index}
-                  variant="outline"
-                  className="h-auto p-4 flex flex-col items-center space-y-2 hover:bg-primary-light/10 hover:border-primary-light"
-                  onClick={() => navigate(action.path)}
-                >
-                  <div className={`p-2 rounded-md ${action.color}`}>
-                    <action.icon className="h-5 w-5 text-white" />
-                  </div>
-                  <span className="text-sm text-center">{action.label}</span>
-                </Button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Recent Activity */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-            <CardDescription>Latest platform activities</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between border-b pb-2">
-                <div>
-                  <p className="font-medium">New cashout request</p>
-                  <p className="text-sm text-muted-foreground">Lagos Pitch owner - ₦12,500</p>
-                </div>
-                <Badge variant="outline">2 mins ago</Badge>
-              </div>
-              <div className="flex items-center justify-between border-b pb-2">
-                <div>
-                  <p className="font-medium">Event created</p>
-                  <p className="text-sm text-muted-foreground">5-a-side football match in Abuja</p>
-                </div>
-                <Badge variant="outline">15 mins ago</Badge>
-              </div>
-              <div className="flex items-center justify-between border-b pb-2">
-                <div>
-                  <p className="font-medium">Venue verification</p>
-                  <p className="text-sm text-muted-foreground">Victory Sports Complex - Verified</p>
-                </div>
-                <Badge variant="outline">1 hour ago</Badge>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {quickActions.map((action, index) => (
+            <Button
+              key={index}
+              variant="outline"
+              className={`h-auto p-4 flex flex-col items-center justify-center space-y-2 ${action.color}`}
+              onClick={() => navigate(action.path)}
+            >
+              <action.icon className="h-6 w-6" />
+              <span>{action.label}</span>
+            </Button>
+          ))}
+        </div>
       </div>
     </AdminLayout>
   );
