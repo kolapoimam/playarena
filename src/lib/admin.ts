@@ -212,21 +212,11 @@ export const adminOperations = {
 
   createFirstAdmin: async (email: string, password: string, secretKey: string) => {
     try {
-      // Debug logs
-      console.log('Environment variables:', {
-        VITE_FIRST_ADMIN_SECRET: import.meta.env.VITE_FIRST_ADMIN_SECRET,
-        NODE_ENV: import.meta.env.MODE,
-        VITE_MODE: import.meta.env.VITE_MODE
-      });
+      // Debug log
       console.log('Received secret key:', secretKey);
       console.log('Expected secret key:', import.meta.env.VITE_FIRST_ADMIN_SECRET);
-      console.log('Keys match:', secretKey === import.meta.env.VITE_FIRST_ADMIN_SECRET);
 
       // Verify the secret key matches the environment variable
-      if (!import.meta.env.VITE_FIRST_ADMIN_SECRET) {
-        throw new Error('Admin secret key not configured');
-      }
-
       if (secretKey !== import.meta.env.VITE_FIRST_ADMIN_SECRET) {
         throw new Error('Invalid secret key');
       }

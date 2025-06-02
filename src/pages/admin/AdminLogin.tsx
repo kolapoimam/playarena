@@ -49,22 +49,26 @@ const AdminLogin = () => {
     setError(null);
 
     try {
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (authError) throw authError;
-
-      // Check if user is an admin
+      // Check if admin exists and password matches
       const { data: adminData, error: adminError } = await supabase
         .from('admins')
         .select('*')
-        .eq('user_id', authData.user?.id)
+        .eq('email', email)
         .single();
 
       if (adminError || !adminData) {
-        throw new Error('Unauthorized access');
+        throw new Error('Invalid login credentials');
+      }
+
+      // Verify password using Supabase's built-in crypto functions
+      const { data: verifyData, error: verifyError } = await supabase
+        .rpc('verify_admin_password', {
+          admin_email: email,
+          provided_password: password
+        });
+
+      if (verifyError || !verifyData) {
+        throw new Error('Invalid login credentials');
       }
 
       // Store admin session
@@ -72,7 +76,7 @@ const AdminLogin = () => {
         id: adminData.id,
         email: adminData.email,
         role: adminData.role,
-        permissions: adminData.permissions
+        status: adminData.status
       }));
 
       // Log admin action
@@ -82,6 +86,12 @@ const AdminLogin = () => {
         details: 'Admin login successful',
         ip_address: window.location.hostname
       });
+
+      // Update last_login timestamp
+      await supabase
+        .from('admins')
+        .update({ last_login: new Date().toISOString() })
+        .eq('id', adminData.id);
 
       navigate('/admin/dashboard');
     } catch (err: any) {
