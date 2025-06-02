@@ -109,23 +109,10 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
     }
 
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      const userId = userData.user?.id;
-
-      if (!userId || userId !== event.host_id) {
-        toast({
-          title: "Error",
-          description: "You are not authorized to view this event's balance.",
-          variant: "destructive",
-        });
-        setWalletBalance(0);
-        return;
-      }
-
       const { data: walletData, error: walletError } = await supabase
         .from('cycling_wallets')
         .select('balance')
-        .eq('host_id', userId)
+        .eq('host_id', event.host_id)
         .maybeSingle();
 
       if (walletError) throw walletError;
