@@ -39,7 +39,9 @@ const AuditLog = () => {
           .from('admin_actions')
           .select(`
             *,
-            admins ( email )
+            admin:admins(
+              email
+            )
           `)
           .order('created_at', { ascending: false });
 
@@ -54,7 +56,7 @@ const AuditLog = () => {
         const formattedLogs = data.map(log => ({
           id: log.id,
           admin_id: log.admin_id,
-          admin_email: log.admins?.email,
+          admin_email: log.admin?.email,
           action: log.action,
           details: log.details,
           ip_address: log.ip_address,

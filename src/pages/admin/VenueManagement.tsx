@@ -43,7 +43,7 @@ const VenueManagement = () => {
           .from('venues')
           .select(`
             *,
-            owner:organizers(full_name, email, phone),
+            owner:profiles(full_name, email, phone),
             events:matches(count),
             revenue:venue_booking_cashout(sum(amount))
           `);

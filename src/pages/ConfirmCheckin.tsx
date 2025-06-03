@@ -193,9 +193,9 @@ const ConfirmCheckin = () => {
 
         if (userId) {
           const { data: walletData, error: walletError } = await supabase
-            .from("wallets")
+            .from("cycling_wallets")
             .select("balance")
-            .eq("organizer_id", userId)
+            .eq("host_id", userId)
             .single();
 
           if (!walletError && walletData) {

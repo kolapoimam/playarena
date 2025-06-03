@@ -232,7 +232,6 @@ const AppRoutes = () => {
 const App = () => {
   useGoogleAnalytics();
   const [showSplash, setShowSplash] = useState(true);
-  const location = useLocation();
 
   useEffect(() => {
     const seen = sessionStorage.getItem('seenSplash');
@@ -270,8 +269,6 @@ const App = () => {
     return <SplashScreen />;
   }
 
-  const isAdminRoute = location.pathname.startsWith('/admin');
-
   return (
     <QueryClientProvider client={queryClient}>
       <MantineProvider>
@@ -280,7 +277,7 @@ const App = () => {
           <Router>
             <ScrollToTop />
             <AppRoutes />
-            {!isAdminRoute && <InstallPrompt />}
+            <InstallPrompt />
           </Router>
         </TooltipProvider>
       </MantineProvider>
