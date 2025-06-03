@@ -13,7 +13,9 @@ export default function AuthCallback() {
       try {
         // Get the session from the OAuth callback
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        if (sessionError) throw sessionError;
+        if (sessionError) {
+          throw sessionError;
+        }
 
         if (session?.user) {
           // Get the user's identity data
@@ -30,7 +32,7 @@ export default function AuthCallback() {
                            identity?.identity_data?.family_name || 
                            'User';
 
-            // Create or update the user's profile
+            // Create or update the user's profile, handling potential trigger errors
             const { error: profileError } = await supabase
               .from("profiles")
               .upsert({
@@ -44,16 +46,19 @@ export default function AuthCallback() {
                 onConflict: 'id',
               })
               .catch((err) => {
-                // Log and ignore specific errors related to update_admin_metrics
                 console.warn("Profile upsert error (possibly due to trigger):", err.message);
                 return { error: null }; // Proceed even if the trigger fails
               });
 
             if (profileError) throw profileError;
 
-            // Redirect to profile page
+            // Redirect to profile on success
             navigate("/profile");
+          } else {
+            throw new Error("No user data available after authentication.");
           }
+        } else {
+          throw new Error("No session available after authentication.");
         }
       } catch (error) {
         console.error("Auth callback error:", error);
@@ -62,7 +67,7 @@ export default function AuthCallback() {
           description: "There was a problem completing your sign in. Please try again.",
           variant: "destructive",
         });
-        navigate("/auth");
+        navigate("/auth"); // Redirect to /auth on error
       }
     };
 
