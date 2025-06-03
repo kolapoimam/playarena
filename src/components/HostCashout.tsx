@@ -489,7 +489,7 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
             <div>
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Account Name</label>
               <Input
-                value={accountName
+               value={accountName}
                 onChange={(e) => handleInputChange('accountName', e.target.value)}
                 placeholder="Enter account name"
                 className="mt-1"
