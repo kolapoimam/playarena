@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Eye, EyeOff } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { useTheme } from "next-themes";
 import { NavLink } from "react-router-dom";
@@ -20,7 +20,6 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
   const [showForgotPassword, setShowForgotPassword] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
   const { theme } = useTheme();
 
   const validateEmail = (email) => {
@@ -70,6 +69,7 @@ const Auth = () => {
             title: "Success! Check Your Email",
             description: "We've sent a confirmation link to your email. Please verify your email to complete registration.",
           });
+          // Reset form
           setEmail("");
           setPassword("");
           setFirstName("");
@@ -109,24 +109,49 @@ const Auth = () => {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: `${window.location.origin}/profile`,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
           },
         },
       });
-      
       if (error) throw error;
-      
-      // The OAuth flow will handle the redirect
-      // The callback route will handle profile creation
+
+      // Get user data after Google login
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
+
+      if (userData.user) {
+        const identity = userData.user.identities?.find(id => id.provider === 'google');
+        const firstName = identity?.identity_data?.first_name || identity?.identity_data?.name || userData.user.email?.split('@')[0] || 'Unknown';
+        const lastName = identity?.identity_data?.last_name || identity?.identity_data?.family_name || 'User';
+
+        // Upsert profile to ensure first_name and last_name are set
+        const { error: profileError } = await supabase
+          .from("profiles")
+          .upsert({
+            id: userData.user.id,
+            email: userData.user.email,
+            first_name: firstName,
+            last_name: lastName,
+            is_initial_setup: true,
+            updated_at: new Date().toISOString(),
+          }, {
+            onConflict: 'id',
+          });
+
+        if (profileError) throw profileError;
+
+        navigate("/profile");
+      }
     } catch (error) {
       toast({
         title: "Oops, Out of Bounds!",
         description: error.message,
         variant: "destructive",
       });
+    } finally {
       setLoading(false);
     }
   };
@@ -246,23 +271,14 @@ const Auth = () => {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 {isSignUp ? "Create Password" : "Password"}
               </label>
-              <div className="relative">
-                <Input
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Your Password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="w-full pr-10"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-                >
-                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                </button>
-              </div>
+              <Input
+                type="password"
+                placeholder="Your Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="w-full"
+              />
             </div>
 
             {!isSignUp && (
