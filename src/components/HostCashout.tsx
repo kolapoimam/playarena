@@ -18,6 +18,10 @@ type CyclingEvent = {
   host_id: string;
   host_name: string;
   host_phone: string;
+  supercode: string;
+  is_free: boolean;
+  price?: number;
+  cancellation_status: boolean;
   cycling_attendees: {
     id_uuid: string;
     attendee_name: string;
@@ -95,6 +99,22 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
     }
 
     try {
+      const { data: attendeesData, error: attendeesError } = await supabase
+        .from('cycling_attendees')
+        .select('status, number_of_slots')
+        .eq('cycling_event_id_uuid', event.id_uuid);
+
+      if (attendeesError) throw attendeesError;
+
+      let balance = 0;
+      if (!event.is_free && event.price) {
+        const checkedInAttendees = attendeesData?.filter((a) => a.status === "checked_in") || [];
+        balance = checkedInAttendees.reduce(
+          (sum, attendee) => sum + ((Number(attendee.number_of_slots) || 1) * (event.price || 0)),
+          0
+        );
+      }
+
       const { data: walletData, error: walletError } = await supabase
         .from('cycling_wallets')
         .select('balance')
@@ -103,7 +123,7 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
 
       if (walletError) throw walletError;
 
-      setWalletBalance(walletData?.balance || 0);
+      setWalletBalance(walletData?.balance || balance);
     } catch (error: any) {
       console.error('Error fetching wallet balance:', error);
       toast({
@@ -277,13 +297,6 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
     setLoading(true);
 
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      const userId = userData.user?.id;
-
-      if (!userId || userId !== event.host_id) {
-        throw new Error("You are not authorized to request a cashout for this event.");
-      }
-
       const { error: cashoutError } = await supabase
         .from('cycling_cashouts')
         .insert({
@@ -295,7 +308,7 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
           account_name: accountName,
           status: 'Review',
           temp_identifier: localTempIdentifier,
-          host_id: userId,
+          host_id: event.host_id,
           created_at: new Date().toISOString(),
         });
 
@@ -303,7 +316,7 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
 
       const { error: walletError } = await supabase
         .rpc('update_cycling_wallet_balance', {
-          p_host_id: userId,
+          p_host_id: event.host_id,
           p_amount: amount,
           p_operation: 'subtract',
         });
