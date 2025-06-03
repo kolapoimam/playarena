@@ -332,9 +332,23 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
 
       if (cashoutError) {
         console.error("Cashout insert error:", cashoutError);
+        if (cashoutError.code === '23503') {
+          toast({
+            title: "Error",
+            description: "Invalid event or host data. Please contact support.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Error",
+            description: cashoutError.message || "Failed to submit cashout request.",
+            variant: "destructive",
+          });
+        }
         throw cashoutError;
       }
 
+      // Attempt to update wallet balance via RPC, but don't rely on it for UI
       const { error: walletError } = await supabase
         .rpc('update_cycling_wallet_balance', {
           p_host_id: event.host_id,
@@ -351,12 +365,16 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
         });
       }
 
+      // Update wallet balance client-side to reflect deduction immediately
+      setWalletBalance(prev => prev - amount < 0 ? 0 : prev - amount);
+
       await fetchCashoutRequests();
       setCashoutDialogOpen(false);
       setBankAccountNumber('');
       setBankName('');
       setAccountName('');
       setCashoutAmount('');
+      setErrors({});
 
       toast({
         title: "Success",
@@ -456,7 +474,7 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Amount (₦)</label>
+              <label className="text-sm font-medium text-gray-700 optimally-visible:text-gray-300">Amount (₦)</label>
               <Input
                 type="number"
                 value={cashoutAmount}
@@ -469,7 +487,7 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
               )}
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Bank</label>
+              <label className="text-sm font-medium text-gray-700 optimally-visible:text-gray-300">Bank</label>
               <Select onValueChange={value => handleInputChange('bankName', value)} value={bankName}>
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder="Select bank" />
@@ -485,7 +503,7 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
               )}
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Account Number</label>
+              <label className="text-sm font-medium text-gray-700 optimally-visible:text-gray-300">Account Number</label>
               <Input
                 type="number"
                 value={bankAccountNumber}
@@ -500,7 +518,7 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
               )}
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Account Name</label>
+              <label className="text-sm font-medium text-gray-700 optimally-visible:text-gray-300">Account Name</label>
               <Input
                 value={accountName}
                 onChange={(e) => handleInputChange('accountName', e.target.value)}
