@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Search, Eye, Ban, UserCheck } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
-import { adminOperations, AdminUser } from '@/lib/admin';
+import { adminOperations } from '@/lib/admin';
+import { supabase } from '@/lib/supabase';
 
 const AdminUserManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -20,25 +21,70 @@ const AdminUserManagement = () => {
 
   // Fetch users
   useEffect(() => {
-    const fetchUsers = async () => {
+    const getUsers = async () => {
       try {
         setLoading(true);
-        const { users } = await adminOperations.getUsers(
-          1,
-          50,
-          statusFilter === 'all' ? undefined : statusFilter
-        );
-        setUsers(users);
+        const { data, error } = await supabase
+          .from('profiles')
+          .select(`
+            *,
+            events_organized:matches(count),
+            events_participated:cycling_attendees(count),
+            user_badges(badge_id!inner(badges(name)))
+          `)
+          .range(0, 49);
+
+        if (error) throw error;
+
+        // Fetch additional data from cycling_attendees, players, hosts, and organizers
+        const { data: cyclingData, error: cyclingError } = await supabase
+          .from('cycling_attendees')
+          .select('*');
+
+        const { data: playersData, error: playersError } = await supabase
+          .from('players')
+          .select('*');
+
+        const { data: hostsData, error: hostsError } = await supabase
+          .from('hosts')
+          .select('*');
+
+        const { data: organizersData, error: organizersError } = await supabase
+          .from('organizers')
+          .select('*');
+
+        if (cyclingError) throw cyclingError;
+        if (playersError) throw playersError;
+        if (hostsError) throw hostsError;
+        if (organizersError) throw organizersError;
+
+        // Merge the additional data into the profiles data
+        const mergedData = data.map(profile => {
+          const cyclingAttendee = cyclingData.find(ca => ca.user_id === profile.id);
+          const player = playersData.find(p => p.user_id === profile.id);
+          const host = hostsData.find(h => h.user_id === profile.id);
+          const organizer = organizersData.find(o => o.user_id === profile.id);
+
+          return {
+            ...profile,
+            cycling_attendee: cyclingAttendee,
+            player: player,
+            host: host,
+            organizer: organizer
+          };
+        });
+
+        setUsers(mergedData);
         setError(null);
-      } catch (err: any) {
-        setError(err.message || 'Failed to fetch users. Please check the database schema and try again.');
-        console.error('Error fetching users:', err);
+      } catch (error) {
+        console.error('Error fetching users:', error);
+        setError('Failed to fetch users: ' + error.message);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchUsers();
+    getUsers();
   }, [statusFilter]);
 
   const handleSuspendUser = async (userId: string) => {

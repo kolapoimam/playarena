@@ -173,7 +173,7 @@ const ConfirmCheckin = () => {
         const { data, error } = await supabase
           .from("cycling_events_view")
           .select(`
-            id_uuid, slug, title, event_date, start_time, max_attendees, host_id, host_name, host_phone, supercode, is_free, price, status, start_landmark_id, start_landmark, cycling_attendees
+            id_uuid, slug, title, event_date, start_time, max_attendees, host_id, host_name, host_phone, supercode, is_free, price, status, start_landmark_id, start_landmark, cycling_attendees!cycling_attendees_cycling_event_id_fkey
           `)
           .eq("supercode", superCode)
           .single();

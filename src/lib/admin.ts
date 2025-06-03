@@ -16,14 +16,18 @@ export interface AdminMetrics {
 
 export interface AdminUser {
   id: string;
-  name: string;
   email: string;
-  phone: string | null;
-  status: 'active' | 'suspended';
+  full_name: string;
+  avatar_url: string;
+  status: string;
   created_at: string;
-  events_organized: number;
-  events_participated: number;
-  badges: string[];
+  last_sign_in: string;
+  matches: any;
+  name: string;
+  phone: string;
+  events_organized: any;
+  events_participated: any;
+  badges: any;
 }
 
 export interface AdminEvent {
@@ -42,7 +46,7 @@ export interface AdminEvent {
 export interface AdminCashout {
   id: string;
   organizer_name: string;
-  organizer_type: 'Event Organizer' | 'Venue Owner';
+  organizer_type: 'Event Organizer' | 'Venue Owner' | 'Cycling Host';
   amount: number;
   status: 'pending' | 'approved' | 'rejected' | 'processed';
   requested_at: string;
@@ -54,6 +58,14 @@ export interface AdminCashout {
     account_number: string;
   };
   rejection_reason?: string;
+}
+
+export interface AdminVenue {
+  id: string;
+  name: string;
+  owner: string;
+  events: number;
+  revenue: number;
 }
 
 // Database Operations
@@ -110,6 +122,10 @@ export const adminOperations = {
       events_organized: user.events_organized?.[0]?.count || 0,
       events_participated: user.events_participated?.[0]?.count || 0,
       badges: user.user_badges?.map((ub: any) => ub.badges.name) || [],
+      full_name: user.full_name || 'Unknown',
+      avatar_url: user.avatar_url || '',
+      last_sign_in: user.last_sign_in || '',
+      matches: user.matches || []
     }));
 
     return { users, total: count || 0 };
@@ -120,7 +136,7 @@ export const adminOperations = {
     let query = supabase
       .from('matches')
       .select(
-        '*,organizer:profiles(full_name),venue:venues(name),tickets_sold:tickets(count),feedback:match_feedback(avg(rating))',
+        '*,organizer:organizers(full_name),venue:venues(name),tickets_sold:tickets(count),feedback:match_feedback(avg(rating))',
         { count: 'exact' }
       );
 
@@ -157,29 +173,51 @@ export const adminOperations = {
 
   // Get cashouts with pagination and filters
   async getCashouts(page: number = 1, limit: number = 10, status?: string): Promise<{ cashouts: AdminCashout[], total: number }> {
-    let query = supabase
+    // Fetch venue booking cashouts
+    let venueQuery = supabase
       .from('venue_booking_cashout')
       .select(
-        '*,organizer:profiles(full_name, bank_details),venue:venues(name)',
+        '*,organizer:organizers(full_name, bank_details),venue:venues(name)',
         { count: 'exact' }
       );
 
     if (status) {
-      query = query.eq('status', status);
+      venueQuery = venueQuery.eq('status', status);
     }
 
-    const { data, error, count } = await query
+    const { data: venueData, error: venueError, count: venueCount } = await venueQuery
       .range((page - 1) * limit, page * limit - 1);
 
-    if (error) {
-      console.error('Supabase query error in getCashouts:', error);
-      throw new Error(`Failed to fetch cashouts: ${error.message}`);
+    if (venueError) {
+      console.error('Supabase query error in getCashouts (venue):', venueError);
+      throw new Error(`Failed to fetch venue cashouts: ${venueError.message}`);
     }
 
-    const cashouts = data.map(cashout => ({
+    // Fetch cycling cashouts
+    let cyclingQuery = supabase
+      .from('cycling_cashouts')
+      .select(
+        '*,organizer:organizers(full_name, bank_details),venue:venues(name)',
+        { count: 'exact' }
+      );
+
+    if (status) {
+      cyclingQuery = cyclingQuery.eq('status', status);
+    }
+
+    const { data: cyclingData, error: cyclingError, count: cyclingCount } = await cyclingQuery
+      .range((page - 1) * limit, page * limit - 1);
+
+    if (cyclingError) {
+      console.error('Supabase query error in getCashouts (cycling):', cyclingError);
+      throw new Error(`Failed to fetch cycling cashouts: ${cyclingError.message}`);
+    }
+
+    // Merge the results
+    const venueCashouts = venueData.map(cashout => ({
       id: cashout.id,
       organizer_name: cashout.organizer?.full_name || 'Unknown',
-      organizer_type: cashout.type || 'Unknown',
+      organizer_type: 'Venue Owner' as const,
       amount: cashout.amount || 0,
       status: cashout.status,
       requested_at: cashout.created_at,
@@ -193,7 +231,27 @@ export const adminOperations = {
       rejection_reason: cashout.rejection_reason,
     }));
 
-    return { cashouts, total: count || 0 };
+    const cyclingCashouts = cyclingData.map(cashout => ({
+      id: cashout.id,
+      organizer_name: cashout.organizer?.full_name || 'Unknown',
+      organizer_type: 'Cycling Host' as const,
+      amount: cashout.amount || 0,
+      status: cashout.status,
+      requested_at: cashout.created_at,
+      event_details: cashout.venue?.name || 'Unknown',
+      checked_in_participants: cashout.checked_in_participants || 0,
+      bank_details: cashout.organizer?.bank_details || {
+        account_name: '',
+        bank_name: '',
+        account_number: '',
+      },
+      rejection_reason: cashout.rejection_reason,
+    }));
+
+    const cashouts = [...venueCashouts, ...cyclingCashouts];
+    const total = (venueCount || 0) + (cyclingCount || 0);
+
+    return { cashouts, total };
   },
 
   // Update cashout status
@@ -305,5 +363,37 @@ export const adminOperations = {
       console.error('Admin creation error:', error);
       throw new Error(`Failed to create admin: ${error.message}`);
     }
+  },
+
+  // Get venues with pagination and filters
+  async getVenues(page: number = 1, limit: number = 10, status?: string): Promise<{ venues: AdminVenue[], total: number }> {
+    let query = supabase
+      .from('venues')
+      .select(
+        '*,owner:organizers(full_name,email,phone),events:matches(count),revenue:venue_booking_cashout(sum(amount))',
+        { count: 'exact' }
+      );
+
+    if (status) {
+      query = query.eq('status', status);
+    }
+
+    const { data, error, count } = await query
+      .range((page - 1) * limit, page * limit - 1);
+
+    if (error) {
+      console.error('Supabase query error in getVenues:', error);
+      throw new Error(`Failed to fetch venues: ${error.message}`);
+    }
+
+    const venues = data.map(venue => ({
+      id: venue.id,
+      name: venue.name,
+      owner: venue.owner?.full_name || 'Unknown',
+      events: venue.events?.[0]?.count || 0,
+      revenue: venue.revenue?.[0]?.sum || 0,
+    }));
+
+    return { venues, total: count || 0 };
   },
 };

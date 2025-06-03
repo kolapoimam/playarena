@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { Goal, Football, ArrowLeft } from "lucide-react";
+import { Goal, Volleyball, ArrowLeft } from "lucide-react";
 
 export default function NotFound() {
   const navigate = useNavigate();
