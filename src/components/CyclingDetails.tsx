@@ -64,11 +64,9 @@ const CyclingDetails = ({ event: initialEvent, cashout, handleCancel, loading, i
   const [localWalletBalance, setLocalWalletBalance] = useState<number>(walletBalance || 0);
   const [event, setEvent] = useState<CyclingEvent | null>(initialEvent);
 
-  // Fetch event details with landmark data
   const fetchEventDetails = async () => {
     if (!initialEvent?.id_uuid) return;
     try {
-      // Fetch the event data with start_landmark_name
       const { data: eventData, error: eventError } = await supabase
         .from("cycling_events")
         .select(`
@@ -103,14 +101,21 @@ const CyclingDetails = ({ event: initialEvent, cashout, handleCancel, loading, i
         .eq("id_uuid", initialEvent.id_uuid)
         .single();
 
-      if (eventError) throw eventError;
+      if (eventError) {
+        console.error("Event fetch error:", eventError);
+        throw eventError;
+      }
+
+      if (!eventData.start_landmark_name) {
+        console.warn(`No start_landmark_name for event ${initialEvent.id_uuid}`);
+      }
 
       setEvent(eventData as CyclingEvent);
     } catch (error) {
       console.error("Error fetching event details:", error);
       toast({
         title: "Error",
-        description: "Failed to fetch event details.",
+        description: "Failed to fetch event details. Please try again.",
         variant: "destructive",
       });
     }
@@ -128,42 +133,47 @@ const CyclingDetails = ({ event: initialEvent, cashout, handleCancel, loading, i
 
     const fetchWalletBalance = async () => {
       try {
-        const { data: attendeesData, error } = await supabase
-          .from("cycling_attendees")
-          .select("status")
-          .eq("cycling_event_id_uuid", event.id_uuid)
-          .throwOnError();
-
-        if (error) throw error;
-
         let balance = 0;
+
+        // Fetch attendees
+        const { data: attendeesData, error: attendeesError } = await supabase
+          .from("cycling_attendees")
+          .select("status, number_of_slots")
+          .eq("cycling_event_id_uuid", event.id_uuid);
+
+        if (attendeesError) {
+          console.error("Attendees fetch error:", attendeesError);
+          throw attendeesError;
+        }
+
         if (!event.is_free && event.price) {
           const checkedInAttendees = attendeesData?.filter((a) => a?.status === "checked_in") || [];
           balance = checkedInAttendees.reduce(
-            (sum, attendee) => sum + (event.price || 0),
+            (sum, attendee) => sum + ((Number(attendee.number_of_slots) || 1) * (event.price || 0)),
             0
           );
         }
 
+        // Fetch wallet balance
         const { data: walletData, error: walletError } = await supabase
           .from("cycling_wallets")
           .select("balance")
           .eq("host_id", event.host_id)
-          .single()
-          .throwOnError();
+          .maybeSingle();
 
         if (walletError) {
           console.error("Wallet fetch error:", walletError);
-        } else if (walletData) {
+        } else if (walletData?.balance !== undefined) {
           balance = walletData.balance;
         }
 
-        setLocalWalletBalance(balance < 0 ? 0 : balance);
+        if (balance < 0) balance = 0;
+        setLocalWalletBalance(balance);
       } catch (error) {
         console.error("Error fetching wallet balance:", error);
         toast({
           title: "Error",
-          description: "Failed to calculate wallet balance.",
+          description: "Failed to calculate wallet balance. Please try again.",
           variant: "destructive",
         });
         setLocalWalletBalance(0);
