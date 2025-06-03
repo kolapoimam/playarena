@@ -300,14 +300,16 @@ const AttendeesManagement = ({
     try {
       console.log('Checking in attendee:', { attendeeId, code });
 
-      // Update attendee status using confirmation code
+      // Update attendee status using confirmation code and event ID
       const { error: updateError } = await supabase
         .from("cycling_attendees")
         .update({ 
           status: "checked_in",
           updated_at: new Date().toISOString()
         })
-        .eq("confirmation_code", code);
+        .eq("confirmation_code", code)
+        .eq("cycling_event_id_uuid", event.id_uuid)
+        .single();
 
       if (updateError) {
         console.error('Update error:', updateError);
