@@ -1,10 +1,8 @@
-// ThemeToggle.tsx
 import { useEffect, useState } from "react";
-import { Moon, Sun } from "lucide-react";
 
 export const useTheme = () => {
   const [theme, setTheme] = useState<"light" | "dark">("light");
-  const [isSpinning, setIsSpinning] = useState(false);
+  const [isToggling, setIsToggling] = useState(false);
 
   useEffect(() => {
     const storedTheme = localStorage.getItem("theme");
@@ -18,7 +16,7 @@ export const useTheme = () => {
   }, []);
 
   const toggleTheme = () => {
-    setIsSpinning(true);
+    setIsToggling(true);
     const newTheme = theme === "light" ? "dark" : "light";
     setTheme(newTheme);
     localStorage.setItem("theme", newTheme);
@@ -27,35 +25,50 @@ export const useTheme = () => {
     } else {
       document.documentElement.classList.remove("dark");
     }
-    setTimeout(() => setIsSpinning(false), 500);
+    setTimeout(() => setIsToggling(false), 300);
   };
 
-  return { theme, toggleTheme, isSpinning };
+  return { theme, toggleTheme, isToggling };
 };
 
 export default function ThemeToggle() {
-  const { theme, toggleTheme, isSpinning } = useTheme();
+  const { theme, toggleTheme, isToggling } = useTheme();
 
   return (
     <button
       onClick={toggleTheme}
-      className="p-2 rounded-full hover:opacity-80 transition-all duration-200"
+      className="relative w-16 h-8 flex items-center rounded-full p-1 cursor-pointer transition-all duration-300 
+        bg-gradient-to-r from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 hover:opacity-90"
       aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
     >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke={theme === "light" ? "#1a1a1a" : "#ffffff"}
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        className={`w-5 h-5 transition-all duration-200 ${isSpinning ? "animate-spin" : ""}`}
+      <div
+        className={`w-6 h-6 rounded-full shadow-md transform transition-all duration-300 flex items-center justify-center
+          ${theme === "light" ? "translate-x-0 bg-yellow-400" : "translate-x-8 bg-blue-600"} 
+          ${isToggling ? "scale-90" : "scale-100"}`}
       >
-        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" />
-        <path d="M12 6c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm0 10c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z" />
-        <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 6c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z" />
-      </svg>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke={theme === "light" ? "#ffffff" : "#ffffff"}
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={`w-4 h-4 ${isToggling ? "animate-pulse" : ""}`}
+        >
+          {theme === "light" ? (
+            // Light bulb icon for light mode
+            <path d="M12 2a4 4 0 0 1 4 4c0 2-1 3-1 3h-6s-1-1-1-3a4 4 0 0 1 4-4zm0 12v2m-2 2h4m-6-8v4h6v-4" />
+          ) : (
+            // Light bulb off icon for dark mode
+            <path d="M12 2a4 4 0 0 1 4 4c0 2-1 3-1 3h-6s-1-1-1-3a4 4 0 0 1 4-4zm0 12v2m-2 2h4" />
+          )}
+        </svg>
+      </div>
+      <div className="absolute inset-0 flex items-center justify-between px-2 text-xs font-semibold">
+        <span className={theme === "light" ? "text-yellow-600" : "text-gray-400"}>ON</span>
+        <span className={theme === "dark" ? "text-blue-400" : "text-gray-400"}>OFF</span>
+      </div>
     </button>
   );
 }
