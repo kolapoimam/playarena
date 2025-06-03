@@ -336,12 +336,21 @@ const AttendeesManagement = ({
       setCheckinDialogOpen(true);
 
       toast({
+        title: "Success",
+        description: `${attendee.attendee_name} has been checked in successfully.`,
+      });
+    } catch (error: any) {
+      console.error('Check-in error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to check in attendee. Please try again.",
+        variant: "destructive",
       });
       // Revert UI state if update failed
       setAttendeeStatuses((prev) =>
         prev.map((status) =>
           status.id_uuid === attendeeId
-            ? { ...status, status: currentStatus || "registered" }
+            ? { ...status, status: attendee.status }
             : status
         )
       );
