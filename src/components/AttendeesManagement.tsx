@@ -280,16 +280,6 @@ const AttendeesManagement = ({
       return;
     }
 
-    // Check if attendee is already checked in
-    if (attendee.status === "checked_in") {
-      toast({
-        title: "Already Checked In",
-        description: "This attendee has already been checked in.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     const code = checkinCodes[attendeeId];
     if (!code || code.length !== 6) {
       setCheckinCodeErrors((prev) => ({
@@ -307,64 +297,33 @@ const AttendeesManagement = ({
     setCheckingInAttendees((prev) => ({ ...prev, [attendeeId]: true }));
     setLoading(true);
 
-    let currentStatus: "registered" | "checked_in" | "absent" | null = null;
-
     try {
       console.log('Checking in attendee:', { attendeeId, code });
 
-      // Verify attendee and current status
-      const { data, error: selectError } = await supabase
-        .from("cycling_attendees")
-        .select("id_uuid, confirmation_code, status")
-        .eq("id_uuid", attendeeId)
-        .single();
-
-      if (selectError || !data) {
-        console.error('Select error:', selectError);
-        throw new Error("Attendee not found in database");
-      }
-
-      currentStatus = data.status as "registered" | "checked_in" | "absent";
-
-      if (data.status !== "registered") {
-        throw new Error("Attendee is already checked in or marked absent");
-      }
-
-      if (data.confirmation_code !== code) {
-        throw new Error("Invalid confirmation code");
-      }
-
-      // Update attendee status
-      const { error: updateError, data: updateData } = await supabase
+      // Update attendee status using confirmation code
+      const { error: updateError } = await supabase
         .from("cycling_attendees")
         .update({ 
           status: "checked_in",
           updated_at: new Date().toISOString()
         })
-        .eq("id_uuid", attendeeId)
-        .eq("confirmation_code", code)
-        .select()
-        .single();
+        .eq("confirmation_code", code);
 
       if (updateError) {
         console.error('Update error:', updateError);
-        throw new Error("Failed to update attendee status");
-      }
-
-      if (!updateData) {
-        throw new Error("No rows updated");
+        throw new Error(`Failed to update attendee status: ${updateError.message}`);
       }
 
       // Update local state
-      setAttendeeStatuses((prev) =>
-        prev.map((status) =>
+      setAttendeeStatuses((prev: AttendeeStatus[]) => (
+        [...prev.map((status: AttendeeStatus) =>
           status.id_uuid === attendeeId
             ? { ...status, status: "checked_in" }
             : status
-        )
-      );
+        )] as AttendeeStatus[]
+      ));
 
-      // Refresh event data
+      // Refresh event data to get updated status
       await fetchEvent();
 
       setCheckinAttendee({
@@ -375,28 +334,6 @@ const AttendeesManagement = ({
       setCheckinDialogOpen(true);
 
       toast({
-        title: "Success",
-        description: `${attendee.attendee_name} has been checked in successfully.`,
-      });
-
-      // Clear check-in code and errors
-      setCheckinCodes((prev) => {
-        const newCodes = { ...prev };
-        delete newCodes[attendeeId];
-        return newCodes;
-      });
-
-      setCheckinCodeErrors((prev) => {
-        const newErrors = { ...prev };
-        delete newErrors[attendeeId];
-        return newErrors;
-      });
-    } catch (error: any) {
-      console.error('Check-in error:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to check in attendee",
-        variant: "destructive",
       });
       // Revert UI state if update failed
       setAttendeeStatuses((prev) =>
