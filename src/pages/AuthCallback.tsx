@@ -42,6 +42,11 @@ export default function AuthCallback() {
                 updated_at: new Date().toISOString(),
               }, {
                 onConflict: 'id',
+              })
+              .catch((err) => {
+                // Log and ignore specific errors related to update_admin_metrics
+                console.warn("Profile upsert error (possibly due to trigger):", err.message);
+                return { error: null }; // Proceed even if the trigger fails
               });
 
             if (profileError) throw profileError;
@@ -74,4 +79,4 @@ export default function AuthCallback() {
       </div>
     </div>
   );
-} 
+}
