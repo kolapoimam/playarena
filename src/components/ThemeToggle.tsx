@@ -37,38 +37,24 @@ export default function ThemeToggle() {
   return (
     <button
       onClick={toggleTheme}
-      className="relative w-16 h-8 flex items-center rounded-full p-1 cursor-pointer transition-all duration-300 
-        bg-gradient-to-r from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 hover:opacity-90"
+      className="p-1 rounded-full hover:opacity-80 transition-all duration-200"
       aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
     >
-      <div
-        className={`w-6 h-6 rounded-full shadow-md transform transition-all duration-300 flex items-center justify-center
-          ${theme === "light" ? "translate-x-0 bg-yellow-400" : "translate-x-8 bg-blue-600"} 
-          ${isToggling ? "scale-90" : "scale-100"}`}
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 24 24"
+        fill={theme === "light" ? "#facc15" : "#3b82f6"}
+        className={`w-6 h-6 transition-all duration-300 ${isToggling ? "animate-spin" : ""}`}
       >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke={theme === "light" ? "#ffffff" : "#ffffff"}
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className={`w-4 h-4 ${isToggling ? "animate-pulse" : ""}`}
-        >
-          {theme === "light" ? (
-            // Light bulb icon for light mode
-            <path d="M12 2a4 4 0 0 1 4 4c0 2-1 3-1 3h-6s-1-1-1-3a4 4 0 0 1 4-4zm0 12v2m-2 2h4m-6-8v4h6v-4" />
-          ) : (
-            // Light bulb off icon for dark mode
-            <path d="M12 2a4 4 0 0 1 4 4c0 2-1 3-1 3h-6s-1-1-1-3a4 4 0 0 1 4-4zm0 12v2m-2 2h4" />
-          )}
-        </svg>
-      </div>
-      <div className="absolute inset-0 flex items-center justify-between px-2 text-xs font-semibold">
-        <span className={theme === "light" ? "text-yellow-600" : "text-gray-400"}>ON</span>
-        <span className={theme === "dark" ? "text-blue-400" : "text-gray-400"}>OFF</span>
-      </div>
+        {/* Volleyball icon */}
+        <circle cx="12" cy="12" r="10" />
+        <path
+          d="M12 2a10 10 0 0 1 7.07 2.93 10 10 0 0 1-2.93 16.14A10 10 0 0 1 4.93 4.93 10 10 0 0 1 12 2zm0 4a6 6 0 0 0-4.24 1.76 6 6 0 0 0 0 8.48A6 6 0 0 0 12 18a6 6 0 0 0 4.24-1.76 6 6 0 0 0 0-8.48A6 6 0 0 0 12 6z"
+          fill={theme === "light" ? "#000000" : "#ffffff"}
+          fillOpacity="0.2"
+        />
+        <path d="M12 2a10 10 0 0 1 5 1.34M12 22a10 10 0 0 1-5-1.34M2 12a10 10 0 0 1 1.34-5M22 12a10 10 0 0 1-1.34 5" />
+      </svg>
     </button>
   );
 }
