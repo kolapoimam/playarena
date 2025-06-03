@@ -92,12 +92,6 @@ const AttendeesTable: React.FC<AttendeesTableProps> = ({ event, attendees, navig
                   <p className="font-medium text-gray-900 dark:text-white">
                     {attendee.attendee_name}
                   </p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Phone: {attendee.attendee_phone || "N/A"}
-                  </p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Slots: {Number(attendee.number_of_slots) || 1}
-                  </p>
                 </div>
                 <div className="flex flex-col items-end space-y-2">
                   <span
