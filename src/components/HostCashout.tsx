@@ -104,7 +104,10 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
         .select('status, number_of_slots')
         .eq('cycling_event_id_uuid', event.id_uuid);
 
-      if (attendeesError) throw attendeesError;
+      if (attendeesError) {
+        console.error("Attendees fetch error:", attendeesError);
+        throw attendeesError;
+      }
 
       let balance = 0;
       if (!event.is_free && event.price) {
@@ -121,14 +124,19 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
         .eq('host_id', event.host_id)
         .maybeSingle();
 
-      if (walletError) throw walletError;
+      if (walletError) {
+        console.error("Wallet fetch error:", walletError);
+      } else if (walletData?.balance !== undefined) {
+        balance = walletData.balance;
+      }
 
-      setWalletBalance(walletData?.balance || balance);
+      if (balance < 0) balance = 0;
+      setWalletBalance(balance);
     } catch (error: any) {
       console.error('Error fetching wallet balance:', error);
       toast({
         title: "Error",
-        description: "Failed to load wallet balance.",
+        description: "Failed to load wallet balance. Please try again.",
         variant: "destructive",
       });
       setWalletBalance(0);
@@ -149,14 +157,17 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
         .eq('temp_identifier', localTempIdentifier)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Cashout fetch error:", error);
+        throw error;
+      }
 
       setCashoutRequests(data || []);
     } catch (error: any) {
       console.error('Error fetching cashout requests:', error);
       toast({
         title: "Error",
-        description: "Failed to load cashout requests.",
+        description: "Failed to load cashout requests. Please try again.",
         variant: "destructive",
       });
       setCashoutRequests([]);
@@ -312,7 +323,10 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
           created_at: new Date().toISOString(),
         });
 
-      if (cashoutError) throw cashoutError;
+      if (cashoutError) {
+        console.error("Cashout insert error:", cashoutError);
+        throw cashoutError;
+      }
 
       const { error: walletError } = await supabase
         .rpc('update_cycling_wallet_balance', {
@@ -345,7 +359,7 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
       console.error('Cashout error:', error);
       toast({
         title: "Error",
-        description: error.message || "Failed to submit cashout request.",
+        description: error.message || "Failed to submit cashout request. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -447,7 +461,7 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
             </div>
             <div>
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Bank</label>
-              <Select onValueChange={(value) => handleInputChange('bankName', value)} value={bankName}>
+              <Select onValueChange={value => handleInputChange('bankName', value)} value={bankName}>
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder="Select bank" />
                 </SelectTrigger>
@@ -457,11 +471,12 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
                   ))}
                 </SelectContent>
               </Select>
-              {errors.bankName && <p className="text-sm text-red-600 mt-1">{errors.bankName}</p>}
+              {errors.bankName && <p className="text-sm text-red-600 mt-1">{errors.bankName]}</p>}
             </div>
             <div>
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Account Number</label>
               <Input
+                type="number"
                 value={bankAccountNumber}
                 onChange={(e) => handleInputChange('bankAccountNumber', e.target.value)}
                 placeholder="Enter 10-digit account number"
@@ -474,7 +489,7 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
             <div>
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Account Name</label>
               <Input
-                value={accountName}
+                value={accountName
                 onChange={(e) => handleInputChange('accountName', e.target.value)}
                 placeholder="Enter account name"
                 className="mt-1"
