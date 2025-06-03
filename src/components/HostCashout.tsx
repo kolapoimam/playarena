@@ -66,6 +66,13 @@ type HostCashoutProps = {
   tempIdentifier?: string;
 };
 
+interface FormErrors {
+  cashoutAmount?: string | null;
+  bankName?: string | null;
+  bankAccountNumber?: string | null;
+  accountName?: string | null;
+}
+
 const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
   const { toast } = useToast();
   const [cashoutRequests, setCashoutRequests] = useState<Cashout[]>([]);
@@ -75,7 +82,7 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
   const [bankName, setBankName] = useState('');
   const [accountName, setAccountName] = useState('');
   const [cashoutAmount, setCashoutAmount] = useState('');
-  const [errors, setErrors] = useState<{ [key: string]: string | null }>({});
+  const [errors, setErrors] = useState<FormErrors>({});
   const [loading, setLoading] = useState(false);
   const [localTempIdentifier, setLocalTempIdentifier] = useState(tempIdentifier);
 
@@ -244,15 +251,15 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
       bankName: bankNameSchema.safeParse(bankName),
     };
 
-    const newErrors: { [key: string]: string | null } = {};
+    const newErrors: FormErrors = {};
     let hasError = false;
 
     for (const [field, result] of Object.entries(validations)) {
       if (!result.success) {
-        newErrors[field] = result.error.errors[0].message;
+        newErrors[field as keyof FormErrors] = result.error.errors[0].message;
         hasError = true;
       } else {
-        newErrors[field] = null;
+        newErrors[field as keyof FormErrors] = null;
       }
     }
 
@@ -457,7 +464,9 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
                 placeholder="Enter amount"
                 className="mt-1"
               />
-              {errors.cashoutAmount && <p className="text-sm text-red-600 mt-1">{errors.cashoutAmount}</p>}
+              {errors.cashoutAmount && typeof errors.cashoutAmount === "string" && (
+                <p className="text-sm text-red-600 mt-1">{errors.cashoutAmount}</p>
+              )}
             </div>
             <div>
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Bank</label>
@@ -471,7 +480,9 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
                   ))}
                 </SelectContent>
               </Select>
-              {errors.bankName && <p className="text-sm text-red-600 mt-1">{errors.bankName]}</p>}
+              {errors.bankName && typeof errors.bankName === "string" && (
+                <p className="text-sm text-red-600 mt-1">{errors.bankName}</p>
+              )}
             </div>
             <div>
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Account Number</label>
@@ -484,17 +495,21 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
                 maxLength={10}
                 className="mt-1"
               />
-              {errors.bankAccountNumber && <p className="text-sm text-red-600 mt-1">{errors.bankAccountNumber}</p>}
+              {errors.bankAccountNumber && typeof errors.bankAccountNumber === "string" && (
+                <p className="text-sm text-red-600 mt-1">{errors.bankAccountNumber}</p>
+              )}
             </div>
             <div>
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Account Name</label>
               <Input
-               value={accountName}
+                value={accountName}
                 onChange={(e) => handleInputChange('accountName', e.target.value)}
                 placeholder="Enter account name"
                 className="mt-1"
               />
-              {errors.accountName && <p className="text-sm text-red-600 mt-1">{errors.accountName}</p>}
+              {errors.accountName && typeof errors.accountName === "string" && (
+                <p className="text-sm text-red-600 mt-1">{errors.accountName}</p>
+              )}
             </div>
           </div>
           <DialogFooter className="mt-6">
