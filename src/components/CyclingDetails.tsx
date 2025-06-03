@@ -23,13 +23,7 @@ type CyclingEvent = {
   cancellation_status: boolean;
   status: string;
   start_landmark_id: string;
-  start_landmark: {
-    id_uuid: string;
-    name: string;
-    state: string;
-    description?: string;
-    map_link?: string;
-  } | null;
+  start_landmark_name: string | null;
   cycling_attendees: {
     id_uuid: string;
     attendee_name: string;
@@ -74,7 +68,7 @@ const CyclingDetails = ({ event: initialEvent, cashout, handleCancel, loading, i
   const fetchEventDetails = async () => {
     if (!initialEvent?.id_uuid) return;
     try {
-      // Fetch the event data with landmark data using a join
+      // Fetch the event data with start_landmark_name
       const { data: eventData, error: eventError } = await supabase
         .from("cycling_events")
         .select(`
@@ -95,13 +89,7 @@ const CyclingDetails = ({ event: initialEvent, cashout, handleCancel, loading, i
           cancellation_status,
           status,
           start_landmark_id,
-          start_landmark:landmarks!start_landmark_id (
-            id_uuid,
-            name,
-            state,
-            description,
-            map_link
-          ),
+          start_landmark_name,
           cycling_attendees (
             id_uuid,
             attendee_name,
@@ -298,7 +286,7 @@ const CyclingDetails = ({ event: initialEvent, cashout, handleCancel, loading, i
         <div className="flex items-center gap-3">
           <MapPin size={20} className="text-green-500" />
           <span className="text-gray-900 dark:text-gray-100">
-            {event.start_landmark?.name || "Unknown Location"}, {event.start_landmark?.state || "Unknown City"}
+            {event.start_landmark_name || "Unknown Location"}
           </span>
         </div>
         <div className="flex items-center gap-3">
