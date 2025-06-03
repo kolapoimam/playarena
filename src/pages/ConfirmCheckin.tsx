@@ -130,6 +130,7 @@ const ConfirmCheckin = () => {
   const [tempIdentifier] = useState(uuidv4());
   const [error, setError] = useState<string | null>(null);
   const [recentSuperCodes, setRecentSuperCodes] = useState<string[]>([]);
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
 
   const resetState = () => {
@@ -141,6 +142,7 @@ const ConfirmCheckin = () => {
     setCheckinCodes({});
     setCheckinCodeErrors({});
     setError(null);
+    setWalletBalance(null);
   };
 
   const fetchEvent = async () => {
@@ -202,6 +204,22 @@ const ConfirmCheckin = () => {
             checkinCode: "",
           }))
         );
+
+        // Fetch wallet balance using host_id from the event
+        if (cyclingData.host_id) {
+          const { data: walletData, error: walletError } = await supabase
+            .from("cycling_wallets")
+            .select("balance")
+            .eq("host_id", cyclingData.host_id)
+            .single();
+
+          if (walletError) {
+            console.error("Error fetching wallet balance:", walletError);
+            setWalletBalance(null);
+          } else if (walletData) {
+            setWalletBalance(walletData.balance);
+          }
+        }
 
         try {
           const { data: cashoutData, error: cashoutError } = await supabase
@@ -304,6 +322,22 @@ const ConfirmCheckin = () => {
             checkinCode: "",
           }))
         );
+
+        // Fetch wallet balance using organizer_id from the match
+        if (matchData.organizer_id) {
+          const { data: walletData, error: walletError } = await supabase
+            .from("wallets")
+            .select("balance")
+            .eq("organizer_id", matchData.organizer_id)
+            .single();
+
+          if (walletError) {
+            console.error("Error fetching wallet balance:", walletError);
+            setWalletBalance(null);
+          } else if (walletData) {
+            setWalletBalance(walletData.balance);
+          }
+        }
 
         try {
           const { data: cashoutData, error: cashoutError } = await supabase
@@ -714,6 +748,7 @@ const ConfirmCheckin = () => {
                     handleCancel={() => setIsCancelDialogOpen(true)}
                     loading={loading}
                     isEventPast={isEventPast()}
+                    walletBalance={walletBalance}
                   />
                 ) : (
                   <MatchDetails
