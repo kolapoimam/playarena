@@ -259,12 +259,12 @@ const AttendeesManagement = ({
 
   const handleCheckinCodeChange = (attendeeId: string, code: string) => {
     const numericCode = code.replace(/[^0-9]/g, "").slice(0, 6);
-    setCheckinCodes((prev) => ({ ...prev, [attendeeId]: numericCode }));
+    setCheckinCodes({ ...checkinCodes, [attendeeId]: numericCode });
     const validation = codeSchema.safeParse(numericCode);
-    setCheckinCodeErrors((prev) => ({
-      ...prev,
+    setCheckinCodeErrors({
+      ...checkinCodeErrors,
       [attendeeId]: validation.success ? null : validation.error?.errors[0].message,
-    }));
+    });
   };
 
   const handleCheckin = async (attendeeId: string) => {
@@ -292,10 +292,10 @@ const AttendeesManagement = ({
 
     const code = checkinCodes[attendeeId];
     if (!code || code.length !== 6) {
-      setCheckinCodeErrors((prev) => ({
-        ...prev,
+      setCheckinCodeErrors({
+        ...checkinCodeErrors,
         [attendeeId]: "Please enter a 6-digit code",
-      }));
+      });
       toast({
         title: "Invalid Code",
         description: "Please enter a 6-digit code",
@@ -304,13 +304,13 @@ const AttendeesManagement = ({
       return;
     }
 
-    setCheckingInAttendees((prev) => ({ ...prev, [attendeeId]: true }));
+    setCheckingInAttendees({ ...checkingInAttendees, [attendeeId]: true });
     setLoading(true);
 
     let currentStatus: "registered" | "checked_in" | "absent" | null = null;
 
     try {
-      console.log('Checking in attendee:', { attendeeId, code });
+      console.log('Updating attendee', { attendeeId, code });
 
       // Verify attendee and current status
       const { data, error: selectError } = await supabase
@@ -344,7 +344,7 @@ const AttendeesManagement = ({
         .eq("id_uuid", attendeeId)
         .eq("confirmation_code", code)
         .select()
-        .single();
+        .maybeSingle();
 
       if (updateError) {
         console.error('Update error:', updateError);
@@ -356,13 +356,11 @@ const AttendeesManagement = ({
       }
 
       // Update local state
-      setAttendeeStatuses((prev) =>
-        prev.map((status) =>
-          status.id_uuid === attendeeId
-            ? { ...status, status: "checked_in" }
-            : status
-        )
-      );
+      setAttendeeStatuses(attendeeStatuses.map(status =>
+        status.id_uuid === attendeeId
+          ? { ...status, status: "checked_in" }
+          : status
+      ));
 
       // Refresh event data
       await fetchEvent();
@@ -380,17 +378,13 @@ const AttendeesManagement = ({
       });
 
       // Clear check-in code and errors
-      setCheckinCodes((prev) => {
-        const newCodes = { ...prev };
-        delete newCodes[attendeeId];
-        return newCodes;
-      });
+      const newCodes = { ...checkinCodes };
+      delete newCodes[attendeeId];
+      setCheckinCodes(newCodes);
 
-      setCheckinCodeErrors((prev) => {
-        const newErrors = { ...prev };
-        delete newErrors[attendeeId];
-        return newErrors;
-      });
+      const newErrors = { ...checkinCodeErrors };
+      delete newErrors[attendeeId];
+      setCheckinCodeErrors(newErrors);
     } catch (error: any) {
       console.error('Check-in error:', error);
       toast({
@@ -399,15 +393,13 @@ const AttendeesManagement = ({
         variant: "destructive",
       });
       // Revert UI state if update failed
-      setAttendeeStatuses((prev) =>
-        prev.map((status) =>
-          status.id_uuid === attendeeId
-            ? { ...status, status: currentStatus || "registered" }
-            : status
-        )
-      );
+      setAttendeeStatuses(attendeeStatuses.map(status =>
+        status.id_uuid === attendeeId
+          ? { ...status, status: currentStatus || "registered" }
+          : status
+      ));
     } finally {
-      setCheckingInAttendees((prev) => ({ ...prev, [attendeeId]: false }));
+      setCheckingInAttendees({ ...checkingInAttendees, [attendeeId]: false });
       setLoading(false);
     }
   };
