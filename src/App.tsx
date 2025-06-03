@@ -1,4 +1,5 @@
-import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
+
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -53,19 +54,18 @@ import JoinCycling from "@/pages/JoinCycling";
 import HostCycling from "@/pages/HostCycling";
 import LandmarkDirectory from "@/pages/LandmarkDirectory";
 import LandmarkDetail from "@/pages/LandmarkDetail";
-import AuthCallback from "@/pages/AuthCallback";
 
 // Import admin components
 import AdminLogin from "@/pages/admin/AdminLogin";
-import FirstTimeSetup from '@/pages/admin/FirstTimeSetup';
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import AdminUserManagement from "@/pages/admin/AdminUserManagement";
 import EventManagement from "@/pages/admin/EventManagement";
 import CashoutManagement from "@/pages/admin/CashoutManagement";
 import VenueManagement from "@/pages/admin/VenueManagement";
 import AnalyticsDashboard from "@/pages/admin/AnalyticsDashboard";
+import AdminManagement from "@/pages/admin/AdminManagement";
+import NotificationManagement from "@/pages/admin/NotificationManagement";
 import AuditLog from "@/pages/admin/AuditLog";
-import NotificationManagement from '@/pages/admin/NotificationManagement';
 
 const queryClient = new QueryClient();
 
@@ -150,7 +150,6 @@ const AppRoutes = () => {
       <Route path="/profile/my-bookings" element={<MyBookings />} />
       <Route path="/profile/booking-code" element={<BookingCode />} />
       <Route path="/auth" element={<Auth />} />
-      <Route path="/auth/callback" element={<AuthCallback />} />
       <Route path="/confirm" element={<Confirm />} />
       <Route path="/organize" element={<Organize />} />
       <Route path="/host-cycling" element={<HostCycling />} />
@@ -176,53 +175,16 @@ const AppRoutes = () => {
       <Route path="/venue/:slug/book" element={<VenueBookingForm />} />
       
       {/* Admin Routes */}
-      <Route path="/admin/setup" element={<FirstTimeSetup />} />
       <Route path="/admin/login" element={<AdminLogin />} />
-      <Route path="/admin" element={
-        <ProtectedAdminRoute>
-          <Navigate to="/admin/dashboard" replace />
-        </ProtectedAdminRoute>
-      } />
-      <Route path="/admin/dashboard" element={
-        <ProtectedAdminRoute>
-          <AdminDashboard />
-        </ProtectedAdminRoute>
-      } />
-      <Route path="/admin/users" element={
-        <ProtectedAdminRoute>
-          <AdminUserManagement />
-        </ProtectedAdminRoute>
-      } />
-      <Route path="/admin/events" element={
-        <ProtectedAdminRoute>
-          <EventManagement />
-        </ProtectedAdminRoute>
-      } />
-      <Route path="/admin/cashouts" element={
-        <ProtectedAdminRoute>
-          <CashoutManagement />
-        </ProtectedAdminRoute>
-      } />
-      <Route path="/admin/venues" element={
-        <ProtectedAdminRoute>
-          <VenueManagement />
-        </ProtectedAdminRoute>
-      } />
-      <Route path="/admin/analytics" element={
-        <ProtectedAdminRoute>
-          <AnalyticsDashboard />
-        </ProtectedAdminRoute>
-      } />
-      <Route path="/admin/audit" element={
-        <ProtectedAdminRoute>
-          <AuditLog />
-        </ProtectedAdminRoute>
-      } />
-      <Route path="/admin/notifications" element={
-        <ProtectedAdminRoute>
-          <NotificationManagement />
-        </ProtectedAdminRoute>
-      } />
+      <Route path="/admin/dashboard" element={<AdminDashboard />} />
+      <Route path="/admin/users" element={<AdminUserManagement />} />
+      <Route path="/admin/events" element={<EventManagement />} />
+      <Route path="/admin/cashouts" element={<CashoutManagement />} />
+      <Route path="/admin/venues" element={<VenueManagement />} />
+      <Route path="/admin/analytics" element={<AnalyticsDashboard />} />
+      <Route path="/admin/admins" element={<AdminManagement />} />
+      <Route path="/admin/notifications" element={<NotificationManagement />} />
+      <Route path="/admin/audit" element={<AuditLog />} />
       
       <Route path="*" element={<NotFound />} />
     </Routes>
@@ -283,17 +245,6 @@ const App = () => {
       </MantineProvider>
     </QueryClientProvider>
   );
-};
-
-// Admin route protection component
-const ProtectedAdminRoute = ({ children }: { children: React.ReactNode }) => {
-  const adminSession = JSON.parse(localStorage.getItem('adminSession') || '{}');
-  
-  if (!adminSession.id) {
-    return <Navigate to="/admin/login" replace />;
-  }
-
-  return <>{children}</>;
 };
 
 export default App;

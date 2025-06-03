@@ -1,144 +1,57 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import { Download, TrendingUp, Users, Calendar, DollarSign } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
-import { supabase } from '@/lib/supabase';
-
-interface AnalyticsData {
-  total_users: number;
-  total_events: number;
-  total_revenue: number;
-  active_venues: number;
-  user_growth: number;
-  event_growth: number;
-  revenue_growth: number;
-  venue_growth: number;
-  monthly_stats: {
-    month: string;
-    users: number;
-    events: number;
-    revenue: number;
-  }[];
-  top_venues: {
-    id: string;
-    name: string;
-    events: number;
-    revenue: number;
-  }[];
-  top_events: {
-    id: string;
-    title: string;
-    participants: number;
-    revenue: number;
-  }[];
-}
 
 const AnalyticsDashboard = () => {
-  const [timeRange, setTimeRange] = useState('30d');
-  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [dateRange, setDateRange] = useState('30days');
 
-  useEffect(() => {
-    const fetchAnalytics = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+  // Mock analytics data
+  const userGrowthData = [
+    { name: 'Week 1', users: 100 },
+    { name: 'Week 2', users: 150 },
+    { name: 'Week 3', users: 200 },
+    { name: 'Week 4', users: 250 },
+  ];
 
-        // Fetch metrics from admin_metrics
-        const { data: metrics, error: metricsError } = await supabase
-          .from('admin_metrics')
-          .select('*')
-          .single();
+  const revenueData = [
+    { name: 'Jan', tickets: 15000, venues: 25000, total: 40000 },
+    { name: 'Feb', tickets: 18000, venues: 30000, total: 48000 },
+    { name: 'Mar', tickets: 22000, venues: 28000, total: 50000 },
+    { name: 'Apr', tickets: 25000, venues: 35000, total: 60000 },
+    { name: 'May', tickets: 28000, venues: 32000, total: 60000 },
+    { name: 'Jun', tickets: 30000, venues: 38000, total: 68000 },
+  ];
 
-        if (metricsError) throw metricsError;
+  const sportsData = [
+    { name: 'Football', value: 45, color: '#0088FE' },
+    { name: 'Basketball', value: 25, color: '#00C49F' },
+    { name: 'Tennis', value: 15, color: '#FFBB28' },
+    { name: 'Volleyball', value: 10, color: '#FF8042' },
+    { name: 'Others', value: 5, color: '#8884D8' },
+  ];
 
-        // Fetch monthly stats
-        const { data: monthlyStats, error: statsError } = await supabase
-          .from('admin_metrics')
-          .select('monthly_stats')
-          .order('created_at', { ascending: false })
-          .limit(12);
+  const topVenues = [
+    { name: 'Lagos Pitch', bookings: 45, revenue: 225000 },
+    { name: 'Victory Sports Complex', bookings: 38, revenue: 304000 },
+    { name: 'Elite Tennis Club', bookings: 25, revenue: 87500 },
+    { name: 'Abuja Football Center', bookings: 22, revenue: 176000 },
+    { name: 'Port Harcourt Arena', bookings: 18, revenue: 108000 },
+  ];
 
-        if (statsError) throw statsError;
+  const handleExportCSV = () => {
+    console.log('Exporting analytics as CSV');
+    // Implementation would generate and download CSV
+  };
 
-        // Fetch top venues
-        const { data: topVenues, error: venuesError } = await supabase
-          .from('venues')
-          .select(`
-            id,
-            name,
-            events:matches(count),
-            revenue:venue_booking_cashout(sum(amount))
-          `)
-          .order('events', { ascending: false })
-          .limit(5);
-
-        if (venuesError) throw venuesError;
-
-        // Fetch top events
-        const { data: topEvents, error: eventsError } = await supabase
-          .from('matches')
-          .select(`
-            id,
-            title,
-            participants,
-            revenue:tickets(sum(total_price))
-          `)
-          .order('participants', { ascending: false })
-          .limit(5);
-
-        if (eventsError) throw eventsError;
-
-        setAnalytics({
-          ...metrics,
-          monthly_stats: monthlyStats.map(stat => stat.monthly_stats),
-          top_venues: topVenues.map(venue => ({
-            id: venue.id,
-            name: venue.name,
-            events: venue.events?.[0]?.count || 0,
-            revenue: venue.revenue?.[0]?.sum || 0
-          })),
-          top_events: topEvents.map(event => ({
-            id: event.id,
-            title: event.title,
-            participants: event.participants,
-            revenue: event.revenue?.[0]?.sum || 0
-          }))
-        });
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAnalytics();
-  }, [timeRange]);
-
-  if (loading) {
-    return (
-      <AdminLayout>
-        <div className="flex items-center justify-center h-full">
-          <p>Loading analytics...</p>
-        </div>
-      </AdminLayout>
-    );
-  }
-
-  if (error || !analytics) {
-    return (
-      <AdminLayout>
-        <div className="flex items-center justify-center h-full">
-          <p className="text-red-500">{error || 'Failed to load analytics'}</p>
-        </div>
-      </AdminLayout>
-    );
-  }
+  const handleExportPDF = () => {
+    console.log('Exporting analytics as PDF');
+    // Implementation would generate and download PDF
+  };
 
   return (
     <AdminLayout>
@@ -149,28 +62,22 @@ const AnalyticsDashboard = () => {
             <p className="text-muted-foreground">Platform performance and insights</p>
           </div>
           <div className="flex items-center space-x-4">
-            <Select value={timeRange} onValueChange={setTimeRange}>
+            <Select value={dateRange} onValueChange={setDateRange}>
               <SelectTrigger className="w-48">
-                <SelectValue placeholder="Select time range" />
+                <SelectValue placeholder="Select date range" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="7d">Last 7 days</SelectItem>
-                <SelectItem value="30d">Last 30 days</SelectItem>
-                <SelectItem value="90d">Last 90 days</SelectItem>
-                <SelectItem value="1y">Last year</SelectItem>
+                <SelectItem value="7days">Last 7 days</SelectItem>
+                <SelectItem value="30days">Last 30 days</SelectItem>
+                <SelectItem value="90days">Last 90 days</SelectItem>
+                <SelectItem value="1year">Last year</SelectItem>
               </SelectContent>
             </Select>
-            <Button variant="outline" onClick={() => {
-              console.log('Exporting analytics as CSV');
-              // Implementation would generate and download CSV
-            }}>
+            <Button variant="outline" onClick={handleExportCSV}>
               <Download className="h-4 w-4 mr-2" />
               CSV
             </Button>
-            <Button variant="outline" onClick={() => {
-              console.log('Exporting analytics as PDF');
-              // Implementation would generate and download PDF
-            }}>
+            <Button variant="outline" onClick={handleExportPDF}>
               <Download className="h-4 w-4 mr-2" />
               PDF
             </Button>
@@ -178,16 +85,16 @@ const AnalyticsDashboard = () => {
         </div>
 
         {/* Key Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Users</CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{analytics.total_users.toLocaleString()}</div>
+              <div className="text-2xl font-bold">2,847</div>
               <p className="text-xs text-muted-foreground">
-                {analytics.user_growth > 0 ? '+' : ''}{analytics.user_growth}% from last period
+                <span className="text-green-600">+12%</span> from last month
               </p>
             </CardContent>
           </Card>
@@ -198,107 +105,168 @@ const AnalyticsDashboard = () => {
               <Calendar className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{analytics.total_events}</div>
+              <div className="text-2xl font-bold">156</div>
               <p className="text-xs text-muted-foreground">
-                {analytics.event_growth > 0 ? '+' : ''}{analytics.event_growth}% from last period
+                <span className="text-green-600">+8%</span> from last month
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+              <CardTitle className="text-sm font-medium">Revenue</CardTitle>
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">₦{analytics.total_revenue.toLocaleString()}</div>
+              <div className="text-2xl font-bold">₦68,000</div>
               <p className="text-xs text-muted-foreground">
-                {analytics.revenue_growth > 0 ? '+' : ''}{analytics.revenue_growth}% from last period
+                <span className="text-green-600">+15%</span> from last month
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Venues</CardTitle>
+              <CardTitle className="text-sm font-medium">Growth Rate</CardTitle>
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{analytics.active_venues}</div>
+              <div className="text-2xl font-bold">+12.5%</div>
               <p className="text-xs text-muted-foreground">
-                {analytics.venue_growth > 0 ? '+' : ''}{analytics.venue_growth}% from last period
+                User growth this month
               </p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Detailed Analytics */}
-        <Tabs defaultValue="overview" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="venues">Top Venues</TabsTrigger>
-            <TabsTrigger value="events">Top Events</TabsTrigger>
-          </TabsList>
+        {/* Charts Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* User Growth Chart */}
+          <Card>
+            <CardHeader>
+              <CardTitle>User Growth</CardTitle>
+              <CardDescription>New users registered over time</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={userGrowthData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="users" fill="#4CAF50" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
 
-          <TabsContent value="overview" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Monthly Statistics</CardTitle>
-                <CardDescription>Platform performance over time</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[400px]">
-                  {/* Add your chart component here */}
-                  <p className="text-muted-foreground">Chart visualization coming soon</p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+          {/* Revenue Trends */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Revenue Trends</CardTitle>
+              <CardDescription>Monthly revenue breakdown</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={revenueData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Line type="monotone" dataKey="tickets" stroke="#8884d8" name="Tickets" />
+                  <Line type="monotone" dataKey="venues" stroke="#82ca9d" name="Venues" />
+                  <Line type="monotone" dataKey="total" stroke="#ffc658" name="Total" strokeWidth={3} />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
 
-          <TabsContent value="venues" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Top Performing Venues</CardTitle>
-                <CardDescription>Venues with highest engagement and revenue</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {analytics.top_venues.map((venue) => (
-                    <div key={venue.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div>
-                        <p className="font-medium">{venue.name}</p>
-                        <p className="text-sm text-muted-foreground">{venue.events} events</p>
-                      </div>
-                      <p className="font-medium">₦{venue.revenue.toLocaleString()}</p>
+          {/* Sports Distribution */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Sports Distribution</CardTitle>
+              <CardDescription>Events by sport type</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={sportsData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {sportsData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          {/* Top Venues */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Top Venues</CardTitle>
+              <CardDescription>Highest performing venues by bookings</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {topVenues.map((venue, index) => (
+                  <div key={index} className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">{venue.name}</p>
+                      <p className="text-sm text-muted-foreground">{venue.bookings} bookings</p>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="events" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Top Performing Events</CardTitle>
-                <CardDescription>Events with highest participation and revenue</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {analytics.top_events.map((event) => (
-                    <div key={event.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div>
-                        <p className="font-medium">{event.title}</p>
-                        <p className="text-sm text-muted-foreground">{event.participants} participants</p>
-                      </div>
-                      <p className="font-medium">₦{event.revenue.toLocaleString()}</p>
+                    <div className="text-right">
+                      <p className="font-bold">₦{venue.revenue.toLocaleString()}</p>
+                      <p className="text-sm text-muted-foreground">revenue</p>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Additional Metrics */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Conversion Rate</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">67.8%</div>
+              <p className="text-sm text-muted-foreground">Users who join events</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Average Event Size</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">12.4</div>
+              <p className="text-sm text-muted-foreground">Participants per event</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Platform Commission</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">₦8,450</div>
+              <p className="text-sm text-muted-foreground">This month</p>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </AdminLayout>
   );

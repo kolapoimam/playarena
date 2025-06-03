@@ -309,7 +309,7 @@ const Index = () => {
               <Button
                 variant="outline"
                 className="text-green-600 hover:bg-green-600 hover:text-white transition-colors"
-                onClick={() => navigate("/activities")}
+                onClick={() => navigate("/matches")}
               >
                 See All
               </Button>

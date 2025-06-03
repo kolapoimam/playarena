@@ -79,7 +79,7 @@ type CyclingEvent = {
     name?: string;
     city?: string;
   } | null;
-  cycling_attendees: {
+  attendees: {
     id_uuid: string;
     attendee_name: string;
     attendee_phone: string;
@@ -93,16 +93,14 @@ type CyclingEvent = {
 type Cashout = {
   id: string;
   cycling_event_id_uuid: string;
-  supercode: string;
-  total_amount_paid: number;
+  super_code: string;
+  amount: number;
   bank_account_number: string;
   bank_name: string;
   account_name: string;
   status: "Review" | "Processed" | "Failed" | "Successful";
   temp_identifier?: string;
-  host_id: string;
   created_at: string;
-  updated_at: string;
 };
 
 const codeSchema = z
@@ -173,7 +171,7 @@ const ConfirmCheckin = () => {
         const { data, error } = await supabase
           .from("cycling_events_view")
           .select(`
-            id_uuid, slug, title, event_date, start_time, max_attendees, host_id, host_name, host_phone, supercode, is_free, price, status, start_landmark_id, start_landmark, cycling_attendees
+            id_uuid, slug, title, event_date, start_time, max_attendees, host_id, host_name, host_phone, supercode, is_free, price, status, start_landmark_id, start_landmark, attendees
           `)
           .eq("supercode", superCode)
           .single();
@@ -193,9 +191,9 @@ const ConfirmCheckin = () => {
 
         if (userId) {
           const { data: walletData, error: walletError } = await supabase
-            .from("cycling_wallets")
+            .from("wallets")
             .select("balance")
-            .eq("host_id", userId)
+            .eq("organizer_id", userId)
             .single();
 
           if (!walletError && walletData) {
@@ -211,7 +209,7 @@ const ConfirmCheckin = () => {
                 city: data.start_landmark.state ?? "Unknown City",
               }
             : null,
-          cycling_attendees: Array.isArray(data.cycling_attendees) ? data.cycling_attendees.map(attendee => ({
+          attendees: Array.isArray(data.attendees) ? data.attendees.map(attendee => ({
             ...attendee,
             status: attendee.status || "registered",
             details: attendee.details || { phone: attendee.attendee_phone || "N/A" },
@@ -222,7 +220,7 @@ const ConfirmCheckin = () => {
 
         setCyclingEvent(cyclingData);
         setPlayerStatuses(
-          (cyclingData.cycling_attendees || []).map((attendee) => ({
+          (cyclingData.attendees || []).map((attendee) => ({
             id: attendee.id_uuid,
             status: attendee.status,
             checkinCode: "",
@@ -271,7 +269,7 @@ const ConfirmCheckin = () => {
 
         if (cyclingData.event_end_time && isPast(new Date(cyclingData.event_end_time))) {
           const updates =
-            cyclingData.cycling_attendees
+            cyclingData.attendees
               ?.filter((p) => p.status === "registered" && p.status !== "checked_in")
               .map((p) =>
                 supabase
@@ -430,7 +428,7 @@ const ConfirmCheckin = () => {
   const canConfirmAttendees = () => {
     if (isCyclingEvent && cyclingEvent) {
       if (cyclingEvent.cancellation_status || isEventPast()) return false;
-      return !!cyclingEvent.cycling_attendees?.length;
+      return !!cyclingEvent.attendees?.length;
     }
     if (!match || match.cancellation_status || isEventPast()) return false;
     return !!match.players?.length;

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,170 +7,108 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Search, Eye, Check, X, MapPin, Phone, Mail } from 'lucide-react';
+import { Search, Eye, CheckCircle, XCircle, Trash2 } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
-import { supabase } from '@/lib/supabase';
-
-interface Venue {
-  id: string;
-  name: string;
-  city: string;
-  state: string;
-  address: string;
-  status: 'pending' | 'verified' | 'rejected';
-  owner_name: string;
-  owner_email: string;
-  owner_phone: string;
-  created_at: string;
-  events_count: number;
-  revenue: number;
-}
 
 const VenueManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [selectedVenue, setSelectedVenue] = useState<Venue | null>(null);
-  const [venues, setVenues] = useState<Venue[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [selectedVenue, setSelectedVenue] = useState<any>(null);
 
-  useEffect(() => {
-    const fetchVenues = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        let query = supabase
-          .from('venues')
-          .select(`
-            *,
-            owner:profiles(full_name, email, phone),
-            events:matches(count),
-            revenue:venue_booking_cashout(sum(amount))
-          `);
-
-        if (statusFilter !== 'all') {
-          query = query.eq('status', statusFilter);
-        }
-
-        const { data, error: fetchError } = await query;
-
-        if (fetchError) throw fetchError;
-
-        const formattedVenues = data.map(venue => ({
-          id: venue.id,
-          name: venue.name,
-          city: venue.city,
-          state: venue.state,
-          address: venue.address,
-          status: venue.status,
-          owner_name: venue.owner?.full_name,
-          owner_email: venue.owner?.email,
-          owner_phone: venue.owner?.phone,
-          created_at: venue.created_at,
-          events_count: venue.events?.[0]?.count || 0,
-          revenue: venue.revenue?.[0]?.sum || 0
-        }));
-
-        setVenues(formattedVenues);
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchVenues();
-  }, [statusFilter]);
-
-  const handleVerifyVenue = async (venueId: string) => {
-    try {
-      const { error: updateError } = await supabase
-        .from('venues')
-        .update({ status: 'verified' })
-        .eq('id', venueId);
-
-      if (updateError) throw updateError;
-
-      setVenues(venues.map(v => 
-        v.id === venueId ? { ...v, status: 'verified' } : v
-      ));
-    } catch (err: any) {
-      setError(err.message);
+  // Mock venue data
+  const venues = [
+    {
+      id: 'VEN-001',
+      name: 'Lagos Pitch',
+      location: 'Lagos, Nigeria',
+      owner: 'John Doe',
+      ownerContact: '+234-801-234-5678',
+      verifiedStatus: 'verified',
+      bookingFee: 5000,
+      totalBookings: 45,
+      lastBooking: '2024-06-01',
+      rating: 4.5,
+      documents: ['Certificate', 'Insurance', 'Photos']
+    },
+    {
+      id: 'VEN-002',
+      name: 'Victory Sports Complex',
+      location: 'Abuja, Nigeria',
+      owner: 'Jane Smith',
+      ownerContact: '+234-802-345-6789',
+      verifiedStatus: 'pending',
+      bookingFee: 8000,
+      totalBookings: 12,
+      lastBooking: '2024-05-28',
+      rating: 4.2,
+      documents: ['Certificate', 'Photos']
+    },
+    {
+      id: 'VEN-003',
+      name: 'Elite Tennis Club',
+      location: 'Port Harcourt, Nigeria',
+      owner: 'Mike Johnson',
+      ownerContact: '+234-803-456-7890',
+      verifiedStatus: 'unverified',
+      bookingFee: 3500,
+      totalBookings: 8,
+      lastBooking: '2024-05-25',
+      rating: 3.8,
+      documents: ['Photos']
     }
-  };
-
-  const handleRejectVenue = async (venueId: string) => {
-    try {
-      const { error: updateError } = await supabase
-        .from('venues')
-        .update({ status: 'rejected' })
-        .eq('id', venueId);
-
-      if (updateError) throw updateError;
-
-      setVenues(venues.map(v => 
-        v.id === venueId ? { ...v, status: 'rejected' } : v
-      ));
-    } catch (err: any) {
-      setError(err.message);
-    }
-  };
+  ];
 
   const filteredVenues = venues.filter(venue => {
-    const matchesSearch = 
-      venue.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      venue.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      venue.state.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      venue.owner_name?.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesSearch;
+    const matchesSearch = venue.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         venue.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         venue.owner.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || venue.verifiedStatus === statusFilter;
+    return matchesSearch && matchesStatus;
   });
 
-  if (loading) {
-    return (
-      <AdminLayout>
-        <div className="flex items-center justify-center h-full">
-          <p>Loading venues...</p>
-        </div>
-      </AdminLayout>
-    );
-  }
+  const handleToggleVerification = (venueId: string, currentStatus: string) => {
+    const newStatus = currentStatus === 'verified' ? 'unverified' : 'verified';
+    console.log('Toggling verification for venue:', venueId, 'to:', newStatus);
+    // Implementation would update venue verification status
+  };
 
-  if (error) {
-    return (
-      <AdminLayout>
-        <div className="flex items-center justify-center h-full">
-          <p className="text-red-500">{error}</p>
-        </div>
-      </AdminLayout>
-    );
-  }
+  const handleDeleteVenue = (venueId: string) => {
+    console.log('Deleting venue:', venueId);
+    // Implementation would delete venue from database
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'verified': return 'default';
+      case 'pending': return 'secondary';
+      case 'unverified': return 'destructive';
+      default: return 'outline';
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'verified': return <CheckCircle className="h-4 w-4" />;
+      case 'unverified': return <XCircle className="h-4 w-4" />;
+      default: return null;
+    }
+  };
 
   return (
     <AdminLayout>
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold">Venue Management</h1>
-          <p className="text-muted-foreground">Manage and verify sports venues</p>
+          <p className="text-muted-foreground">Verify and manage venue listings</p>
         </div>
 
-        {/* Status Summary */}
+        {/* Venue Summary */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="p-6">
               <div className="text-center">
-                <p className="text-2xl font-bold text-yellow-600">
-                  {venues.filter(v => v.status === 'pending').length}
-                </p>
-                <p className="text-sm text-muted-foreground">Pending</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-6">
-              <div className="text-center">
                 <p className="text-2xl font-bold text-green-600">
-                  {venues.filter(v => v.status === 'verified').length}
+                  {venues.filter(v => v.verifiedStatus === 'verified').length}
                 </p>
                 <p className="text-sm text-muted-foreground">Verified</p>
               </div>
@@ -178,10 +117,20 @@ const VenueManagement = () => {
           <Card>
             <CardContent className="p-6">
               <div className="text-center">
-                <p className="text-2xl font-bold text-red-600">
-                  {venues.filter(v => v.status === 'rejected').length}
+                <p className="text-2xl font-bold text-yellow-600">
+                  {venues.filter(v => v.verifiedStatus === 'pending').length}
                 </p>
-                <p className="text-sm text-muted-foreground">Rejected</p>
+                <p className="text-sm text-muted-foreground">Pending</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-6">
+              <div className="text-center">
+                <p className="text-2xl font-bold text-red-600">
+                  {venues.filter(v => v.verifiedStatus === 'unverified').length}
+                </p>
+                <p className="text-sm text-muted-foreground">Unverified</p>
               </div>
             </CardContent>
           </Card>
@@ -189,36 +138,39 @@ const VenueManagement = () => {
             <CardContent className="p-6">
               <div className="text-center">
                 <p className="text-2xl font-bold">
-                  {venues.length}
+                  {venues.reduce((sum, v) => sum + v.totalBookings, 0)}
                 </p>
-                <p className="text-sm text-muted-foreground">Total Venues</p>
+                <p className="text-sm text-muted-foreground">Total Bookings</p>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Filters */}
+        {/* Search and Filters */}
         <Card>
           <CardHeader>
-            <CardTitle>Filter Venues</CardTitle>
+            <CardTitle>Search Venues</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent>
             <div className="flex flex-col md:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                placeholder="Search venues..."
+                  placeholder="Search by name, location, or owner..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                className="md:w-64"
+                  className="pl-10"
                 />
+              </div>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-full md:w-48">
                   <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
                   <SelectItem value="verified">Verified</SelectItem>
-                  <SelectItem value="rejected">Rejected</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="unverified">Unverified</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -229,59 +181,37 @@ const VenueManagement = () => {
         <Card>
           <CardHeader>
             <CardTitle>Venues ({filteredVenues.length})</CardTitle>
-            <CardDescription>View and manage all sports venues</CardDescription>
+            <CardDescription>All venue listings on the platform</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>ID</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Location</TableHead>
                   <TableHead>Owner</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Events</TableHead>
-                  <TableHead>Revenue</TableHead>
+                  <TableHead>Booking Fee</TableHead>
+                  <TableHead>Bookings</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredVenues.map((venue) => (
                   <TableRow key={venue.id}>
+                    <TableCell className="font-mono text-xs">{venue.id}</TableCell>
                     <TableCell className="font-medium">{venue.name}</TableCell>
+                    <TableCell>{venue.location}</TableCell>
+                    <TableCell>{venue.owner}</TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-1">
-                        <MapPin className="h-4 w-4 text-muted-foreground" />
-                        <span>{venue.city}, {venue.state}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <p>{venue.owner_name}</p>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Phone className="h-3 w-3" />
-                          <span>{venue.owner_phone}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Mail className="h-3 w-3" />
-                          <span>{venue.owner_email}</span>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          venue.status === 'verified'
-                            ? 'default'
-                            : venue.status === 'rejected'
-                            ? 'destructive'
-                            : 'secondary'
-                        }
-                      >
-                        {venue.status}
+                      <Badge variant={getStatusColor(venue.verifiedStatus)} className="flex items-center gap-1 w-fit">
+                        {getStatusIcon(venue.verifiedStatus)}
+                        {venue.verifiedStatus}
                       </Badge>
                     </TableCell>
-                    <TableCell>{venue.events_count}</TableCell>
-                    <TableCell>₦{venue.revenue.toLocaleString()}</TableCell>
+                    <TableCell className="font-mono">₦{venue.bookingFee.toLocaleString()}</TableCell>
+                    <TableCell>{venue.totalBookings}</TableCell>
                     <TableCell>
                       <div className="flex items-center space-x-2">
                         <Dialog>
@@ -298,86 +228,84 @@ const VenueManagement = () => {
                             <DialogHeader>
                               <DialogTitle>Venue Details</DialogTitle>
                               <DialogDescription>
-                                View details for {selectedVenue?.name}
+                                Detailed information about {selectedVenue?.name}
                               </DialogDescription>
                             </DialogHeader>
                             {selectedVenue && (
                               <div className="space-y-6">
                                 <div className="grid grid-cols-2 gap-4">
                                   <div>
-                                    <p className="text-sm font-medium">Address</p>
-                                    <p className="text-lg">{selectedVenue.address}</p>
+                                    <p className="text-sm font-medium">Owner Contact</p>
+                                    <p className="text-lg">{selectedVenue.ownerContact}</p>
                                   </div>
                                   <div>
-                                    <p className="text-sm font-medium">Location</p>
-                                    <p className="text-lg">{selectedVenue.city}, {selectedVenue.state}</p>
+                                    <p className="text-sm font-medium">Total Bookings</p>
+                                    <p className="text-lg">{selectedVenue.totalBookings}</p>
                                   </div>
-                                  </div>
-
                                   <div>
-                                  <p className="text-sm font-medium mb-2">Owner Details</p>
-                                  <div className="bg-muted p-4 rounded-lg space-y-2">
-                                    <p><span className="font-medium">Name:</span> {selectedVenue.owner_name}</p>
-                                    <p><span className="font-medium">Email:</span> {selectedVenue.owner_email}</p>
-                                    <p><span className="font-medium">Phone:</span> {selectedVenue.owner_phone}</p>
+                                    <p className="text-sm font-medium">Last Booking</p>
+                                    <p className="text-lg">{selectedVenue.lastBooking}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-medium">Rating</p>
+                                    <p className="text-lg">{selectedVenue.rating}/5</p>
                                   </div>
                                 </div>
                                 
-                                <div className="grid grid-cols-2 gap-4">
-                                  <div>
-                                    <p className="text-sm font-medium">Total Events</p>
-                                    <p className="text-2xl font-bold">{selectedVenue.events_count}</p>
-                                  </div>
                                 <div>
-                                    <p className="text-sm font-medium">Total Revenue</p>
-                                    <p className="text-2xl font-bold">₦{selectedVenue.revenue.toLocaleString()}</p>
+                                  <p className="text-sm font-medium mb-2">Verification Documents</p>
+                                  <div className="flex flex-wrap gap-2">
+                                    {selectedVenue.documents.map((doc: string, index: number) => (
+                                      <Badge key={index} variant="outline">{doc}</Badge>
+                                    ))}
                                   </div>
                                 </div>
 
-                                {selectedVenue.status === 'pending' && (
                                 <div className="flex space-x-4">
                                   <Button
-                                      onClick={() => handleVerifyVenue(selectedVenue.id)}
-                                      className="flex-1"
-                                    >
-                                      <Check className="h-4 w-4 mr-2" />
-                                      Verify Venue
-                                    </Button>
-                                    <Button
-                                      variant="destructive"
-                                      onClick={() => handleRejectVenue(selectedVenue.id)}
+                                    onClick={() => handleToggleVerification(selectedVenue.id, selectedVenue.verifiedStatus)}
+                                    variant={selectedVenue.verifiedStatus === 'verified' ? 'destructive' : 'default'}
                                     className="flex-1"
                                   >
-                                      <X className="h-4 w-4 mr-2" />
-                                      Reject Venue
+                                    {selectedVenue.verifiedStatus === 'verified' ? (
+                                      <>
+                                        <XCircle className="h-4 w-4 mr-2" />
+                                        Unverify
+                                      </>
+                                    ) : (
+                                      <>
+                                        <CheckCircle className="h-4 w-4 mr-2" />
+                                        Verify
+                                      </>
+                                    )}
                                   </Button>
                                 </div>
-                                )}
                               </div>
                             )}
                           </DialogContent>
                         </Dialog>
 
-                        {venue.status === 'pending' && (
-                          <>
                         <Button
                           variant="ghost"
                           size="sm"
-                              onClick={() => handleVerifyVenue(venue.id)}
-                              className="text-green-600 hover:text-green-700"
-                            >
-                              <Check className="h-4 w-4" />
+                          onClick={() => handleToggleVerification(venue.id, venue.verifiedStatus)}
+                          className={venue.verifiedStatus === 'verified' ? 'text-red-600 hover:text-red-700' : 'text-green-600 hover:text-green-700'}
+                        >
+                          {venue.verifiedStatus === 'verified' ? (
+                            <XCircle className="h-4 w-4" />
+                          ) : (
+                            <CheckCircle className="h-4 w-4" />
+                          )}
                         </Button>
+
                         <Button
                           variant="ghost"
                           size="sm"
-                              onClick={() => handleRejectVenue(venue.id)}
+                          onClick={() => handleDeleteVenue(venue.id)}
                           className="text-red-600 hover:text-red-700"
                         >
-                              <X className="h-4 w-4" />
+                          <Trash2 className="h-4 w-4" />
                         </Button>
-                          </>
-                        )}
                       </div>
                     </TableCell>
                   </TableRow>

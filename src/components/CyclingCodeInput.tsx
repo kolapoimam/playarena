@@ -48,21 +48,32 @@ type CyclingEvent = {
 
 type CyclingEventResponse = {
   id_uuid: string;
-  event_name: string;
+  slug: string;
+  title: string;
   event_date: string;
-  event_start_time: string;
-  event_end_time: string;
+  start_time: string;
+  max_attendees: number;
   host_id: string;
   host_name: string;
   host_phone: string;
-  cycling_attendees: {
+  supercode: string;
+  is_free: boolean;
+  price?: number;
+  status: string;
+  start_landmark_id: string;
+  start_landmark: {
+    name?: string;
+    state?: string;
+  } | null;
+  attendees: {
     id_uuid: string;
     attendee_name: string;
     attendee_phone: string;
-    status: "registered" | "checked_in" | "absent";
+    attendee_status: string;
     confirmation_code: string;
     details: { phone: string } | null;
-  }[];
+    number_of_slots?: number;
+  }[] | null;
 };
 
 const codeSchema = z
@@ -150,7 +161,7 @@ const CyclingCodeInput = ({
         const { data: cyclingData, error: cyclingError } = await supabase
           .from("cycling_events_view")
           .select(`
-            id_uuid, slug, title, event_date, start_time, max_attendees, host_id, host_name, host_phone, supercode, is_free, price, status, start_landmark_id, start_landmark, cycling_attendees
+            id_uuid, slug, title, event_date, start_time, max_attendees, host_id, host_name, host_phone, supercode, is_free, price, status, start_landmark_id, start_landmark, attendees
           `)
           .eq("supercode", numericValue)
           .maybeSingle();
@@ -170,7 +181,7 @@ const CyclingCodeInput = ({
                   city: response.start_landmark.state ?? "Unknown City",
                 }
               : null,
-            attendees: Array.isArray(response.cycling_attendees) ? response.cycling_attendees.map(attendee => ({
+            attendees: Array.isArray(response.attendees) ? response.attendees.map(attendee => ({
               ...attendee,
               details: attendee.details || { phone: attendee.attendee_phone || "N/A" },
             })) : [],

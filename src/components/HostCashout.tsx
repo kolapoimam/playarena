@@ -11,36 +11,48 @@ import { v4 as uuidv4 } from 'uuid';
 
 type CyclingEvent = {
   id_uuid: string;
-  event_name: string;
+  slug: string;
+  title: string;
   event_date: string;
-  event_start_time: string;
-  event_end_time: string;
+  start_time: string;
+  event_start_time?: string | null;
+  event_end_time?: string | null;
+  max_attendees: number;
   host_id: string;
   host_name: string;
   host_phone: string;
-  cycling_attendees: {
+  supercode: string;
+  is_free: boolean;
+  price?: number;
+  cancellation_status: boolean;
+  status: string;
+  start_landmark_id: string;
+  location: {
+    name?: string;
+    city?: string;
+  } | null;
+  attendees: {
     id_uuid: string;
     attendee_name: string;
     attendee_phone: string;
-    status: "registered" | "checked_in" | "absent";
+    attendee_status: string;
     confirmation_code: string;
     details: { phone: string } | null;
-  }[];
+    number_of_slots?: number;
+  }[] | null;
 };
 
 type Cashout = {
   id: string;
   cycling_event_id_uuid: string;
-  supercode: string;
+  super_code: string;
   total_amount_paid: number;
   bank_account_number: string;
   bank_name: string;
   account_name: string;
   status: 'Review' | 'Processed' | 'Failed' | 'Successful';
   temp_identifier?: string;
-  host_id: string;
   created_at: string;
-  updated_at: string;
 };
 
 const bankAccountSchema = z.string().regex(/^\d{10}$/, { message: "Bank account number must be exactly 10 digits" });
@@ -88,22 +100,41 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
     }
   }, [tempIdentifier]);
 
-  const fetchWalletBalance = async () => {
+  const fetchWalletBalance = useCallback(async () => {
     if (!event) {
       setWalletBalance(0);
       return;
     }
 
     try {
-      const { data: walletData, error: walletError } = await supabase
-        .from('cycling_wallets')
-        .select('balance')
-        .eq('host_id', event.host_id)
-        .maybeSingle();
+      const { data: attendeesData, error } = await supabase
+        .from('cycling_attendees')
+        .select('attendee_status, number_of_slots')
+        .eq('cycling_event_id_uuid', event.id_uuid);
 
-      if (walletError) throw walletError;
+      if (error) throw error;
 
-      setWalletBalance(walletData?.balance || 0);
+      let balance = 0;
+      if (!event.is_free && event.price) {
+        const checkedInAttendees = attendeesData.filter(a => a.attendee_status === 'checked_in');
+        balance = checkedInAttendees.reduce(
+          (sum, attendee) => sum + ((Number(attendee.number_of_slots) || 1) * (event.price || 0)),
+          0
+        );
+      }
+
+      const { data: cashoutData, error: cashoutError } = await supabase
+        .from('cashouts')
+        .select('total_amount_paid')
+        .eq('cycling_event_id_uuid', event.id_uuid)
+        .in('status', ['Review', 'Processed', 'Successful']);
+
+      if (cashoutError) throw cashoutError;
+
+      const cashoutTotal = cashoutData.reduce((sum, request) => sum + (request.total_amount_paid || 0), 0);
+      balance -= cashoutTotal;
+
+      setWalletBalance(balance < 0 ? 0 : balance);
     } catch (error: any) {
       console.error('Error fetching wallet balance:', error);
       toast({
@@ -113,17 +144,17 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
       });
       setWalletBalance(0);
     }
-  };
+  }, [event, toast]);
 
-  const fetchCashoutRequests = async () => {
-    if (!event || !localTempIdentifier) {
+  const fetchCashoutRequests = useCallback(async () => {
+    if (!event) {
       setCashoutRequests([]);
       return;
     }
 
     try {
       const { data, error } = await supabase
-        .from('cycling_cashouts')
+        .from('cashouts')
         .select('*')
         .eq('cycling_event_id_uuid', event.id_uuid)
         .eq('temp_identifier', localTempIdentifier)
@@ -141,7 +172,7 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
       });
       setCashoutRequests([]);
     }
-  };
+  }, [event, localTempIdentifier, toast]);
 
   useEffect(() => {
     if (!event || !localTempIdentifier) return;
@@ -150,13 +181,13 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
     fetchCashoutRequests();
 
     const channel = supabase
-      .channel(`cycling_cashouts_event_${event.id_uuid}`)
+      .channel(`cashouts_event_${event.id_uuid}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'cycling_cashouts',
+          table: 'cashouts',
           filter: `cycling_event_id_uuid=eq.${event.id_uuid}`,
         },
         () => {
@@ -169,7 +200,7 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [event, localTempIdentifier]);
+  }, [event, localTempIdentifier, fetchWalletBalance, fetchCashoutRequests]);
 
   const handleInputChange = (field: string, value: string) => {
     if (field === 'bankAccountNumber') {
@@ -280,42 +311,26 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
       const { data: userData } = await supabase.auth.getUser();
       const userId = userData.user?.id;
 
-      if (!userId || userId !== event.host_id) {
-        throw new Error("You are not authorized to request a cashout for this event.");
+      if (!userId) {
+        throw new Error("User not authenticated.");
       }
 
       const { error: cashoutError } = await supabase
-        .from('cycling_cashouts')
+        .from('cashouts')
         .insert({
           cycling_event_id_uuid: event.id_uuid,
-          supercode: event.supercode,
+          super_code: event.supercode,
           total_amount_paid: amount,
           bank_account_number: bankAccountNumber,
           bank_name: bankName,
           account_name: accountName,
           status: 'Review',
           temp_identifier: localTempIdentifier,
-          host_id: userId,
+          organizer_id: userId,
           created_at: new Date().toISOString(),
         });
 
       if (cashoutError) throw cashoutError;
-
-      const { error: walletError } = await supabase
-        .rpc('update_cycling_wallet_balance', {
-          p_host_id: userId,
-          p_amount: amount,
-          p_operation: 'subtract',
-        });
-
-      if (walletError) {
-        console.error('Wallet update error:', walletError);
-        toast({
-          title: "Warning",
-          description: "Cashout requested, but failed to update wallet balance.",
-          variant: "destructive",
-        });
-      }
 
       await fetchCashoutRequests();
       setCashoutDialogOpen(false);

@@ -3,13 +3,9 @@ import { Badge } from "@/components/ui/badge";
 import { Users } from "lucide-react";
 
 type Attendee = {
-  id_uuid: string;
+  id: string;
   attendee_name: string;
-  attendee_phone: string;
-  status: "registered" | "checked_in" | "absent";
-  confirmation_code: string;
-  details: { phone: string } | null;
-  number_of_slots?: number;
+  attendee_status: string;
 };
 
 type CyclingEvent = {
@@ -81,32 +77,20 @@ const AttendeesTable: React.FC<AttendeesTableProps> = ({ event, attendees, navig
       <h2 className="font-semibold mb-3">Attendees ({totalAttendees}/{event.max_attendees})</h2>
       
       {attendees && attendees.length > 0 ? (
-        <div className="space-y-4">
-          {attendees.map((attendee) => (
-            <div
-              key={attendee.id_uuid}
-              className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600"
-            >
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between">
-                <div className="mb-2 sm:mb-0">
-                  <p className="font-medium text-gray-900 dark:text-white">
-                    {attendee.attendee_name}
-                  </p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Phone: {attendee.attendee_phone || "N/A"}
-                  </p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Slots: {Number(attendee.number_of_slots) || 1}
-                  </p>
-                </div>
-                <div className="flex flex-col items-end space-y-2">
-                  <span
-                    className={`inline-block px-2 py-1 text-sm font-medium rounded border ${getStatusStyles(attendee.status)}`}
-                  >
-                    {formatStatus(attendee.status)}
-                  </span>
-                </div>
+        <div className="space-y-2">
+          {attendees.map((attendee, index) => (
+            <div key={index} className="flex items-center gap-2 p-2 bg-muted rounded-md justify-between">
+              <div className="flex items-center gap-2">
+                <span className="w-8 h-8 rounded-full bg-playarena-100 flex items-center justify-center">
+                  {attendee.attendee_name.charAt(0).toUpperCase()}
+                </span>
+                <span>{attendee.attendee_name}</span>
               </div>
+              <Badge
+                className={`${getStatusStyles(attendee.attendee_status)} !hover:bg-transparent !hover:cursor-default`}
+              >
+                {formatStatus(attendee.attendee_status)}
+              </Badge>
             </div>
           ))}
         </div>
