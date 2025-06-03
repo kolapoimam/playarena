@@ -129,22 +129,8 @@ const ConfirmCheckin = () => {
   }>({});
   const [tempIdentifier] = useState(uuidv4());
   const [error, setError] = useState<string | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
   const [recentSuperCodes, setRecentSuperCodes] = useState<string[]>([]);
-  const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
-
-  useEffect(() => {
-    const fetchUserId = async () => {
-      const { data: session } = await supabase.auth.getSession();
-      if (session.session) {
-        setUserId(session.session.user.id);
-      } else {
-        setUserId(null);
-      }
-    };
-    fetchUserId();
-  }, []);
 
   const resetState = () => {
     setMatch(null);
@@ -189,18 +175,6 @@ const ConfirmCheckin = () => {
             variant: "destructive",
           });
           return;
-        }
-
-        if (userId) {
-          const { data: walletData, error: walletError } = await supabase
-            .from("cycling_wallets")
-            .select("balance")
-            .eq("host_id", userId)
-            .single();
-
-          if (!walletError && walletData) {
-            setWalletBalance(walletData.balance);
-          }
         }
 
         const cyclingData: CyclingEvent = {
@@ -307,18 +281,6 @@ const ConfirmCheckin = () => {
             variant: "destructive",
           });
           return;
-        }
-
-        if (userId) {
-          const { data: walletData, error: walletError } = await supabase
-            .from("wallets")
-            .select("balance")
-            .eq("organizer_id", userId)
-            .single();
-
-          if (!walletError && walletData) {
-            setWalletBalance(walletData.balance);
-          }
         }
 
         const matchData: Match = {
@@ -662,7 +624,6 @@ const ConfirmCheckin = () => {
             loading={loading}
             setLoading={setLoading}
             fetchEvent={fetchEvent}
-            userId={userId}
             recentSuperCodes={recentSuperCodes}
             setRecentSuperCodes={setRecentSuperCodes}
             setCyclingEvent={setCyclingEvent}
@@ -677,7 +638,6 @@ const ConfirmCheckin = () => {
             loading={loading}
             setLoading={setLoading}
             fetchMatch={fetchEvent}
-            userId={userId}
             recentSuperCodes={recentSuperCodes}
             setRecentSuperCodes={setRecentSuperCodes}
             setIsCyclingEvent={setIsCyclingEvent}
@@ -754,7 +714,6 @@ const ConfirmCheckin = () => {
                     handleCancel={() => setIsCancelDialogOpen(true)}
                     loading={loading}
                     isEventPast={isEventPast()}
-                    walletBalance={walletBalance || 0}
                   />
                 ) : (
                   <MatchDetails
@@ -784,7 +743,6 @@ const ConfirmCheckin = () => {
                     setLoading={setLoading}
                     isEventPast={isEventPast()}
                     canConfirmAttendees={canConfirmAttendees()}
-                    handleCancel={() => setIsCancelDialogOpen(true)}
                     navigate={navigate}
                   />
                 ) : (
