@@ -23,7 +23,7 @@ interface CyclingEvent {
   host_name: string;
   host_id: string;
   start_landmark: { id_uuid: string; name: string; state: string; slug: string } | null;
-  attendees: { id_uuid: string; attendee_name: string; status: "registered" | "checked_in" | "absent" }[];
+  cycling_attendees: { id_uuid: string; attendee_name: string; status: "registered" | "checked_in" | "absent" }[];
   status: string;
 }
 
@@ -110,7 +110,7 @@ const CyclingActivity = () => {
       const processedEvents = (data || []).map(event => ({
         ...event,
         start_landmark: event.start_landmark || null,
-        attendees: event.attendees || []
+        cycling_attendees: event.cycling_attendees || []
       })) as CyclingEvent[];
 
       // Convert and sort events
@@ -438,7 +438,7 @@ const CyclingActivity = () => {
                       <div className="flex items-center gap-2">
                         <Users size={16} className="text-gray-600 dark:text-gray-400" />
                         <span>
-                          {event.attendees?.length || 0}/{event.max_attendees} spots filled
+                          {event.cycling_attendees?.length || 0}/{event.max_attendees} spots filled
                         </span>
                       </div>
                     </div>

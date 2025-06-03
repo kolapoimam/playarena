@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -38,11 +37,11 @@ type CyclingEvent = {
     name?: string;
     city?: string;
   } | null;
-  attendees: {
+  cycling_attendees: {
     id_uuid: string;
     attendee_name: string;
     attendee_phone: string;
-    status: string;
+    status: "registered" | "checked_in" | "absent";
     confirmation_code: string;
     details: { phone: string } | null;
     number_of_slots?: number;
@@ -51,7 +50,7 @@ type CyclingEvent = {
 
 type AttendeeStatus = {
   id_uuid: string;
-  attendee_status: "registered" | "checked_in" | "absent";
+  status: "registered" | "checked_in" | "absent";
   checkinCode: string;
 };
 
@@ -66,11 +65,11 @@ type AttendeesManagementProps = {
   event: CyclingEvent | null;
   tempIdentifier: string;
   attendeeStatuses: AttendeeStatus[];
-  setAttendeeStatuses: React.Dispatch<React.SetStateAction<AttendeeStatus[]>>;
+  setAttendeeStatuses: (statuses: AttendeeStatus[]) => void;
   checkinCodes: { [key: string]: string };
-  setCheckinCodes: React.Dispatch<React.SetStateAction<{ [key: string]: string }>>;
+  setCheckinCodes: (codes: { [key: string]: string }) => void;
   checkinCodeErrors: { [key: string]: string | null };
-  setCheckinCodeErrors: React.Dispatch<React.SetStateAction<{ [key: string]: string | null }>>;
+  setCheckinCodeErrors: (errors: { [key: string]: string | null }) => void;
   fetchEvent: () => void;
   loading: boolean;
   setLoading: (value: boolean) => void;
@@ -132,14 +131,14 @@ const AttendeesManagement = ({
       try {
         const { data: attendeesData, error } = await supabase
           .from('cycling_attendees')
-          .select('id_uuid, status, confirmation_code')
+          .select('id_uuid, status')
           .eq('cycling_event_id_uuid', event.id_uuid);
 
         if (error) throw error;
 
-        const initialStatuses: AttendeeStatus[] = attendeesData.map(attendee => ({
+        const initialStatuses = attendeesData.map(attendee => ({
           id_uuid: attendee.id_uuid,
-          attendee_status: (attendee.status || 'registered') as "registered" | "checked_in" | "absent",
+          status: attendee.status,
           checkinCode: checkinCodes[attendee.id_uuid] || ''
         }));
         setAttendeeStatuses(initialStatuses);
@@ -162,10 +161,10 @@ const AttendeesManagement = ({
 
               if (updateError) throw updateError;
 
-              setAttendeeStatuses((prev) =>
+              setAttendeeStatuses(prev =>
                 prev.map(status =>
                   registeredAttendees.some(a => a.id_uuid === status.id_uuid)
-                    ? { ...status, attendee_status: 'absent' }
+                    ? { ...status, status: 'absent' }
                     : status
                 )
               );
@@ -188,10 +187,10 @@ const AttendeesManagement = ({
           description: "Failed to load attendee statuses.",
           variant: "destructive",
         });
-        if (event?.attendees) {
-          const initialStatuses: AttendeeStatus[] = event.attendees.map(attendee => ({
+        if (event?.cycling_attendees) {
+          const initialStatuses = event.cycling_attendees.map(attendee => ({
             id_uuid: attendee.id_uuid,
-            attendee_status: (attendee.status || 'registered') as "registered" | "checked_in" | "absent",
+            status: attendee.status,
             checkinCode: checkinCodes[attendee.id_uuid] || ''
           }));
           setAttendeeStatuses(initialStatuses);
@@ -211,7 +210,8 @@ const AttendeesManagement = ({
           table: 'cycling_attendees',
           filter: `cycling_event_id_uuid=eq.${event.id_uuid}`,
         },
-        () => {
+        (payload) => {
+          console.log('Received real-time update:', payload);
           fetchAttendeeStatuses();
           fetchEvent();
         }
@@ -224,10 +224,10 @@ const AttendeesManagement = ({
   }, [event, setAttendeeStatuses, checkinCodes, fetchEvent, toast]);
 
   const canCheckin = () => {
-    if (!event || event.cancellation_status || !event.attendees?.length) return false;
+    if (!event || event.cancellation_status || !event.cycling_attendees?.length) return false;
     const eventDateTime = new Date(`${event.event_date}T${event.start_time}`);
     const checkTime = addDays(eventDateTime, 1);
-    const hasRegisteredAttendees = event.attendees?.some(a => a.status === "registered");
+    const hasRegisteredAttendees = event.cycling_attendees?.some(a => a.status === "registered");
     return !isPast(checkTime) && hasRegisteredAttendees;
   };
 
@@ -242,7 +242,7 @@ const AttendeesManagement = ({
     }
 
     if (!canCheckin()) {
-      const reason = !event.attendees?.length
+      const reason = !event.cycling_attendees?.length
         ? "No attendees are registered for this event."
         : "The event has ended or check-in is no longer available.";
       toast({
@@ -270,7 +270,7 @@ const AttendeesManagement = ({
   const handleCheckin = async (attendeeId: string) => {
     if (!event) return;
 
-    const attendee = event.attendees?.find((p) => p.id_uuid === attendeeId);
+    const attendee = event.cycling_attendees?.find((p) => p.id_uuid === attendeeId);
     if (!attendee) {
       toast({
         title: "Error",
@@ -297,61 +297,35 @@ const AttendeesManagement = ({
     setCheckingInAttendees((prev) => ({ ...prev, [attendeeId]: true }));
     setLoading(true);
 
-    let currentStatus: "registered" | "checked_in" | "absent" | null = null;
-
     try {
       console.log('Checking in attendee:', { attendeeId, code });
 
-      // Verify attendee and current status
-      const { data, error: selectError } = await supabase
+      // Update attendee status using confirmation code and event ID
+      const { error: updateError } = await supabase
         .from("cycling_attendees")
-        .select("id_uuid, confirmation_code, status")
-        .eq("id_uuid", attendeeId)
-        .single();
-
-      if (selectError || !data) {
-        console.error('Select error:', selectError);
-        throw new Error("Attendee not found in database");
-      }
-
-      currentStatus = data.status as "registered" | "checked_in" | "absent";
-
-      if (data.status !== "registered") {
-        throw new Error("Attendee is already checked in or marked absent");
-      }
-
-      if (data.confirmation_code !== code) {
-        throw new Error("Invalid confirmation code");
-      }
-
-      // Update attendee status with confirmation_code in WHERE
-      const { error: updateError, data: updateData } = await supabase
-        .from("cycling_attendees")
-        .update({ status: "checked_in" })
-        .eq("id_uuid", attendeeId)
+        .update({ 
+          status: "checked_in",
+          updated_at: new Date().toISOString()
+        })
         .eq("confirmation_code", code)
-        .select("id_uuid, status")
+        .eq("cycling_event_id_uuid", event.id_uuid)
         .single();
 
       if (updateError) {
         console.error('Update error:', updateError);
-        throw new Error("Failed to update attendee status");
+        throw new Error(`Failed to update attendee status: ${updateError.message}`);
       }
 
-      if (!updateData) {
-        throw new Error("No rows updated");
-      }
-
-      // Sync UI with updated data
-      setAttendeeStatuses((prev) =>
-        prev.map((status) =>
+      // Update local state
+      setAttendeeStatuses((prev: AttendeeStatus[]) => (
+        [...prev.map((status: AttendeeStatus) =>
           status.id_uuid === attendeeId
-            ? { ...status, attendee_status: "checked_in" }
+            ? { ...status, status: "checked_in" }
             : status
-        )
-      );
+        )] as AttendeeStatus[]
+      ));
 
-      // Refresh event data
+      // Refresh event data to get updated status
       await fetchEvent();
 
       setCheckinAttendee({
@@ -362,34 +336,12 @@ const AttendeesManagement = ({
       setCheckinDialogOpen(true);
 
       toast({
-        title: "Success",
-        description: `${attendee.attendee_name} has been checked in successfully.`,
-      });
-
-      // Clear check-in code and errors
-      setCheckinCodes((prev) => {
-        const newCodes = { ...prev };
-        delete newCodes[attendeeId];
-        return newCodes;
-      });
-
-      setCheckinCodeErrors((prev) => {
-        const newErrors = { ...prev };
-        delete newErrors[attendeeId];
-        return newErrors;
-      });
-    } catch (error: any) {
-      console.error('Check-in error:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to check in attendee",
-        variant: "destructive",
       });
       // Revert UI state if update failed
       setAttendeeStatuses((prev) =>
         prev.map((status) =>
           status.id_uuid === attendeeId
-            ? { ...status, attendee_status: currentStatus || "registered" }
+            ? { ...status, status: currentStatus || "registered" }
             : status
         )
       );
@@ -446,18 +398,20 @@ const AttendeesManagement = ({
           onClick={() => setIsAttendeesOpen(!isAttendeesOpen)}
           className="flex items-center justify-between w-full text-left text-lg font-semibold mb-2 text-gray-900 dark:text-white"
         >
-          <span>Attendees ({event.attendees?.length || 0})</span>
+          <span>Attendees ({event.cycling_attendees?.length || 0})</span>
           {isAttendeesOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
         </button>
 
         {isAttendeesOpen && (
           <div className="space-y-4 max-h-96 overflow-y-auto">
-            {event.attendees?.length === 0 ? (
+            {event.cycling_attendees?.length === 0 ? (
               <p className="text-center text-gray-600 dark:text-gray-400">
                 No attendees registered.
               </p>
             ) : (
-              event.attendees?.map((attendee) => (
+              event.cycling_attendees?.map((attendee) => {
+                const currentStatus = attendeeStatuses.find(s => s.id_uuid === attendee.id_uuid)?.status || attendee.status;
+                return (
                 <div
                   key={attendee.id_uuid}
                   className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600"
@@ -476,11 +430,11 @@ const AttendeesManagement = ({
                     </div>
                     <div className="flex flex-col items-end space-y-2">
                       <span
-                        className={`inline-block px-2 py-1 text-sm font-medium rounded border ${getStatusStyles(attendee.status)}`}
+                        className={`inline-block px-2 py-1 text-sm font-medium rounded border ${getStatusStyles(currentStatus)}`}
                       >
-                        {getDisplayStatus(attendee.status)}
+                        {getDisplayStatus(currentStatus)}
                       </span>
-                      {mode === "checkin" && attendee.status === "registered" && canConfirmAttendees && (
+                      {mode === "checkin" && currentStatus === "registered" && canConfirmAttendees && (
                         <div className="flex items-center gap-2">
                           <Input
                             placeholder="6-digit code"
@@ -520,35 +474,49 @@ const AttendeesManagement = ({
                     </div>
                   </div>
                 </div>
-              ))
+              )})
             )}
           </div>
         )}
       </div>
 
+      {mode === "checkin" && (
+        <Button
+          onClick={() => setMode(null)}
+          className="mt-4 bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700 text-white"
+          disabled={loading}
+        >
+          {loading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            "Done"
+          )}
+        </Button>
+      )}
+
       <Dialog open={checkinDialogOpen} onOpenChange={setCheckinDialogOpen}>
         <DialogContent className="sm:max-w-md rounded-lg">
           <DialogHeader>
-            <DialogTitle>Check-in Successful!</DialogTitle>
+            <DialogTitle>Check-in Successful</DialogTitle>
             <DialogDescription>
               {checkinAttendee && (
-                <div className="text-center py-4">
-                  <p className="text-lg font-semibold text-green-600 dark:text-green-400">
-                    {checkinAttendee.name}
-                  </p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    has been successfully checked in for {checkinAttendee.slots} slot(s).
-                  </p>
-                </div>
+                <>
+                  {checkinAttendee.name} has been checked in with{" "}
+                  {checkinAttendee.slots} slot
+                  {checkinAttendee.slots !== 1 ? "s" : ""}.
+                </>
               )}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button
               onClick={() => setCheckinDialogOpen(false)}
-              className="bg-green-500 hover:bg-green-600 text-white w-full"
+              className="bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700 text-white rounded-md"
             >
-              Continue
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,73 +1,75 @@
-# Welcome to your Lovable project
+# Sport Cliq - Sports Community Platform
 
-## Project info
+Sport Cliq is a comprehensive sports community platform that connects sports enthusiasts, venues, and event organizers. Built with modern web technologies, it provides a seamless experience for managing sports activities, venues, and community engagement.
 
-**URL**: https://lovable.dev/projects/0c87260f-323c-4219-9a58-e1e6227f1a3f
+## 🌟 Features
 
-## How can I edit this code?
+### For Sports Enthusiasts
+- Discover and join sports events in your area
+- Book sports venues and facilities
+- Track your participation history
+- Connect with other sports enthusiasts
+- Receive notifications for upcoming events
+- Join cycling groups and activities
+- Explore sports landmarks and routes
 
-There are several ways of editing your application.
+### For Venue Owners
+- List and manage sports venues
+- Handle venue bookings and availability
+- Process payments and manage revenue
+- Track venue performance metrics
+- Manage venue staff and operations
+- Receive real-time booking notifications
 
-**Use Lovable**
+### For Event Organizers
+- Create and manage sports events
+- Handle participant registrations
+- Process ticket sales and payments
+- Manage event check-ins
+- Track event performance
+- Send event notifications
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/0c87260f-323c-4219-9a58-e1e6227f1a3f) and start prompting.
+### Admin Features
+- Comprehensive admin dashboard
+- User management and moderation
+- Event oversight and management
+- Venue verification and management
+- Financial monitoring and cashout processing
+- Analytics and reporting
+- System-wide notifications
+- Audit logging
 
-Changes made via Lovable will be committed automatically to this repo.
+## 🛠️ Technology Stack
 
-**Use your preferred IDE**
+### Frontend
+- **Framework**: React with TypeScript
+- **Styling**: Tailwind CSS with shadcn/ui components
+- **Build Tool**: Vite
+- **State Management**: React Query
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### Backend & Infrastructure
+- **Database**: Supabase (PostgreSQL)
+- **Authentication**: Supabase Auth
+- **Real-time Updates**: Supabase Realtime
+- **CDN & Security**: Cloudflare
+- **Deployment**: Vercel
+- **Analytics**: Google Analytics
+- **Notifications**: OneSignal
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+## 🔒 Security
 
-Follow these steps:
+- All admin routes are protected and require authentication
+- Admin actions are logged in the audit log
+- Environment variables are used for sensitive data
+- Row Level Security (RLS) is implemented in Supabase
+- Regular security audits and updates
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+## 📝 License
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+© 2024 Sport Cliq. All rights reserved.
 
-# Step 3: Install the necessary dependencies.
-npm i
+This software and its documentation are proprietary and confidential. Unauthorized copying, distribution, or use of this software, via any medium, is strictly prohibited.
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+## 📞 Support
 
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/0c87260f-323c-4219-9a58-e1e6227f1a3f) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+For internal support, contact the Sport Cliq development team at support@sportcliq.com

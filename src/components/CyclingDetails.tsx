@@ -24,12 +24,13 @@ type CyclingEvent = {
   status: string;
   start_landmark_id: string;
   start_landmark: {
+    id_uuid: string;
     name: string;
     state: string;
-    description?: string | null;
-    map_link?: string | null;
-  };
-  attendees: {
+    description?: string;
+    map_link?: string;
+  } | null;
+  cycling_attendees: {
     id_uuid: string;
     attendee_name: string;
     attendee_phone: string;
@@ -43,12 +44,16 @@ type CyclingEvent = {
 type Cashout = {
   id: string;
   cycling_event_id_uuid: string;
-  super_code: string;
+  supercode: string;
+  total_amount_paid: number;
   bank_account_number: string;
   bank_name: string;
   account_name: string;
   status: "Review" | "Processed" | "Failed" | "Successful";
   temp_identifier?: string;
+  host_id: string;
+  created_at: string;
+  updated_at: string;
 };
 
 type CyclingDetailsProps = {
@@ -60,9 +65,72 @@ type CyclingDetailsProps = {
   walletBalance: number;
 };
 
-const CyclingDetails = ({ event, cashout, handleCancel, loading, isEventPast, walletBalance }: CyclingDetailsProps) => {
+const CyclingDetails = ({ event: initialEvent, cashout, handleCancel, loading, isEventPast, walletBalance }: CyclingDetailsProps) => {
   const { toast } = useToast();
   const [localWalletBalance, setLocalWalletBalance] = useState<number>(walletBalance || 0);
+  const [event, setEvent] = useState<CyclingEvent | null>(initialEvent);
+
+  // Fetch event details with landmark data
+  const fetchEventDetails = async () => {
+    if (!initialEvent?.id_uuid) return;
+    try {
+      // Fetch the event data with landmark data using a join
+      const { data: eventData, error: eventError } = await supabase
+        .from("cycling_events")
+        .select(`
+          id_uuid,
+          slug,
+          title,
+          event_date,
+          start_time,
+          event_start_time,
+          event_end_time,
+          max_attendees,
+          host_id,
+          host_name,
+          host_phone,
+          supercode,
+          is_free,
+          price,
+          cancellation_status,
+          status,
+          start_landmark_id,
+          start_landmark:landmarks!start_landmark_id (
+            id_uuid,
+            name,
+            state,
+            description,
+            map_link
+          ),
+          cycling_attendees (
+            id_uuid,
+            attendee_name,
+            attendee_phone,
+            status,
+            confirmation_code,
+            details,
+            number_of_slots
+          )
+        `)
+        .eq("id_uuid", initialEvent.id_uuid)
+        .single();
+
+      if (eventError) throw eventError;
+
+      setEvent(eventData as CyclingEvent);
+    } catch (error) {
+      console.error("Error fetching event details:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch event details.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  useEffect(() => {
+    fetchEventDetails();
+  }, [initialEvent]);
 
   useEffect(() => {
     if (!event) {
@@ -89,17 +157,15 @@ const CyclingDetails = ({ event, cashout, handleCancel, loading, isEventPast, wa
           );
         }
 
-        // Fetch wallet balance with proper headers
         const { data: walletData, error: walletError } = await supabase
-          .from("wallets")
+          .from("cycling_wallets")
           .select("balance")
-          .eq("organizer_id", event.host_id)
+          .eq("host_id", event.host_id)
           .single()
           .throwOnError();
 
         if (walletError) {
           console.error("Wallet fetch error:", walletError);
-          // Continue with attendee-based balance if wallet fetch fails
         } else if (walletData) {
           balance = walletData.balance;
         }
@@ -144,7 +210,7 @@ const CyclingDetails = ({ event, cashout, handleCancel, loading, isEventPast, wa
     const eventDateTime = new Date(`${event.event_date}T${event.start_time}`);
     const now = new Date();
     const minutesToStart = differenceInMinutes(eventDateTime, now);
-    const hasCheckedInAttendees = event.attendees?.some((a) => a.status === "checked_in") || false;
+    const hasCheckedInAttendees = event.cycling_attendees?.some((a) => a.status === "checked_in") || false;
     return minutesToStart > 0 && !event.cancellation_status && !hasCheckedInAttendees;
   };
 
@@ -184,7 +250,7 @@ const CyclingDetails = ({ event, cashout, handleCancel, loading, isEventPast, wa
     if (!event) return "N/A";
     let total = 0;
     if (!event.is_free && event.price) {
-      const checkedInAttendees = event.attendees?.filter((a) => a?.status === "checked_in") || [];
+      const checkedInAttendees = event.cycling_attendees?.filter((a) => a?.status === "checked_in") || [];
       total = checkedInAttendees.reduce(
         (sum, attendee) => sum + ((Number(attendee?.number_of_slots) || 1) * (event.price || 0)),
         0
@@ -194,8 +260,8 @@ const CyclingDetails = ({ event, cashout, handleCancel, loading, isEventPast, wa
   };
 
   const calculateTotalSlotsOccupied = () => {
-    if (!event || !event.attendees) return 0;
-    return event.attendees.reduce((sum, attendee) => sum + (Number(attendee?.number_of_slots) || 1), 0);
+    if (!event || !event.cycling_attendees) return 0;
+    return event.cycling_attendees.reduce((sum, attendee) => sum + (Number(attendee?.number_of_slots) || 1), 0);
   };
 
   if (!event) return null;

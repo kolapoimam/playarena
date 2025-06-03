@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,69 +8,61 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Search, Eye, Ban, Trash2, Edit } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
+import { adminOperations, AdminEvent } from '@/lib/admin';
 
 const EventManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [sportFilter, setSportFilter] = useState('all');
-  const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  const [selectedEvent, setSelectedEvent] = useState<AdminEvent | null>(null);
+  const [events, setEvents] = useState<AdminEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock event data
-  const events = [
-    {
-      id: 'EVT-001',
-      title: '5-a-side Football Match',
-      sport: 'Football',
-      organizer: 'John Doe',
-      date: '2024-06-15',
-      status: 'upcoming',
-      participants: 8,
-      venue: 'Lagos Pitch',
-      ticketsSold: 15,
-      feedback: 4.5
-    },
-    {
-      id: 'EVT-002',
-      title: 'Basketball Tournament',
-      sport: 'Basketball',
-      organizer: 'Jane Smith',
-      date: '2024-06-20',
-      status: 'active',
-      participants: 12,
-      venue: 'Victory Sports Complex',
-      ticketsSold: 25,
-      feedback: 4.2
-    },
-    {
-      id: 'EVT-003',
-      title: 'Tennis Singles',
-      sport: 'Tennis',
-      organizer: 'Mike Johnson',
-      date: '2024-06-10',
-      status: 'completed',
-      participants: 2,
-      venue: 'Elite Tennis Club',
-      ticketsSold: 8,
-      feedback: 4.8
+  // Fetch events
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        setLoading(true);
+        const { events } = await adminOperations.getEvents(
+          1, 
+          50, 
+          statusFilter === 'all' ? undefined : statusFilter,
+          sportFilter === 'all' ? undefined : sportFilter
+        );
+        setEvents(events);
+        setError(null);
+      } catch (err) {
+        setError('Failed to fetch events');
+        console.error('Error fetching events:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEvents();
+  }, [statusFilter, sportFilter]);
+
+  const handleCancelEvent = async (eventId: string) => {
+    try {
+      await adminOperations.updateEventStatus(eventId, 'cancelled');
+      setEvents(events.map(e => 
+        e.id === eventId ? { ...e, status: 'cancelled' } : e
+      ));
+    } catch (err) {
+      console.error('Error cancelling event:', err);
+      setError('Failed to cancel event');
     }
-  ];
-
-  const filteredEvents = events.filter(event => {
-    const matchesSearch = event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         event.organizer.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || event.status === statusFilter;
-    const matchesSport = sportFilter === 'all' || event.sport === sportFilter;
-    return matchesSearch && matchesStatus && matchesSport;
-  });
-
-  const handleCancelEvent = (eventId: string) => {
-    console.log('Cancelling event:', eventId);
-    // Implementation would cancel event and process refunds
   };
 
-  const handleDeleteEvent = (eventId: string) => {
-    console.log('Deleting event:', eventId);
-    // Implementation would delete event from database
+  const handleDeleteEvent = async (eventId: string) => {
+    try {
+      await adminOperations.updateEventStatus(eventId, 'deleted');
+      setEvents(events.filter(e => e.id !== eventId));
+    } catch (err) {
+      console.error('Error deleting event:', err);
+      setError('Failed to delete event');
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -84,41 +75,53 @@ const EventManagement = () => {
     }
   };
 
+  const filteredEvents = events.filter(event => {
+    const matchesSearch = event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         event.organizer.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesSearch;
+  });
+
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center h-full">
+          <p>Loading events...</p>
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center h-full">
+          <p className="text-red-500">{error}</p>
+        </div>
+      </AdminLayout>
+    );
+  }
+
   return (
     <AdminLayout>
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold">Event Management</h1>
-          <p className="text-muted-foreground">Manage events and ensure policy compliance</p>
+          <p className="text-muted-foreground">Manage and monitor all events</p>
         </div>
 
-        {/* Search and Filters */}
+        {/* Filters */}
         <Card>
           <CardHeader>
-            <CardTitle>Search Events</CardTitle>
+            <CardTitle>Filter Events</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <div className="flex flex-col md:flex-row gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search by title or organizer..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              <Select value={sportFilter} onValueChange={setSportFilter}>
-                <SelectTrigger className="w-full md:w-48">
-                  <SelectValue placeholder="Filter by sport" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Sports</SelectItem>
-                  <SelectItem value="Football">Football</SelectItem>
-                  <SelectItem value="Basketball">Basketball</SelectItem>
-                  <SelectItem value="Tennis">Tennis</SelectItem>
-                </SelectContent>
-              </Select>
+              <Input
+                placeholder="Search events..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="md:w-64"
+              />
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-full md:w-48">
                   <SelectValue placeholder="Filter by status" />
@@ -131,6 +134,18 @@ const EventManagement = () => {
                   <SelectItem value="cancelled">Cancelled</SelectItem>
                 </SelectContent>
               </Select>
+              <Select value={sportFilter} onValueChange={setSportFilter}>
+                <SelectTrigger className="w-full md:w-48">
+                  <SelectValue placeholder="Filter by sport" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Sports</SelectItem>
+                  <SelectItem value="Football">Football</SelectItem>
+                  <SelectItem value="Basketball">Basketball</SelectItem>
+                  <SelectItem value="Tennis">Tennis</SelectItem>
+                  <SelectItem value="Volleyball">Volleyball</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
@@ -139,7 +154,7 @@ const EventManagement = () => {
         <Card>
           <CardHeader>
             <CardTitle>Events ({filteredEvents.length})</CardTitle>
-            <CardDescription>All events on the platform</CardDescription>
+            <CardDescription>View and manage all events on the platform</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
@@ -152,6 +167,7 @@ const EventManagement = () => {
                   <TableHead>Date</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Participants</TableHead>
+                  <TableHead>Venue</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -162,13 +178,14 @@ const EventManagement = () => {
                     <TableCell className="font-medium">{event.title}</TableCell>
                     <TableCell>{event.sport}</TableCell>
                     <TableCell>{event.organizer}</TableCell>
-                    <TableCell>{event.date}</TableCell>
+                    <TableCell>{new Date(event.date).toLocaleDateString()}</TableCell>
                     <TableCell>
                       <Badge variant={getStatusColor(event.status)}>
                         {event.status}
                       </Badge>
                     </TableCell>
                     <TableCell>{event.participants}</TableCell>
+                    <TableCell>{event.venue}</TableCell>
                     <TableCell>
                       <div className="flex items-center space-x-2">
                         <Dialog>
@@ -181,65 +198,71 @@ const EventManagement = () => {
                               <Eye className="h-4 w-4" />
                             </Button>
                           </DialogTrigger>
-                          <DialogContent>
+                          <DialogContent className="max-w-2xl">
                             <DialogHeader>
                               <DialogTitle>Event Details</DialogTitle>
                               <DialogDescription>
-                                Detailed information about {selectedEvent?.title}
+                                View details for event {selectedEvent?.id}
                               </DialogDescription>
                             </DialogHeader>
                             {selectedEvent && (
-                              <div className="space-y-4">
+                              <div className="space-y-6">
                                 <div className="grid grid-cols-2 gap-4">
                                   <div>
-                                    <p className="text-sm font-medium">Venue</p>
-                                    <p className="text-lg">{selectedEvent.venue}</p>
-                                  </div>
-                                  <div>
                                     <p className="text-sm font-medium">Tickets Sold</p>
-                                    <p className="text-lg">{selectedEvent.ticketsSold}</p>
+                                    <p className="text-2xl font-bold">{selectedEvent.tickets_sold}</p>
                                   </div>
                                   <div>
-                                    <p className="text-sm font-medium">Participants</p>
-                                    <p className="text-lg">{selectedEvent.participants}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-sm font-medium">Feedback Rating</p>
-                                    <p className="text-lg">{selectedEvent.feedback}/5</p>
+                                    <p className="text-sm font-medium">Average Rating</p>
+                                    <p className="text-2xl font-bold">{selectedEvent.feedback.toFixed(1)}</p>
                                   </div>
                                 </div>
+
+                                {selectedEvent.status === 'upcoming' && (
+                                  <div className="flex space-x-4">
+                                    <Button
+                                      variant="destructive"
+                                      onClick={() => handleCancelEvent(selectedEvent.id)}
+                                      className="flex-1"
+                                    >
+                                      <Ban className="h-4 w-4 mr-2" />
+                                      Cancel Event
+                                    </Button>
+                                    <Button
+                                      variant="destructive"
+                                      onClick={() => handleDeleteEvent(selectedEvent.id)}
+                                      className="flex-1"
+                                    >
+                                      <Trash2 className="h-4 w-4 mr-2" />
+                                      Delete Event
+                                    </Button>
+                                  </div>
+                                )}
                               </div>
                             )}
                           </DialogContent>
                         </Dialog>
 
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-blue-600 hover:text-blue-700"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-
-                        {event.status !== 'cancelled' && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleCancelEvent(event.id)}
-                            className="text-yellow-600 hover:text-yellow-700"
-                          >
-                            <Ban className="h-4 w-4" />
-                          </Button>
+                        {event.status === 'upcoming' && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleCancelEvent(event.id)}
+                              className="text-yellow-600 hover:text-yellow-700"
+                            >
+                              <Ban className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteEvent(event.id)}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </>
                         )}
-
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteEvent(event.id)}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>

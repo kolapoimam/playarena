@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,75 +8,58 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Textarea } from '@/components/ui/textarea';
 import { Check, X, Eye, Clock } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
+import { adminOperations, AdminCashout } from '@/lib/admin';
 
 const CashoutManagement = () => {
   const [statusFilter, setStatusFilter] = useState('all');
-  const [selectedCashout, setSelectedCashout] = useState<any>(null);
+  const [selectedCashout, setSelectedCashout] = useState<AdminCashout | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [cashouts, setCashouts] = useState<AdminCashout[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock cashout data
-  const cashouts = [
-    {
-      id: 'CSH-001',
-      organizerName: 'John Doe',
-      organizerType: 'Event Organizer',
-      amount: 12500,
-      status: 'pending',
-      requestedAt: '2024-06-02 10:30',
-      eventDetails: '5-a-side Football Match',
-      checkedInParticipants: 8,
-      bankDetails: {
-        accountName: 'John Doe',
-        bankName: 'First Bank',
-        accountNumber: '1234567890'
+  // Fetch cashouts
+  useEffect(() => {
+    const fetchCashouts = async () => {
+      try {
+        setLoading(true);
+        const { cashouts } = await adminOperations.getCashouts(1, 50, statusFilter === 'all' ? undefined : statusFilter);
+        setCashouts(cashouts);
+        setError(null);
+      } catch (err) {
+        setError('Failed to fetch cashouts');
+        console.error('Error fetching cashouts:', err);
+      } finally {
+        setLoading(false);
       }
-    },
-    {
-      id: 'CSH-002',
-      organizerName: 'Victory Sports Complex',
-      organizerType: 'Venue Owner',
-      amount: 25000,
-      status: 'approved',
-      requestedAt: '2024-06-01 14:20',
-      eventDetails: 'Venue Booking Revenue',
-      checkedInParticipants: 15,
-      bankDetails: {
-        accountName: 'Victory Sports Ltd',
-        bankName: 'GTBank',
-        accountNumber: '0987654321'
-      }
-    },
-    {
-      id: 'CSH-003',
-      organizerName: 'Jane Smith',
-      organizerType: 'Event Organizer',
-      amount: 8750,
-      status: 'rejected',
-      requestedAt: '2024-05-30 16:45',
-      eventDetails: 'Basketball Tournament',
-      checkedInParticipants: 6,
-      rejectionReason: 'Insufficient checked-in participants',
-      bankDetails: {
-        accountName: 'Jane Smith',
-        bankName: 'UBA',
-        accountNumber: '5678901234'
-      }
+    };
+
+    fetchCashouts();
+  }, [statusFilter]);
+
+  const handleApproveCashout = async (cashoutId: string) => {
+    try {
+      await adminOperations.updateCashoutStatus(cashoutId, 'approved');
+      setCashouts(cashouts.map(c => 
+        c.id === cashoutId ? { ...c, status: 'approved' } : c
+      ));
+    } catch (err) {
+      console.error('Error approving cashout:', err);
+      setError('Failed to approve cashout');
     }
-  ];
-
-  const filteredCashouts = cashouts.filter(cashout => {
-    return statusFilter === 'all' || cashout.status === statusFilter;
-  });
-
-  const handleApproveCashout = (cashoutId: string) => {
-    console.log('Approving cashout:', cashoutId);
-    // Implementation would approve cashout and initiate Paystack payout
   };
 
-  const handleRejectCashout = (cashoutId: string, reason: string) => {
-    console.log('Rejecting cashout:', cashoutId, 'Reason:', reason);
-    // Implementation would reject cashout and send notification
-    setRejectionReason('');
+  const handleRejectCashout = async (cashoutId: string, reason: string) => {
+    try {
+      await adminOperations.updateCashoutStatus(cashoutId, 'rejected', reason);
+      setCashouts(cashouts.map(c => 
+        c.id === cashoutId ? { ...c, status: 'rejected', rejection_reason: reason } : c
+      ));
+      setRejectionReason('');
+    } catch (err) {
+      console.error('Error rejecting cashout:', err);
+      setError('Failed to reject cashout');
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -98,6 +80,26 @@ const CashoutManagement = () => {
       default: return null;
     }
   };
+
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center h-full">
+          <p>Loading cashouts...</p>
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center h-full">
+          <p className="text-red-500">{error}</p>
+        </div>
+      </AdminLayout>
+    );
+  }
 
   return (
     <AdminLayout>
@@ -174,7 +176,7 @@ const CashoutManagement = () => {
         {/* Cashouts Table */}
         <Card>
           <CardHeader>
-            <CardTitle>Cashout Requests ({filteredCashouts.length})</CardTitle>
+            <CardTitle>Cashout Requests ({cashouts.length})</CardTitle>
             <CardDescription>Manage cashout requests from organizers and venue owners</CardDescription>
           </CardHeader>
           <CardContent>
@@ -191,11 +193,11 @@ const CashoutManagement = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredCashouts.map((cashout) => (
+                {cashouts.map((cashout) => (
                   <TableRow key={cashout.id}>
                     <TableCell className="font-mono text-xs">{cashout.id}</TableCell>
-                    <TableCell className="font-medium">{cashout.organizerName}</TableCell>
-                    <TableCell>{cashout.organizerType}</TableCell>
+                    <TableCell className="font-medium">{cashout.organizer_name}</TableCell>
+                    <TableCell>{cashout.organizer_type}</TableCell>
                     <TableCell className="font-mono">₦{cashout.amount.toLocaleString()}</TableCell>
                     <TableCell>
                       <Badge variant={getStatusColor(cashout.status)} className="flex items-center gap-1 w-fit">
@@ -203,7 +205,7 @@ const CashoutManagement = () => {
                         {cashout.status}
                       </Badge>
                     </TableCell>
-                    <TableCell>{cashout.requestedAt}</TableCell>
+                    <TableCell>{new Date(cashout.requested_at).toLocaleString()}</TableCell>
                     <TableCell>
                       <div className="flex items-center space-x-2">
                         <Dialog>
@@ -228,28 +230,28 @@ const CashoutManagement = () => {
                                 <div className="grid grid-cols-2 gap-4">
                                   <div>
                                     <p className="text-sm font-medium">Event/Venue Details</p>
-                                    <p className="text-lg">{selectedCashout.eventDetails}</p>
+                                    <p className="text-lg">{selectedCashout.event_details}</p>
                                   </div>
                                   <div>
                                     <p className="text-sm font-medium">Checked-in Participants</p>
-                                    <p className="text-lg">{selectedCashout.checkedInParticipants}</p>
+                                    <p className="text-lg">{selectedCashout.checked_in_participants}</p>
                                   </div>
                                 </div>
                                 
                                 <div>
                                   <p className="text-sm font-medium mb-2">Bank Details</p>
                                   <div className="bg-muted p-4 rounded-lg space-y-2">
-                                    <p><span className="font-medium">Account Name:</span> {selectedCashout.bankDetails.accountName}</p>
-                                    <p><span className="font-medium">Bank:</span> {selectedCashout.bankDetails.bankName}</p>
-                                    <p><span className="font-medium">Account Number:</span> {selectedCashout.bankDetails.accountNumber}</p>
+                                    <p><span className="font-medium">Account Name:</span> {selectedCashout.bank_details.account_name}</p>
+                                    <p><span className="font-medium">Bank:</span> {selectedCashout.bank_details.bank_name}</p>
+                                    <p><span className="font-medium">Account Number:</span> {selectedCashout.bank_details.account_number}</p>
                                   </div>
                                 </div>
 
-                                {selectedCashout.rejectionReason && (
+                                {selectedCashout.rejection_reason && (
                                   <div>
                                     <p className="text-sm font-medium mb-2">Rejection Reason</p>
                                     <p className="text-sm text-muted-foreground bg-destructive/10 p-3 rounded-lg">
-                                      {selectedCashout.rejectionReason}
+                                      {selectedCashout.rejection_reason}
                                     </p>
                                   </div>
                                 )}
