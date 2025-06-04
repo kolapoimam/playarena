@@ -163,43 +163,6 @@ const MatchSuccessDialog = ({ open, onOpenChange, formValues, selectedVenue, sup
 
   return (
     <>
-      <div className="flex gap-3">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button 
-              variant="outline" 
-              className="flex-1"
-            >
-              <Share2 className="mr-2 h-4 w-4" />
-              Share
-              <ChevronDown className="ml-2 h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={shareToWhatsApp}>
-              Share to WhatsApp
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={shareToTwitter}>
-              Share to Twitter
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={shareToFacebook}>
-              Share to Facebook
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleShare}>
-              Share via Device
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <Button 
-          variant="outline"
-          className="flex-1"
-          onClick={handleDownload}
-          disabled={isDownloading}
-        >
-          <Download className="mr-2 h-4 w-4" />
-          {isDownloading ? "Downloading..." : "Download"}
-        </Button>
-      </div>
 
       <Dialog open={open} onOpenChange={(open) => {
         if (!open && matchSlug) {
@@ -297,20 +260,6 @@ const MatchSuccessDialog = ({ open, onOpenChange, formValues, selectedVenue, sup
               >
                 <Download size={16} className="mr-2" />
                 {isDownloading ? "Downloading..." : "Download Supercode"}
-              </Button>
-            </div>
-            <div className="flex justify-center mt-4">
-              <Button 
-                className="bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 transition-colors"
-                onClick={() => {
-                  if (!isDownloading && matchSlug) {
-                    onOpenChange(false);
-                    onNavigate(matchSlug);
-                  }
-                }}
-                disabled={isDownloading}
-              >
-                Close
               </Button>
             </div>
           </DialogDescription>
