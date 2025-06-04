@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Calendar, Users, MapPin, Copy } from "lucide-react";
+import { Calendar, Volleyball, Users, MapPin, Copy } from "lucide-react";
 import { format } from "date-fns";
 import { utcToZonedTime } from "date-fns-tz";
 import { DateTime } from "luxon";
@@ -366,7 +366,7 @@ const MyMatches = () => {
           <Card className="w-full bg-white dark:bg-gray-800 border-none shadow-xl rounded-xl">
             <CardHeader>
               <CardTitle className="text-xl font-semibold text-green-700 dark:text-green-400 flex items-center">
-                <Users className="mr-2 h-6 w-6" />
+                <Volleyball className="mr-2 h-6 w-6" />
                 My Matches
               </CardTitle>
             </CardHeader>
