@@ -433,22 +433,18 @@ const AttendeesManagement = ({
                       <p className="text-sm text-gray-600 dark:text-gray-400">
                         Phone: {attendee.attendee_phone || "N/A"}
                       </p>
-                      {currentStatus === "checked_in" && (
-                        <>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
-                            Slots: {Number(attendee.number_of_slots) || 1}
-                          </p>
-                          {attendee.is_own_bike && (
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
-                              Own Bike
-                            </p>
-                          )}
-                          {attendee.is_rental_bike && (
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
-                              Rental Bike
-                            </p>
-                          )}
-                        </>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        Slots: {Number(attendee.number_of_slots) || 1}
+                      </p>
+                      {attendee.is_own_bike && (
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          Own Bike
+                        </p>
+                      )}
+                      {attendee.is_rental_bike && (
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          Rental Bike
+                        </p>
                       )}
                     </div>
                     <span
