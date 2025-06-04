@@ -57,12 +57,10 @@ const CyclerDashboard = ({ profile }: CyclerDashboardProps) => {
     let attendeesQuery = supabase
       .from("user_joined_cycling")
       .select(`
-        attendee:cycling_attendees!user_joined_cycling_attendee_id_fkey(
-          id,
-          created_at,
-          cycling_event_id_uuid,
-          number_of_slots
-        )
+        id,
+        created_at,
+        attendee_id,
+        cycling_attendees(id, cycling_event_id_uuid, confirmation_code, status)
       `)
       .eq("user_id", userId);
 
@@ -76,7 +74,7 @@ const CyclerDashboard = ({ profile }: CyclerDashboardProps) => {
     if (analyticsFilter === "this_month") {
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
       eventsQuery = eventsQuery.gte("created_at", monthStart.toISOString());
-      attendeesQuery = attendeesQuery.gte("attendee.created_at", monthStart.toISOString());
+      attendeesQuery = attendeesQuery.gte("created_at", monthStart.toISOString());
       cashoutsQuery = cashoutsQuery.gte("created_at", monthStart.toISOString());
     } else if (analyticsFilter === "last_month") {
       const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -85,8 +83,8 @@ const CyclerDashboard = ({ profile }: CyclerDashboardProps) => {
         .gte("created_at", lastMonthStart.toISOString())
         .lte("created_at", lastMonthEnd.toISOString());
       attendeesQuery = attendeesQuery
-        .gte("attendee.created_at", lastMonthStart.toISOString())
-        .lte("attendee.created_at", lastMonthEnd.toISOString());
+        .gte("created_at", lastMonthStart.toISOString())
+        .lte("created_at", lastMonthEnd.toISOString());
       cashoutsQuery = cashoutsQuery
         .gte("created_at", lastMonthStart.toISOString())
         .lte("created_at", lastMonthEnd.toISOString());
@@ -94,7 +92,7 @@ const CyclerDashboard = ({ profile }: CyclerDashboardProps) => {
       const weekStart = new Date(now.setDate(now.getDate() - now.getDay()));
       weekStart.setHours(0, 0, 0, 0);
       eventsQuery = eventsQuery.gte("created_at", weekStart.toISOString());
-      attendeesQuery = attendeesQuery.gte("attendee.created_at", weekStart.toISOString());
+      attendeesQuery = attendeesQuery.gte("created_at", weekStart.toISOString());
       cashoutsQuery = cashoutsQuery.gte("created_at", weekStart.toISOString());
     } else if (analyticsFilter === "last_week") {
       const lastWeekStart = new Date(now.setDate(now.getDate() - now.getDay() - 7));
@@ -105,8 +103,8 @@ const CyclerDashboard = ({ profile }: CyclerDashboardProps) => {
         .gte("created_at", lastWeekStart.toISOString())
         .lte("created_at", lastWeekEnd.toISOString());
       attendeesQuery = attendeesQuery
-        .gte("attendee.created_at", lastWeekStart.toISOString())
-        .lte("attendee.created_at", lastWeekEnd.toISOString());
+        .gte("created_at", lastWeekStart.toISOString())
+        .lte("created_at", lastWeekEnd.toISOString());
       cashoutsQuery = cashoutsQuery
         .gte("created_at", lastWeekStart.toISOString())
         .lte("created_at", lastWeekEnd.toISOString());
@@ -121,13 +119,19 @@ const CyclerDashboard = ({ profile }: CyclerDashboardProps) => {
       ] = await Promise.all([eventsQuery, attendeesQuery, cashoutsQuery]);
 
       if (eventsError || joinedError || cashoutsError) {
-        console.error("Analytics fetch error:", { eventsError, joinedError, cashoutsError });
+        console.error("Analytics fetch error:", {
+          eventsError: eventsError?.message,
+          joinedError: joinedError?.message,
+          cashoutsError: cashoutsError?.message,
+        });
         toast({ title: "Error", description: "Failed to load cycling analytics.", variant: "destructive" });
         return;
       }
 
       // Extract attendees data
-      const attendeesData = joinedData?.map((item) => item.attendee).filter((attendee) => attendee !== null) || [];
+      const attendeesData = joinedData
+        ?.map((item) => item.cycling_attendees)
+        .filter((attendee) => attendee !== null) || [];
 
       // Calculate total spent by joining attendees with events
       let totalSpent = 0;
@@ -139,7 +143,7 @@ const CyclerDashboard = ({ profile }: CyclerDashboardProps) => {
           .in("id_uuid", eventIds);
 
         if (eventsFetchError) {
-          console.error("Events fetch error:", eventsFetchError);
+          console.error("Events fetch error:", eventsFetchError.message);
           toast({ title: "Error", description: "Failed to load event details.", variant: "destructive" });
           return;
         }
@@ -147,7 +151,7 @@ const CyclerDashboard = ({ profile }: CyclerDashboardProps) => {
         totalSpent = attendeesData.reduce((sum, attendee) => {
           const event = eventsForAttendees?.find((e) => e.id_uuid === attendee.cycling_event_id_uuid);
           if (event && !event.is_free && event.price) {
-            return sum + (attendee.number_of_slots || 1) * event.price;
+            return sum + event.price; // Assume 1 slot per attendee
           }
           return sum;
         }, 0);
