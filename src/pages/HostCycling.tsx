@@ -73,7 +73,7 @@ const formSchema = z.object({
   host_name: z.string().min(3, 'Name must be at least 3 characters').max(50, 'Name cannot exceed 50 characters'),
   host_phone: z.string().regex(/^[0-9]{11}$/, 'Phone number must be exactly 11 digits'),
 }).refine(
-  data => {
+  (data) => {
     if (data.registration_deadline && data.event_date) {
       return data.registration_deadline <= data.event_date;
     }
@@ -84,7 +84,7 @@ const formSchema = z.object({
     path: ['registration_deadline'],
   }
 ).refine(
-  data => {
+  (data) => {
     const now = new Date();
     const selectedDateTime = new Date(data.event_date);
     const [hours, minutes] = data.start_time.replace(/ AM|PM/i, '').split(':').map(Number);
@@ -101,7 +101,7 @@ const formSchema = z.object({
     path: ['start_time'],
   }
 ).refine(
-  data => {
+  (data) => {
     if (!data.is_free && (!data.price || data.price < 1000)) {
       return false;
     }
@@ -112,7 +112,7 @@ const formSchema = z.object({
     path: ['price'],
   }
 ).refine(
-  data => {
+  (data) => {
     if (data.end_time) {
       const startDateTime = DateTime.fromFormat(
         `${format(data.event_date, 'yyyy-MM-dd')} ${data.start_time}`,
@@ -131,6 +131,12 @@ const formSchema = z.object({
   {
     message: 'End time must be after start time',
     path: ['end_time'],
+  }
+).refine(
+  (data) => data.is_own_bike || data.is_rental_available,
+  {
+    message: "You must select at least one option: 'Bring Your Own Bike' or 'Rentals Available'.",
+    path: ["is_rental_available"],
   }
 );
 
@@ -152,7 +158,7 @@ const HostCycling = () => {
   const [isRegistrationOpen, setIsRegistrationOpen] = useState(false);
   const [isHostDetailsOpen, setIsHostDetailsOpen] = useState(false);
   const [isCreateLandmarkOpen, setIsCreateLandmarkOpen] = useState(false);
-  const [isEndTimeEnabled, setIsEndTimeEnabled] = useState(false); // New state for end_time toggle
+  const [isEndTimeEnabled, setIsEndTimeEnabled] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const createButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -210,81 +216,71 @@ const HostCycling = () => {
     fetchLandmarks();
   }, [toast]);
 
-  // Reset end_time when toggle is disabled
   useEffect(() => {
     if (!isEndTimeEnabled) {
       form.setValue('end_time', '', { shouldValidate: true });
     }
   }, [isEndTimeEnabled, form]);
 
-const handleCreateLandmark = async (data: {
-  new_landmark_name: string;
-  new_landmark_state: string;
-  new_landmark_description?: string;
-  new_landmark_map_link?: string | null;
-}) => {
-  try {
-    // Trim input to avoid hidden characters
-    const trimmedName = data.new_landmark_name.trim();
-    if (!trimmedName) throw new Error('Landmark name cannot be empty');
+  const handleCreateLandmark = async (data: {
+    new_landmark_name: string;
+    new_landmark_state: string;
+    new_landmark_description?: string;
+    new_landmark_map_link?: string | null;
+  }) => {
+    try {
+      const trimmedName = data.new_landmark_name.trim();
+      if (!trimmedName) throw new Error('Landmark name cannot be empty');
 
-    console.log('Calling generate_unique_slug with:', {
-      p_text_input: trimmedName,
-      p_table_name: 'landmarks',
-      p_id_uuid: null,
-    });
+      const { data: slugData, error: slugDataError } = await supabase.rpc('generate_unique_slug', {
+        p_text_input: trimmedName,
+        p_table_name: 'landmarks',
+        p_id_uuid: null,
+      });
 
-    const { data: slugData, error: slugDataError } = await supabase.rpc('generate_unique_slug', {
-      p_text_input: trimmedName,
-      p_table_name: 'landmarks',
-      p_id_uuid: null,
-    });
+      if (slugDataError) {
+        throw new Error(`Failed to generate landmark slug: ${slugDataError.message}`);
+      }
+      if (typeof slugData !== 'string' || !slugData) {
+        throw new Error('Invalid slug response from server');
+      }
 
-    console.log('RPC Response:', { slugData, slugDataError });
+      const { data: newLandmark, error: landmarkError } = await supabase
+        .from('landmarks')
+        .insert({
+          name: trimmedName,
+          state: data.new_landmark_state,
+          description: data.new_landmark_description || null,
+          map_link: data.new_landmark_map_link || null,
+          slug: slugData,
+        })
+        .select('id_uuid, name, state')
+        .single();
 
-    if (slugDataError) {
-      throw new Error(`Failed to generate landmark slug: ${slugDataError.message}`);
+      if (landmarkError) {
+        throw new Error(`Failed to create landmark: ${landmarkError.message}`);
+      }
+      if (!newLandmark) {
+        throw new Error('No landmark data returned');
+      }
+
+      setLandmarks(prev => [...prev, newLandmark]);
+      setLandmarksError(null);
+      form.setValue('start_landmark_id', newLandmark.id_uuid, { shouldValidate: true });
+      toast({
+        title: 'Success',
+        description: 'Landmark created successfully!',
+        variant: 'default',
+      });
+    } catch (error: any) {
+      console.error('Error creating landmark:', error);
+      toast({
+        title: 'Error creating landmark',
+        description: error.message || 'Failed to create landmark. Try again.',
+        variant: 'destructive',
+      });
     }
-    if (typeof slugData !== 'string' || !slugData) {
-      throw new Error('Invalid slug response from server');
-    }
-
-    const { data: newLandmark, error: landmarkError } = await supabase
-      .from('landmarks')
-      .insert({
-        name: trimmedName,
-        state: data.new_landmark_state,
-        description: data.new_landmark_description || null,
-        map_link: data.new_landmark_map_link || null,
-        slug: slugData,
-      })
-      .select('id_uuid, name, state')
-      .single();
-
-    if (landmarkError) {
-      throw new Error(`Failed to create landmark: ${landmarkError.message}`);
-    }
-    if (!newLandmark) {
-      throw new Error('No landmark data returned');
-    }
-
-    setLandmarks(prev => [...prev, newLandmark]);
-    setLandmarksError(null);
-    form.setValue('start_landmark_id', newLandmark.id_uuid, { shouldValidate: true });
-    toast({
-      title: 'Success',
-      description: 'Landmark created successfully!',
-      variant: 'default',
-    });
-  } catch (error) {
-    console.error('Error creating landmark:', error);
-    toast({
-      title: 'Error creating landmark',
-      description: error instanceof Error ? error.message : 'Failed to create landmark. Try again.',
-      variant: 'destructive',
-    });
-  }
-};
+  };
 
   const onSubmit = async (data: FormValues) => {
     setFormIsLoading(true);
@@ -365,8 +361,6 @@ const handleCreateLandmark = async (data: {
         console.error('API view fetch error:', apiError);
         throw new Error(`Failed to fetch API view data: ${apiError?.message || 'No API data'}`);
       }
-
-      console.log('Event created:', apiData);
 
       if (!apiData.id || !apiData.slug || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(apiData.id)) {
         throw new Error('Invalid event data: ID must be a UUID and slug must be valid');
@@ -546,7 +540,6 @@ const handleCreateLandmark = async (data: {
                           <FormControl>
                             <Input placeholder='Enter event name, e.g., "Sunday Social Ride"' {...field} />
                           </FormControl>
-                          <FormMessage />
                         </FormItem>
                       )}
                     />
@@ -623,7 +616,7 @@ const handleCreateLandmark = async (data: {
                     </div>
                     <FormField
                       control={form.control}
-                      name="isEndTimeEnabled" // Not part of formSchema, used for toggle
+                      name="isEndTimeEnabled"
                       render={({ field }) => (
                         <FormItem className="flex items-center space-x-2">
                           <FormControl>
@@ -802,6 +795,7 @@ const handleCreateLandmark = async (data: {
                           </FormItem>
                         )}
                       />
+                      <FormMessage className="text-red-500" />
                     </div>
                   </>
                 )}
