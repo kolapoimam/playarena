@@ -1,16 +1,17 @@
-
 import { useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { 
   Share2, 
-  Download, // Ensure this is imported
+  Download,
   Trophy,
   MapPin,
   Calendar,
   DollarSign,
   Users,
-  ChevronDown
-} from "lucide-react"; // Verify this import
+  ChevronDown,
+  Volleyball,
+  Medal
+} from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -25,6 +26,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 
 type Venue = {
   id: string;
@@ -69,9 +71,9 @@ const MatchDetailsDialogue: React.FC<MatchDetailsDialogueProps> = ({ match }) =>
 
   const formatDate = (dateString: string) => {
     const options: Intl.DateTimeFormatOptions = {
-      weekday: "short",
+      weekday: "long",
       day: "numeric",
-      month: "short",
+      month: "long",
       year: "numeric",
     };
     return new Date(dateString).toLocaleDateString("en-NG", options);
@@ -146,7 +148,7 @@ const MatchDetailsDialogue: React.FC<MatchDetailsDialogueProps> = ({ match }) =>
     const url = `${window.location.origin}/match/${match.slug}`;
     const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
     const shareText = `Join my Football Match: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. ${totalPlayerSlots}/${match.total_slots} slots. Powered by Sport Cliq. ${match.is_private ? ` (Access Password: ${match.access_password})` : ''}`;
-    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}"e=${encodeURIComponent(shareText)}`;
+    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(shareText)}`;
     window.open(facebookUrl, '_blank');
   };
 
@@ -166,18 +168,6 @@ const MatchDetailsDialogue: React.FC<MatchDetailsDialogueProps> = ({ match }) =>
 
     setIsDownloading(true);
     try {
-      const logoSrc = backgroundColor === '#4CAF50' || backgroundColor === '#000000' || backgroundColor === '#2196F3' || backgroundColor === '#9C27B0' ? "/playarenadark.png" : "/playarenalight.png";
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.src = logoSrc;
-      await new Promise((resolve) => {
-        img.onload = resolve;
-        img.onerror = () => {
-          console.warn("Failed to load logo image for canvas");
-          resolve(null);
-        };
-      });
-
       const canvas = await html2canvas(cardRef.current, {
         scale: 2,
         useCORS: true,
@@ -186,49 +176,25 @@ const MatchDetailsDialogue: React.FC<MatchDetailsDialogueProps> = ({ match }) =>
         scrollY: -window.scrollY,
       });
 
-      const blob = await new Promise<Blob | null>((resolve) =>
-        canvas.toBlob((blob) => resolve(blob), "image/png")
-      );
-
-      if (!blob) {
-        throw new Error("Failed to convert canvas to Blob");
-      }
-
-      const filename = `SportCliq-Match-${match.title.replace(/\s+/g, '-')}.png`;
-      const url = URL.createObjectURL(blob);
-
-      if (navigator.share && (navigator as any).canShare?.({ files: [new File([blob], filename, { type: "image/png" })] })) {
-        try {
-          await navigator.share({
-            files: [new File([blob], filename, { type: "image/png" })],
-            title: match.title,
-            text: `Join my match at ${match.venue?.name || 'unknown venue'}!`,
-          });
-          URL.revokeObjectURL(url);
-          return;
-        } catch (shareError) {
-          console.warn("Share API failed, falling back to download:", shareError);
-        }
-      }
-
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'px',
+        format: [canvas.width, canvas.height],
+      });
+      pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+      pdf.save(`SportCliq-Match-${match.title.replace(/\s+/g, '-')}.pdf`);
     } catch (error) {
-      console.error("Error generating image:", error);
+      console.error("Error generating PDF:", error);
       toast({
         title: "Error",
-        description: "Failed to download match card. Please try again.",
+        description: "Failed to download match card as PDF.",
         variant: "destructive",
       });
     } finally {
       setIsDownloading(false);
     }
-  }, [isImageLoaded, match, toast, backgroundColor]);
+  }, [isImageLoaded, match, toast]);
 
   const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
 
@@ -270,7 +236,7 @@ const MatchDetailsDialogue: React.FC<MatchDetailsDialogueProps> = ({ match }) =>
           onClick={() => setDownloadDialogOpen(true)}
           disabled={isDownloading}
         >
-          <Download size={18} className="mr-2" /> {/* Ensure this works with proper import */}
+          <Download size={18} className="mr-2" />
           {isDownloading ? "Downloading..." : "Download"}
         </Button>
       </div>
@@ -283,90 +249,103 @@ const MatchDetailsDialogue: React.FC<MatchDetailsDialogueProps> = ({ match }) =>
         <DialogContent className="w-full max-w-[90vw] sm:max-w-[500px] rounded-2xl">
           <DialogTitle className="text-xl font-bold text-gray-800 dark:text-white">Match Details</DialogTitle>
           <DialogDescription>
-            <p className="text-gray-600 dark:text-gray-300 mb-4 text-center">
-              Download this card to share your match details with friends.
-            </p>
-            <div className="relative">
-              <select
-                value={backgroundColor}
-                onChange={(e) => setBackgroundColor(e.target.value)}
-                className="mt-4 w-full p-2 border rounded-lg"
-              >
-                <option value="#4CAF50">Green</option>
-                <option value="#FF5722">Orange</option>
-                <option value="#2196F3">Blue</option>
-                <option value="#9C27B0">Purple</option>
-                <option value="#000000">Black</option>
-              </select>
-              <div 
-                ref={cardRef}
-                className="relative bg-gradient-to-r from-green-500 to-green-700 rounded-lg p-6 text-white shadow-xl max-w-md mx-auto overflow-hidden border-4 border-dashed border-white/30 mt-4"
-                style={{
-                  backgroundImage: 'linear-gradient(45deg, rgba(255,255,255,0.1) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.1) 75%, transparent 75%, transparent)',
-                  backgroundSize: '40px 40px',
-                  clipPath: 'polygon(10% 0%, 90% 0%, 100% 10%, 100% 90%, 90% 100%, 10% 100%, 0% 90%, 0% 10%)',
-                  backgroundColor: backgroundColor,
-                }}
-              >
-                {/* Perforated Edge Semi-Circles */}
-                <div className="absolute top-0 left-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '20%' }} />
-                <div className="absolute top-0 left-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '50%' }} />
-                <div className="absolute top-0 left-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '80%' }} />
-                <div className="absolute top-0 right-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '20%' }} />
-                <div className="absolute top-0 right-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '50%' }} />
-                <div className="absolute top-0 right-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '80%' }} />
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+              <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Match Details</h2>
+              <p className="text-gray-600 dark:text-gray-300 mb-4 text-sm text-center">
+                Your match details are ready. Save or share this card to invite players.
+              </p>
+              <div className="relative">
+                <div
+                  ref={cardRef}
+                  className="relative bg-gradient-to-r from-green-500 to-green-700 rounded-lg p-6 text-white shadow-xl max-w-md mx-auto overflow-hidden border-4 border-dashed border-white/30 animate-ticket-reveal"
+                  style={{
+                    backgroundImage: 'linear-gradient(45deg, rgba(255,255,255,0.1) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.1) 75%, transparent 75%, transparent)',
+                    backgroundSize: '40px 40px',
+                    clipPath: 'polygon(10% 0%, 90% 0%, 100% 10%, 100% 90%, 90% 100%, 10% 100%, 0% 90%, 0% 10%)',
+                    backgroundColor: backgroundColor,
+                  }}
+                >
+                  {/* Perforated Edge Semi-Circles */}
+                  <div className="absolute top-0 left-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '20%' }} />
+                  <div className="absolute top-0 left-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '50%' }} />
+                  <div className="absolute top-0 left-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '80%' }} />
+                  <div className="absolute top-0 right-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '20%' }} />
+                  <div className="absolute top-0 right-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '50%' }} />
+                  <div className="absolute top-0 right-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '80%' }} />
 
-                {/* Ticket Content */}
-                <div className="flex items-center justify-between mb-4">
-                  <img 
-                    src={logoSrc}
-                    alt="PlayArena Logo" 
-                    className="h-10 w-auto"
-                    crossOrigin="anonymous"
-                    onLoad={handleImageLoad}
-                    onError={() => {
-                      toast({
-                        title: "Error",
-                        description: "Failed to load logo image.",
-                        variant: "destructive",
-                      });
-                      setIsImageLoaded(true);
-                    }}
-                  />
-                  <Trophy className="h-6 w-6" />
+                  {/* Ticket Content */}
+                  <div className="flex items-center justify-between mb-4">
+                    <img 
+                      src={logoSrc}
+                      alt="PlayArena Logo" 
+                      className="h-10 w-auto"
+                      crossOrigin="anonymous"
+                      onLoad={handleImageLoad}
+                      onError={() => {
+                        toast({
+                          title: "Error",
+                          description: "Failed to load logo image.",
+                          variant: "destructive",
+                        });
+                        setIsImageLoaded(true);
+                      }}
+                    />
+                    <Trophy className="h-6 w-6" />
+                  </div>
+                  <div className="flex items-center justify-around mb-4">
+                    <Trophy className="h-6 w-6 text-yellow-300" />
+                    <Volleyball className="h-6 w-6 text-red-500" />
+                    <Medal className="h-6 w-6 text-blue-300" />
+                  </div>
+                  <h2 className="text-2xl font-bold mb-2 tracking-tight font-condensed uppercase text-center">{match.title}</h2>
+                  <div className="text-center mb-4">
+                    <p className="text-sm"><MapPin className="inline h-4 w-4 mr-1" /> {match.venue?.name || "Venue"}, {match.venue?.city || ""}</p>
+                    <p className="text-sm"><Calendar className="inline h-4 w-4 mr-1" /> {formatDate(match.match_date)} at {formatTime(match.match_time)}</p>
+                    <p className="text-sm"><DollarSign className="inline h-4 w-4 mr-1" /> {match.is_paid ? `Paid (₦${match.price?.toFixed(2)})` : "Free"}</p>
+                    <p className="text-sm"><Users className="inline h-4 w-4 mr-1" /> {totalPlayerSlots}/{match.total_slots} slots booked</p>
+                    {match.is_private && (
+                      <div className="bg-white text-green-600 rounded-md p-4 text-center shadow-inner">
+                        <p className="text-sm font-medium uppercase tracking-wide">Access Password</p>
+                        <p className="text-4xl font-bold tracking-wider mt-1 font-mono">{match.access_password || "N/A"}</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <h2 className="text-2xl font-bold mb-2 tracking-tight font-condensed uppercase text-center">{match.title}</h2>
-                <div className="text-center mb-4">
-                  <p className="text-sm"><MapPin className="inline h-4 w-4 mr-1" /> {match.venue?.name || "Venue"}, {match.venue?.city || ""}</p>
-                  <p className="text-sm"><Calendar className="inline h-4 w-4 mr-1" /> {formatDate(match.match_date)} at {formatTime(match.match_time)}</p>
-                  <p className="text-sm"><DollarSign className="inline h-4 w-4 mr-1" /> {match.is_paid ? `Paid (₦${match.price?.toFixed(2)})` : "Free"}</p>
-                  <p className="text-sm"><Users className="inline h-4 w-4 mr-1" /> {totalPlayerSlots}/{match.total_slots} slots booked</p>
-                  {match.is_private && (
-                    <p className="text-sm font-semibold">Access Password: <span className="font-mono">{match.access_password || "N/A"}</span></p>
-                  )}
-                </div>
+                <select
+                  value={backgroundColor}
+                  onChange={(e) => setBackgroundColor(e.target.value)}
+                  className="mt-4 w-full p-2 border rounded-lg"
+                >
+                  <option value="#4CAF50">Green</option>
+                  <option value="#FF5722">Orange</option>
+                  <option value="#2196F3">Blue</option>
+                  <option value="#9C27B0">Purple</option>
+                  <option value="#000000">Black</option>
+                </select>
               </div>
-            </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400 my-4 text-center">
-              <strong>Note:</strong> Save or share this card to invite players to your match.
-            </p>
-            <div className="flex justify-center gap-4 px-6 py-4">
-              <Button 
-                className="flex-1 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg px-6 py-3 shadow-sm transition-colors duration-200 border-0 max-w-xs"
-                onClick={handleDownload}
-                disabled={!isImageLoaded || isDownloading}
-              >
-                <Download size={16} className="mr-2" />
-                {isDownloading ? "Downloading..." : "Download"}
-              </Button>
-              <Button 
-                className="flex-1 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg px-6 py-3 shadow-sm transition-colors duration-200 border-0 max-w-xs"
-                onClick={handleShare}
-                disabled={isDownloading}
-              >
-                <Share2 size={16} className="mr-2" />
-                Share
-              </Button>
+              <p className="text-sm text-gray-500 dark:text-gray-400 my-4 text-center">
+                <strong>Note:</strong> Save or download this card to share match details with friends.
+              </p>
+              <div className="flex justify-center gap-4 px-6 py-4">
+                <Button 
+                  className="flex-1 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg px-6 py-3 shadow-sm transition-colors duration-200 border-0 max-w-xs"
+                  onClick={handleDownload}
+                  disabled={!isImageLoaded || isDownloading}
+                  aria-label="Download match card as PDF"
+                >
+                  <Download size={16} className="mr-2" />
+                  {isDownloading ? "Downloading..." : "Download"}
+                </Button>
+                <Button 
+                  className="flex-1 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg px-6 py-3 shadow-sm transition-colors duration-200 border-0 max-w-xs"
+                  onClick={handleShare}
+                  disabled={isDownloading}
+                  aria-label="Share match card"
+                >
+                  <Share2 size={16} className="mr-2" />
+                  Share
+                </Button>
+              </div>
             </div>
             <div className="flex justify-center">
               <Button 
