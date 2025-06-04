@@ -475,8 +475,8 @@ const handleCancelEvent = async () => {
   } else if (match && !match.cancellation_status) {
     const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
     const now = new Date();
-    const timeToStartMinutes = differenceInMinutes(matchDateTime, now);
-    if (timeToStartMinutes <= 0) {
+    const timeToStart = differenceInMinutes(matchDateTime, now);
+    if (timeToStart <= 0) {
       toast({
         title: "Error",
         description: "Cannot cancel match after it has started.",
