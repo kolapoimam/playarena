@@ -12,13 +12,13 @@ import {
   Form,
   FormControl,
   FormField,
-  FormLabel,
   FormItem,
+  FormLabel,
   FormMessage,
 } from "@/components/ui/form";
 import { ArrowLeft, Calendar, Clock, MapPin, Users, Loader } from "lucide-react";
 import CyclingSuccessDialog from "@/components/CyclingSuccessDialog";
-import Navbar from '@/components/Navbar';
+import Navbar from "@/components/Navbar";
 
 type Landmark = {
   name: string;
@@ -91,36 +91,29 @@ const JoinCycling = () => {
   const [successDialogOpen, setSuccessDialogOpen] = useState(false);
   const [confirmationCode, setConfirmationCode] = useState<string | null>(null);
 
-  const form = useForm<FormValues>({
+  const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: { name: "", phone: "", is_own_bike: false, is_rental_bike: false },
   });
 
   const defaultEmail = form.getValues("phone")
-    ? `${form.getValues("phone")}@sportcliq.com`
-    : "default@sportcliq.com";
+    ? `${form.getValues("phone")}@sportcycling.net`
+    : undefined;
 
   useEffect(() => {
     const checkAuth = async () => {
       try {
         const { data: session } = await supabase.auth.getSession();
-        if (!session.session) {
-          navigate('/login');
-          return;
+        if (session.session) {
+          setUserId(session.session.user.id);
         }
-        setUserId(session.session.user.id);
       } catch (err: any) {
-        console.error('Auth error:', err);
-        toast({
-          title: 'Authentication Error',
-          description: 'Please log in to join an event.',
-          variant: 'destructive',
-        });
-        navigate('/login');
+        console.error('No authentication found:', err);
+        // No redirect; allow non-logged-in users to proceed
       }
     };
     checkAuth();
-  }, [navigate, toast]);
+  }, []);
 
   useEffect(() => {
     const script = document.createElement("script");
@@ -131,7 +124,7 @@ const JoinCycling = () => {
       toast({
         title: "Error",
         description: "Failed to load Paystack script.",
-        variant: "destructive",
+        variant: "error",
       });
     };
     document.body.appendChild(script);
@@ -177,11 +170,11 @@ const JoinCycling = () => {
           .eq("cycling_event_id_uuid", data.id_uuid);
         if (!attendeesError) setAttendees(attendeesData || []);
       } catch (err: any) {
-        console.error('Error:', err);
+        console.error('Error:", err);
         toast({
           title: 'Error',
           description: err.message || 'Failed to load event.',
-          variant: 'destructive',
+          variant: 'error',
         });
         navigate('/cycling-activities');
       } finally {
@@ -214,21 +207,21 @@ const JoinCycling = () => {
             } else {
               throw new Error('Payment verification failed: Invalid payment details');
             }
-          } catch (error: any) {
+          } catch (err) (error: any) {
+            console.error(`Verification attempt ${attempt} failed: ${error.message}. Retrying...`);
             if (attempt === retries) {
               throw error;
             }
-            console.warn(`Verification attempt ${attempt} failed: ${error.message}. Retrying...`);
-            await new Promise(resolve => setTimeout(resolve, delay));
+            await Promise.resolve(resolve => setTimeout(resolve, delay));
           }
         }
       } catch (error: any) {
-        console.error('Error verifying payment:', error.message);
+        console.error('Error verifying payment:', error);
         setPaymentStatus('failed');
         toast({
           title: 'Payment Verification Error',
           description: 'Failed to verify your payment. Please try again or contact support.',
-          variant: 'destructive',
+          variant: 'error',
         });
       } finally {
         setVerifyingPayment(false);
@@ -243,7 +236,7 @@ const JoinCycling = () => {
       toast({
         title: 'Error',
         description: 'Event not configured for payment.',
-        variant: 'destructive',
+        variant: 'error',
       });
       return;
     }
@@ -252,7 +245,7 @@ const JoinCycling = () => {
       toast({
         title: 'Error',
         description: 'Paystack not available.',
-        variant: 'destructive',
+        variant: 'error',
       });
       return;
     }
@@ -262,27 +255,27 @@ const JoinCycling = () => {
       toast({
         title: 'Invalid Amount',
         description: 'Minimum payment is ₦1.00.',
-        variant: 'destructive',
+        variant: 'error',
       });
       return;
     }
 
-    if (!defaultEmail.includes('@') || defaultEmail.length < 5) {
+    if (!defaultEmail || !defaultEmail.includes('@') || defaultEmail.length < 5) {
       toast({
         title: 'Invalid Email',
         description: 'Enter a valid phone number.',
-        variant: 'destructive',
+        variant: 'error',
       });
       return;
     }
 
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(event.id_uuid)) {
-      console.error('Invalid event_id format:', event.id_uuid);
+      console.error('Error:', event.id_uuid 'Invalid event_id format:', event.id_uuid);
       toast({
         title: 'Error',
         description: 'Invalid event configuration.',
-        variant: 'destructive',
+        variant: 'error',
       });
       return;
     }
@@ -290,7 +283,7 @@ const JoinCycling = () => {
     try {
       setJoining(true);
 
-      const response = await supabase.functions.invoke('initialize-paystack-transaction', {
+      const { data: response, error } = await supabase.functions.invoke('initialize-paystack-transaction', {
         body: {
           email: defaultEmail,
           amount: amountInNaira,
@@ -298,20 +291,20 @@ const JoinCycling = () => {
           resource_type: 'cycling',
           slug: event.slug,
           title: event.title,
-          callback_url: `${window.location.origin}/join-cycling/${event.slug}`,
+          callback_url: callback`${window.location.origin}/join-cycling/${event.slug}`,
           metadata: {
-            event_id: event.id_uuid,
+            id: event_id,
             resource_type: 'cycling',
-            user_phone: form.getValues('phone') || 'unknown',
+            user_phone: form.get('phone', 'unknown') || '',
           },
         },
-      });
+      );
 
       if (response.error) {
-        throw new Error(response.error.message || 'Failed to initialize payment');
+        throw new Error(response.error?.message || 'Failed to initialize payment');
       }
 
-      const { access_code } = response.data;
+      const access_code = response.data.access_code;
 
       if (!access_code) {
         throw new Error('No access code returned');
@@ -319,7 +312,7 @@ const JoinCycling = () => {
 
       const paystack = new window.PaystackPop();
       paystack.resumeTransaction(access_code, {
-        onSuccess: (transaction) => {
+        onSuccess: (transaction: { transaction: any; reference: any; }) => {
           setPaymentReference(transaction.reference);
           setPaymentStatus('success');
           toast({
@@ -332,17 +325,17 @@ const JoinCycling = () => {
           toast({
             title: 'Payment Cancelled',
             description: 'Payment process cancelled.',
-            variant: 'destructive',
+            variant: 'error',
           });
           setJoining(false);
         },
       });
-    } catch (error: any) {
+    } catch (error: any) => {
       console.error('Error initiating payment:', error);
       toast({
         title: 'Payment Error',
         description: error.message || 'Failed to initiate payment.',
-        variant: 'destructive',
+        variant: 'error',
       });
       setJoining(false);
     }
@@ -353,7 +346,7 @@ const JoinCycling = () => {
       toast({
         title: 'Error',
         description: 'Event not loaded or invalid.',
-        variant: 'destructive',
+        variant: 'error',
       });
       return;
     }
@@ -362,18 +355,8 @@ const JoinCycling = () => {
       toast({
         title: 'Error',
         description: 'Event is full.',
-        variant: 'destructive',
+        variant: 'error',
       });
-      return;
-    }
-
-    if (!userId) {
-      toast({
-        title: 'Authentication Error',
-        description: 'Please log in to join an event.',
-        variant: 'destructive',
-      });
-      navigate('/login');
       return;
     }
 
@@ -408,17 +391,20 @@ const JoinCycling = () => {
         throw new Error(`Failed to create attendee: ${attendeeError?.message || 'No attendee data'}`);
       }
 
-      const { error: userJoinedError } = await supabase
-        .from('user_joined_cycling')
-        .insert({
-          user_id: userId,
-          cycling_event_id: event.id_uuid,
-          attendee_id: attendeeRecord.id_uuid,
-        });
+      // Only insert into user_joined_cycling if user is logged in
+      if (userId) {
+        const { error: userJoinedError } = await supabase
+          .from('user_joined_cycling')
+          .insert({
+            user_id: userId,
+            cycling_event_id: event.id_uuid,
+            attendee_id: attendeeRecord.id_uuid,
+          });
 
-      if (userJoinedError) {
-        console.error('Error inserting into user_joined_cycling:', userJoinedError);
-        throw new Error(`Failed to record joined event: ${userJoinedError.message}`);
+        if (userJoinedError) {
+          console.error('Error inserting into user_joined_cycling:', userJoinedError);
+          throw new Error(`Failed to record joined event: ${userJoinedError.message}`);
+        }
       }
 
       setConfirmationCode(confirmationCode);
@@ -438,7 +424,7 @@ const JoinCycling = () => {
       toast({
         title: 'Error',
         description: error.message || 'Failed to join event.',
-        variant: 'destructive',
+        variant: 'error',
       });
     } finally {
       setJoining(false);
@@ -453,6 +439,10 @@ const JoinCycling = () => {
       year: 'numeric',
     };
     return new Date(dateString).toLocaleDateString('en-NG', options);
+  };
+
+  const handleNavigate = () => {
+    navigate(`/cycling/${event?.slug || ''}`);
   };
 
   if (loading || verifyingPayment) {
@@ -497,9 +487,9 @@ const JoinCycling = () => {
       </header>
 
       <div className="p-6">
-        <div className="bg-card rounded-lg shadow-md p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">{event.title}</h2>
-          <div className="text-muted-foreground mb-4 space-y-2">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
+          <h2 className="text-xl font-semibold mb-2">{event.title}</h2>
+          <div className="text-muted-foreground mb-4 space-y-1">
             <div className="flex items-center gap-2">
               <Calendar size={16} />
               <span>{formatDate(event.event_date)}</span>
@@ -523,18 +513,24 @@ const JoinCycling = () => {
             )}
           </div>
           {isPastEvent ? (
-            <div className="text-center py-4 bg-muted rounded-lg">
-              <h2 className="text-lg font-semibold text-gray-700">This event has already passed</h2>
+            <div className="text-center py-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
+              <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300">This event has already passed</h2>
               <p className="text-muted-foreground mt-2">You cannot join this event anymore.</p>
-              <Button className="mt-4 bg-green-500 hover:bg-green-600 text-white" onClick={() => navigate("/cycling-activities")}>
+              <Button
+                className="mt-4 bg-green-500 hover:bg-green-600 text-white"
+                onClick={() => navigate("/cycling-activities")}
+              >
                 Browse Other Events
               </Button>
             </div>
           ) : isFull ? (
-            <div className="text-center py-4 bg-muted rounded-lg">
-              <h2 className="text-lg font-semibold text-gray-700">This event is full</h2>
+            <div className="text-center py-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
+              <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300">This event is full</h2>
               <p className="text-muted-foreground mt-2">All spots are taken.</p>
-              <Button className="mt-4 bg-green-500 hover:bg-green-600 text-white" onClick={() => navigate(`/cycling/${event.slug}`)}>
+              <Button
+                className="mt-4 bg-green-500 hover:bg-green-600 text-white"
+                onClick={() => navigate(`/cycling/${event.slug}`)}
+              >
                 View Event Details
               </Button>
             </div>
@@ -542,7 +538,7 @@ const JoinCycling = () => {
             <>
               {(event.is_free || paymentStatus === "success") && (
                 <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 mt-6">
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                     <FormField
                       control={form.control}
                       name="name"
@@ -553,7 +549,7 @@ const JoinCycling = () => {
                             <Input
                               placeholder="Enter your name"
                               {...field}
-                              className="border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                              className="border-gray-300 dark:border-gray-600 rounded-md focus:ring-green-500 focus:border-green-500"
                             />
                           </FormControl>
                           <FormMessage className="text-red-500" />
@@ -572,7 +568,7 @@ const JoinCycling = () => {
                               inputMode="numeric"
                               placeholder="Enter 11-digit phone number"
                               {...field}
-                              className="border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                              className="border-gray-300 dark:border-gray-600 rounded-md focus:ring-green-500 focus:border-green-500"
                               onChange={(e) => {
                                 const numericValue = e.target.value.replace(/\D/g, "").slice(0, 11);
                                 field.onChange(numericValue);
@@ -668,7 +664,7 @@ const JoinCycling = () => {
                               Joining...
                             </>
                           ) : (
-                            "Complete Registration"
+                            "Join Event"
                           )}
                         </Button>
                       </>
@@ -678,7 +674,7 @@ const JoinCycling = () => {
               )}
               {!event.is_free && paymentStatus === "pending" && (
                 <>
-                  <h3 className="text-lg font-semibold text-gray-800 mt-6">Payment Required</h3>
+                  <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mt-6">Payment Required</h3>
                   <p className="text-muted-foreground">
                     This is a paid event. Please complete the payment to join.
                   </p>
@@ -687,7 +683,7 @@ const JoinCycling = () => {
                   </div>
                   <Button
                     type="button"
-                    className="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg transition-colors mt-4"
+                    className="w-full bg-green-500 hover:bg-green-600 text-white py-2 transition-colors mt-4 rounded-lg"
                     onClick={handlePaymentInitiation}
                     disabled={joining || !paystackLoaded}
                   >
@@ -705,24 +701,29 @@ const JoinCycling = () => {
             </>
           )}
         </div>
-
-        {event && confirmationCode && (
-          <CyclingSuccessDialog
-            open={successDialogOpen}
-            onOpenChange={setSuccessDialogOpen}
-            formValues={{
-              title: event.title,
-              event_date: new Date(event.event_date),
-              start_time: event.start_time,
-              host_name: event.host_name,
-            }}
-            selectedLandmark={event.start_landmark}
-            supercode={confirmationCode}
-            eventSlug={event.slug}
-            onNavigate={() => navigate(`/cycling/${event.slug}`)}
-          />
-        )}
       </div>
+
+      {event && confirmationCode && (
+        <CyclingSuccessDialog
+          open={successDialogOpen}
+          onOpenChange={setSuccessDialogOpen}
+          formValues={{
+            title: event.title,
+            event_date: new Date(event.event_date),
+            start_time: event.start_time,
+            host_name: event.host_name,
+          }}
+          selected_event={{
+            id_uuid: event.id_uuid,
+            name: event.start_landmark.name,
+            state: event.start_landmark.state,
+            slug: event.slug,
+          }}
+          confirmation_code={confirmationCode}
+          eventSlug={event.slug}
+          onNavigate={handleNavigate}
+        />
+      )}
       <Navbar />
     </div>
   );
