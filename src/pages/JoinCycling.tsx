@@ -131,105 +131,105 @@ const JoinCycling = () => {
     return () => document.body.removeChild(script);
   }, [toast]);
 
-useEffect(() => {
-  if (!slug) return;
-  const fetchEvent = async () => {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from("cycling_events")
-        .select(`
-          id_uuid,
-          slug,
-          title,
-          event_date,
-          start_time,
-          max_attendees,
-          is_free,
-          price,
-          host_name,
-          host_phone,
-          is_own_bike,
-          is_rental_available,
-          start_landmark:landmarks!cycling_events_start_landmark_id_fkey(name, state)
-        `)
-        .eq("slug", slug)
-        .single();
-      if (error) throw error;
+  useEffect(() => {
+    if (!slug) return;
+    const fetchEvent = async () => {
+      try {
+        setLoading(true);
+        const { data, error } = await supabase
+          .from("cycling_events")
+          .select(`
+            id_uuid,
+            slug,
+            title,
+            event_date,
+            start_time,
+            max_attendees,
+            is_free,
+            price,
+            host_name,
+            host_phone,
+            is_own_bike,
+            is_rental_available,
+            start_landmark:landmarks!cycling_events_start_landmark_id_fkey(name, state)
+          `)
+          .eq("slug", slug)
+          .single();
+        if (error) throw error;
 
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      if (!uuidRegex.test(data.id_uuid)) {
-        throw new Error(`Invalid event ID format: ${data.id_uuid}`);
-      }
-
-      setEvent(data);
-
-      const { data: attendeesData, error: attendeesError } = await supabase
-        .from("cycling_attendees")
-        .select("id_uuid, attendee_name, attendee_phone, confirmation_code, payment_status, cycling_event_id_uuid")
-        .eq("cycling_event_id_uuid", data.id_uuid);
-      if (!attendeesError) setAttendees(attendeesData || []);
-    } catch (err: any) {
-      console.error('Error:', err); // Corrected line
-      toast({
-        title: 'Error',
-        description: err.message || 'Failed to load event.',
-        variant: 'error',
-      });
-      navigate('/cycling-activities');
-    } finally {
-      setLoading(false);
-    }
-  };
-  fetchEvent();
-}, [slug, navigate, toast]);
-
-useEffect(() => {
-  if (!paymentReference || !event?.id_uuid) return;
-
-  const verifyPayment = async (retries = 3, delay = 1000) => {
-    setVerifyingPayment(true);
-    try {
-      for (let attempt = 1; attempt <= retries; attempt++) {
-        try {
-          const { data, error } = await supabase.functions.invoke('verify-paystack-transaction', {
-            body: { reference: paymentReference },
-          });
-          if (error) throw error;
-          const { verified, event_id, slug: resourceSlug } = data;
-          if (verified && event_id === event.id_uuid && resourceSlug === event.slug) {
-            setPaymentStatus('success');
-            toast({
-              title: 'Payment Successful',
-              description: 'Your payment was processed successfully. Please complete your registration.',
-            });
-            return;
-          } else {
-            throw new Error('Payment verification failed: Invalid payment details');
-          }
-        } catch (error: any) {
-          console.error(`Verification attempt ${attempt} failed: ${error.message}. Retrying...`);
-          if (attempt === retries) {
-            throw error;
-          }
-          await new Promise(resolve => setTimeout(resolve, delay));
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!uuidRegex.test(data.id_uuid)) {
+          throw new Error(`Invalid event ID format: ${data.id_uuid}`);
         }
-      }
-    } catch (error: any) { // Corrected line
-      console.error('Error verifying payment:', error);
-      setPaymentStatus('failed');
-      toast({
-        title: 'Payment Verification Error',
-        description: 'Failed to verify your payment. Please try again or contact support.',
-        variant: 'error',
-      });
-    } finally {
-      setVerifyingPayment(false);
-    }
-  };
 
-  verifyPayment();
-}, [paymentReference, event, toast]);
+        setEvent(data);
+
+        const { data: attendeesData, error: attendeesError } = await supabase
+          .from("cycling_attendees")
+          .select("id_uuid, attendee_name, attendee_phone, confirmation_code, payment_status, cycling_event_id_uuid")
+          .eq("cycling_event_id_uuid", data.id_uuid);
+        if (!attendeesError) setAttendees(attendeesData || []);
+      } catch (err: any) {
+        console.error('Error:', err); // Fixed previously (line 173)
+        toast({
+          title: 'Error',
+          description: err.message || 'Failed to load event.',
+          variant: 'error',
+        });
+        navigate('/cycling-activities');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchEvent();
+  }, [slug, navigate, toast]);
+
+  useEffect(() => {
+    if (!paymentReference || !event?.id_uuid) return;
+
+    const verifyPayment = async (retries = 3, delay = 1000) => {
+      setVerifyingPayment(true);
+      try {
+        for (let attempt = 1; attempt <= retries; attempt++) {
+          try {
+            const { data, error } = await supabase.functions.invoke('verify-paystack-transaction', {
+              body: { reference: paymentReference },
+            });
+            if (error) throw error;
+            const { verified, event_id, slug: resourceSlug } = data;
+            if (verified && event_id === event.id_uuid && resourceSlug === event.slug) {
+              setPaymentStatus('success');
+              toast({
+                title: 'Payment Successful',
+                description: 'Your payment was processed successfully. Please complete your registration.',
+              });
+              return;
+            } else {
+              throw new Error('Payment verification failed: Invalid payment details');
+            }
+          } catch (error: any) {
+            console.error(`Verification attempt ${attempt} failed: ${error.message}. Retrying...`);
+            if (attempt === retries) {
+              throw error;
+            }
+            await new Promise(resolve => setTimeout(resolve, delay));
+          }
+        }
+      } catch (error: any) { // Fixed previously (line 210)
+        console.error('Error verifying payment:', error);
+        setPaymentStatus('failed');
+        toast({
+          title: 'Payment Verification Error',
+          description: 'Failed to verify your payment. Please try again or contact support.',
+          variant: 'error',
+        });
+      } finally {
+        setVerifyingPayment(false);
+      }
+    };
+
+    verifyPayment();
+  }, [paymentReference, event, toast]);
 
   const handlePaymentInitiation = async () => {
     if (!event || event.is_free || !event.price) {
@@ -271,7 +271,7 @@ useEffect(() => {
 
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(event.id_uuid)) {
-      console.error('Error:', event.id_uuid 'Invalid event_id format:', event.id_uuid);
+      console.error('Error:', 'Invalid event_id format:', event.id_uuid); // Fixed line (line 274)
       toast({
         title: 'Error',
         description: 'Invalid event configuration.',
@@ -282,7 +282,6 @@ useEffect(() => {
 
     try {
       setJoining(true);
-
       const { data: response, error } = await supabase.functions.invoke('initialize-paystack-transaction', {
         body: {
           email: defaultEmail,
@@ -291,28 +290,27 @@ useEffect(() => {
           resource_type: 'cycling',
           slug: event.slug,
           title: event.title,
-          callback_url: callback`${window.location.origin}/join-cycling/${event.slug}`,
+          callback_url: `${window.location.origin}/join-cycling/${event.slug}`,
           metadata: {
-            id: event_id,
+            id: event.id_uuid,
             resource_type: 'cycling',
-            user_phone: form.get('phone', 'unknown') || '',
+            user_phone: form.getValues('phone') || 'unknown',
           },
         },
-      );
+      });
 
-      if (response.error) {
-        throw new Error(response.error?.message || 'Failed to initialize payment');
+      if (error) {
+        throw new Error(error.message || 'Failed to initialize payment');
       }
 
-      const access_code = response.data.access_code;
-
+      const access_code = response.data?.access_code;
       if (!access_code) {
         throw new Error('No access code returned');
       }
 
       const paystack = new window.PaystackPop();
       paystack.resumeTransaction(access_code, {
-        onSuccess: (transaction: { transaction: any; reference: any; }) => {
+        onSuccess: (transaction: { reference: string }) => {
           setPaymentReference(transaction.reference);
           setPaymentStatus('success');
           toast({
@@ -330,7 +328,7 @@ useEffect(() => {
           setJoining(false);
         },
       });
-    } catch (error: any) => {
+    } catch (error: any) {
       console.error('Error initiating payment:', error);
       toast({
         title: 'Payment Error',
@@ -473,10 +471,10 @@ useEffect(() => {
 
   return (
     <div className="min-h-screen pb-24">
-      <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg">
+      <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-md shadow-lg">
         <div className="flex items-center justify-between">
           <Button variant="ghost" onClick={() => navigate(-1)} className="text-white hover:bg-green-600">
-            <ArrowLeft size={18} className="mr-2" />
+            <ArrowLeft size={16} className="mr-2" />
             Back
           </Button>
           <div className="text-center">
