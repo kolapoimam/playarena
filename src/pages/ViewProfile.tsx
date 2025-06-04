@@ -97,23 +97,23 @@ const ViewProfile = () => {
             </TabsList>
             <TabsContent value="statistics">
 <div className="my-4 flex justify-center">
-  <div className="relative inline-flex items-center bg-white dark:bg-gray-800 rounded-full p-1 shadow-lg border border-gray-200 dark:border-gray-600">
+  <div className="relative inline-flex bg-gray-100 dark:bg-gray-700 rounded-full p-1 shadow-inner">
     <button
       onClick={() => setDashboardType("match")}
-      className={`px-6 py-2 text-sm font-medium rounded-full transition-all duration-300 ease-in-out relative z-10 ${
+      className={`px-4 py-2 text-sm font-medium rounded-full transition-all duration-300 ease-in-out relative z-10 min-w-[80px] ${
         dashboardType === "match"
-          ? "text-white shadow-sm"
-          : "text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+          ? "text-white"
+          : "text-gray-600 dark:text-gray-400"
       }`}
     >
       Matches
     </button>
     <button
       onClick={() => setDashboardType("cycling")}
-      className={`px-6 py-2 text-sm font-medium rounded-full transition-all duration-300 ease-in-out relative z-10 ${
+      className={`px-4 py-2 text-sm font-medium rounded-full transition-all duration-300 ease-in-out relative z-10 min-w-[80px] ${
         dashboardType === "cycling"
-          ? "text-white shadow-sm"
-          : "text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+          ? "text-white"
+          : "text-gray-600 dark:text-gray-400"
       }`}
     >
       Cycling
@@ -121,8 +121,8 @@ const ViewProfile = () => {
     
     {/* Sliding background */}
     <div
-      className={`absolute top-1 h-8 bg-gradient-to-r from-green-500 to-green-600 rounded-full shadow-md transition-all duration-300 ease-in-out ${
-        dashboardType === "match" ? "left-1 w-20" : "left-[85px] w-20"
+      className={`absolute top-1 bottom-1 bg-green-500 rounded-full shadow-lg transition-transform duration-300 ease-in-out w-[84px] ${
+        dashboardType === "match" ? "translate-x-1" : "translate-x-[85px]"
       }`}
     />
   </div>
