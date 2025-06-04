@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -239,9 +240,9 @@ const TicketReceipt = () => {
           <p className="text-sm text-gray-500 dark:text-gray-400 my-4 text-center">
             <strong>Note:</strong> Save or download this ticket code. You'll need it for entry on match day.
           </p>
-<div className="flex justify-between gap-4 px-6 py-4">
+<div className="flex justify-center gap-4 px-6 py-4">
   <Button
-    className="flex-1 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg px-6 py-3 shadow-sm transition-colors duration-200 border-0"
+    className="flex-1 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg px-6 py-3 shadow-sm transition-colors duration-200 border-0 max-w-xs"
     onClick={handleDownload}
     disabled={isDownloading}
     aria-label="Download ticket as PDF"
@@ -250,7 +251,7 @@ const TicketReceipt = () => {
     {isDownloading ? "Downloading..." : "Download"}
   </Button>
   <Button
-    className="flex-1 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg px-6 py-3 shadow-sm transition-colors duration-200 border-0"
+    className="flex-1 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg px-6 py-3 shadow-sm transition-colors duration-200 border-0 max-w-xs"
     onClick={handleShare}
     disabled={isDownloading}
     aria-label="Share ticket receipt"
