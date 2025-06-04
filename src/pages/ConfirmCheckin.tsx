@@ -27,7 +27,6 @@ import HostCashout from "@/components/HostCashout";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Toggle } from "@/components/ui/toggle";
 
-// Type definitions remain unchanged
 type Match = {
   id: string;
   slug: string;
@@ -64,8 +63,6 @@ type CyclingEvent = {
   title: string;
   event_date: string;
   start_time: string;
-  event_start_time?: string | null;
-  event_end_time?: string | null;
   max_attendees: number;
   host_id: string;
   host_name: string;
