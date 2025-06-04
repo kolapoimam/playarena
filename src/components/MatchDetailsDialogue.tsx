@@ -343,15 +343,6 @@ const MatchDetailsDialogue: React.FC<MatchDetailsDialogueProps> = ({ match }) =>
                 {isDownloading ? "Downloading..." : "Download"}
               </Button>
             </div>
-            <div className="flex justify-center mt-4">
-              <Button 
-                className="bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 transition-colors"
-                onClick={() => setDownloadDialogOpen(false)}
-                disabled={isDownloading}
-              >
-                Close
-              </Button>
-            </div>
           </DialogDescription>
         </DialogContent>
       </Dialog>
