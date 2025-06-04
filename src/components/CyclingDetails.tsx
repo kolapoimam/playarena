@@ -11,8 +11,8 @@ type CyclingEvent = {
   title: string;
   event_date: string;
   start_time: string;
-  event_start_time?: string | null;
-  event_end_time?: string | null;
+  start_time?: string | null;
+  end_time?: string | null;
   max_attendees: number;
   host_id: string;
   host_name: string;
@@ -80,8 +80,7 @@ const fetchEventDetails = async () => {
         title,
         event_date,
         start_time,
-        event_start_time,
-        event_end_time,
+        end_time,
         max_attendees,
         host_id,
         host_name,
