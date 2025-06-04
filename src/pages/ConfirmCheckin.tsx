@@ -536,52 +536,51 @@ const handleCancelEvent = async () => {
       }
     }, [superCode, isCyclingEvent]);
 
-    useEffect(() => {
-      if (isCyclingEvent && cyclingEvent?.id_uuid) {
-        const subscription = supabase
-          .channel(`attendees_cycling_${cyclingEvent?.id_uuid}`)
-          .on(
-            "postgres_changes",
-            {
-              event: "*",
-              event
-              schema: "public",
-              table: "cycling_attendees",
-              filter: `event_id=eq.${cyclingEvent?.id_uuid}`,
-            },
-            (payload) => {
-              console.log("Attendee update received", payload);
-              fetchEvent();
-            }
-          )
-          .subscribe();
+useEffect(() => {
+  if (isCyclingEvent && cyclingEvent?.id_uuid) {
+    const subscription = supabase
+      .channel(`attendees_cycling_${cyclingEvent?.id_uuid}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "cycling_attendees",
+          filter: `cycling_event_id_uuid=eq.${cyclingEvent?.id_uuid}`,
+        },
+        (payload) => {
+          console.log("Attendee update received", payload);
+          fetchEvent();
+        }
+      )
+      .subscribe();
 
-        return () => {
-          supabase.removeChannel(subscription);
-        };
-      } else if (match?.id) {
-        const subscription = supabase
-          .channel(`players_match_${match.id}`)
-          .on(
-            "postgres_changes",
-            {
-              event: "*",
-              schema: "public",
-              table: "players",
-              filter: `match_id=eq.${match.id}`,
-            },
-            (payload) => {
-              console.log("Player update received", payload);
-              fetchEvent();
-            }
-          )
-          .subscribe();
+    return () => {
+      supabase.removeChannel(subscription);
+    };
+  } else if (match?.id) {
+    const subscription = supabase
+      .channel(`players_match_${match.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "players",
+          filter: `match_id=eq.${match.id}`,
+        },
+        (payload) => {
+          console.log("Player update received", payload);
+          fetchEvent();
+        }
+      )
+      .subscribe();
 
-        return () => {
-          supabase.removeChannel(subscription);
-        };
-      }
-    }, [match?.id, cyclingEvent?.id_uuid, isCyclingEvent]);
+    return () => {
+      supabase.removeChannel(subscription);
+    };
+  }
+}, [match?.id, cyclingEvent?.id_uuid, isCyclingEvent]);
 
     return (
       <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
