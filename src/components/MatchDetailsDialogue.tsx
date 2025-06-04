@@ -3,19 +3,12 @@ import { Button } from "@/components/ui/button";
 import { 
   Share2, 
   Download, 
-  ChevronDown,
   Trophy,
   MapPin,
   Calendar,
   DollarSign,
   Users
 } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -62,8 +55,8 @@ const MatchDetailsDialogue: React.FC<MatchDetailsDialogueProps> = ({ match }) =>
   const { toast } = useToast();
   const [downloadDialogOpen, setDownloadDialogOpen] = useState(false);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
-  const [isDownloading, setIsDownloading] = useState(false); // New state for download status
-  const [backgroundOption, setBackgroundOption] = useState("field");
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [backgroundColor, setBackgroundColor] = useState('#4CAF50'); // Default green
   const cardRef = useRef<HTMLDivElement>(null);
 
   const formatDate = (dateString: string) => {
@@ -83,60 +76,38 @@ const MatchDetailsDialogue: React.FC<MatchDetailsDialogueProps> = ({ match }) =>
     return date.toLocaleTimeString("en-NG", { hour: "2-digit", minute: "2-digit", hour12: true });
   };
 
-  const shareMatch = async () => {
+  const handleShare = () => {
     const url = `${window.location.origin}/match/${match.slug}`;
     const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
     const shareText = `Join my Football Match: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. ${totalPlayerSlots}/${match.total_slots} slots. Powered by Sport Cliq. ${url}${match.is_private ? ` (Access Password: ${match.access_password})` : ''}`;
-    
     if (navigator.share) {
-      try {
-        await navigator.share({
+      navigator
+        .share({
           title: `Join my Football Match: ${match.title}`,
           text: shareText,
-          url: url,
+          url,
+        })
+        .then(() => {
+          toast({
+            title: "Shared!",
+            description: "Match link shared successfully.",
+          });
+        })
+        .catch((error) => {
+          console.error("Error sharing:", error);
+          toast({
+            title: "Error",
+            description: "Failed to share the match.",
+            variant: "destructive",
+          });
         });
-      } catch (err) {
-        console.error("Share failed:", err);
-      }
     } else {
-      try {
-        await navigator.clipboard.writeText(shareText);
-        toast({
-          title: "Link copied!",
-          description: "Share it with your friends to join the match.",
-        });
-      } catch (err) {
-        toast({
-          title: "Failed to copy",
-          description: "Please try again or copy the URL manually.",
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Sharing Not Supported",
+        description: "Your browser does not support sharing. Please copy the link manually.",
+        variant: "destructive",
+      });
     }
-  };
-
-  const shareToWhatsApp = () => {
-    const url = `${window.location.origin}/match/${match.slug}`;
-    const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
-    const shareText = `Join my Football Match: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. ${totalPlayerSlots}/${match.total_slots} slots. Powered by Sport Cliq. ${url}${match.is_private ? ` (Access Password: ${match.access_password})` : ''}`;
-    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
-    window.open(whatsappUrl, '_blank');
-  };
-
-  const shareToTwitter = () => {
-    const url = `${window.location.origin}/match/${match.slug}`;
-    const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
-    const shareText = `Join my Football Match: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. ${totalPlayerSlots}/${match.total_slots} slots. Powered by Sport Cliq. ${url}${match.is_private ? ` (Access Password: ${match.access_password})` : ''}`;
-    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
-    window.open(twitterUrl, '_blank');
-  };
-
-  const shareToFacebook = () => {
-    const url = `${window.location.origin}/match/${match.slug}`;
-    const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
-    const shareText = `Join my Football Match: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. ${totalPlayerSlots}/${match.total_slots} slots. Powered by Sport Cliq. ${match.is_private ? ` (Access Password: ${match.access_password})` : ''}`;
-    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(shareText)}`; // Fixed quote parameter
-    window.open(facebookUrl, '_blank');
   };
 
   const handleImageLoad = () => {
@@ -155,32 +126,17 @@ const MatchDetailsDialogue: React.FC<MatchDetailsDialogueProps> = ({ match }) =>
 
     setIsDownloading(true);
     try {
-      // Preload logo image to avoid CORS issues
-      const logoSrc = backgroundOption === "white" ? "/playarenalight.png" : "/playarenadark.png";
+      const logoSrc = backgroundColor === '#4CAF50' || backgroundColor === '#000000' || backgroundColor === '#2196F3' || backgroundColor === '#9C27B0' ? "/playarenadark.png" : "/playarenalight.png";
       const img = new Image();
       img.crossOrigin = "anonymous";
       img.src = logoSrc;
-      await new Promise((resolve, reject) => {
+      await new Promise((resolve) => {
         img.onload = resolve;
         img.onerror = () => {
           console.warn("Failed to load logo image for canvas");
-          resolve(null); // Proceed even if image fails
+          resolve(null);
         };
       });
-
-      // Preload background image if using field
-      if (backgroundOption === "field") {
-        const bgImg = new Image();
-        bgImg.crossOrigin = "anonymous";
-        bgImg.src = "/football-field.jpg";
-        await new Promise((resolve, reject) => {
-          bgImg.onload = resolve;
-          bgImg.onerror = () => {
-            console.warn("Failed to load background image for canvas");
-            resolve(null); // Proceed even if image fails
-          };
-        });
-      }
 
       const canvas = await html2canvas(cardRef.current, {
         scale: 2,
@@ -190,7 +146,6 @@ const MatchDetailsDialogue: React.FC<MatchDetailsDialogueProps> = ({ match }) =>
         scrollY: -window.scrollY,
       });
 
-      // Convert canvas to Blob
       const blob = await new Promise<Blob | null>((resolve) =>
         canvas.toBlob((blob) => resolve(blob), "image/png")
       );
@@ -202,7 +157,6 @@ const MatchDetailsDialogue: React.FC<MatchDetailsDialogueProps> = ({ match }) =>
       const filename = `SportCliq-Match-${match.title.replace(/\s+/g, '-')}.png`;
       const url = URL.createObjectURL(blob);
 
-      // Try navigator.share for mobile/PWA
       if (navigator.share && (navigator as any).canShare?.({ files: [new File([blob], filename, { type: "image/png" })] })) {
         try {
           await navigator.share({
@@ -211,13 +165,12 @@ const MatchDetailsDialogue: React.FC<MatchDetailsDialogueProps> = ({ match }) =>
             text: `Join my match at ${match.venue?.name || 'unknown venue'}!`,
           });
           URL.revokeObjectURL(url);
-          return; // Share completed, no need to proceed to download
+          return;
         } catch (shareError) {
           console.warn("Share API failed, falling back to download:", shareError);
         }
       }
 
-      // Fallback to traditional download
       const link = document.createElement("a");
       link.href = url;
       link.download = filename;
@@ -235,47 +188,30 @@ const MatchDetailsDialogue: React.FC<MatchDetailsDialogueProps> = ({ match }) =>
     } finally {
       setIsDownloading(false);
     }
-  }, [isImageLoaded, match, toast, backgroundOption]);
+  }, [isImageLoaded, match, toast, backgroundColor]);
 
   const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
 
+  const isDarkBackground = backgroundColor === '#4CAF50' || backgroundColor === '#000000' || backgroundColor === '#2196F3' || backgroundColor === '#9C27B0';
+  const logoSrc = isDarkBackground ? '/playarenadark.png' : '/playarenalight.png';
+
   return (
     <>
-      <div className="flex gap-3 mt-6">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button 
-              variant="outline" 
-              className="flex-1"
-            >
-              <Share2 size={18} className="mr-2" />
-              Share
-              <ChevronDown size={16} className="ml-2" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-[200px]">
-            <DropdownMenuItem onClick={shareToWhatsApp}>
-              Share to WhatsApp
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={shareToTwitter}>
-              Share to Twitter
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={shareToFacebook}>
-              Share to Facebook
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={shareMatch}>
-              Share via Device
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-        
-        <Button 
-          variant="outline"
-          className="flex-1"
+      <div className="flex justify-center gap-4 px-6 py-4 mt-6">
+        <Button
+          className="flex-1 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg px-6 py-3 shadow-sm transition-colors duration-200 border-0 max-w-xs"
+          onClick={handleShare}
+          disabled={isDownloading}
+        >
+          <Share2 size={16} className="mr-2" />
+          Share
+        </Button>
+        <Button
+          className="flex-1 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg px-6 py-3 shadow-sm transition-colors duration-200 border-0 max-w-xs"
           onClick={() => setDownloadDialogOpen(true)}
           disabled={isDownloading}
         >
-          <Download size={18} className="mr-2" />
+          <Download size={16} className="mr-2" />
           {isDownloading ? "Downloading..." : "Download"}
         </Button>
       </div>
@@ -283,82 +219,40 @@ const MatchDetailsDialogue: React.FC<MatchDetailsDialogueProps> = ({ match }) =>
       <Dialog open={downloadDialogOpen} onOpenChange={(open) => {
         setDownloadDialogOpen(open);
         setIsImageLoaded(false);
-        if (!open) setBackgroundOption("field");
+        if (!open) setBackgroundColor('#4CAF50');
       }}>
         <DialogContent className="sm:max-w-[425px] max-w-[90vw] rounded-2xl">
           <DialogTitle>Match Details</DialogTitle>
           <DialogDescription>
             <p className="text-gray-600 dark:text-gray-300 mb-4">
-              Download this card to share your match details with friends. Choose any background below.
+              Download this card to share your match details with friends.
             </p>
-            <div className="mb-4">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Background:</label>
-              <div className="flex items-center space-x-4 mt-2">
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    value="field"
-                    checked={backgroundOption === "field"}
-                    onChange={() => setBackgroundOption("field")}
-                    className="form-radio text-playarena-500"
-                    disabled={isDownloading}
-                  />
-                  <span>Default</span>
-                </label>
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    value="white"
-                    checked={backgroundOption === "white"}
-                    onChange={() => setBackgroundOption("white")}
-                    className="form-radio text-playarena-500"
-                    disabled={isDownloading}
-                  />
-                  <span>White</span>
-                </label>
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    value="green"
-                    checked={backgroundOption === "green"}
-                    onChange={() => setBackgroundOption("green")}
-                    className="form-radio text-playarena-500"
-                    disabled={isDownloading}
-                  />
-                  <span>Green</span>
-                </label>
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    value="black"
-                    checked={backgroundOption === "black"}
-                    onChange={() => setBackgroundOption("black")}
-                    className="form-radio text-playarena-500"
-                    disabled={isDownloading}
-                  />
-                  <span>Black</span>
-                </label>
-              </div>
-            </div>
-            <div 
-              ref={cardRef}
-              className={`rounded-lg p-6 shadow-lg relative overflow-hidden ${backgroundOption === "field" ? "bg-cover bg-center" : ""}`}
-              style={{
-                backgroundImage: backgroundOption === "field" ? "url('/football-field.jpg')" : "",
-                backgroundColor: backgroundOption !== "field" ? backgroundOption : "transparent",
-                ...(backgroundOption === "field" && {
-                  backgroundBlendMode: "overlay",
-                  backgroundColor: "rgba(0, 0, 0, 0.5)",
-                }),
-              }}
-            >
-              <div className="relative z-10">
+            <div className="relative">
+              <div 
+                ref={cardRef}
+                className="relative bg-gradient-to-r from-green-500 to-green-700 rounded-lg p-6 text-white shadow-xl max-w-md mx-auto overflow-hidden border-4 border-dashed border-white/30"
+                style={{
+                  backgroundImage: 'linear-gradient(45deg, rgba(255,255,255,0.1) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.1) 75%, transparent 75%, transparent)',
+                  backgroundSize: '40px 40px',
+                  clipPath: 'polygon(10% 0%, 90% 0%, 100% 10%, 100% 90%, 90% 100%, 10% 100%, 0% 90%, 0% 10%)',
+                  backgroundColor: backgroundColor,
+                }}
+              >
+                {/* Perforated Edge Semi-Circles */}
+                <div className="absolute top-0 left-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '20%' }} />
+                <div className="absolute top-0 left-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '50%' }} />
+                <div className="absolute top-0 left-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '80%' }} />
+                <div className="absolute top-0 right-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '20%' }} />
+                <div className="absolute top-0 right-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '50%' }} />
+                <div className="absolute top-0 right-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '80%' }} />
+
+                {/* Ticket Content */}
                 <div className="flex items-center justify-between mb-4">
                   <img 
-                    src={backgroundOption === "white" ? "/playarenalight.png" : "/playarenadark.png"}
+                    src={logoSrc}
                     alt="PlayArena Logo" 
-                    className="h-8 w-auto"
-                    crossOrigin="anonymous" // Ensure CORS compatibility
+                    className="h-10 w-auto"
+                    crossOrigin="anonymous"
                     onLoad={handleImageLoad}
                     onError={() => {
                       toast({
@@ -369,44 +263,55 @@ const MatchDetailsDialogue: React.FC<MatchDetailsDialogueProps> = ({ match }) =>
                       setIsImageLoaded(true);
                     }}
                   />
-                  <Trophy className={`h-6 w-6 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
+                  <Trophy className="h-6 w-6" />
                 </div>
-                <div className="flex items-center justify-between mb-2">
-                  <h2 className={`text-xl font-bold ${backgroundOption === "white" ? "text-black" : "text-white"}`}>{match.title}</h2>
-                </div>
-                <div className="space-y-2 mb-4">
-                  <div className="flex items-center">
-                    <MapPin className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-                    <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{match.venue?.name || "Venue"}, {match.venue?.city || ""}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <Calendar className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-                    <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{formatDate(match.match_date)} at {formatTime(match.match_time)}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <DollarSign className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-                    <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{match.is_paid ? `Paid (₦${match.price?.toFixed(2)})` : "Free"}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <Users className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-                    <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{totalPlayerSlots}/{match.total_slots} slots booked</span>
-                  </div>
+                <h2 className="text-2xl font-bold mb-2 tracking-tight font-condensed uppercase text-center">{match.title}</h2>
+                <div className="text-center mb-4">
+                  <p className="text-sm"><MapPin className="inline h-4 w-4 mr-1" /> {match.venue?.name || "Venue"}, {match.venue?.city || ""}</p>
+                  <p className="text-sm"><Calendar className="inline h-4 w-4 mr-1" /> {formatDate(match.match_date)} at {formatTime(match.match_time)}</p>
+                  <p className="text-sm"><DollarSign className="inline h-4 w-4 mr-1" /> {match.is_paid ? `Paid (₦${match.price?.toFixed(2)})` : "Free"}</p>
+                  <p className="text-sm"><Users className="inline h-4 w-4 mr-1" /> {totalPlayerSlots}/{match.total_slots} slots booked</p>
+                  {match.is_private && (
+                    <p className="text-sm font-semibold">Access Password: <span className="font-mono">{match.access_password || "N/A"}</span></p>
+                  )}
                 </div>
               </div>
+              <select
+                value={backgroundColor}
+                onChange={(e) => setBackgroundColor(e.target.value)}
+                className="mt-4 w-full p-2 border rounded-lg"
+              >
+                <option value="#4CAF50">Green</option>
+                <option value="#FF5722">Orange</option>
+                <option value="#2196F3">Blue</option>
+                <option value="#9C27B0">Purple</option>
+                <option value="#000000">Black</option>
+              </select>
             </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400 my-4">
+            <p className="text-sm text-gray-500 dark:text-gray-400 my-4 text-center">
               <strong>Note:</strong> Save or share this card to invite players to your match.
             </p>
-            <div className="flex gap-2">
+            <div className="flex justify-center gap-4 px-6 py-4">
               <Button 
-                className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
+                className="flex-1 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg px-6 py-3 shadow-sm transition-colors duration-200 border-0 max-w-xs"
                 onClick={handleDownload}
                 disabled={!isImageLoaded || isDownloading}
               >
+                <Download size={16} className="mr-2" />
                 {isDownloading ? "Downloading..." : "Download"}
               </Button>
               <Button 
-                className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
+                className="flex-1 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg px-6 py-3 shadow-sm transition-colors duration-200 border-0 max-w-xs"
+                onClick={handleShare}
+                disabled={isDownloading}
+              >
+                <Share2 size={16} className="mr-2" />
+                Share
+              </Button>
+            </div>
+            <div className="flex justify-center">
+              <Button 
+                className="bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 transition-colors"
                 onClick={() => setDownloadDialogOpen(false)}
                 disabled={isDownloading}
               >
