@@ -99,6 +99,16 @@ const JoinCycling = () => {
     ? `${form.getValues("phone")}@sportcliq.com`
     : "default@sportcliq.com";
 
+    useEffect(() => {
+    const checkAuth = async () => {
+      const { data: session } = await supabase.auth.getSession();
+      if (session.session) {
+        setUserId(session.session.user.id);
+      }
+    };
+    checkAuth();
+  }, []);
+  
   // Load Paystack script
   useEffect(() => {
     const script = document.createElement("script");
