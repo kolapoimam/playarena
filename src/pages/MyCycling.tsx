@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Bicycle, Calendar, Clock, MapPin, Users, Copy } from "lucide-react";
+import { ArrowLeft, Bike, Calendar, Clock, MapPin, Users, Copy } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { format } from "date-fns";
 import { utcToZonedTime } from "date-fns-tz";
@@ -303,7 +303,7 @@ const MyCycling = () => {
                             Slots: <span className="text-green-600 dark:text-green-400">{event.attendees.length}</span>/{event.max_attendees}
                           </p>
                           <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
-                            <Bicycle size={16} className="mr-2" />
+                            <Bike size={16} className="mr-2" />
                             Organized by: {event.host_name || "Unknown"}
                           </p>
                         </div>
@@ -358,7 +358,7 @@ const MyCycling = () => {
                             Slots: <span className="text-green-600 dark:text-green-400">{event.attendees.length}</span>/{event.max_attendees}
                           </p>
                           <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
-                            <Bicycle size={16} className="mr-2" />
+                            <Bike size={16} className="mr-2" />
                             Organized by: {event.host_name || "Unknown"}
                           </p>
                         </div>
