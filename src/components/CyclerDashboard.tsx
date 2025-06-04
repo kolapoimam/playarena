@@ -10,7 +10,7 @@ type Analytics = {
   total_joined: number;
   total_spent: number;
   total_cashout: number;
-  total_venues: number;
+  total_landmarks: number;
 };
 
 type Profile = {
@@ -28,7 +28,7 @@ const CyclerDashboard = ({ profile }: CyclerDashboardProps) => {
     total_joined: 0,
     total_spent: 0,
     total_cashout: 0,
-    total_venues: 0,
+    total_landmarks: 0,
   });
   const [analyticsFilter, setAnalyticsFilter] = useState<"all" | "this_month" | "last_month" | "this_week" | "last_week">("all");
 
@@ -38,135 +38,135 @@ const CyclerDashboard = ({ profile }: CyclerDashboardProps) => {
     }
   }, [profile, analyticsFilter]);
 
-const fetchAnalytics = async () => {
-  const { data: session } = await supabase.auth.getSession();
-  if (!session.session) {
-    toast({ title: "Error", description: "Please log in to view analytics.", variant: "destructive" });
-    return;
-  }
-
-  const userId = session.session.user.id;
-  const now = new Date();
-
-  // Base queries
-  let eventsQuery = supabase
-    .from("cycling_events")
-    .select("id_uuid, created_at, venue_id", { count: "exact" })
-    .eq("host_id", userId);
-
-  let attendeesQuery = supabase
-    .from("user_joined_cycling")
-    .select(`
-      attendee:cycling_attendees!user_joined_cycling_attendee_id_fkey(
-        id,
-        created_at,
-        cycling_event_id_uuid,
-        number_of_slots
-      )
-    `)
-    .eq("user_id", userId);
-
-  let cashoutsQuery = supabase
-    .from("cycling_cashouts")
-    .select("total_amount_paid, created_at")
-    .eq("host_id", userId)
-    .eq("status", "Successful");
-
-  // Apply time filters
-  if (analyticsFilter === "this_month") {
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    eventsQuery = eventsQuery.gte("created_at", monthStart.toISOString());
-    attendeesQuery = attendeesQuery.gte("attendee.created_at", monthStart.toISOString());
-    cashoutsQuery = cashoutsQuery.gte("created_at", monthStart.toISOString());
-  } else if (analyticsFilter === "last_month") {
-    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
-    eventsQuery = eventsQuery
-      .gte("created_at", lastMonthStart.toISOString())
-      .lte("created_at", lastMonthEnd.toISOString());
-    attendeesQuery = attendeesQuery
-      .gte("attendee.created_at", lastMonthStart.toISOString())
-      .lte("attendee.created_at", lastMonthEnd.toISOString());
-    cashoutsQuery = cashoutsQuery
-      .gte("created_at", lastMonthStart.toISOString())
-      .lte("created_at", lastMonthEnd.toISOString());
-  } else if (analyticsFilter === "this_week") {
-    const weekStart = new Date(now.setDate(now.getDate() - now.getDay()));
-    weekStart.setHours(0, 0, 0, 0);
-    eventsQuery = eventsQuery.gte("created_at", weekStart.toISOString());
-    attendeesQuery = attendeesQuery.gte("attendee.created_at", weekStart.toISOString());
-    cashoutsQuery = cashoutsQuery.gte("created_at", weekStart.toISOString());
-  } else if (analyticsFilter === "last_week") {
-    const lastWeekStart = new Date(now.setDate(now.getDate() - now.getDay() - 7));
-    lastWeekStart.setHours(0, 0, 0, 0);
-    const lastWeekEnd = new Date(now.setDate(now.getDate() - now.getDay() - 1));
-    lastWeekEnd.setHours(23, 59, 59, 999);
-    eventsQuery = eventsQuery
-      .gte("created_at", lastWeekStart.toISOString())
-      .lte("created_at", lastWeekEnd.toISOString());
-    attendeesQuery = attendeesQuery
-      .gte("attendee.created_at", lastWeekStart.toISOString())
-      .lte("attendee.created_at", lastWeekEnd.toISOString());
-    cashoutsQuery = cashoutsQuery
-      .gte("created_at", lastWeekStart.toISOString())
-      .lte("created_at", lastWeekEnd.toISOString());
-  }
-
-  try {
-    // Fetch data
-    const [{ data: eventsData, count: eventsCount, error: eventsError }, { data: joinedData, error: joinedError }, { data: cashoutsData, error: cashoutsError }] = await Promise.all([
-      eventsQuery,
-      attendeesQuery,
-      cashoutsQuery,
-    ]);
-
-    if (eventsError || joinedError || cashoutsError) {
-      console.error("Analytics fetch error:", { eventsError, joinedError, cashoutsError });
-      toast({ title: "Error", description: "Failed to load cycling analytics.", variant: "destructive" });
+  const fetchAnalytics = async () => {
+    const { data: session } = await supabase.auth.getSession();
+    if (!session.session) {
+      toast({ title: "Error", description: "Please log in to view analytics.", variant: "destructive" });
       return;
     }
 
-    // Extract attendees data
-    const attendeesData = joinedData?.map((item) => item.attendee).filter((attendee) => attendee !== null) || [];
+    const userId = session.session.user.id;
+    const now = new Date();
 
-    // Calculate total spent by joining attendees with events
-    let totalSpent = 0;
-    if (attendeesData.length > 0) {
-      const eventIds = attendeesData.map((a) => a.cycling_event_id_uuid);
-      const { data: eventsForAttendees, error: eventsFetchError } = await supabase
-        .from("cycling_events")
-        .select("id_uuid, price, is_free")
-        .in("id_uuid", eventIds);
+    // Base queries
+    let eventsQuery = supabase
+      .from("cycling_events")
+      .select("id_uuid, created_at, start_landmark_id", { count: "exact" })
+      .eq("host_id", userId);
 
-      if (eventsFetchError) {
-        console.error("Events fetch error:", eventsFetchError);
-        toast({ title: "Error", description: "Failed to load event details.", variant: "destructive" });
+    let attendeesQuery = supabase
+      .from("user_joined_cycling")
+      .select(`
+        attendee:cycling_attendees!user_joined_cycling_attendee_id_fkey(
+          id,
+          created_at,
+          cycling_event_id_uuid,
+          number_of_slots
+        )
+      `)
+      .eq("user_id", userId);
+
+    let cashoutsQuery = supabase
+      .from("cycling_cashouts")
+      .select("total_amount_paid, created_at")
+      .eq("host_id", userId)
+      .eq("status", "Successful");
+
+    // Apply time filters
+    if (analyticsFilter === "this_month") {
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      eventsQuery = eventsQuery.gte("created_at", monthStart.toISOString());
+      attendeesQuery = attendeesQuery.gte("attendee.created_at", monthStart.toISOString());
+      cashoutsQuery = cashoutsQuery.gte("created_at", monthStart.toISOString());
+    } else if (analyticsFilter === "last_month") {
+      const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+      eventsQuery = eventsQuery
+        .gte("created_at", lastMonthStart.toISOString())
+        .lte("created_at", lastMonthEnd.toISOString());
+      attendeesQuery = attendeesQuery
+        .gte("attendee.created_at", lastMonthStart.toISOString())
+        .lte("attendee.created_at", lastMonthEnd.toISOString());
+      cashoutsQuery = cashoutsQuery
+        .gte("created_at", lastMonthStart.toISOString())
+        .lte("created_at", lastMonthEnd.toISOString());
+    } else if (analyticsFilter === "this_week") {
+      const weekStart = new Date(now.setDate(now.getDate() - now.getDay()));
+      weekStart.setHours(0, 0, 0, 0);
+      eventsQuery = eventsQuery.gte("created_at", weekStart.toISOString());
+      attendeesQuery = attendeesQuery.gte("attendee.created_at", weekStart.toISOString());
+      cashoutsQuery = cashoutsQuery.gte("created_at", weekStart.toISOString());
+    } else if (analyticsFilter === "last_week") {
+      const lastWeekStart = new Date(now.setDate(now.getDate() - now.getDay() - 7));
+      lastWeekStart.setHours(0, 0, 0, 0);
+      const lastWeekEnd = new Date(now.setDate(now.getDate() - now.getDay() - 1));
+      lastWeekEnd.setHours(23, 59, 59, 999);
+      eventsQuery = eventsQuery
+        .gte("created_at", lastWeekStart.toISOString())
+        .lte("created_at", lastWeekEnd.toISOString());
+      attendeesQuery = attendeesQuery
+        .gte("attendee.created_at", lastWeekStart.toISOString())
+        .lte("attendee.created_at", lastWeekEnd.toISOString());
+      cashoutsQuery = cashoutsQuery
+        .gte("created_at", lastWeekStart.toISOString())
+        .lte("created_at", lastWeekEnd.toISOString());
+    }
+
+    try {
+      // Fetch data
+      const [
+        { data: eventsData, count: eventsCount, error: eventsError },
+        { data: joinedData, error: joinedError },
+        { data: cashoutsData, error: cashoutsError },
+      ] = await Promise.all([eventsQuery, attendeesQuery, cashoutsQuery]);
+
+      if (eventsError || joinedError || cashoutsError) {
+        console.error("Analytics fetch error:", { eventsError, joinedError, cashoutsError });
+        toast({ title: "Error", description: "Failed to load cycling analytics.", variant: "destructive" });
         return;
       }
 
-      totalSpent = attendeesData.reduce((sum, attendee) => {
-        const event = eventsForAttendees?.find((e) => e.id_uuid === attendee.cycling_event_id_uuid);
-        if (event && !event.is_free && event.price) {
-          return sum + (attendee.number_of_slots || 1) * event.price;
+      // Extract attendees data
+      const attendeesData = joinedData?.map((item) => item.attendee).filter((attendee) => attendee !== null) || [];
+
+      // Calculate total spent by joining attendees with events
+      let totalSpent = 0;
+      if (attendeesData.length > 0) {
+        const eventIds = attendeesData.map((a) => a.cycling_event_id_uuid);
+        const { data: eventsForAttendees, error: eventsFetchError } = await supabase
+          .from("cycling_events")
+          .select("id_uuid, price, is_free")
+          .in("id_uuid", eventIds);
+
+        if (eventsFetchError) {
+          console.error("Events fetch error:", eventsFetchError);
+          toast({ title: "Error", description: "Failed to load event details.", variant: "destructive" });
+          return;
         }
-        return sum;
-      }, 0);
+
+        totalSpent = attendeesData.reduce((sum, attendee) => {
+          const event = eventsForAttendees?.find((e) => e.id_uuid === attendee.cycling_event_id_uuid);
+          if (event && !event.is_free && event.price) {
+            return sum + (attendee.number_of_slots || 1) * event.price;
+          }
+          return sum;
+        }, 0);
+      }
+
+      // Calculate analytics
+      const analyticsData: Analytics = {
+        total_organized: eventsCount || 0,
+        total_joined: attendeesData.length,
+        total_spent: totalSpent,
+        total_cashout: cashoutsData?.reduce((sum, c) => sum + c.total_amount_paid, 0) || 0,
+        total_landmarks: eventsData ? [...new Set(eventsData.map((e) => e.start_landmark_id))].length : 0,
+      };
+
+      setAnalytics(analyticsData);
+    } catch (error: any) {
+      console.error("Analytics fetch error:", error.message, error);
+      toast({ title: "Error", description: "Failed to load cycling analytics.", variant: "destructive" });
     }
-
-    // Calculate analytics
-    const analyticsData: Analytics = {
-      total_organized: eventsCount || 0,
-      total_joined: attendeesData.length,
-      total_spent: totalSpent,
-      total_cashout: cashoutsData?.reduce((sum, c) => sum + c.total_amount_paid, 0) || 0,
-      total_venues: eventsData ? [...new Set(eventsData.map((e) => e.venue_id))].length : 0,
-    };
-
-    setAnalytics(analyticsData);
-  } catch (error) {
-    console.error("Analytics fetch error:", error);
-    toast({ title: "Error", description: "Failed to load cycling analytics.", variant: "destructive" });
-  }
   };
 
   return (
@@ -235,8 +235,8 @@ const fetchAnalytics = async () => {
           <div className="p-4 bg-green-50 dark:bg-green-900/50 rounded-lg flex items-center gap-3 shadow-md">
             <MapPin className="h-8 w-8 text-green-600" />
             <div>
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Venues Used</p>
-              <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{analytics.total_venues}</p>
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Landmarks Used</p>
+              <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{analytics.total_landmarks}</p>
             </div>
           </div>
         </div>
