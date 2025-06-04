@@ -132,7 +132,7 @@ const UserDashboard = ({ profile }: UserDashboardProps) => {
     <Card className="bg-white dark:bg-gray-800 border-none shadow-xl rounded-xl">
       <CardHeader>
         <CardTitle className="text-xl font-semibold text-green-700 dark:text-green-400">
-          Your Stats
+          Matches Stats
         </CardTitle>
         <Select
           value={analyticsFilter}
