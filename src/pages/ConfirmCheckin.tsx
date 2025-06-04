@@ -27,6 +27,7 @@ import HostCashout from "@/components/HostCashout";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Toggle } from "@/components/ui/toggle";
 
+// Type definitions remain unchanged
 type Match = {
   id: string;
   slug: string;
@@ -845,7 +846,8 @@ const ConfirmCheckin = () => {
         </Dialog>
         <Navbar />
       </div>
-    );
-  };
+    </div>
+  );
+};
 
 export default ConfirmCheckin;
