@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Calendar, MapPin, ArrowLeft, Ticket, Copy, Trophy, Volleyball, Clock, Medal } from "lucide-react";
+import { Calendar, MapPin, ArrowLeft, Ticket, Share2, Download, Trophy, Volleyball, Medal } from "lucide-react";
 import { format } from "date-fns";
 import Navbar from "@/components/Navbar";
 import html2canvas from "html2canvas";
@@ -35,7 +35,7 @@ const TicketReceipt = () => {
   const [ticket, setTicket] = useState<Ticket | null>(null);
   const [loading, setLoading] = useState(true);
   const [isDownloading, setIsDownloading] = useState(false);
-  const [downloadFormat, setDownloadFormat] = useState<'png' | 'pdf'>('png');
+  const [downloadFormat, setDownloadFormat] = useState<'png' | 'pdf'>('png'); // Default to PNG
   const [backgroundColor, setBackgroundColor] = useState('#4CAF50'); // Default green
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -109,12 +109,34 @@ const TicketReceipt = () => {
     }
   };
 
-  const copyTicketCode = () => {
-    if (ticket?.ticket_code) {
-      navigator.clipboard.writeText(ticket.ticket_code);
+  const handleShare = () => {
+    const shareUrl = window.location.href; // Dynamically get the current page URL
+    if (navigator.share) {
+      navigator
+        .share({
+          title: "My SportCliq Ticket Receipt",
+          text: `Check out my ticket for ${ticket?.match.title}! 🎟️`,
+          url: shareUrl,
+        })
+        .then(() => {
+          toast({
+            title: "Shared!",
+            description: "Ticket receipt link shared successfully.",
+          });
+        })
+        .catch((error) => {
+          console.error("Error sharing:", error);
+          toast({
+            title: "Error",
+            description: "Failed to share the ticket receipt.",
+            variant: "destructive",
+          });
+        });
+    } else {
       toast({
-        title: "Copied!",
-        description: "Ticket code copied to clipboard",
+        title: "Sharing Not Supported",
+        description: "Your browser does not support sharing. Please copy the link manually.",
+        variant: "destructive",
       });
     }
   };
@@ -166,7 +188,7 @@ const TicketReceipt = () => {
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
           <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Tickets Purchased!</h2>
           <p className="text-gray-600 dark:text-gray-300 mb-4 text-sm">
-            Your tickets have been successfully purchased. Below is your unique 6-digit ticket code for entry.
+            Your "|"tickets have been successfully purchased. Below is your unique 6-digit ticket code for entry.
           </p>
           <div className="relative">
             {/* Ticket Card with Clipped Edges */}
@@ -225,7 +247,7 @@ const TicketReceipt = () => {
           <p className="text-sm text-gray-500 dark:text-gray-400 my-4 text-center">
             <strong>Note:</strong> Save or download this ticket code. You'll need it for entry on match day.
           </p>
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex gap-3">
             <div className="flex-1 relative">
               <select
                 value={downloadFormat}
@@ -242,17 +264,18 @@ const TicketReceipt = () => {
                 disabled={isDownloading}
                 aria-label={`Download ticket as ${downloadFormat.toUpperCase()}`}
               >
-                {isDownloading ? "Downloading..." : `Download ${downloadFormat.toUpperCase()}`}
+                <Download size={16} className="mr-2" />
+                {isDownloading ? "Downloading..." : "Download"}
               </Button>
             </div>
             <Button
               className="flex-1 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 transition-colors"
-              onClick={copyTicketCode}
+              onClick={handleShare}
               disabled={isDownloading}
-              aria-label="Copy ticket code"
+              aria-label="Share ticket receipt"
             >
-              <Copy size={16} className="mr-2" />
-              Copy Code
+              <Share2 size={16} className="mr-2" />
+              Share
             </Button>
           </div>
         </div>
