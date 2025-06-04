@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -5,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import UserDashboard from "../components/UserDashboard";
+import CyclerDashboard from "../components/CyclerDashboard";
 import Performance from "@/components/Performance";
 import Navbar from "@/components/Navbar";
 import { ArrowLeft } from "lucide-react";
@@ -19,6 +21,7 @@ const ViewProfile = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("statistics");
+  const [dashboardType, setDashboardType] = useState<"cycling" | "match">("match");
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -93,7 +96,50 @@ const ViewProfile = () => {
               </TabsTrigger>
             </TabsList>
             <TabsContent value="statistics">
-              <UserDashboard profile={profile} />
+              <div className="my-4 flex justify-center">
+                <div className="relative inline-flex items-center bg-gray-200 dark:bg-gray-600 rounded-full p-1 shadow-md">
+                  <input
+                    type="checkbox"
+                    id="dashboard-toggle"
+                    className="sr-only"
+                    checked={dashboardType === "cycling"}
+                    onChange={() => setDashboardType(dashboardType === "cycling" ? "match" : "cycling")}
+                  />
+                  <label
+                    htmlFor="dashboard-toggle"
+                    className="flex items-center cursor-pointer w-56"
+                  >
+                    <span
+                      className={`px-4 py-2 text-sm font-medium transition-colors duration-300 ${
+                        dashboardType === "match"
+                          ? "text-white bg-green-500 rounded-full"
+                          : "text-gray-700 dark:text-gray-300"
+                      }`}
+                    >
+                      Match Statistics
+                    </span>
+                    <span
+                      className={`px-4 py-2 text-sm font-medium transition-colors duration-300 ${
+                        dashboardType === "cycling"
+                          ? "text-white bg-green-500 rounded-full"
+                          : "text-gray-700 dark:text-gray-300"
+                      }`}
+                    >
+                      Cycling Statistics
+                    </span>
+                    <span
+                      className={`absolute top-1 left-1 w-28 h-8 bg-green-500 rounded-full transform transition-transform duration-300 ${
+                        dashboardType === "cycling" ? "translate-x-28" : "translate-x-0"
+                      }`}
+                    />
+                  </label>
+                </div>
+              </div>
+              {dashboardType === "cycling" ? (
+                <CyclerDashboard profile={profile} />
+              ) : (
+                <UserDashboard profile={profile} />
+              )}
             </TabsContent>
             <TabsContent value="performance">
               <Performance profile={profile} />
