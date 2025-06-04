@@ -35,9 +35,8 @@ const TicketReceipt = () => {
   const [ticket, setTicket] = useState<Ticket | null>(null);
   const [loading, setLoading] = useState(true);
   const [isDownloading, setIsDownloading] = useState(false);
-  const [downloadFormat, setDownloadFormat] = useState<'png' | 'pdf'>('png'); // Default to PNG
-  const [backgroundColor, setBackgroundColor] = useState('#4CAF50'); // Default green
   const cardRef = useRef<HTMLDivElement>(null);
+  const [backgroundColor, setBackgroundColor] = useState('#4CAF50'); // Default green
 
   useEffect(() => {
     const fetchTicket = async () => {
@@ -82,26 +81,18 @@ const TicketReceipt = () => {
     try {
       const canvas = await html2canvas(cardRef.current, { scale: 2 });
       const imgData = canvas.toDataURL('image/png');
-
-      if (downloadFormat === 'png') {
-        const link = document.createElement('a');
-        link.download = `PlayArena-Ticket-${ticket?.match.title.replace(/\s+/g, '-')}.png`;
-        link.href = imgData;
-        link.click();
-      } else {
-        const pdf = new jsPDF({
-          orientation: 'portrait',
-          unit: 'px',
-          format: [canvas.width, canvas.height],
-        });
-        pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
-        pdf.save(`PlayArena-Ticket-${ticket?.match.title.replace(/\s+/g, '-')}.pdf`);
-      }
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'px',
+        format: [canvas.width, canvas.height],
+      });
+      pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+      pdf.save(`SportCliq-Ticket-${ticket?.match.title.replace(/\s+/g, '-')}.pdf`);
     } catch (error) {
       console.error("Error generating ticket:", error);
       toast({
         title: "Error",
-        description: `Failed to download ticket as ${downloadFormat.toUpperCase()}.`,
+        description: "Failed to download ticket as PDF.",
         variant: "destructive",
       });
     } finally {
@@ -110,7 +101,7 @@ const TicketReceipt = () => {
   };
 
   const handleShare = () => {
-    const shareUrl = window.location.href; // Dynamically get the current page URL
+    const shareUrl = window.location.href;
     if (navigator.share) {
       navigator
         .share({
@@ -188,7 +179,7 @@ const TicketReceipt = () => {
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
           <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Tickets Purchased!</h2>
           <p className="text-gray-600 dark:text-gray-300 mb-4 text-sm">
-            Your "|"tickets have been successfully purchased. Below is your unique 6-digit ticket code for entry.
+            Your tickets have been successfully purchased. Below is your unique 6-digit ticket code for entry.
           </p>
           <div className="relative">
             {/* Ticket Card with Clipped Edges */}
@@ -248,33 +239,22 @@ const TicketReceipt = () => {
             <strong>Note:</strong> Save or download this ticket code. You'll need it for entry on match day.
           </p>
           <div className="flex gap-3">
-            <div className="flex-1 relative">
-              <select
-                value={downloadFormat}
-                onChange={(e) => setDownloadFormat(e.target.value as 'png' | 'pdf')}
-                className="absolute top-0 left-0 w-20 p-2 text-sm bg-gray-100 dark:bg-gray-700 border rounded-lg"
-                aria-label="Select download format"
-              >
-                <option value="png">PNG</option>
-                <option value="pdf">PDF</option>
-              </select>
-              <Button
-                className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 pl-24 transition-colors"
-                onClick={handleDownload}
-                disabled={isDownloading}
-                aria-label={`Download ticket as ${downloadFormat.toUpperCase()}`}
-              >
-                <Download size={16} className="mr-2" />
-                {isDownloading ? "Downloading..." : "Download"}
-              </Button>
-            </div>
             <Button
-              className="flex-1 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 transition-colors"
+              className="flex-1 bg-gradient-to-r from-green-500 to-green-700 text-white font-medium rounded-lg px-6 py-3 shadow-lg hover:from-green-600 hover:to-green-800 transition-all duration-300 border-2 border-dashed border-white/30 animate-ticket-reveal"
+              onClick={handleDownload}
+              disabled={isDownloading}
+              aria-label="Download ticket as PDF"
+            >
+              <Download size={18} className="mr-2" />
+              {isDownloading ? "Downloading..." : "Download PDF"}
+            </Button>
+            <Button
+              className="flex-1 bg-gradient-to-r from-green-500 to-green-700 text-white font-medium rounded-lg px-6 py-3 shadow-lg hover:from-green-600 hover:to-green-800 transition-all duration-300 border-2 border-dashed border-white/30 animate-ticket-reveal"
               onClick={handleShare}
               disabled={isDownloading}
               aria-label="Share ticket receipt"
             >
-              <Share2 size={16} className="mr-2" />
+              <Share2 size={18} className="mr-2" />
               Share
             </Button>
           </div>
