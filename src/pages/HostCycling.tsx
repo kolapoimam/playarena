@@ -23,7 +23,6 @@ import CreateLandmarkDialog from '@/components/CreateLandmarkDialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { DateTime } from 'luxon';
 
-// Error Boundary Component
 class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
   state = { hasError: false };
 
@@ -145,6 +144,7 @@ type FormValues = z.infer<typeof formSchema>;
 const HostCycling = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [userId, setUserId] = useState<string | null>(null);
   const [landmarks, setLandmarks] = useState<{ id_uuid: string; name: string; state: string }[]>([]);
   const [loadingLandmarks, setLoadingLandmarks] = useState(true);
   const [landmarksError, setLandmarksError] = useState<string | null>(null);
@@ -183,16 +183,28 @@ const HostCycling = () => {
     },
   });
 
-    useEffect(() => {
+  useEffect(() => {
     const checkAuth = async () => {
-      const { data: session } = await supabase.auth.getSession();
-      if (session.session) {
+      try {
+        const { data: session } = await supabase.auth.getSession();
+        if (!session.session) {
+          navigate('/login');
+          return;
+        }
         setUserId(session.session.user.id);
+      } catch (err: any) {
+        console.error('Auth error:', err);
+        toast({
+          title: 'Authentication Error',
+          description: 'Please log in to host an event.',
+          variant: 'destructive',
+        });
+        navigate('/login');
       }
     };
     checkAuth();
-  }, []);
-  
+  }, [navigate, toast]);
+
   useEffect(() => {
     const fetchLandmarks = async () => {
       try {
@@ -293,6 +305,16 @@ const HostCycling = () => {
   };
 
   const onSubmit = async (data: FormValues) => {
+    if (!userId) {
+      toast({
+        title: 'Authentication Error',
+        description: 'Please log in to host an event.',
+        variant: 'destructive',
+      });
+      navigate('/login');
+      return;
+    }
+
     setFormIsLoading(true);
     try {
       if (!data.start_landmark_id) {
@@ -359,6 +381,18 @@ const HostCycling = () => {
       if (eventError || !eventData) {
         console.error('Supabase insert error:', eventError);
         throw new Error(`Failed to create event: ${eventError?.message || 'No event data'}`);
+      }
+
+      const { error: userHostedError } = await supabase
+        .from('user_hosted_cycling')
+        .insert({
+          user_id: userId,
+          cycling_event_id: eventData.id_uuid,
+        });
+
+      if (userHostedError) {
+        console.error('Error inserting into user_hosted_cycling:', userHostedError);
+        throw new Error(`Failed to record hosted event: ${userHostedError.message}`);
       }
 
       const { data: apiData, error: apiError } = await supabase
