@@ -5,6 +5,8 @@ import { useToast } from "@/hooks/use-toast";
 import { isPast, differenceInMinutes } from "date-fns";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { ArrowLeft, AlertCircle, Loader2 } from "lucide-react";
 import {
   Dialog,
@@ -19,6 +21,7 @@ import { v4 as uuidv4 } from "uuid";
 import MatchCodeInput from "@/components/MatchCodeInput";
 import CyclingCodeInput from "@/components/CyclingCodeInput";
 import MatchDetails from "@/components/MatchDetails";
+import TicketManagement from "@/components/TicketManagement";
 import PlayerManagement from "@/components/PlayerManagement";
 import OrganizerCashout from "@/components/OrganizerCashout";
 import CyclingDetails from "@/components/CyclingDetails";
@@ -43,6 +46,7 @@ type Match = {
   price?: number;
   cancellation_status: boolean;
   status: string;
+  sell_tickets: boolean;
   venue: {
     name?: string;
     city?: string;
@@ -55,6 +59,22 @@ type Match = {
     details: { phone: string } | null;
     number_of_slots?: number;
   }[] | null;
+  tickets: {
+    id: string;
+    buyer_name: string;
+    number_of_tickets: number;
+    ticket_code: string;
+    checked_in: boolean;
+    total_price: number;
+  }[] | null;
+  ticket_sales: {
+    id: string;
+    total_tickets_sold: number;
+    total_checked_in: number;
+    total_pending: number;
+    total_amount: number;
+    settlement_status: string;
+  } | null;
 };
 
 type CyclingEvent = {
@@ -89,15 +109,18 @@ type CyclingEvent = {
 
 type Cashout = {
   id: string;
-  cycling_event_id_uuid: string;
-  supercode: string;
+  cycling_event_id_uuid?: string;
+  match_id?: string;
+  supercode?: string;
+  super_code?: string;
   total_amount_paid: number;
   bank_account_number: string;
   bank_name: string;
   account_name: string;
   status: "Review" | "Processed" | "Failed" | "Successful";
   temp_identifier?: string;
-  host_id: string;
+  host_id?: string;
+  organizer_id?: string;
   created_at: string;
   updated_at: string;
 };
@@ -129,6 +152,79 @@ const ConfirmCheckin = () => {
   const [recentSuperCodes, setRecentSuperCodes] = useState<string[]>([]);
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+  const [cashoutDialogOpen, setCashoutDialogOpen] = useState(false);
+  const [bankAccountNumber, setBankAccountNumber] = useState("");
+  const [bankName, setBankName] = useState("");
+  const [accountName, setAccountName] = useState("");
+  const [cashoutLoading, setCashoutLoading] = useState(false);
+
+  const handleCashout = async () => {
+    if (!match || !match.ticket_sales || match.ticket_sales.settlement_status !== "Pending") {
+      toast({
+        title: "Error",
+        description: "Cannot process cashout. No ticket sales or already settled.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!bankAccountNumber || !bankName || !accountName) {
+      toast({
+        title: "Error",
+        description: "Please provide all bank details.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setCashoutLoading(true);
+    try {
+      const { error } = await supabase
+        .from("cashouts")
+        .insert({
+          match_id: match.id,
+          super_code: match.super_code,
+          total_amount_paid: match.ticket_sales.total_amount,
+          bank_account_number: bankAccountNumber,
+          bank_name: bankName,
+          account_name: accountName,
+          status: "Review",
+          temp_identifier,
+          organizer_id: match.organizer_id,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+
+      if (error) throw error;
+
+      // Update ticket_sales settlement status
+      const { error: settlementError } = await supabase
+        .from("ticket_sales")
+        .update({ settlement_status: "Processing", updated_at: new Date().toISOString() })
+        .eq("match_id", match.id);
+
+      if (settlementError) throw settlementError;
+
+      toast({
+        title: "Success",
+        description: "Cashout request submitted successfully.",
+      });
+      setCashoutDialogOpen(false);
+      setBankAccountNumber("");
+      setBankName("");
+      setAccountName("");
+      await fetchEvent();
+    } catch (error: any) {
+      console.error("Error processing cashout:", error);
+      toast({
+        title: "Error",
+        description: "Failed to process cashout. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setCashoutLoading(false);
+    }
+  };
 
   const resetState = () => {
     setMatch(null);
@@ -275,9 +371,12 @@ const ConfirmCheckin = () => {
         const { data, error } = await supabase
           .from("matches")
           .select(`
-            id, slug, title, match_date, match_time, match_start_time, match_end_time, total_slots, organizer_id, organizer_name, super_code, is_paid, price, cancellation_status, status,
+            id, slug, title, match_date, match_time, match_start_time, match_end_time, total_slots, 
+            organizer_id, organizer_name, super_code, is_paid, price, cancellation_status, status, sell_tickets,
             venue:venues(name, city),
-            players(id, player_name, status, confirmation_code, details, number_of_slots)
+            players(id, player_name, status, confirmation_code, details, number_of_slots),
+            tickets(id, buyer_name, number_of_tickets, ticket_code, checked_in, total_price),
+            ticket_sales(id, total_tickets_sold, total_checked_in, total_pending, total_amount, settlement_status)
           `)
           .eq("super_code", superCode)
           .single();
@@ -304,6 +403,8 @@ const ConfirmCheckin = () => {
               }
             : null,
           players: Array.isArray(data.players) ? data.players : [],
+          tickets: Array.isArray(data.tickets) ? data.tickets : [],
+          ticket_sales: data.ticket_sales || null,
           cancellation_status: data.cancellation_status ?? false,
           status: data.status ?? "upcoming",
         };
@@ -411,7 +512,7 @@ const ConfirmCheckin = () => {
       return !!cyclingEvent.cycling_attendees?.length;
     }
     if (!match || match.cancellation_status || isEventPast()) return false;
-    return !!match.players?.length;
+    return !!match.players?.length || !!match.tickets?.length;
   };
 
   const handleCancelEvent = async () => {
@@ -508,6 +609,28 @@ const ConfirmCheckin = () => {
 
         if (playersError) throw playersError;
 
+        if (match.sell_tickets) {
+          const { error: ticketsError } = await supabase
+            .from("tickets")
+            .update({
+              checked_in: false,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("match_id", match.id);
+
+          if (ticketsError) throw ticketsError;
+
+          const { error: ticketSalesError } = await supabase
+            .from("ticket_sales")
+            .update({
+              settlement_status: "Cancelled",
+              updated_at: new Date().toISOString(),
+            })
+            .eq("match_id", match.id);
+
+          if (ticketSalesError) throw ticketSalesError;
+        }
+
         toast({
           title: "Success",
           description: "Match canceled successfully.",
@@ -557,7 +680,7 @@ const ConfirmCheckin = () => {
         supabase.removeChannel(subscription);
       };
     } else if (match?.id) {
-      const subscription = supabase
+      const playerSubscription = supabase
         .channel(`players_match_${match.id}`)
         .on(
           "postgres_changes",
@@ -574,8 +697,44 @@ const ConfirmCheckin = () => {
         )
         .subscribe();
 
+      const ticketSubscription = supabase
+        .channel(`tickets_match_${match.id}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "tickets",
+            filter: `match_id=eq.${match.id}`,
+          },
+          (payload) => {
+            console.log("Ticket update received", payload);
+            fetchEvent();
+          }
+        )
+        .subscribe();
+
+      const ticketSalesSubscription = supabase
+        .channel(`ticket_sales_${match.id}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "ticket_sales",
+            filter: `match_id=eq.${match.id}`,
+          },
+          (payload) => {
+            console.log("Ticket sales update received", payload);
+            fetchEvent();
+          }
+        )
+        .subscribe();
+
       return () => {
-        supabase.removeChannel(subscription);
+        supabase.removeChannel(playerSubscription);
+        supabase.removeChannel(ticketSubscription);
+        supabase.removeChannel(ticketSalesSubscription);
       };
     }
   }, [match?.id, cyclingEvent?.id_uuid, isCyclingEvent]);
@@ -763,23 +922,57 @@ const ConfirmCheckin = () => {
                     navigate={navigate}
                   />
                 ) : (
-                  <PlayerManagement
-                    match={match}
-                    tempIdentifier={tempIdentifier}
-                    playerStatuses={playerStatuses}
-                    setPlayerStatuses={setPlayerStatuses}
-                    checkinCodes={checkinCodes}
-                    setCheckinCodes={setCheckinCodes}
-                    checkinCodeErrors={checkinCodeErrors}
-                    setCheckinCodeErrors={setCheckinCodeErrors}
-                    fetchMatch={fetchEvent}
-                    loading={loading}
-                    setLoading={setLoading}
-                    isMatchPast={isEventPast()}
-                    canConfirmPlayers={canConfirmAttendees()}
-                    handleCancelMatch={() => setIsCancelDialogOpen(true)}
-                    navigate={navigate}
-                  />
+                  <>
+                    <PlayerManagement
+                      match={match}
+                      tempIdentifier={tempIdentifier}
+                      playerStatuses={playerStatuses}
+                      setPlayerStatuses={setPlayerStatuses}
+                      checkinCodes={checkinCodes}
+                      setCheckinCodes={setCheckinCodes}
+                      checkinCodeErrors={checkinCodeErrors}
+                      setCheckinCodeErrors={setCheckinCodeErrors}
+                      fetchMatch={fetchEvent}
+                      loading={loading}
+                      setLoading={setLoading}
+                      isMatchPast={isEventPast()}
+                      canConfirmPlayers={canConfirmAttendees()}
+                      handleCancelMatch={() => setIsCancelDialogOpen(true)}
+                      navigate={navigate}
+                    />
+                    {match?.sell_tickets && (
+                      <div className="mt-6">
+                        <div className="flex items-center justify-between mb-4">
+                          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+                            Ticket Sales
+                          </h2>
+                          {match.ticket_sales && (
+                            <span className="px-2 py-1 text-xs font-medium rounded border bg-green-500 text-white border-green-600">
+                              Total Ticket Sales: ${match.ticket_sales.total_amount.toFixed(2)}
+                            </span>
+                          )}
+                        </div>
+                        <TicketManagement
+                          match={match}
+                          fetchMatch={fetchEvent}
+                          loading={loading}
+                          setLoading={setLoading}
+                          isMatchPast={isEventPast()}
+                          canConfirmTickets={canConfirmAttendees()}
+                          navigate={navigate}
+                        />
+                        {match.ticket_sales && match.ticket_sales.settlement_status === "Pending" && (
+                          <Button
+                            onClick={() => setCashoutDialogOpen(true)}
+                            className="mt-4 bg-purple-500 hover:bg-purple-600 text-white"
+                            disabled={isEventPast() || !match.ticket_sales.total_amount}
+                          >
+                            Request Cashout
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </TabsContent>
@@ -841,6 +1034,74 @@ const ConfirmCheckin = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        <Dialog open={cashoutDialogOpen} onOpenChange={setCashoutDialogOpen}>
+          <DialogContent className="max-w-md rounded-lg">
+            <DialogHeader>
+              <DialogTitle>Request Cashout for Ticket Sales</DialogTitle>
+              <DialogDescription>
+                Enter your bank details to request a cashout of{" "}
+                {match?.ticket_sales?.total_amount.toFixed(2) || "0.00"} for checked-in tickets.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="bankAccountNumber">Bank Account Number</Label>
+                <Input
+                  id="bankAccountNumber"
+                  value={bankAccountNumber}
+                  onChange={(e) => setBankAccountNumber(e.target.value)}
+                  placeholder="Enter bank account number"
+                  disabled={cashoutLoading}
+                />
+              </div>
+              <div>
+                <Label htmlFor="bankName">Bank Name</Label>
+                <Input
+                  id="bankName"
+                  value={bankName}
+                  onChange={(e) => setBankName(e.target.value)}
+                  placeholder="Enter bank name"
+                  disabled={cashoutLoading}
+                />
+              </div>
+              <div>
+                <Label htmlFor="accountName">Account Name</Label>
+                <Input
+                  id="accountName"
+                  value={accountName}
+                  onChange={(e) => setAccountName(e.target.value)}
+                  placeholder="Enter account name"
+                  disabled={cashoutLoading}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                onClick={() => setCashoutDialogOpen(false)}
+                variant="outline"
+                disabled={cashoutLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleCashout}
+                className=" background-color: #6B46C1 hover:bg-purple-600 text-white"
+                disabled={cashoutLoading}
+              >
+                {cashoutLoading ? (
+                  <>
+                    <Loader2 size={16} className="mr-2 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  "Submit Cashout"
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         <Navbar />
       </div>
     </div>
