@@ -179,22 +179,22 @@ const ConfirmCheckin = () => {
           return;
         }
 
-        const cyclingData: CyclingEvent = {
-          ...data,
-          location: data.start_landmark
-            ? {
-                name: data.start_landmark.name ?? "Unknown Location",
-                city: data.start_landmark.state ?? "Unknown City",
-              }
-            : null,
-          cycling_attendees: Array.isArray(data.cycling_attendees) ? data.cycling_attendees.map(attendee => ({
-            ...attendee,
-            status: attendee.status || "registered",
-            details: attendee.details || { phone: attendee.attendee_phone || "N/A" },
-          })) : [],
-          cancellation_status: data.cancellation_status ?? false,
-          status: data.status ?? "upcoming",
-        };
+const cyclingData: CyclingEvent = {
+  ...data,
+  location: data.start_landmark
+    ? {
+        name: data.start_landmark.name ?? "Unknown Location",
+        city: data.start_landmark.state ?? "Unknown City",
+      }
+    : null,
+  cycling_attendees: Array.isArray(data.cycling_attendees) ? data.cycling_attendees.map(attendee => ({
+    ...attendee,
+    status: attendee.status || "registered",
+    details: attendee.details || { phone: attendee.attendee_phone || "N/A" },
+  })) : [],
+  cancellation_status: data.cancellation_status ?? false,
+  status: data.status ?? "upcoming",
+};
 
         setCyclingEvent(cyclingData);
         setPlayerStatuses(
@@ -206,18 +206,20 @@ const ConfirmCheckin = () => {
         );
 
         // Fetch wallet balance using host_id from the event
-        if (cyclingData.host_id) {
-          const { data: walletData, error: walletError } = await supabase
-            .from("cycling_wallets")
-            .select("balance")
-            .eq("host_id", cyclingData.host_id)
-            .single();
+if (cyclingData.host_id) {
+  const { data: walletData, error: walletError } = await supabase
+    .from("cycling_wallets")
+    .select("balance")
+    .eq("host_id", cyclingData.host_id)
+    .maybeSingle();
 
-          if (walletError) {
-            console.error("Error fetching wallet balance:", walletError);
-            setWalletBalance(null);
-          } else if (walletData) {
-            setWalletBalance(walletData.balance);
+  if (walletError) {
+    console.error("Error fetching wallet balance:", walletError);
+    setWalletBalance(0);
+  } else if (walletData?.balance !== undefined) {
+    setWalletBalance(walletData.balance);
+  } else {
+    setWalletBalance(0);const cyclingData: CyclingEvent = {
           }
         }
 
