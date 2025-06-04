@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Loader, Calendar, MapPin, Clock, Users, DollarSign, Trophy, Phone, MessageSquare } from "lucide-react";
+import { ArrowLeft, Loader, Calendar, MapPin, Clock, Users, DollarSign, Volleyball, Phone, MessageSquare } from "lucide-react";
 import {
   Form,
   FormControl,
@@ -762,149 +762,141 @@ const JoinMatch = () => {
       </div>
       <Navbar />
 
-      <Dialog open={successDialogOpen} onOpenChange={(open) => {
-        setSuccessDialogOpen(open);
-        setIsImageLoaded(false);
-        if (!open) setBackgroundOption("field");
-      }}>
-        <DialogContent className="sm:max-w-[425px] max-w-[90vw] rounded-2xl">
-          <DialogTitle>Registration Successful</DialogTitle>
-          <DialogDescription>
-            <p className="text-gray-600 dark:text-gray-300 mb-4">
-              You have successfully registered for the match for {selectedSlots} slot{selectedSlots > 1 ? "s" : ""}.
-            </p>
-            <div className="mb-4">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Background:</label>
-              <div className="flex items-center space-x-4 mt-2">
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    value="field"
-                    checked={backgroundOption === "field"}
-                    onChange={() => setBackgroundOption("field")}
-                    className="form-radio text-playarena-500"
-                  />
-                  <span>Default</span>
-                </label>
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    value="white"
-                    checked={backgroundOption === "white"}
-                    onChange={() => setBackgroundOption("white")}
-                    className="form-radio text-playarena-500"
-                  />
-                  <span>White</span>
-                </label>
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    value="green"
-                    checked={backgroundOption === "green"}
-                    onChange={() => setBackgroundOption("green")}
-                    className="form-radio text-playarena-500"
-                  />
-                  <span>Green</span>
-                </label>
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    value="black"
-                    checked={backgroundOption === "black"}
-                    onChange={() => setBackgroundOption("black")}
-                    className="form-radio text-playarena-500"
-                  />
-                  <span>Black</span>
-                </label>
-              </div>
-            </div>
-            <div 
-              ref={cardRef}
-              className={`rounded-lg p-6 shadow-lg relative overflow-hidden ${backgroundOption === "field" ? "bg-cover bg-center" : ""}`}
-              style={{
-                backgroundImage: backgroundOption === "field" ? "url('/football-field.jpg')" : "",
-                backgroundColor: backgroundOption !== "field" ? backgroundOption : "transparent",
-                ...(backgroundOption === "field" && {
-                  backgroundBlendMode: "overlay",
-                  backgroundColor: "rgba(0, 0, 0, 0.5)",
-                }),
+<Dialog open={successDialogOpen} onOpenChange={(open) => {
+  setSuccessDialogOpen(open);
+  setIsImageLoaded(false);
+  if (!open) setBackgroundOption("field");
+}}>
+  <DialogContent className="w-full max-w-[90vw] sm:max-w-[500px] rounded-2xl">
+    <DialogTitle className="text-xl font-bold text-gray-800 dark:text-white">Registration Successful</DialogTitle>
+    <DialogDescription>
+      <p className="text-gray-600 dark:text-gray-300 mb-4 text-center">
+        You have successfully registered for the match for {selectedSlots} slot{selectedSlots > 1 ? "s" : ""}.
+      </p>
+      <div className="relative">
+        <div className="mb-4">
+          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Background:</label>
+          <div className="flex items-center space-x-4 mt-2">
+            <label className="flex items-center space-x-2">
+              <input
+                type="radio"
+                value="field"
+                checked={backgroundOption === "field"}
+                onChange={() => setBackgroundOption("field")}
+                className="form-radio text-playarena-500"
+              />
+              <span>Default</span>
+            </label>
+            <label className="flex items-center space-x-2">
+              <input
+                type="radio"
+                value="white"
+                checked={backgroundOption === "white"}
+                onChange={() => setBackgroundOption("white")}
+                className="form-radio text-playarena-500"
+              />
+              <span>White</span>
+            </label>
+            <label className="flex items-center space-x-2">
+              <input
+                type="radio"
+                value="green"
+                checked={backgroundOption === "green"}
+                onChange={() => setBackgroundOption("green")}
+                className="form-radio text-playarena-500"
+              />
+              <span>Green</span>
+            </label>
+            <label className="flex items-center space-x-2">
+              <input
+                type="radio"
+                value="black"
+                checked={backgroundOption === "black"}
+                onChange={() => setBackgroundOption("black")}
+                className="form-radio text-playarena-500"
+              />
+              <span>Black</span>
+            </label>
+          </div>
+        </div>
+        <div 
+          ref={cardRef}
+          className="relative bg-gradient-to-r from-green-500 to-green-700 rounded-lg p-6 text-white shadow-xl max-w-md mx-auto overflow-hidden border-4 border-dashed border-white/30 mt-4"
+          style={{
+            backgroundImage: backgroundOption === "field" ? "linear-gradient(45deg, rgba(255,255,255,0.1) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.1) 75%, transparent 75%, transparent)" : "",
+            backgroundSize: backgroundOption === "field" ? "40px 40px" : "",
+            clipPath: 'polygon(10% 0%, 90% 0%, 100% 10%, 100% 90%, 90% 100%, 10% 100%, 0% 90%, 0% 10%)',
+            backgroundColor: backgroundOption !== "field" ? (backgroundOption === "white" ? "#FFFFFF" : backgroundOption === "green" ? "#4CAF50" : backgroundOption === "black" ? "#000000" : "#4CAF50") : "transparent",
+            ...(backgroundOption === "field" && {
+              backgroundBlendMode: "overlay",
+              backgroundColor: "rgba(0, 0, 0, 0.5)",
+            }),
+          }}
+        >
+          {/* Perforated Edge Semi-Circles */}
+          <div className="absolute top-0 left-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '20%' }} />
+          <div className="absolute top-0 left-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '50%' }} />
+          <div className="absolute top-0 left-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '80%' }} />
+          <div className="absolute top-0 right-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '20%' }} />
+          <div className="absolute top-0 right-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '50%' }} />
+          <div className="absolute top-0 right-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '80%' }} />
+
+          {/* Ticket Content */}
+          <div className="flex items-center justify-between mb-4">
+            <img 
+              src={backgroundOption === "white" ? "/playarenalight.png" : "/playarenadark.png"}
+              alt="PlayArena Logo" 
+              className="h-10 w-auto"
+              onLoad={handleImageLoad}
+              onError={() => {
+                toast({
+                  title: "Error",
+                  description: "Failed to load logo image.",
+                  variant: "destructive",
+                });
+                setIsImageLoaded(true);
               }}
-              >
-                <div className="relative z-10">
-                  <div className="flex items-center justify-between mb-4">
-                    <img 
-                      src={backgroundOption === "white" ? "/playarenalight.png" : "/playarenadark.png"}
-                      alt="PlayArena Logo" 
-                      className="h-8 w-auto"
-                      onLoad={handleImageLoad}
-                      onError={() => {
-                        toast({
-                          title: "Error",
-                          description: "Failed to load logo image.",
-                          variant: "destructive",
-                        });
-                        setIsImageLoaded(true);
-                      }}
-                    />
-                    <Trophy className={`h-6 w-6 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-                  </div>
-                  <h2 className={`text-xl font-bold mb-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`}>{match?.title}</h2>
-                  <div className="space-y-2 mb-4">
-                    <div className="flex items-center">
-                      <MapPin className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-                      <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{match?.venue?.name || "Venue"}, {match?.venue?.city || ""}</span>
-                    </div>
-                    <div className="flex items-center">
-                      <Calendar className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-                      <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{match && formatDate(match.match_date)} at {match && formatTime(match.match_time)}</span>
-                    </div>
-                    <div className="flex items-center">
-                      <DollarSign className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-                      <span className={backgroundOption === "white" ? "text-black" : "text-white"}>
-                        {match?.is_paid ? `Paid (₦${match?.price?.toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} x${selectedSlots})` : "Free"}
-                      </span>
-                    </div>
-                    <div className="flex items-center">
-                      <Users className={`h-4 w-4 mr-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-                      <span className={backgroundOption === "white" ? "text-black" : "text-white"}>{totalPlayerSlots}/{match?.total_slots} slots booked</span>
-                    </div>
-                    <div className="flex items-center">
-                      <span className={`font-bold ${backgroundOption === "white" ? "text-black" : "text-white"}`}>Confirmation Code:</span>
-                      <span className={`ml-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`}>{confirmationCode}</span>
-                    </div>
-                    {selectedSlots > 1 && (
-                      <div className="flex items-center">
-                        <span className={`font-bold ${backgroundOption === "white" ? "text-black" : "text-white"}`}>Slots Registered:</span>
-                        <span className={`ml-2 ${backgroundOption === "white" ? "text-black" : "text-white"}`}>{selectedSlots}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-              <p className="text-sm text-gray-500 dark:text-gray-400 my-4">
-                <strong>Note:</strong> Save this card to present your confirmation code at check-in.
-              </p>
-              <div className="flex gap-2">
-                <Button 
-                  className="w-full bg-green-500 hover:bg-green-600 text-white"
-                  onClick={handleDownload}
-                  disabled={!isImageLoaded}
-                >
-                  Download
-                </Button>
-                <Button 
-                  className="w-full bg-green-500 hover:bg-green-600 text-white"
-                  onClick={() => {
-                    setSuccessDialogOpen(false);
-                    navigate(`/match/${match.slug}`);
-                  }}
-                >
-                  Close
-                </Button>
-              </div>
-            </DialogDescription>
-          </DialogContent>
-        </Dialog>
+            />
+            <Volleyball className={`h-6 w-6 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
+          </div>
+          <h2 className={`text-2xl font-bold mb-2 tracking-tight font-condensed uppercase text-center ${backgroundOption === "white" ? "text-black" : "text-white"}`}>{match?.title}</h2>
+          <div className="text-center mb-4">
+            <p className={`text-sm ${backgroundOption === "white" ? "text-black" : "text-white"}`}><MapPin className={`inline h-4 w-4 mr-1 ${backgroundOption === "white" ? "text-black" : "text-white"}`} /> {match?.venue?.name || "Venue"}, {match?.venue?.city || ""}</p>
+            <p className={`text-sm ${backgroundOption === "white" ? "text-black" : "text-white"}`}><Calendar className={`inline h-4 w-4 mr-1 ${backgroundOption === "white" ? "text-black" : "text-white"}`} /> {match && formatDate(match.match_date)} at {match && formatTime(match.match_time)}</p>
+            <p className={`text-sm ${backgroundOption === "white" ? "text-black" : "text-white"}`}><DollarSign className={`inline h-4 w-4 mr-1 ${backgroundOption === "white" ? "text-black" : "text-white"}`} /> {match?.is_paid ? `Paid (₦${match?.price?.toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} x${selectedSlots})` : "Free"}</p>
+            <p className={`text-sm ${backgroundOption === "white" ? "text-black" : "text-white"}`}><Users className={`inline h-4 w-4 mr-1 ${backgroundOption === "white" ? "text-black" : "text-white"}`} /> {totalPlayerSlots}/{match?.total_slots} slots booked</p>
+            <p className={`text-sm ${backgroundOption === "white" ? "text-black" : "text-white"}`}><span className="font-bold">Confirmation Code:</span> {confirmationCode}</p>
+            {selectedSlots > 1 && (
+              <p className={`text-sm ${backgroundOption === "white" ? "text-black" : "text-white"}`}><span className="font-bold">Slots Registered:</span> {selectedSlots}</p>
+            )}
+          </div>
+        </div>
+      </div>
+      <p className="text-sm text-gray-500 dark:text-gray-400 my-4 text-center">
+        <strong>Note:</strong> Save this card to present your confirmation code at check-in.
+      </p>
+      <div className="flex justify-center gap-4 px-6 py-4">
+        <Button 
+          className="flex-1 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg px-6 py-3 shadow-sm transition-colors duration-200 border-0 max-w-xs"
+          onClick={handleDownload}
+          disabled={!isImageLoaded}
+        >
+          <Download size={16} className="mr-2" />
+          Download
+        </Button>
+        <Button 
+          className="flex-1 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg px-6 py-3 shadow-sm transition-colors duration-200 border-0 max-w-xs"
+          onClick={() => {
+            setSuccessDialogOpen(false);
+            navigate(`/match/${match.slug}`);
+          }}
+        >
+          Close
+        </Button>
+      </div>
+    </DialogDescription>
+  </DialogContent>
+</Dialog>
       </div>
     );
 };
