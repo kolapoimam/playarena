@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -14,7 +14,7 @@ type CyclingEvent = {
   event_name: string;
   event_date: string;
   event_start_time: string;
-  event_end_time: string;
+  event_end_time?: string | null;
   host_id: string;
   host_name: string;
   host_phone: string;
@@ -23,13 +23,14 @@ type CyclingEvent = {
   price?: number;
   cancellation_status: boolean;
   cycling_attendees: {
-    id_uuid: string;
+    id?: string;
+    id_uuid?: string;
     attendee_name: string;
-    attendee_phone: string;
+    attendee_phone?: string;
     status: "registered" | "checked_in" | "absent";
     confirmation_code: string;
-    details: { phone: string } | null;
-  }[];
+    number_of_slots?: number;
+  }[] | null;
 };
 
 type Cashout = {
@@ -116,10 +117,10 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
         throw attendeesError;
       }
 
-      let balance = 0;
+      let calculatedBalance = 0;
       if (!event.is_free && event.price) {
         const checkedInAttendees = attendeesData?.filter((a) => a.status === "checked_in") || [];
-        balance = checkedInAttendees.reduce(
+        calculatedBalance = checkedInAttendees.reduce(
           (sum, attendee) => sum + ((Number(attendee.number_of_slots) || 1) * (event.price || 0)),
           0
         );
@@ -127,18 +128,18 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
 
       const { data: walletData, error: walletError } = await supabase
         .from('cycling_wallets')
-        .select('balance')
+        .select('total_earned, total_paid_out, balance')
         .eq('host_id', event.host_id)
         .maybeSingle();
 
       if (walletError) {
         console.error("Wallet fetch error:", walletError);
-      } else if (walletData?.balance !== undefined) {
-        balance = walletData.balance;
+        setWalletBalance(calculatedBalance);
+      } else if (walletData?.total_earned !== undefined && walletData?.total_paid_out !== undefined) {
+        setWalletBalance(walletData.total_earned - walletData.total_paid_out);
+      } else {
+        setWalletBalance(walletData?.balance ?? calculatedBalance);
       }
-
-      if (balance < 0) balance = 0;
-      setWalletBalance(balance);
     } catch (error: any) {
       console.error('Error fetching wallet balance:', error);
       toast({
@@ -348,7 +349,6 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
         throw cashoutError;
       }
 
-      // Attempt to update wallet balance via RPC, but don't rely on it for UI
       const { error: walletError } = await supabase
         .rpc('update_cycling_wallet_balance', {
           p_host_id: event.host_id,
@@ -365,7 +365,6 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
         });
       }
 
-      // Update wallet balance client-side to reflect deduction immediately
       setWalletBalance(prev => prev - amount < 0 ? 0 : prev - amount);
 
       await fetchCashoutRequests();
