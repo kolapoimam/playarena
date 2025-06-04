@@ -107,6 +107,24 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
     }
 
     try {
+      // Prioritize cycling_wallets.balance
+      const { data: walletData, error: walletError } = await supabase
+        .from('cycling_wallets')
+        .select('balance')
+        .eq('host_id', event.host_id)
+        .maybeSingle();
+
+      if (walletError) {
+        console.error("Wallet fetch error:", walletError);
+        throw walletError;
+      }
+
+      if (walletData?.balance !== undefined) {
+        setWalletBalance(walletData.balance);
+        return;
+      }
+
+      // Fallback to attendee-based calculation
       const { data: attendeesData, error: attendeesError } = await supabase
         .from('cycling_attendees')
         .select('status, number_of_slots')
@@ -126,20 +144,7 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
         );
       }
 
-      const { data: walletData, error: walletError } = await supabase
-        .from('cycling_wallets')
-        .select('total_earned, total_paid_out, balance')
-        .eq('host_id', event.host_id)
-        .maybeSingle();
-
-      if (walletError) {
-        console.error("Wallet fetch error:", walletError);
-        setWalletBalance(calculatedBalance);
-      } else if (walletData?.total_earned !== undefined && walletData?.total_paid_out !== undefined) {
-        setWalletBalance(walletData.total_earned - walletData.total_paid_out);
-      } else {
-        setWalletBalance(walletData?.balance ?? calculatedBalance);
-      }
+      setWalletBalance(calculatedBalance);
     } catch (error: any) {
       console.error('Error fetching wallet balance:', error);
       toast({
@@ -162,7 +167,6 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
         .from('cycling_cashouts')
         .select('*')
         .eq('cycling_event_id_uuid', event.id_uuid)
-        .eq('temp_identifier', localTempIdentifier)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -188,7 +192,7 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
     fetchWalletBalance();
     fetchCashoutRequests();
 
-    const channel = supabase
+    const cashoutChannel = supabase
       .channel(`cycling_cashouts_event_${event.id_uuid}`)
       .on(
         'postgres_changes',
@@ -205,8 +209,26 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
       )
       .subscribe();
 
+    // Add cycling_wallets subscription
+    const walletChannel = supabase
+      .channel(`cycling_wallets_${event.host_id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'cycling_wallets',
+          filter: `host_id=eq.${event.host_id}`,
+        },
+        () => {
+          fetchWalletBalance();
+        }
+      )
+      .subscribe();
+
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(cashoutChannel);
+      supabase.removeChannel(walletChannel);
     };
   }, [event, localTempIdentifier]);
 
@@ -349,22 +371,7 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
         throw cashoutError;
       }
 
-      const { error: walletError } = await supabase
-        .rpc('update_cycling_wallet_balance', {
-          p_host_id: event.host_id,
-          p_amount: amount,
-          p_operation: 'subtract',
-        });
-
-      if (walletError) {
-        console.error('Wallet update error:', walletError);
-        toast({
-          title: "Warning",
-          description: "Cashout requested, but failed to update wallet balance.",
-          variant: "destructive",
-        });
-      }
-
+      // Optimistic UI update
       setWalletBalance(prev => prev - amount < 0 ? 0 : prev - amount);
 
       await fetchCashoutRequests();
