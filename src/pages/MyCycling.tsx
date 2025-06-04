@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Calendar, Clock, MapPin, Users } from "lucide-react";
+import { ArrowLeft, Bicycle, Calendar, Clock, MapPin, Users, Copy } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { format } from "date-fns";
 import { utcToZonedTime } from "date-fns-tz";
@@ -24,6 +24,9 @@ type CyclingEvent = {
   max_attendees: number;
   attendees: { id_uuid: string }[];
   start_landmark: Landmark;
+  super_code?: string;
+  host_name?: string;
+  confirmation_code?: string;
 };
 
 const MyCycling = () => {
@@ -60,6 +63,7 @@ const MyCycling = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
+        // Fetch hosted events
         const { data: hostedData, error: hostedError } = await supabase
           .from("user_hosted_cycling")
           .select(`
@@ -70,6 +74,8 @@ const MyCycling = () => {
               event_date,
               start_time,
               max_attendees,
+              super_code,
+              host_name,
               attendees:cycling_attendees!cycling_attendees_cycling_event_id_uuid_fkey(id_uuid),
               start_landmark:landmarks!cycling_events_start_landmark_id_fkey(name, state)
             )
@@ -84,6 +90,7 @@ const MyCycling = () => {
 
         setHostedEvents(hosted);
 
+        // Fetch joined events with confirmation code
         const { data: joinedData, error: joinedError } = await supabase
           .from("user_joined_cycling")
           .select(`
@@ -94,16 +101,21 @@ const MyCycling = () => {
               event_date,
               start_time,
               max_attendees,
-              attendees:cycling_attendees!cycling_attendees_cycling_event_id_uuid_fkey(id_uuid),
+              host_name,
+              attendees:cycling_attendees!cycling_attendees_cycling_event_id_uuid_fkey(id_uuid, confirmation_code),
               start_landmark:landmarks!cycling_events_start_landmark_id_fkey(name, state)
-            )
+            ),
+            attendee:cycling_attendees!user_joined_cycling_attendee_id_fkey(confirmation_code)
           `)
           .eq("user_id", userId);
 
         if (joinedError) throw joinedError;
 
         const joined = joinedData
-          .map((item: any) => item.cycling_event)
+          .map((item: any) => ({
+            ...item.cycling_event,
+            confirmation_code: item.attendee?.confirmation_code,
+          }))
           .filter((event: CyclingEvent | null) => event !== null);
 
         setJoinedEvents(joined);
@@ -123,28 +135,39 @@ const MyCycling = () => {
   }, [userId, toast]);
 
   const formatMatchDateTime = (date: string, time: string) => {
-    if (!date || !time || isNaN(new Date(`${date}T${time}Z`).getTime())) {
-      return { dateStr: "Invalid Date", timeStr: "Invalid Time" };
-    }
+    // Parse event_date (timestamp) to YYYY-MM-DD and combine with start_time
     try {
-      const zonedDate = utcToZonedTime(new Date(`${date}T${time}Z`), "Africa/Lagos");
-      const dateStr = format(zonedDate, "EEE, dd MMM yyyy");
-      const timeStr = format(zonedDate, "h:mm a");
-      return { dateStr, timeStr };
+      const dateObj = new Date(date);
+      if (isNaN(dateObj.getTime())) throw new Error("Invalid date");
+      const dateStr = format(dateObj, "yyyy-MM-dd");
+      const isoDateTime = `${dateStr}T${time.padStart(5, "0")}:00Z`; // Ensure HH:mm format
+      const zonedDate = utcToZonedTime(new Date(isoDateTime), "Africa/Lagos");
+      return {
+        dateStr: format(zonedDate, "EEE, dd MMM yyyy"),
+        timeStr: format(zonedDate, "h:mm a"),
+      };
     } catch {
       return { dateStr: "Invalid Date", timeStr: "Invalid Time" };
     }
   };
 
   const getMatchStatus = (matchDate: string, startTime: string) => {
-    const now = DateTime.now().setZone("Africa/Lagos");
-    const matchDateTime = DateTime.fromISO(`${matchDate}T${startTime}`, { zone: "utc" }).setZone("Africa/Lagos");
-    const endDateTime = matchDateTime.plus({ hours: 1 }); // Assume 1-hour duration
+    try {
+      const dateObj = new Date(matchDate);
+      if (isNaN(dateObj.getTime())) throw new Error("Invalid date");
+      const dateStr = format(dateObj, "yyyy-MM-dd");
+      const isoDateTime = `${dateStr}T${startTime.padStart(5, "0")}:00Z`;
+      const now = DateTime.now().setZone("Africa/Lagos");
+      const matchDateTime = DateTime.fromISO(isoDateTime, { zone: "utc" }).setZone("Africa/Lagos");
+      const endDateTime = matchDateTime.plus({ hours: 1 }); // Assume 1-hour duration
 
-    if (now < matchDateTime) return { text: "Upcoming", className: "bg-blue-100 text-blue-800" };
-    if (now.hasSame(matchDateTime, "day") && now < matchDateTime) return { text: "Today", className: "bg-green-100 text-green-700" };
-    if (now >= matchDateTime && now <= endDateTime) return { text: "Live", className: "bg-green-100 text-green-800" };
-    return { text: "Passed", className: "bg-gray-100 text-gray-800" };
+      if (now < matchDateTime) return { text: "Upcoming", className: "bg-blue-100 text-blue-800" };
+      if (now.hasSame(matchDateTime, "day") && now < matchDateTime) return { text: "Today", className: "bg-green-100 text-green-700" };
+      if (now >= matchDateTime && now <= endDateTime) return { text: "Live", className: "bg-green-100 text-green-800" };
+      return { text: "Passed", className: "bg-gray-100 text-gray-800" };
+    } catch {
+      return { text: "Unknown", className: "bg-gray-100 text-gray-800" };
+    }
   };
 
   if (loading) {
@@ -256,8 +279,32 @@ const MyCycling = () => {
                             <MapPin size={16} className="mr-2" />
                             {event.start_landmark.name}, {event.start_landmark.state}
                           </p>
+                          <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                            <span>Super Code:</span>
+                            <span className="flex items-center gap-1">
+                              <span>{event.super_code || "N/A"}</span>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(event.super_code || "");
+                                  toast({
+                                    title: "Success",
+                                    description: "Super code copied!",
+                                  });
+                                }}
+                                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+                              >
+                                <Copy size={12} />
+                              </Button>
+                            </span>
+                          </div>
                           <p className="text-base font-medium text-gray-900 dark:text-gray-100">
-                            Attendees: <span className="text-green-600 dark:text-green-400">{event.attendees.length}</span>/{event.max_attendees}
+                            Slots: <span className="text-green-600 dark:text-green-400">{event.attendees.length}</span>/{event.max_attendees}
+                          </p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
+                            <Bicycle size={16} className="mr-2" />
+                            Organized by: {event.host_name || "Unknown"}
                           </p>
                         </div>
                       </div>
@@ -304,8 +351,15 @@ const MyCycling = () => {
                             <MapPin size={16} className="mr-2" />
                             {event.start_landmark.name}, {event.start_landmark.state}
                           </p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            Confirmation Code: {event.confirmation_code || "N/A"}
+                          </p>
                           <p className="text-base font-medium text-gray-900 dark:text-gray-100">
-                            Attendees: <span className="text-green-600 dark:text-green-400">{event.attendees.length}</span>/{event.max_attendees}
+                            Slots: <span className="text-green-600 dark:text-green-400">{event.attendees.length}</span>/{event.max_attendees}
+                          </p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
+                            <Bicycle size={16} className="mr-2" />
+                            Organized by: {event.host_name || "Unknown"}
                           </p>
                         </div>
                       </div>
