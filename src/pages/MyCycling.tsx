@@ -60,13 +60,14 @@ const MyCycling = () => {
       const { data: session } = await supabase.auth.getSession();
       if (!session.session) {
         navigate("/login");
+        setLoading(false);
         return;
       }
 
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
-        .select("*")
-        .eq("id", session.session.user.id)
+        .select("id, nickname, first_name")
+        .eq("id", session.session.user_id)
         .single();
 
       if (profileError) {
@@ -78,70 +79,70 @@ const MyCycling = () => {
       setProfile(profileData);
 
       // Fetch hosted events
-      const { data: hostData, error: hostError } = await supabase
-        .from("cycling_events")
+      const { data: hostedData, error: hostedError } = await supabase
+        .from("user_hosted_cycling")
         .select(`
-          id_uuid,
-          title,
-          slug,
-          event_date,
-          start_time,
-          end_time,
-          supercode,
-          status,
-          cancellation_status,
-          is_free,
-          price,
-          max_attendees,
-          host_name,
-          is_own_bike,
-          is_rental_available,
-          start_landmark:landmarks!start_landmark_id(name, state)
+          cycling_events!cycling_event_id (
+            id_uuid,
+            title,
+            slug,
+            event_date,
+            start_time,
+            end_time,
+            supercode,
+            status,
+            cancellation_status,
+            is_free,
+            price,
+            max_attendees,
+            host_name,
+            is_own_bike,
+            is_rental_available,
+            start_landmark:landmarks!start_landmark_id(name, state)
+          )
         `)
-        .eq("host_phone", profileData.nickname || profileData.first_name || "08118610973") // Fallback to match SQL data
+        .eq("user_id", profileData.id)
         .order("created_at", { ascending: false })
         .limit(5);
 
-      if (hostError) {
+      if (hostedError) {
         toast({ title: "Error", description: "Failed to load hosted events.", variant: "destructive" });
+        console.error("Hosted events error:", hostedError);
         setLoading(false);
         return;
       }
 
-      const hostedEventsWithAttendees = await Promise.all(
-        (hostData || []).map(async (item) => {
+      const hostedEventsData = await Promise.all(
+        (hostedData || []).map(async (item) => {
+          const event = item.cycling_events;
           const { data: attendees, error: attendeeError } = await supabase
             .from("cycling_attendees")
             .select("id_uuid")
-            .eq("cycling_event_id_uuid", item.id_uuid)
+            .eq("cycling_event_id_uuid", event.id_uuid)
             .eq("status", "registered");
 
           if (attendeeError) {
             toast({ title: "Error", description: "Failed to load attendee count.", variant: "destructive" });
-            return { ...item, booked_attendees: 0 };
+            return { ...event, booked_attendees: 0 };
           }
 
           return {
-            ...item,
-            start_landmark_name: item.start_landmark?.name,
-            start_landmark_state: item.start_landmark?.state,
-            is_rental_bike: item.is_rental_available,
+            ...event,
+            start_landmark_name: event.start_landmark?.name,
+            start_landmark_state: event.start_landmark?.state,
+            is_rental_bike: event.is_rental_available,
             booked_attendees: attendees.length,
           };
         })
       );
 
-      setHostedEvents(hostedEventsWithAttendees);
+      setHostedEvents(hostedEventsData);
 
       // Fetch joined events
-      const { data: joinData, error: joinError } = await supabase
-        .from("cycling_attendees")
+      const { data: joinedData, error: joinedError } = await supabase
+        .from("user_joined_cycling")
         .select(`
-          id_uuid,
-          cycling_event_id_uuid,
-          confirmation_code,
-          status,
-          cycling_events!cycling_event_id_uuid(
+          cycling_events!cycling_event_id (
             id_uuid,
             title,
             slug,
@@ -158,22 +159,28 @@ const MyCycling = () => {
             is_rental_available,
             start_landmark:landmarks!start_landmark_id(name, state)
           ),
-          is_own_bike,
-          is_rental_bike
+          cycling_attendees!attendee_id (
+            confirmation_code,
+            status,
+            is_own_bike,
+            is_rental_bike
+          )
         `)
-        .eq("attendee_phone", profileData.nickname || profileData.first_name || "12312321321") // Fallback to match SQL data
+        .eq("user_id", profileData.id)
         .order("created_at", { ascending: false })
         .limit(5);
 
-      if (joinError) {
+      if (joinedError) {
         toast({ title: "Error", description: "Failed to load joined events.", variant: "destructive" });
+        console.error("Joined events error:", joinedError);
         setLoading(false);
         return;
       }
 
       const joinedEventsData = await Promise.all(
-        (joinData || []).map(async (item) => {
+        (joinedData || []).map(async (item) => {
           const event = item.cycling_events;
+          const attendee = item.cycling_attendees;
           const { data: attendees, error: attendeeError } = await supabase
             .from("cycling_attendees")
             .select("id_uuid")
@@ -187,15 +194,15 @@ const MyCycling = () => {
 
           return {
             ...event,
-            confirmation_code: item.confirmation_code,
-            attendee_status: item.status || "registered",
-            attendee_cancellation_status: item.status === "cancelled",
+            confirmation_code: attendee.confirmation_code,
+            attendee_status: attendee.status || "registered",
+            attendee_cancellation_status: attendee.status === "cancelled",
             start_landmark_name: event.start_landmark?.name,
             start_landmark_state: event.start_landmark?.state,
             is_rental_bike: event.is_rental_available,
             booked_attendees: attendees.length,
-            is_own_bike: item.is_own_bike,
-            is_rental_bike: item.is_rental_bike,
+            is_own_bike: attendee.is_own_bike,
+            is_rental_bike: attendee.is_rental_bike,
           };
         })
       );
@@ -254,7 +261,15 @@ const MyCycling = () => {
           .from("cycling_attendees")
           .update({ status: "cancelled", updated_at: new Date().toISOString() })
           .eq("cycling_event_id_uuid", cancelEventId)
-          .eq("attendee_phone", profile.nickname || profile.first_name || "12312321321");
+          .eq("status", "registered")
+          .eq("id_uuid", (
+            await supabase
+              .from("user_joined_cycling")
+              .select("attendee_id")
+              .eq("cycling_event_id", cancelEventId)
+              .eq("user_id", profile.id)
+              .single()
+          ).data?.attendee_id);
 
         if (attendeeError) throw attendeeError;
 
