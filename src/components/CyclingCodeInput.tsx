@@ -134,72 +134,82 @@ const CyclingCodeInput = ({
     const numericValue = value.replace(/[^0-9]/g, "").slice(0, 6);
     setSuperCode(numericValue);
     
-    // Only show error if the code is not 6 digits and not empty
-    if (numericValue.length > 0 && numericValue.length !== 6) {
-      setSuperCodeError("Code must be exactly 6 digits");
-    } else {
-      setSuperCodeError(null);
-    }
-    
+    // Clear previous states
     setEventNotFound(false);
     setCyclingEvent(null);
 
-    if (numericValue.length === 6) {
-      setLoading(true);
-      try {
-        const { data: cyclingData, error: cyclingError } = await supabase
-          .from("cycling_events_view")
-          .select(`
-            id_uuid, slug, title, event_date, start_time, max_attendees, host_id, host_name, host_phone, supercode, is_free, price, status, start_landmark_id, start_landmark, cycling_attendees
-          `)
-          .eq("supercode", numericValue)
-          .maybeSingle();
+    // Handle validation and error states
+    if (numericValue.length === 0) {
+      // Empty input - no error
+      setSuperCodeError(null);
+      return;
+    }
+    
+    if (numericValue.length < 6) {
+      // Incomplete code - show error
+      setSuperCodeError("Code must be exactly 6 digits");
+      return;
+    }
 
-        if (cyclingError) {
-          console.error("Cycling event query error:", cyclingError);
-          throw cyclingError;
-        }
+    // 6-digit code entered - clear error and fetch event
+    setSuperCodeError(null);
+    setLoading(true);
+    
+    try {
+      const { data: cyclingData, error: cyclingError } = await supabase
+        .from("cycling_events_view")
+        .select(`
+          id_uuid, slug, title, event_date, start_time, max_attendees, host_id, host_name, host_phone, supercode, is_free, price, status, start_landmark_id, start_landmark, cycling_attendees
+        `)
+        .eq("supercode", numericValue)
+        .maybeSingle();
 
-        if (cyclingData) {
-          const response = cyclingData as unknown as CyclingEventResponse;
-          const cyclingEvent: CyclingEvent = {
-            ...response,
-            location: response.start_landmark
-              ? {
-                  name: response.start_landmark.name ?? "Unknown Location",
-                  city: response.start_landmark.state ?? "Unknown City",
-                }
-              : null,
-            attendees: Array.isArray(response.cycling_attendees) ? response.cycling_attendees.map(attendee => ({
-              ...attendee,
-              details: attendee.details || { phone: attendee.attendee_phone || "N/A" },
-            })) : [],
-            cancellation_status: false,
-            status: response.status ?? "upcoming",
-          };
-          setCyclingEvent(cyclingEvent);
-          setSuperCodeError(null);
-          await fetchEvent();
-          return;
-        }
-
-        setEventNotFound(true);
-        toast({
-          title: "Not Found",
-          description: "No cycling event found with this super code.",
-          variant: "destructive",
-        });
-      } catch (error: any) {
-        console.error("Error checking event:", error);
-        setEventNotFound(true);
-        toast({
-          title: "Error",
-          description: error.message || "Failed to validate super code.",
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
+      if (cyclingError) {
+        console.error("Cycling event query error:", cyclingError);
+        throw cyclingError;
       }
+
+      if (cyclingData) {
+        const response = cyclingData as unknown as CyclingEventResponse;
+        const cyclingEvent: CyclingEvent = {
+          ...response,
+          location: response.start_landmark
+            ? {
+                name: response.start_landmark.name ?? "Unknown Location",
+                city: response.start_landmark.state ?? "Unknown City",
+              }
+            : null,
+          attendees: Array.isArray(response.cycling_attendees) ? response.cycling_attendees.map(attendee => ({
+            ...attendee,
+            details: attendee.details || { phone: attendee.attendee_phone || "N/A" },
+          })) : [],
+          cancellation_status: false,
+          status: response.status ?? "upcoming",
+        };
+        setCyclingEvent(cyclingEvent);
+        await fetchEvent();
+        return;
+      }
+
+      // Event not found
+      setEventNotFound(true);
+      setSuperCodeError("No cycling event found with this super code");
+      toast({
+        title: "Not Found",
+        description: "No cycling event found with this super code.",
+        variant: "destructive",
+      });
+    } catch (error: any) {
+      console.error("Error checking event:", error);
+      setEventNotFound(true);
+      setSuperCodeError("Failed to validate super code");
+      toast({
+        title: "Error",
+        description: error.message || "Failed to validate super code.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -216,6 +226,7 @@ const CyclingCodeInput = ({
     } catch (error: any) {
       console.error("Error fetching event:", error);
       setEventNotFound(true);
+      setSuperCodeError("Failed to fetch event");
       toast({
         title: "Error",
         description: error.message || "Failed to fetch event.",
