@@ -1,10 +1,17 @@
+
 import { useRef, useState } from "react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { MapPin, CalendarIcon, Clock, User, Trophy } from "lucide-react";
+import { MapPin, CalendarIcon, Clock, User, Trophy, Share2, Download, ChevronDown } from "lucide-react";
 import { format } from "date-fns";
 import html2canvas from "html2canvas";
 import { useToast } from "@/hooks/use-toast";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 type FormValues = {
   title: string;
@@ -36,158 +43,265 @@ const MatchSuccessDialog = ({ open, onOpenChange, formValues, selectedVenue, sup
   const [isDownloading, setIsDownloading] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
-const handleDownload = async () => {
-  if (!cardRef.current) {
-    toast({
-      title: "Error",
-      description: "Card element is not ready. Please try again.",
-      variant: "destructive",
-    });
-    return;
-  }
-  setIsDownloading(true);
-  try {
-    // Ensure images are preloaded to avoid CORS issues
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.src = "/playarenadark.png";
-    await new Promise((resolve) => {
-      img.onload = resolve;
-      img.onerror = () => {
-        console.warn("Failed to load logo image for canvas");
-        resolve(null); // Proceed even if image fails
-      };
-    });
-
-    const canvas = await html2canvas(cardRef.current, {
-      scale: 2,
-      useCORS: true,
-      logging: false, // Set to true for debugging on mobile/PWA
-    });
-
-    // Convert canvas to Blob for better compatibility
-    const blob = await new Promise<Blob | null>((resolve) =>
-      canvas.toBlob((blob) => resolve(blob), "image/png")
-    );
-
-    if (!blob) {
-      throw new Error("Failed to convert canvas to Blob");
-    }
-
-    const filename = `SportCliq-Supercode-${formValues.title.replace(/\s+/g, '-')}.png`;
-    const url = URL.createObjectURL(blob);
-
-    // Try navigator.share for mobile/PWA if available
-    if (navigator.share && (navigator as any).canShare?.({ files: [new File([blob], filename, { type: "image/png" })] })) {
-      try {
-        await navigator.share({
-          files: [new File([blob], filename, { type: "image/png" })],
-          title: formValues.title,
-          text: `Join my match with supercode ${supercode}!`,
+  const handleShare = () => {
+    const url = matchSlug ? `${window.location.origin}/match/${matchSlug}` : window.location.origin;
+    const shareText = `Join my match: ${formValues.title} at ${selectedVenue?.name || 'unknown venue'} on ${formValues.match_date ? format(formValues.match_date, "PPP") : 'unknown date'} from ${formValues.start_time} to ${formValues.end_time}. Supercode: ${supercode}. Powered by SportCliq.${formValues.is_private ? ` Access Password: ${formValues.access_password}` : ''}`;
+    if (navigator.share) {
+      navigator
+        .share({
+          title: `Join ${formValues.title}`,
+          text: shareText,
+          url,
+        })
+        .then(() => {
+          toast({
+            title: "Shared!",
+            description: "Match link shared successfully.",
+          });
+        })
+        .catch((error) => {
+          console.error("Error sharing:", error);
+          toast({
+            title: "Error",
+            description: "Failed to share the match.",
+            variant: "destructive",
+          });
         });
-        URL.revokeObjectURL(url);
-        return; // Share completed, no need to proceed to download
-      } catch (shareError) {
-        console.warn("Share API failed, falling back to download:", shareError);
+    } else {
+      try {
+        navigator.clipboard.writeText(shareText);
+        toast({
+          title: "Link copied!",
+          description: "Share it with your friends to join the match.",
+        });
+      } catch (err) {
+        toast({
+          title: "Failed to copy",
+          description: "Please try again or copy the URL manually.",
+          variant: "destructive",
+        });
       }
     }
+  };
 
-    // Fallback to traditional download
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  } catch (error) {
-    console.error("Error generating image:", error);
-    toast({
-      title: "Error",
-      description: "Failed to download supercode card. Please try again.",
-      variant: "destructive",
-    });
-  } finally {
-    setIsDownloading(false);
+  const shareToWhatsApp = () => {
+    const url = matchSlug ? `${window.location.origin}/match/${matchSlug}` : window.location.origin;
+    const shareText = `Join my match: ${formValues.title} at ${selectedVenue?.name || 'unknown venue'} on ${formValues.match_date ? format(formValues.match_date, "PPP") : 'unknown date'} from ${formValues.start_time} to ${formValues.end_time}. Supercode: ${supercode}. Powered by SportCliq.${formValues.is_private ? ` Access Password: ${formValues.access_password}` : ''}`;
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
+    window.open(whatsappUrl, "_blank");
+  };
+
+  const shareToTwitter = () => {
+    const url = matchSlug ? `${window.location.origin}/match/${matchSlug}` : window.location.origin;
+    const shareText = `Join my match: ${formValues.title} at ${selectedVenue?.name || 'unknown venue'} on ${formValues.match_date ? format(formValues.match_date, "PPP") : 'unknown date'} from ${formValues.start_time} to ${formValues.end_time}. Supercode: ${supercode}. Powered by SportCliq.${formValues.is_private ? ` Access Password: ${formValues.access_password}` : ''}`;
+    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
+    window.open(twitterUrl, "_blank");
+  };
+
+  const shareToFacebook = () => {
+    const url = matchSlug ? `${window.location.origin}/match/${matchSlug}` : window.location.origin;
+    const shareText = `Join my match: ${formValues.title} at ${selectedVenue?.name || 'unknown venue'} on ${formValues.match_date ? format(formValues.match_date, "PPP") : 'unknown date'} from ${formValues.start_time} to ${formValues.end_time}. Supercode: ${supercode}. Powered by SportCliq.${formValues.is_private ? ` Access Password: ${formValues.access_password}` : ''}`;
+    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(shareText)}`;
+    window.open(facebookUrl, "_blank");
+  };
+
+  const handleDownload = async () => {
+    if (!cardRef.current) {
+      toast({
+        title: "Error",
+        description: "Card element is not ready. Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setIsDownloading(true);
+    try {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.src = "/playarenadark.png";
+      await new Promise((resolve) => {
+        img.onload = resolve;
+        img.onerror = () => {
+          console.warn("Failed to load logo image for canvas");
+          resolve(null);
+        };
+      });
+
+      const canvas = await html2canvas(cardRef.current, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+      });
+
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob((blob) => resolve(blob), "image/png")
+      );
+
+      if (!blob) {
+        throw new Error("Failed to convert canvas to Blob");
+      }
+
+      const filename = `SportCliq-Supercode-${formValues.title.replace(/\s+/g, '-')}.png`;
+      const url = URL.createObjectURL(blob);
+
+      if (navigator.share && (navigator as any).canShare?.({ files: [new File([blob], filename, { type: "image/png" })] })) {
+        try {
+          await navigator.share({
+            files: [new File([blob], filename, { type: "image/png" })],
+            title: formValues.title,
+            text: `Join my match with supercode ${supercode}!`,
+          });
+          URL.revokeObjectURL(url);
+          return;
+        } catch (shareError) {
+          console.warn("Share API failed, falling back to download:", shareError);
+        }
+      }
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Error generating image:", error);
+      toast({
+        title: "Error",
+        description: "Failed to download supercode card.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDownloading(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={(open) => {
-      if (!open && matchSlug) {
-        onNavigate(matchSlug);
-      }
-      onOpenChange(open);
-    }}>
-      <DialogContent className="sm:max-w-[375px] rounded-2xl">
-        <DialogTitle className="text-xl font-bold text-gray-800 dark:text-gray-200">Match Created Successfully!</DialogTitle>
-        <DialogDescription>
-          <p className="text-gray-600 dark:text-gray-300 mb-4 text-sm">
-            Your match has been created. Below is your unique 6-digit supercode for check-ins on match day.
-            {formValues.is_private && " Also, note the access password to share with invited players."}
-          </p>
-          <div 
-            ref={cardRef}
-            className="bg-gradient-to-br from-green-500 to-green-700 rounded-xl p-6 text-white shadow-lg"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <img 
-                src="/playarenadark.png" 
-                alt="PlayArena Logo" 
-                className="h-8 w-auto"
-              />
-              <Trophy className="h-6 w-6" />
-            </div>
-            <h2 className="text-xl font-bold mb-2">{formValues.title || "Your Match"}</h2>
-<div className="space-y-2 mb-4 text-sm leading-tight">
-  <div className="flex items-center">
-    <MapPin className="h-4 w-4 mr-2 align-middle" />
-    <span className="align-middle">{selectedVenue?.name || "Venue"}</span>
-  </div>
-  <div className="flex items-center">
-    <CalendarIcon className="h-4 w-4 mr-2 align-middle" />
-    <span className="align-middle">
-      {formValues.match_date ? format(formValues.match_date, "PPP") : "Date"}
-    </span>
-  </div>
-  <div className="flex items-center">
-    <Clock className="h-4 w-4 mr-2 align-middle" />
-    <span className="align-middle">
-      From {formValues.start_time || "Start"} to {formValues.end_time || "End"}
-    </span>
-  </div>
-  <div className="flex items-center">
-    <User className="h-4 w-4 mr-2 align-middle" />
-    <span className="align-middle">
-      Organized by {formValues.organizer_name || "Organizer"}
-    </span>
-  </div>
-  {formValues.is_private && (
-    <div className="flex items-center">
-      <span className="font-semibold align-middle">Access Password:</span>
-      <span className="ml-2 font-mono align-middle">{formValues.access_password || "N/A"}</span>
-    </div>
-  )}
-</div>
-            <div className="bg-white text-green-600 rounded-md p-4 text-center shadow-inner">
-              <p className="text-sm font-medium">Supercode</p>
-              <p className="text-3xl font-bold tracking-wider">{supercode || "N/A"}</p>
-            </div>
-          </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400 my-4">
-            <strong>Note:</strong> Save or download this code. You'll need it on match day.
-            {formValues.is_private && " Share the access password with invited players to allow them to join."}
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3">
+    <>
+      <div className="flex gap-3">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
             <Button 
-              className="flex-1 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 transition-colors"
-              onClick={handleDownload}
+              variant="outline" 
+              className="flex-1"
+            >
+              <Share2 className="mr-2 h-4 w-4" />
+              Share
+              <ChevronDown className="ml-2 h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={shareToWhatsApp}>
+              Share to WhatsApp
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={shareToTwitter}>
+              Share to Twitter
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={shareToFacebook}>
+              Share to Facebook
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleShare}>
+              Share via Device
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <Button 
+          variant="outline"
+          className="flex-1"
+          onClick={handleDownload}
+          disabled={isDownloading}
+        >
+          <Download className="mr-2 h-4 w-4" />
+          {isDownloading ? "Downloading..." : "Download"}
+        </Button>
+      </div>
+
+      <Dialog open={open} onOpenChange={(open) => {
+        if (!open && matchSlug) {
+          onNavigate(matchSlug);
+        }
+        onOpenChange(open);
+      }}>
+        <DialogContent className="w-full max-w-[90vw] sm:max-w-[500px] rounded-2xl">
+          <DialogTitle className="text-xl font-bold text-gray-800 dark:text-white">Match Created Successfully!</DialogTitle>
+          <DialogDescription>
+            <p className="text-gray-600 dark:text-gray-300 mb-4 text-sm text-center">
+              Your match has been created. Below is your unique 6-digit Supercode for check-ins on match day.
+              {formValues.is_private && " Also, share the access password with invited players."}
+            </p>
+            <div 
+              ref={cardRef}
+              className="relative bg-gradient-to-r from-green-500 to-green-700 rounded-lg p-6 text-white shadow-xl max-w-md mx-auto overflow-hidden border-4 border-dashed border-white/30"
+              style={{
+                backgroundImage: 'linear-gradient(45deg, rgba(255,255,255,0.1) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.1) 75%, transparent 75%, transparent)',
+                backgroundSize: '40px 40px',
+                clipPath: 'polygon(10% 0%, 90% 0%, 100% 10%, 100% 90%, 90% 100%, 10% 100%, 0% 90%, 0% 10%)',
+              }}
+            >
+              {/* Perforated Edge Semi-Circles */}
+              <div className="absolute top-0 left-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '20%' }} />
+              <div className="absolute top-0 left-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '50%' }} />
+              <div className="absolute top-0 left-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '80%' }} />
+              <div className="absolute top-0 right-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '20%' }} />
+              <div className="absolute top-0 right-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '50%' }} />
+              <div className="absolute top-0 right-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '80%' }} />
+
+              {/* Ticket Content */}
+              <div className="flex items-center justify-between mb-4">
+                <img 
+                  src="/playarenadark.png" 
+                  alt="PlayArena Logo" 
+                  className="h-10 w-auto"
+                />
+                <Trophy className="h-6 w-6" />
+              </div>
+              <h2 className="text-2xl font-bold mb-2 tracking-tight font-condensed uppercase text-center">{formValues.title || "Your Match"}</h2>
+              <div className="text-center mb-4">
+                <p className="text-sm"><MapPin className="inline h-4 w-4 mr-1" /> {selectedVenue?.name || "Venue"}</p>
+                <p className="text-sm"><CalendarIcon className="inline h-4 w-4 mr-1" /> {formValues.match_date ? format(formValues.match_date, "PPP") : "Date"}</p>
+                <p className="text-sm"><Clock className="inline h-4 w-4 mr-1" /> From {formValues.start_time || "Start"} to {formValues.end_time || "End"}</p>
+                <p className="text-sm"><User className="inline h-4 w-4 mr-1" /> Organized by {formValues.organizer_name || "Organizer"}</p>
+                {formValues.is_private && (
+                  <p className="text-sm font-semibold">Access Password: <span className="font-mono">{formValues.access_password || "N/A"}</span></p>
+                )}
+              </div>
+              <div className="bg-white text-green-600 rounded-md p-4 text-center shadow-inner">
+                <p className="text-sm font-medium uppercase tracking-wide">Supercode</p>
+                <p className="text-4xl font-bold tracking-wider mt-1 font-mono">{supercode || "N/A"}</p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400 my-4 text-center">
+              <strong>Note:</strong> Save or share this code. You'll need it on match day.
+              {formValues.is_private && " Share the access password with invited players to allow them to join."}
+            </p>
+            <div className="flex justify-center gap-4 px-6 py-4">
+              <Button 
+                className="flex-1 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg px-6 py-3 shadow-sm transition-colors duration-200 border-0 max-w-xs"
+                onClick={handleDownload}
+                disabled={isDownloading}
+              >
+                <Download size={16} className="mr-2" />
+                {isDownloading ? "Downloading..." : "Download Supercode"}
+              </Button>
+              <Button
+              className="flex-1 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg px-6 py-3 shadow-sm transition-colors duration-200 border-0 max-w-xs"
+              onClick={handleShare}
+              onClick={() => {
+                if (!isDownloading && matchSlug) {
+                  onOpenChange(false);
+                  onNavigate(matchSlug);
+                }
+              }}
               disabled={isDownloading}
             >
-              {isDownloading ? "Downloading..." : "Download Supercode"}
+              <Share2 size={16} className="mr-2" />
+              Share
             </Button>
+          </div>
+          <div className="flex justify-center">
             <Button 
-              className="flex-1 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 transition-colors"
+              className="bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 transition-colors"
               onClick={() => {
                 if (!isDownloading && matchSlug) {
                   onOpenChange(false);
@@ -202,6 +316,7 @@ const handleDownload = async () => {
         </DialogDescription>
       </DialogContent>
     </Dialog>
+    </>
   );
 };
 
