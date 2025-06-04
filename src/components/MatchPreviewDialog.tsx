@@ -40,91 +40,109 @@ type MatchPreviewDialogProps = {
 const MatchPreviewDialog = ({ open, onOpenChange, formValues, selectedVenue }: MatchPreviewDialogProps) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[375px] rounded-2xl">
-        <DialogTitle className="text-xl font-bold text-gray-800 dark:text-gray-200">Match Preview</DialogTitle>
+      <DialogContent className="w-full max-w-[90vw] sm:max-w-[500px] rounded-2xl">
+        <DialogTitle className="text-xl font-bold text-gray-800 dark:text-white">Match Preview</DialogTitle>
         <DialogDescription>
-          <div className="bg-gradient-to-br from-green-500 to-green-700 rounded-xl p-6 text-white shadow-lg">
-            <div className="flex items-center justify-between mb-4">
-              <img 
-                src="/playarenadark.png" 
-                alt="PlayArena Logo" 
-                className="h-8 w-auto"
-              />
-              <Trophy className="h-6 w-6" />
-            </div>
-            <h2 className="text-xl font-bold mb-2">{formValues.title || "Your Match"}</h2>
-            <div className="space-y-2 mb-4 text-sm">
-              <div className="flex items-center">
-                <MapPin className="h-4 w-4 mr-2" />
-                <span>{selectedVenue ? `${selectedVenue.name}${selectedVenue.city ? `, ${selectedVenue.city}` : ''}` : "Venue not loaded"}</span>
+          <div className="relative">
+            <div
+              className="relative bg-gradient-to-r from-green-500 to-green-700 rounded-lg p-6 text-white shadow-xl max-w-md mx-auto overflow-hidden border-4 border-dashed border-white/30"
+              style={{
+                backgroundImage: 'linear-gradient(45deg, rgba(255,255,255,0.1) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.1) 75%, transparent 75%, transparent)',
+                backgroundSize: '40px 40px',
+                clipPath: 'polygon(10% 0%, 90% 0%, 100% 10%, 100% 90%, 90% 100%, 10% 100%, 0% 90%, 0% 10%)',
+              }}
+            >
+              {/* Perforated Edge Semi-Circles */}
+              <div className="absolute top-0 left-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '20%' }} />
+              <div className="absolute top-0 left-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '50%' }} />
+              <div className="absolute top-0 left-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '80%' }} />
+              <div className="absolute top-0 right-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '20%' }} />
+              <div className="absolute top-0 right-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '50%' }} />
+              <div className="absolute top-0 right-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '80%' }} />
+
+              {/* Ticket Content */}
+              <div className="flex items-center justify-between mb-4">
+                <img 
+                  src="/playarenadark.png" 
+                  alt="PlayArena Logo" 
+                  className="h-10 w-auto"
+                />
+                <Trophy className="h-6 w-6" />
               </div>
-              <div className="flex items-center">
-                <CalendarIcon className="h-4 w-4 mr-2" />
-                <span>{formValues.match_date ? format(formValues.match_date, "PPP") : "Date"}</span>
+              <h2 className="text-2xl font-bold mb-2 tracking-tight font-condensed uppercase text-center">{formValues.title || "Your Match"}</h2>
+              <div className="space-y-2 mb-4 text-sm text-center">
+                <div className="flex items-center justify-center">
+                  <MapPin className="h-4 w-4 mr-1" />
+                  <span>{selectedVenue ? `${selectedVenue.name}${selectedVenue.city ? `, ${selectedVenue.city}` : ''}` : "Venue not loaded"}</span>
+                </div>
+                <div className="flex items-center justify-center">
+                  <CalendarIcon className="h-4 w-4 mr-1" />
+                  <span>{formValues.match_date ? format(formValues.match_date, "PPP") : "Date"}</span>
+                </div>
+                <div className="flex items-center justify-center">
+                  <Clock className="h-4 w-4 mr-1" />
+                  <span>From {formValues.start_time || "Start"} to {formValues.end_time || "End"}</span>
+                </div>
+                <div className="flex items-center justify-center">
+                  <User className="h-4 w-4 mr-1" />
+                  <span>Organized by {formValues.organizer_name || "Organizer"}</span>
+                </div>
+                <div className="flex items-center justify-center">
+                  <span className="font-semibold">Players: </span>
+                  <span className="ml-1">{formValues.total_slots || "N/A"}</span>
+                </div>
+                {formValues.is_paid && (
+                  <div className="flex items-center justify-center">
+                    <span className="font-semibold">Price: </span>
+                    <span className="ml-1">₦{formValues.price?.toFixed(2) || "0.00"}</span>
+                  </div>
+                )}
+                {formValues.sell_tickets && (
+                  <div className="flex items-center justify-center">
+                    <span className="font-semibold">Ticket Price: </span>
+                    <span className="ml-1">₦{formValues.ticket_price?.toFixed(2) || "N/A"}</span>
+                  </div>
+                )}
+                {formValues.max_tickets && (
+                  <div className="flex items-center justify-center">
+                    <span className="font-semibold">Max Tickets: </span>
+                    <span className="ml-1">{formValues.max_tickets}</span>
+                  </div>
+                )}
+                {formValues.notes && (
+                  <div className="flex items-center justify-center">
+                    <span className="font-semibold">Notes: </span>
+                    <span className="ml-1">{formValues.notes}</span>
+                  </div>
+                )}
+                {formValues.skill_level && formValues.skill_level !== "" && (
+                  <div className="flex items-center justify-center">
+                    <span className="font-semibold">Skill Level: </span>
+                    <span className="ml-1">{formValues.skill_level}</span>
+                  </div>
+                )}
+                {formValues.match_type && formValues.match_type !== "" && (
+                  <div className="flex items-center justify-center">
+                    <span className="font-semibold">Match Type: </span>
+                    <span className="ml-1">{formValues.match_type}</span>
+                  </div>
+                )}
+                {formValues.gender && formValues.gender !== "" && (
+                  <div className="flex items-center justify-center">
+                    <span className="font-semibold">Gender: </span>
+                    <span className="ml-1">{formValues.gender}</span>
+                  </div>
+                )}
+                {formValues.is_private && (
+                  <div className="flex items-center justify-center">
+                    <span className="font-semibold">Access Password: </span>
+                    <span className="ml-1 font-mono">{formValues.access_password || "N/A"}</span>
+                  </div>
+                )}
               </div>
-              <div className="flex items-center">
-                <Clock className="h-4 w-4 mr-2" />
-                <span>From {formValues.start_time || "Start"} to {formValues.end_time || "End"}</span>
-              </div>
-              <div className="flex items-center">
-                <User className="h-4 w-4 mr-2" />
-                <span>Organized by {formValues.organizer_name || "Organizer"}</span>
-              </div>
-              <div className="flex items-center">
-                <span className="font-semibold">Players: </span>
-                <span className="ml-2">{formValues.total_slots || "N/A"}</span>
-              </div>
-              {formValues.is_paid && (
-                <div className="flex items-center">
-                  <span className="font-semibold">Price: </span>
-                  <span className="ml-2">₦{formValues.price?.toFixed(2) || "0.00"}</span>
-                </div>
-              )}
-              {formValues.sell_tickets && (
-                <div className="flex items-center">
-                  <span className="font-semibold">Ticket Price: </span>
-                  <span className="ml-2">₦{formValues.ticket_price?.toFixed(2) || "N/A"}</span>
-                </div>
-              )}
-              {formValues.max_tickets && (
-                <div className="flex items-center">
-                  <span className="font-semibold">Max Tickets: </span>
-                  <span className="ml-2">{formValues.max_tickets}</span>
-                </div>
-              )}
-              {formValues.notes && (
-                <div className="flex items-center">
-                  <span className="font-semibold">Notes: </span>
-                  <span className="ml-2">{formValues.notes}</span>
-                </div>
-              )}
-              {formValues.skill_level && formValues.skill_level !== "" && (
-                <div className="flex items-center">
-                  <span className="font-semibold">Skill Level: </span>
-                  <span className="ml-2">{formValues.skill_level}</span>
-                </div>
-              )}
-              {formValues.match_type && formValues.match_type !== "" && (
-                <div className="flex items-center">
-                  <span className="font-semibold">Match Type: </span>
-                  <span className="ml-2">{formValues.match_type}</span>
-                </div>
-              )}
-              {formValues.gender && formValues.gender !== "" && (
-                <div className="flex items-center">
-                  <span className="font-semibold">Gender: </span>
-                  <span className="ml-2">{formValues.gender}</span>
-                </div>
-              )}
-              {formValues.is_private && (
-                <div className="flex items-center">
-                  <span className="font-semibold">Access Password: </span>
-                  <span className="ml-2 font-mono">{formValues.access_password || "N/A"}</span>
-                </div>
-              )}
             </div>
           </div>
-          <div className="mt-4 flex justify-end">
+          <div className="flex justify-center mt-4">
             <Button
               className="bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 transition-colors"
               onClick={() => onOpenChange(false)}
