@@ -1,4 +1,3 @@
-
 import { useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,6 +8,7 @@ import {
   Calendar,
   DollarSignIcon,
   Users,
+  ChevronDown,
 } from "lucide-react";
 import {
   Dialog,
@@ -16,6 +16,12 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import html2canvas from "html2canvas";
 
@@ -55,6 +61,7 @@ type Event = {
     name?: string;
     city?: string;
   } | null;
+  start_landmark: Landmark;
   cycling_attendees: {
     id_uuid: string;
     attendee_name: string;
@@ -117,12 +124,41 @@ const CyclingDetailsDialogue: React.FC<CyclingDetailsDialogueProps> = ({
           });
         });
     } else {
-      toast({
-        title: "Sharing Not Supported",
-        description: "Your browser does not support sharing. Please copy the link manually.",
-        variant: "destructive",
-      });
+      try {
+        navigator.clipboard.writeText(shareText);
+        toast({
+          title: "Link copied!",
+          description: "Share it with your friends to join the event.",
+        });
+      } catch (err) {
+        toast({
+          title: "Failed to copy",
+          description: "Please try again or copy the URL manually.",
+          variant: "destructive",
+        });
+      }
     }
+  };
+
+  const shareToWhatsApp = () => {
+    const url = `${window.location.origin}/cycling/${event.slug}`;
+    const shareText = `Join my cycling event: ${event.title} at ${event.start_landmark.name}, ${event.start_landmark.state} on ${formatDate(event.event_date)} at ${event.start_time}. ${attendees.length}/${event.max_attendees} spots taken. Powered by SportCliq. ${url}`;
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
+    window.open(whatsappUrl, "_blank");
+  };
+
+  const shareToTwitter = () => {
+    const url = `${window.location.origin}/cycling/${event.slug}`;
+    const shareText = `Join my cycling event: ${event.title} at ${event.start_landmark.name}, ${event.start_landmark.state} on ${formatDate(event.event_date)} at ${event.start_time}. ${attendees.length}/${event.max_attendees} spots taken. Powered by SportCliq. ${url}`;
+    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
+    window.open(twitterUrl, "_blank");
+  };
+
+  const shareToFacebook = () => {
+    const url = `${window.location.origin}/cycling/${event.slug}`;
+    const shareText = `Join my cycling event: ${event.title} at ${event.start_landmark.name}, ${event.start_landmark.state} on ${formatDate(event.event_date)} at ${event.start_time}. ${attendees.length}/${event.max_attendees} spots taken. Powered by SportCliq.`;
+    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(shareText)}`;
+    window.open(facebookUrl, "_blank");
   };
 
   const handleImageLoad = () => {
@@ -192,7 +228,7 @@ const CyclingDetailsDialogue: React.FC<CyclingDetailsDialogueProps> = ({
       link.download = filename;
       link.click();
       URL.revokeObjectURL(url);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error generating image:", error);
       toast({
         title: "Error",
@@ -209,21 +245,40 @@ const CyclingDetailsDialogue: React.FC<CyclingDetailsDialogueProps> = ({
 
   return (
     <>
-      <div className="flex justify-center gap-4 px-6 py-4 mt-4">
-        <Button
-          className="flex-1 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg px-6 py-3 shadow-sm transition-colors duration-200 border-0 max-w-xs"
-          onClick={handleShare}
-          disabled={isDownloading}
-        >
-          <Share2 size={16} className="mr-2" />
-          Share
-        </Button>
-        <Button
-          className="flex-1 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg px-6 py-3 shadow-sm transition-colors duration-200 border-0 max-w-xs"
+      <div className="flex gap-3 mt-6">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button 
+              variant="outline" 
+              className="flex-1"
+            >
+              <Share2 size={18} className="mr-2" />
+              Share
+              <ChevronDown size={16} className="ml-2" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-[200px]">
+            <DropdownMenuItem onClick={shareToWhatsApp}>
+              Share to WhatsApp
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={shareToTwitter}>
+              Share to Twitter
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={shareToFacebook}>
+              Share to Facebook
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleShare}>
+              Share via Device
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <Button 
+          variant="outline"
+          className="flex-1"
           onClick={() => setDownloadDialogOpen(true)}
           disabled={isDownloading}
         >
-          <Download size={16} className="mr-2" />
+          <Download size={18} className="mr-2" />
           {isDownloading ? "Downloading..." : "Download"}
         </Button>
       </div>
@@ -235,16 +290,27 @@ const CyclingDetailsDialogue: React.FC<CyclingDetailsDialogueProps> = ({
           if (!open) setBackgroundColor('#4CAF50');
         }}
       >
-        <DialogContent className="sm:max-w-[425px] rounded-lg">
-          <DialogTitle>Event Details</DialogTitle>
+        <DialogContent className="w-full max-w-[90vw] sm:max-w-[500px] rounded-2xl">
+          <DialogTitle className="text-xl font-bold text-gray-800 dark:text-white">Event Details</DialogTitle>
           <DialogDescription>
-            <p className="text-gray-600 dark:text-gray-300 mb-4">
+            <p className="text-gray-600 dark:text-gray-300 mb-4 text-center">
               Download or share this card to invite friends to your cycling event.
             </p>
             <div className="relative">
+              <select
+                value={backgroundColor}
+                onChange={(e) => setBackgroundColor(e.target.value)}
+                className="mt-4 w-full p-2 border rounded-lg"
+              >
+                <option value="#4CAF50">Green</option>
+                <option value="#FF5722">Orange</option>
+                <option value="#2196F3">Blue</option>
+                <option value="#9C27B0">Purple</option>
+                <option value="#000000">Black</option>
+              </select>
               <div
                 ref={cardRef}
-                className="relative bg-gradient-to-r from-green-500 to-green-700 rounded-lg p-6 text-white shadow-xl max-w-md mx-auto overflow-hidden border-4 border-dashed border-white/30"
+                className="relative bg-gradient-to-r from-green-500 to-green-700 rounded-lg p-6 text-white shadow-xl max-w-md mx-auto overflow-hidden border-4 border-dashed border-white/30 mt-4"
                 style={{
                   backgroundImage: 'linear-gradient(45deg, rgba(255,255,255,0.1) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.1) 75%, transparent 75%, transparent)',
                   backgroundSize: '40px 40px',
@@ -283,21 +349,10 @@ const CyclingDetailsDialogue: React.FC<CyclingDetailsDialogueProps> = ({
                 <div className="text-center mb-4">
                   <p className="text-sm"><MapPin className="inline h-4 w-4 mr-1" /> {event.start_landmark.name}, {event.start_landmark.state}</p>
                   <p className="text-sm"><Calendar className="inline h-4 w-4 mr-1" /> {formatDate(event.event_date)} at {event.start_time}</p>
-                  <p className="text-sm"><DollarSignIcon className="inline h-4 w-4 mr-1" /> {event.is_free ? "Free" : event.price ? `₦${event.price.toLocaleString("en-NG")}` : "Paid"}</p>
-                  <p className="text-sm"><Users className="inline h-4 w-4 mr-1" /> {attendees.length}/{event.max_attendees} spots booked</p>
+                  <p className="text-sm"><DollarSignIcon className="inline h-4 w-4 mr-1" /> {event.is_free ? "Free" : event.price ? `₦${event.price.toLocaleString("en-NG")}` : "Free"}</p>
+                  <p className="text-sm"><Users className="inline h-4 w-4 mr-1" /> {attendees.length}/{event.max_attendees} spots</p>
                 </div>
               </div>
-              <select
-                value={backgroundColor}
-                onChange={(e) => setBackgroundColor(e.target.value)}
-                className="mt-4 w-full p-2 border rounded-lg"
-              >
-                <option value="#4CAF50">Green</option>
-                <option value="#FF5722">Orange</option>
-                <option value="#2196F3">Blue</option>
-                <option value="#9C27B0">Purple</option>
-                <option value="#000000">Black</option>
-              </select>
             </div>
             <p className="text-sm text-gray-500 dark:text-gray-400 my-4 text-center">
               <strong>Note:</strong> Share this card to invite friends to your event.
