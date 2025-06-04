@@ -23,14 +23,19 @@ type CyclingEvent = {
   cancellation_status: boolean;
   status: string;
   start_landmark_id: string;
-  start_landmark_name: string | null;
+  duration_type: string;
+  duration_value: number;
+  is_own_bike: boolean;
+  is_rental_available: boolean;
+  notes?: string | null;
+  start_landmark: Landmark;
+  end_landmark?: Landmark | null;
   cycling_attendees: {
     id_uuid: string;
     attendee_name: string;
     attendee_phone: string;
     status: "registered" | "checked_in" | "absent";
     confirmation_code: string;
-    details: { phone: string } | null;
     number_of_slots?: number;
   }[] | null;
 };
@@ -94,7 +99,6 @@ const fetchEventDetails = async () => {
           attendee_phone,
           status,
           confirmation_code,
-          details,
           number_of_slots
         )
       `)
@@ -104,10 +108,6 @@ const fetchEventDetails = async () => {
     if (eventError) {
       console.error("Event fetch error:", eventError);
       throw eventError;
-    }
-
-    if (!eventData.start_landmark_name) {
-      console.warn(`No start_landmark_name for event ${initialEvent.id_uuid}`);
     }
 
     setEvent(eventData as CyclingEvent);
