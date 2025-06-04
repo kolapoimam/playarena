@@ -1,7 +1,7 @@
-import { useRef, useState } from "react";
+import { useState, useRef } from "react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { MapPin, CalendarIcon, Clock, User, Trophy, Share2, Download, ChevronDown } from "lucide-react";
+import { MapPin, CalendarIcon, Clock, User, Trophy, Share2, Download, ChevronDown, Volleyball, Medal } from "lucide-react";
 import { format } from "date-fns";
 import html2canvas from "html2canvas";
 import { useToast } from "@/hooks/use-toast";
@@ -40,6 +40,7 @@ type MatchSuccessDialogProps = {
 const MatchSuccessDialog = ({ open, onOpenChange, formValues, selectedVenue, supercode, matchSlug, onNavigate }: MatchSuccessDialogProps) => {
   const { toast } = useToast();
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isImageLoaded, setIsImageLoaded] = useState(false);
   const [backgroundColor, setBackgroundColor] = useState('#4CAF50'); // Default green
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -105,33 +106,27 @@ const MatchSuccessDialog = ({ open, onOpenChange, formValues, selectedVenue, sup
     window.open(facebookUrl, "_blank");
   };
 
+  const handleImageLoad = () => {
+    setIsImageLoaded(true);
+  };
+
   const handleDownload = async () => {
-    if (!cardRef.current) {
+    if (!cardRef.current || !isImageLoaded) {
       toast({
         title: "Error",
-        description: "Card element is not ready. Please try again.",
+        description: "Card is not ready for download. Please wait a moment and try again.",
         variant: "destructive",
       });
       return;
     }
     setIsDownloading(true);
     try {
-      const logoSrc = backgroundColor === '#4CAF50' || backgroundColor === '#000000' || backgroundColor === '#2196F3' || backgroundColor === '#9C27B0' ? "/playarenadark.png" : "/playarenalight.png";
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.src = logoSrc;
-      await new Promise((resolve) => {
-        img.onload = resolve;
-        img.onerror = () => {
-          console.warn("Failed to load logo image for canvas");
-          resolve(null);
-        };
-      });
-
       const canvas = await html2canvas(cardRef.current, {
         scale: 2,
         useCORS: true,
         logging: false,
+        scrollX: 0,
+        scrollY: -window.scrollY,
       });
 
       const blob = await new Promise<Blob | null>((resolve) =>
@@ -144,21 +139,6 @@ const MatchSuccessDialog = ({ open, onOpenChange, formValues, selectedVenue, sup
 
       const filename = `SportCliq-Supercode-${formValues.title.replace(/\s+/g, '-')}.png`;
       const url = URL.createObjectURL(blob);
-
-      if (navigator.share && (navigator as any).canShare?.({ files: [new File([blob], filename, { type: "image/png" })] })) {
-        try {
-          await navigator.share({
-            files: [new File([blob], filename, { type: "image/png" })],
-            title: formValues.title,
-            text: `Join my match with supercode ${supercode}!`,
-          });
-          URL.revokeObjectURL(url);
-          return;
-        } catch (shareError) {
-          console.warn("Share API failed, falling back to download:", shareError);
-        }
-      }
-
       const link = document.createElement("a");
       link.href = url;
       link.download = filename;
@@ -227,28 +207,17 @@ const MatchSuccessDialog = ({ open, onOpenChange, formValues, selectedVenue, sup
         }
         onOpenChange(open);
       }}>
-        <DialogContent className="w-full max-w-[90vw] sm:max-w-[500px] rounded-2xl">
-          <DialogTitle className="text-xl font-bold text-gray-800 dark:text-white">Match Created Successfully!</DialogTitle>
-          <DialogDescription>
-            <p className="text-gray-600 dark:text-gray-300 mb-4 text-sm text-center">
+        <DialogContent className="w-full max-w-[90vw] sm:max-w-[500px] rounded-2xl p-4 sm:p-6">
+          <DialogTitle className="text-xl font-bold text-gray-800 dark:text-white text-center">Match Created Successfully!</DialogTitle>
+          <DialogDescription className="flex flex-col items-center">
+            <p className="text-gray-600 dark:text-gray-300 mb-4 text-sm text-center max-w-xs">
               Your match has been created. Below is your unique 6-digit Supercode for check-ins on match day.
               {formValues.is_private && " Also, share the access password with invited players."}
             </p>
-            <div className="relative">
-              <select
-                value={backgroundColor}
-                onChange={(e) => setBackgroundColor(e.target.value)}
-                className="mt-4 w-full p-2 border rounded-lg"
-              >
-                <option value="#4CAF50">Green</option>
-                <option value="#FF5722">Orange</option>
-                <option value="#2196F3">Blue</option>
-                <option value="#9C27B0">Purple</option>
-                <option value="#000000">Black</option>
-              </select>
-              <div 
+            <div className="relative w-full max-w-md">
+              <div
                 ref={cardRef}
-                className="relative bg-gradient-to-r from-green-500 to-green-700 rounded-lg p-6 text-white shadow-xl max-w-md mx-auto overflow-hidden border-4 border-dashed border-white/30 mt-4"
+                className="relative bg-gradient-to-r from-green-500 to-green-700 rounded-lg p-6 text-white shadow-xl mx-auto overflow-hidden border-4 border-dashed border-white/30 animate-ticket-reveal"
                 style={{
                   backgroundImage: 'linear-gradient(45deg, rgba(255,255,255,0.1) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.1) 75%, transparent 75%, transparent)',
                   backgroundSize: '40px 40px',
@@ -270,8 +239,23 @@ const MatchSuccessDialog = ({ open, onOpenChange, formValues, selectedVenue, sup
                     src={logoSrc}
                     alt="PlayArena Logo" 
                     className="h-10 w-auto"
+                    crossOrigin="anonymous"
+                    onLoad={handleImageLoad}
+                    onError={() => {
+                      toast({
+                        title: "Error",
+                        description: "Failed to load logo image.",
+                        variant: "destructive",
+                      });
+                      setIsImageLoaded(true);
+                    }}
                   />
                   <Trophy className="h-6 w-6" />
+                </div>
+                <div className="flex items-center justify-around mb-4">
+                  <Trophy className="h-6 w-6 text-yellow-300" />
+                  <Volleyball className="h-6 w-6 text-red-500" />
+                  <Medal className="h-6 w-6 text-blue-300" />
                 </div>
                 <h2 className="text-2xl font-bold mb-2 tracking-tight font-condensed uppercase text-center">{formValues.title || "Your Match"}</h2>
                 <div className="text-center mb-4">
@@ -288,22 +272,36 @@ const MatchSuccessDialog = ({ open, onOpenChange, formValues, selectedVenue, sup
                   <p className="text-4xl font-bold tracking-wider mt-1 font-mono">{supercode || "N/A"}</p>
                 </div>
               </div>
+              <select
+                value={backgroundColor}
+                onChange={(e) => setBackgroundColor(e.target.value)}
+                className="mt-4 w-full p-2 border rounded-lg"
+              >
+                <option value="#4CAF50">Green</option>
+                <option value="#FF5722">Orange</option>
+                <option value="#2196F3">Blue</option>
+                <option value="#9C27B0">Purple</option>
+                <option value="#000000">Black</option>
+              </select>
             </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400 my-4 text-center">
+            <p className="text-sm text-gray-500 dark:text-gray-400 my-4 text-center max-w-xs">
               <strong>Note:</strong> Save or share this code. You'll need it on match day.
               {formValues.is_private && " Share the access password with invited players to allow them to join."}
             </p>
-            <div className="flex justify-center gap-4 px-6 py-4">
+            <div className="flex justify-center w-full">
               <Button 
-                className="flex-1 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg px-6 py-3 shadow-sm transition-colors duration-200 border-0 max-w-xs"
+                className="bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg px-6 py-3 shadow-sm transition-colors duration-200 border-0 max-w-xs w-full sm:w-auto"
                 onClick={handleDownload}
-                disabled={isDownloading}
+                disabled={!isImageLoaded || isDownloading}
+                aria-label="Download supercode card as image"
               >
                 <Download size={16} className="mr-2" />
                 {isDownloading ? "Downloading..." : "Download Supercode"}
               </Button>
+            </div>
+            <div className="flex justify-center mt-4">
               <Button 
-                className="flex-1 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg px-6 py-3 shadow-sm transition-colors duration-200 border-0 max-w-xs"
+                className="bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 transition-colors"
                 onClick={() => {
                   if (!isDownloading && matchSlug) {
                     onOpenChange(false);
