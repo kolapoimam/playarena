@@ -45,6 +45,8 @@ type CyclingEvent = {
     confirmation_code: string;
     details: { phone: string } | null;
     number_of_slots?: number;
+    is_own_bike?: boolean;
+    is_rental_bike?: boolean;
   }[] | null;
 };
 
@@ -131,7 +133,7 @@ const AttendeesManagement = ({
       try {
         const { data: attendeesData, error } = await supabase
           .from('cycling_attendees')
-          .select('id_uuid, status')
+          .select('id_uuid, status, is_own_bike, is_rental_bike')
           .eq('cycling_event_id_uuid', event.id_uuid);
 
         if (error) throw error;
@@ -145,8 +147,8 @@ const AttendeesManagement = ({
 
         // Check if event is past 24 hours and update statuses to absent
         const eventDateTime = new Date(`${event.event_date}T${event.start_time}`);
-        const checkTime = addDays(eventDateTime, 1);
-        if (isPast(checkTime) && attendeesData.length > 0) {
+        const twentyFourHoursAfter = addHours(eventDateTime, 24);
+        if (isPast(twentyFourHoursAfter) && attendeesData.length > 0) {
           const registeredAttendees = attendeesData.filter(a => a.status === 'registered');
           if (registeredAttendees.length > 0) {
             try {
@@ -226,7 +228,7 @@ const AttendeesManagement = ({
   const canCheckin = () => {
     if (!event || event.cancellation_status || !event.cycling_attendees?.length) return false;
     const eventDateTime = new Date(`${event.event_date}T${event.start_time}`);
-    const checkTime = addDays(eventDateTime, 1);
+    const checkTime = addHours(eventDateTime, 24);
     const hasRegisteredAttendees = event.cycling_attendees?.some(a => a.status === "registered");
     return !isPast(checkTime) && hasRegisteredAttendees;
   };
@@ -361,34 +363,35 @@ const AttendeesManagement = ({
   };
 
   const getStatusStyles = (status: string) => {
-    switch (status) {
+    switch (status.toLowerCase()) {
       case "registered":
-        return "bg-yellow-100 text-yellow-700 border-yellow-300 dark:bg-yellow-800 dark:text-yellow-200 dark:border-yellow-600";
+        return "bg-yellow-500 text-white border-yellow-600";
       case "checked_in":
-        return "bg-green-100 text-green-700 border-green-300 dark:bg-green-800 dark:text-green-200 dark:border-green-600";
+        return "bg-green-500 text-white border-green-600";
       case "absent":
-        return "bg-red-100 text-red-700 border-red-300 dark:bg-red-800 dark:text-red-200 dark:border-red-600";
+        return "bg-red-500 text-white border-red-600";
       default:
-        return "bg-gray-100 text-gray-700 border-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600";
+        return "bg-gray-500 text-white border-gray-600";
     }
   };
 
   const getDisplayStatus = (status: string) => {
-    return status === "absent" ? "No Show" : status.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
+    return status.toLowerCase() === "absent" ? "No Show" : 
+           status.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
   };
 
   if (!event) return null;
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-600">
-      <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700">
+      <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">
         Manage Attendees
       </h2>
 
-      <div className="mb-6">
+      <div className="mb-4">
         <Button
           onClick={handleCheckinMode}
-          className="bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700 text-white w-full sm:w-auto"
+          className="bg-blue-500 hover:bg-blue-600 text-white w-full sm:w-auto"
           disabled={!canCheckin() || loading}
         >
           {loading ? (
@@ -402,88 +405,97 @@ const AttendeesManagement = ({
         </Button>
       </div>
 
-      <div className="space-y-4">
+      <div className="max-h-[400px] overflow-y-auto">
         <button
           onClick={() => setIsAttendeesOpen(!isAttendeesOpen)}
-          className="flex items-center justify-between w-full text-left text-lg font-semibold mb-2 text-gray-900 dark:text-white"
+          className="flex items-center gap-2 w-full text-left text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4"
         >
-          <span>Attendees ({event.cycling_attendees?.length || 0})</span>
+          Attendees ({event.cycling_attendees?.length || 0})
           {isAttendeesOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
         </button>
 
         {isAttendeesOpen && (
-          <div className="space-y-4 max-h-96 overflow-y-auto">
+          <div className="space-y-4">
             {event.cycling_attendees?.length === 0 ? (
-              <p className="text-center text-gray-600 dark:text-gray-400">
+              <p className="text-gray-600 dark:text-gray-400">
                 No attendees registered.
               </p>
             ) : (
               event.cycling_attendees?.map((attendee) => {
                 const currentStatus = attendeeStatuses.find(s => s.id_uuid === attendee.id_uuid)?.status || attendee.status;
                 return (
-                <div
-                  key={attendee.id_uuid}
-                  className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600"
-                >
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between">
-                    <div className="mb-2 sm:mb-0">
-                      <p className="font-medium text-gray-900 dark:text-white">
-                        {attendee.attendee_name}
-                      </p>
+                  <div
+                    key={attendee.id_uuid}
+                    className="relative flex flex-col sm:flex-row gap-4 items-start sm:items-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg"
+                  >
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-900 dark:text-gray-100">{attendee.attendee_name}</p>
                       <p className="text-sm text-gray-600 dark:text-gray-400">
                         Phone: {attendee.attendee_phone || "N/A"}
                       </p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Slots: {Number(attendee.number_of_slots) || 1}
+                      {currentStatus === "checked_in" && (
+                        <>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            Slots: {Number(attendee.number_of_slots) || 1}
+                          </p>
+                          {attendee.is_own_bike && (
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                              Own Bike
+                            </p>
+                          )}
+                          {attendee.is_rental_bike && (
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                              Rental Bike
+                            </p>
+                          )}
+                        </>
+                      )}
+                    </div>
+                    <span
+                      className={`absolute top-2 right-2 px-2 py-1 text-xs font-medium rounded border ${getStatusStyles(currentStatus)}`}
+                    >
+                      {getDisplayStatus(currentStatus)}
+                    </span>
+                    {mode === "checkin" && currentStatus === "registered" && canConfirmAttendees && (
+                      <div className="flex gap-2 w-full sm:w-auto">
+                        <Input
+                          placeholder="Enter check-in code"
+                          value={checkinCodes[attendee.id_uuid] || ""}
+                          onChange={(e) =>
+                            handleCheckinCodeChange(attendee.id_uuid, e.target.value)
+                          }
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          maxLength={6}
+                          className="w-full sm:w-[150px] dark:bg-gray-700 dark:text-gray-100"
+                          disabled={checkingInAttendees[attendee.id_uuid] || loading}
+                        />
+                        <Button
+                          onClick={() => handleCheckin(attendee.id_uuid)}
+                          className="bg-blue-500 hover:bg-blue-600 text-white"
+                          disabled={
+                            !checkinCodes[attendee.id_uuid] ||
+                            checkinCodes[attendee.id_uuid].length !== 6 ||
+                            checkingInAttendees[attendee.id_uuid] ||
+                            loading
+                          }
+                        >
+                          {checkingInAttendees[attendee.id_uuid] ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            "Verify"
+                          )}
+                        </Button>
+                      </div>
+                    )}
+                    {checkinCodeErrors[attendee.id_uuid] && (
+                      <p className="text-sm text-red-600 dark:text-red-400 mt-1">
+                        {checkinCodeErrors[attendee.id_uuid]}
                       </p>
-                    </div>
-                    <div className="flex flex-col items-end space-y-2">
-                      <span
-                        className={`inline-block px-2 py-1 text-sm font-medium rounded border ${getStatusStyles(currentStatus)}`}
-                      >
-                        {getDisplayStatus(currentStatus)}
-                      </span>
-                      {mode === "checkin" && currentStatus === "registered" && canConfirmAttendees && (
-                        <div className="flex items-center gap-2">
-                          <Input
-                            placeholder="6-digit code"
-                            value={checkinCodes[attendee.id_uuid] || ""}
-                            onChange={(e) =>
-                              handleCheckinCodeChange(attendee.id_uuid, e.target.value)
-                            }
-                            inputMode="numeric"
-                            pattern="[0-9]*"
-                            maxLength={6}
-                            className="w-32 text-sm dark:bg-gray-700 dark:text-gray-100"
-                            disabled={checkingInAttendees[attendee.id_uuid] || loading}
-                          />
-                          <Button
-                            onClick={() => handleCheckin(attendee.id_uuid)}
-                            className="bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded"
-                            disabled={
-                              !checkinCodes[attendee.id_uuid] ||
-                              checkinCodes[attendee.id_uuid].length !== 6 ||
-                              checkingInAttendees[attendee.id_uuid] ||
-                              loading
-                            }
-                          >
-                            {checkingInAttendees[attendee.id_uuid] ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              "Verify"
-                            )}
-                          </Button>
-                        </div>
-                      )}
-                      {checkinCodeErrors[attendee.id_uuid] && (
-                        <p className="text-sm text-red-600 dark:text-red-400 mt-1">
-                          {checkinCodeErrors[attendee.id_uuid]}
-                        </p>
-                      )}
-                    </div>
+                    )}
                   </div>
-                </div>
-              )})
+                );
+              })
             )}
           </div>
         )}
@@ -492,7 +504,7 @@ const AttendeesManagement = ({
       {mode === "checkin" && (
         <Button
           onClick={() => setMode(null)}
-          className="mt-4 bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700 text-white"
+          className="mt-4 bg-green-500 hover:bg-green-600 text-white"
           disabled={loading}
         >
           {loading ? (
@@ -523,7 +535,7 @@ const AttendeesManagement = ({
           <DialogFooter>
             <Button
               onClick={() => setCheckinDialogOpen(false)}
-              className="bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700 text-white rounded-md"
+              className="bg-green-500 hover:bg-green-600 text-white rounded-md"
             >
               Close
             </Button>
