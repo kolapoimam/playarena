@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, Trophy, MapPin } from "lucide-react";
+import { Users, Trophy, MapPin, Coins, Wallet, Volleyball, Medal } from "lucide-react";
 
 type Analytics = {
   total_organized: number;
@@ -164,28 +164,28 @@ const UserDashboard = ({ profile }: UserDashboardProps) => {
       <CardContent>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div className="p-4 bg-green-50 dark:bg-green-900/50 rounded-lg flex items-center gap-3 shadow-md">
-            <Users className="h-8 w-8 text-green-600" />
+            <Trophy className="h-8 w-8 text-green-600" />
             <div>
               <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Matches Organized</p>
               <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{analytics.total_organized}</p>
             </div>
           </div>
           <div className="p-4 bg-green-50 dark:bg-green-900/50 rounded-lg flex items-center gap-3 shadow-md">
-            <Users className="h-8 w-8 text-green-600" />
+            <Medal className="h-8 w-8 text-green-600" />
             <div>
               <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Matches Joined</p>
               <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{analytics.total_joined}</p>
             </div>
           </div>
           <div className="p-4 bg-green-50 dark:bg-green-900/50 rounded-lg flex items-center gap-3 shadow-md">
-            <Trophy className="h-8 w-8 text-green-600" />
+            <Coins className="h-8 w-8 text-green-600" />
             <div>
               <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Spent</p>
               <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">₦{analytics.total_spent.toFixed(2)}</p>
             </div>
           </div>
           <div className="p-4 bg-green-50 dark:bg-green-900/50 rounded-lg flex items-center gap-3 shadow-md">
-            <Trophy className="h-8 w-8 text-green-600" />
+            <Wallet className="h-8 w-8 text-green-600" />
             <div>
               <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Cashout</p>
               <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">₦{analytics.total_cashout.toFixed(2)}</p>
