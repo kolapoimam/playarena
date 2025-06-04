@@ -1,15 +1,16 @@
+
 import { useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { 
   Share2, 
-  Download, 
+  Download, // Ensure this is imported
   Trophy,
   MapPin,
   Calendar,
   DollarSign,
   Users,
   ChevronDown
-} from "lucide-react";
+} from "lucide-react"; // Verify this import
 import {
   Dialog,
   DialogContent,
@@ -145,7 +146,7 @@ const MatchDetailsDialogue: React.FC<MatchDetailsDialogueProps> = ({ match }) =>
     const url = `${window.location.origin}/match/${match.slug}`;
     const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
     const shareText = `Join my Football Match: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. ${totalPlayerSlots}/${match.total_slots} slots. Powered by Sport Cliq. ${match.is_private ? ` (Access Password: ${match.access_password})` : ''}`;
-    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(shareText)}`;
+    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}"e=${encodeURIComponent(shareText)}`;
     window.open(facebookUrl, '_blank');
   };
 
@@ -269,7 +270,7 @@ const MatchDetailsDialogue: React.FC<MatchDetailsDialogueProps> = ({ match }) =>
           onClick={() => setDownloadDialogOpen(true)}
           disabled={isDownloading}
         >
-          <Download size={18} className="mr-2" />
+          <Download size={18} className="mr-2" /> {/* Ensure this works with proper import */}
           {isDownloading ? "Downloading..." : "Download"}
         </Button>
       </div>
