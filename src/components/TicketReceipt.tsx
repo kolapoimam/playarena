@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Calendar, MapPin, ArrowLeft, Ticket, Copy } from "lucide-react";
+import { Calendar, MapPin, ArrowLeft, Ticket, Copy, Award, Volleyball, Clock } from "lucide-react";
 import { format } from "date-fns";
 import Navbar from "@/components/Navbar";
 import html2canvas from "html2canvas";
@@ -36,6 +36,7 @@ const TicketReceipt = () => {
   const [loading, setLoading] = useState(true);
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadFormat, setDownloadFormat] = useState<'png' | 'pdf'>('png');
+  const [backgroundColor, setBackgroundColor] = useState('#4CAF50'); // Default green
   const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -141,6 +142,9 @@ const TicketReceipt = () => {
     );
   }
 
+  const isDarkBackground = backgroundColor === '#4CAF50' || backgroundColor === '#000000';
+  const logoSrc = isDarkBackground ? '/playarenadark.png' : '/playarenalight.png';
+
   return (
     <div className="min-h-screen pb-20 bg-gray-100 dark:bg-gray-900">
       <header className="sticky top-0 z-50 bg-gradient-to-r from-green-500 to-green-700 text-white shadow-lg">
@@ -165,61 +169,58 @@ const TicketReceipt = () => {
             Your tickets have been successfully purchased. Below is your unique 6-digit ticket code for entry.
           </p>
           <div className="relative">
-            {/* Ticket Card */}
+            {/* Ticket Card with Clipped Edges */}
             <div
               ref={cardRef}
               className="relative bg-gradient-to-r from-green-500 to-green-700 rounded-lg p-6 text-white shadow-xl max-w-md mx-auto overflow-hidden border-4 border-dashed border-white/30 animate-ticket-reveal"
               style={{
                 backgroundImage: 'linear-gradient(45deg, rgba(255,255,255,0.1) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.1) 75%, transparent 75%, transparent)',
                 backgroundSize: '40px 40px',
+                clipPath: 'polygon(10% 0%, 90% 0%, 100% 10%, 100% 90%, 90% 100%, 10% 100%, 0% 90%, 0% 10%)',
+                backgroundColor: backgroundColor,
               }}
             >
               {/* Perforated Edge Semi-Circles */}
-              <div className="absolute top-0 left-0 w-full h-2 bg-white/20 border-t border-dashed border-white/50" />
-              <div className="absolute bottom-0 left-0 w-full h-2 bg-white/20 border-b border-dashed border-white/50" />
-              <div className="absolute top-0 left-[-12px] w-6 h-6 bg-gray-100 dark:bg-gray-900 rounded-full" style={{ top: '20%' }} />
-              <div className="absolute top-0 left-[-12px] w-6 h-6 bg-gray-100 dark:bg-gray-900 rounded-full" style={{ top: '50%' }} />
-              <div className="absolute top-0 left-[-12px] w-6 h-6 bg-gray-100 dark:bg-gray-900 rounded-full" style={{ top: '80%' }} />
-              <div className="absolute top-0 right-[-12px] w-6 h-6 bg-gray-100 dark:bg-gray-900 rounded-full" style={{ top: '20%' }} />
-              <div className="absolute top-0 right-[-12px] w-6 h-6 bg-gray-100 dark:bg-gray-900 rounded-full" style={{ top: '50%' }} />
-              <div className="absolute top-0 right-[-12px] w-6 h-6 bg-gray-100 dark:bg-gray-900 rounded-full" style={{ top: '80%' }} />
+              <div className="absolute top-0 left-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '20%' }} />
+              <div className="absolute top-0 left-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '50%' }} />
+              <div className="absolute top-0 left-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '80%' }} />
+              <div className="absolute top-0 right-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '20%' }} />
+              <div className="absolute top-0 right-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '50%' }} />
+              <div className="absolute top-0 right-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '80%' }} />
 
               {/* Ticket Content */}
               <div className="flex items-center justify-between mb-4">
-                <img src="/playarenalight.png" alt="PlayArena Logo" className="h-10 w-auto" />
+                <img src={logoSrc} alt="PlayArena Logo" className="h-10 w-auto" />
                 <Ticket className="h-6 w-6" />
               </div>
-              <h2 className="text-2xl font-bold mb-4 tracking-tight font-condensed uppercase">{ticket.match.title}</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 text-sm">
-                <div>
-                  <div className="flex items-center mb-2">
-                    <MapPin className="h-4 w-4 mr-2" />
-                    <span>{ticket.match.venue?.name || "Venue"}, {ticket.match.venue?.city || ""}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <Calendar className="h-4 w-4 mr-2" />
-                    <span>
-                      {format(new Date(ticket.match.match_date), "PPP")} at{" "}
-                      {format(new Date(`1970-01-01T${ticket.match.match_time}`), "p")}
-                    </span>
-                  </div>
-                </div>
-                <div>
-                  <div className="flex items-center mb-2">
-                    <span className="font-semibold">Tickets:</span>
-                    <span className="ml-2">{ticket.number_of_tickets}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <span className="font-semibold">Total:</span>
-                    <span className="ml-2">₦{ticket.total_price.toFixed(2)}</span>
-                  </div>
-                </div>
+              <div className="flex items-center justify-around mb-4">
+                <Award className="h-6 w-6 text-yellow-300" />
+                <Volleyball className="h-6 w-6 text-red-500" />
+                <Clock className="h-6 w-6 text-blue-300" />
+              </div>
+              <h2 className="text-2xl font-bold mb-2 tracking-tight font-condensed uppercase text-center">{ticket.match.title}</h2>
+              <div className="text-center mb-4">
+                <p className="text-sm"><MapPin className="inline h-4 w-4 mr-1" /> {ticket.match.venue?.name || "Venue"}, {ticket.match.venue?.city || ""}</p>
+                <p className="text-sm"><Calendar className="inline h-4 w-4 mr-1" /> {format(new Date(ticket.match.match_date), "PPP")} at {format(new Date(`1970-01-01T${ticket.match.match_time}`), "p")}</p>
+                <p className="text-sm font-semibold">Holder: {ticket.buyer_name}</p>
+                <p className="text-sm">Slots: {ticket.number_of_tickets}</p>
               </div>
               <div className="bg-white text-green-600 rounded-md p-4 text-center shadow-inner">
                 <p className="text-sm font-medium uppercase tracking-wide">Ticket Code</p>
                 <p className="text-4xl font-bold tracking-wider mt-1 font-mono">{ticket.ticket_code}</p>
               </div>
             </div>
+            <select
+              value={backgroundColor}
+              onChange={(e) => setBackgroundColor(e.target.value)}
+              className="mt-4 w-full p-2 border rounded-lg"
+            >
+              <option value="#4CAF50">Green</option>
+              <option value="#FF5722">Orange</option>
+              <option value="#2196F3">Blue</option>
+              <option value="#9C27B0">Purple</option>
+              <option value="#000000">Black</option>
+            </select>
           </div>
           <p className="text-sm text-gray-500 dark:text-gray-400 my-4 text-center">
             <strong>Note:</strong> Save or download this ticket code. You'll need it for entry on match day.
