@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Loader, Calendar, MapPin, Clock, Users, DollarSign, Volleyball, Phone, MessageSquare } from "lucide-react";
+import { ArrowLeft, Loader, Calendar, MapPin, Clock, Users, DollarSign, Download, Volleyball, Phone, MessageSquare } from "lucide-react";
 import {
   Form,
   FormControl,
