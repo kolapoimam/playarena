@@ -23,7 +23,7 @@ interface CyclingEvent {
   host_name: string;
   host_id: string;
   start_landmark: { id_uuid: string; name: string; state: string; slug: string } | null;
-  cycling_attendees: { id_uuid: string; attendee_name: string; status: "registered" | "checked_in" | "absent" }[];
+  cycling_attendees: { id_uuid: string; attendee_name: string; status: "registered" | "checked_in" | "absent"; number_of_slots?: number }[];
   status: string;
 }
 
@@ -83,7 +83,7 @@ const CyclingActivity = () => {
           `
           id_uuid, slug, title, event_date, start_time, max_attendees, is_free, price, host_name, host_id, status,
           start_landmark:landmarks!start_landmark_id(id_uuid, name, state, slug),
-          attendees:cycling_attendees!cycling_attendees_cycling_event_id_uuid_fkey(id_uuid, attendee_name, status)
+          attendees:cycling_attendees!cycling_attendees_cycling_event_id_uuid_fkey(id_uuid, attendee_name, status, number_of_slots)
         `,
           { count: "exact" }
         );
@@ -110,7 +110,7 @@ const CyclingActivity = () => {
       const processedEvents = (data || []).map(event => ({
         ...event,
         start_landmark: event.start_landmark || null,
-        cycling_attendees: event.cycling_attendees || []
+        cycling_attendees: event.attendees || []
       })) as CyclingEvent[];
 
       // Convert and sort events
@@ -395,6 +395,7 @@ const CyclingActivity = () => {
             {filteredEvents.map((event) => {
               const { statusLabel, statusClass } = getEventStatus(event);
               const isPast = event.status === "passed";
+              const totalAttendeeSlots = event.cycling_attendees?.reduce((sum, attendee) => sum + (attendee.number_of_slots || 1), 0) || 0;
               return (
                 <div key={event.id_uuid} className="w-full border rounded-lg overflow-hidden shadow-sm bg-white dark:bg-gray-800">
                   <div className="p-4">
@@ -438,7 +439,7 @@ const CyclingActivity = () => {
                       <div className="flex items-center gap-2">
                         <Users size={16} className="text-gray-600 dark:text-gray-400" />
                         <span>
-                          {event.cycling_attendees?.length || 0}/{event.max_attendees} spots filled
+                          {totalAttendeeSlots}/{event.max_attendees} spots filled
                         </span>
                       </div>
                     </div>
