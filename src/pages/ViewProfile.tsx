@@ -96,45 +96,37 @@ const ViewProfile = () => {
               </TabsTrigger>
             </TabsList>
             <TabsContent value="statistics">
-              <div className="my-4 flex justify-center">
-                <div className="relative inline-flex items-center bg-gray-200 dark:bg-gray-600 rounded-full p-1 shadow-md">
-                  <input
-                    type="checkbox"
-                    id="dashboard-toggle"
-                    className="sr-only"
-                    checked={dashboardType === "cycling"}
-                    onChange={() => setDashboardType(dashboardType === "cycling" ? "match" : "cycling")}
-                  />
-                  <label
-                    htmlFor="dashboard-toggle"
-                    className="flex items-center cursor-pointer w-56"
-                  >
-                    <span
-                      className={`px-4 py-2 text-sm font-medium transition-colors duration-300 ${
-                        dashboardType === "match"
-                          ? "text-white bg-green-500 rounded-full"
-                          : "text-gray-700 dark:text-gray-300"
-                      }`}
-                    >
-                      Match Statistics
-                    </span>
-                    <span
-                      className={`px-4 py-2 text-sm font-medium transition-colors duration-300 ${
-                        dashboardType === "cycling"
-                          ? "text-white bg-green-500 rounded-full"
-                          : "text-gray-700 dark:text-gray-300"
-                      }`}
-                    >
-                      Cycling Statistics
-                    </span>
-                    <span
-                      className={`absolute top-1 left-1 w-28 h-8 bg-green-500 rounded-full transform transition-transform duration-300 ${
-                        dashboardType === "cycling" ? "translate-x-28" : "translate-x-0"
-                      }`}
-                    />
-                  </label>
-                </div>
-              </div>
+<div className="my-4 flex justify-center">
+  <div className="relative inline-flex items-center bg-white dark:bg-gray-800 rounded-full p-1 shadow-lg border border-gray-200 dark:border-gray-600">
+    <button
+      onClick={() => setDashboardType("match")}
+      className={`px-6 py-2 text-sm font-medium rounded-full transition-all duration-300 ease-in-out relative z-10 ${
+        dashboardType === "match"
+          ? "text-white shadow-sm"
+          : "text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+      }`}
+    >
+      Matches
+    </button>
+    <button
+      onClick={() => setDashboardType("cycling")}
+      className={`px-6 py-2 text-sm font-medium rounded-full transition-all duration-300 ease-in-out relative z-10 ${
+        dashboardType === "cycling"
+          ? "text-white shadow-sm"
+          : "text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+      }`}
+    >
+      Cycling
+    </button>
+    
+    {/* Sliding background */}
+    <div
+      className={`absolute top-1 h-8 bg-gradient-to-r from-green-500 to-green-600 rounded-full shadow-md transition-all duration-300 ease-in-out ${
+        dashboardType === "match" ? "left-1 w-20" : "left-[85px] w-20"
+      }`}
+    />
+  </div>
+</div>
               {dashboardType === "cycling" ? (
                 <CyclerDashboard profile={profile} />
               ) : (
