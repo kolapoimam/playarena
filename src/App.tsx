@@ -45,6 +45,7 @@ import MyBookings from "@/pages/MyBookings";
 import BookingCode from "@/pages/BookingCode";
 import AccountDetails from "@/pages/AccountDetails";
 import MyMatches from "@/pages/MyMatches";
+import MyCycling from "@/pages/MyCycling";
 import MatchPreferences from "@/pages/MatchPreferences";
 import Wallet from "@/pages/Wallet";
 import CyclingActivity from "@/pages/CyclingActivity";
@@ -144,6 +145,7 @@ const AppRoutes = () => {
         element={<AccountDetails />}
       />
       <Route path="/profile/my-matches" element={<MyMatches />} />
+      <Route path="/profile/my-cycling" element={<MyCycling />} />
       <Route path="/profile/match-preferences" element={<MatchPreferences />} />
       <Route path="/profile/wallet" element={<Wallet />} />
       <Route path="/profile/my-venue" element={<MyVenue />} />
