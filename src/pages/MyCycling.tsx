@@ -28,7 +28,6 @@ type CyclingEvent = {
   supercode?: string;
   host_name?: string;
   confirmation_code?: string;
-  attendee_status?: "registered" | "checked_in" | "absent"; // Added for attendee status
 };
 
 const MyCycling = () => {
@@ -92,7 +91,7 @@ const MyCycling = () => {
 
         setHostedEvents(hosted);
 
-        // Fetch joined events with confirmation code and status
+        // Fetch joined events with confirmation code
         const { data: joinedData, error: joinedError } = await supabase
           .from("user_joined_cycling")
           .select(`
@@ -104,10 +103,10 @@ const MyCycling = () => {
               start_time,
               max_attendees,
               host_name,
-              attendees:cycling_attendees!cycling_attendees_cycling_event_id_uuid_fkey(id_uuid, confirmation_code, status),
+              attendees:cycling_attendees!cycling_attendees_cycling_event_id_uuid_fkey(id_uuid, confirmation_code),
               start_landmark:landmarks!cycling_events_start_landmark_id_fkey(name, state)
             ),
-            attendee:cycling_attendees!user_joined_cycling_attendee_id_fkey(confirmation_code, status)
+            attendee:cycling_attendees!user_joined_cycling_attendee_id_fkey(confirmation_code)
           `)
           .eq("user_id", userId);
 
@@ -117,7 +116,6 @@ const MyCycling = () => {
           .map((item: any) => ({
             ...item.cycling_event,
             confirmation_code: item.attendee?.confirmation_code,
-            attendee_status: item.attendee?.status, // Add attendee status
           }))
           .filter((event: CyclingEvent | null) => event !== null);
 
@@ -139,12 +137,17 @@ const MyCycling = () => {
 
   const formatMatchDateTime = (date: string, time: string) => {
     try {
+      // Parse event_date (e.g., '2025-06-20 00:00:00+00') to extract YYYY-MM-DD
       const dateObj = new Date(date);
       if (isNaN(dateObj.getTime())) throw new Error("Invalid date");
       const dateStr = format(dateObj, "yyyy-MM-dd");
+
+      // Parse start_time (e.g., '07:00 AM') to HH:mm format
       const parsedTime = parse(time, "h:mm a", new Date());
       if (isNaN(parsedTime.getTime())) throw new Error("Invalid time");
       const timeStr = format(parsedTime, "HH:mm");
+
+      // Combine date and time for UTC parsing
       const isoDateTime = `${dateStr}T${timeStr}:00Z`;
       const zonedDate = utcToZonedTime(new Date(isoDateTime), "Africa/Lagos");
       return {
@@ -162,13 +165,17 @@ const MyCycling = () => {
       const dateObj = new Date(matchDate);
       if (isNaN(dateObj.getTime())) throw new Error("Invalid date");
       const dateStr = format(dateObj, "yyyy-MM-dd");
+
+      // Parse start_time (e.g., '07:00 AM') to HH:mm
       const parsedTime = parse(startTime, "h:mm a", new Date());
       if (isNaN(parsedTime.getTime())) throw new Error("Invalid time");
       const timeStr = format(parsedTime, "HH:mm");
+
       const isoDateTime = `${dateStr}T${timeStr}:00Z`;
       const now = DateTime.now().setZone("Africa/Lagos");
       const matchDateTime = DateTime.fromISO(isoDateTime, { zone: "utc" }).setZone("Africa/Lagos");
-      const endDateTime = matchDateTime.plus({ hours: 1 });
+      const endDateTime = matchDateTime.plus({ hours: 1 }); // Assume 1-hour duration
+
       if (now < matchDateTime) return { text: "Upcoming", className: "bg-blue-100 text-blue-800" };
       if (now.hasSame(matchDateTime, "day") && now < matchDateTime) return { text: "Today", className: "bg-green-100 text-green-700" };
       if (now >= matchDateTime && now <= endDateTime) return { text: "Live", className: "bg-green-100 text-green-800" };
@@ -176,24 +183,6 @@ const MyCycling = () => {
     } catch {
       return { text: "Unknown", className: "bg-gray-100 text-gray-800" };
     }
-  };
-
-  const getAttendeeStatusStyles = (status: string) => {
-    switch (status.toLowerCase()) {
-      case "registered":
-        return "bg-yellow-500 text-white border-yellow-600";
-      case "checked_in":
-        return "bg-green-500 text-white border-green-600";
-      case "absent":
-        return "bg-red-500 text-white border-red-600";
-      default:
-        return "bg-gray-500 text-white border-gray-600";
-    }
-  };
-
-  const getAttendeeDisplayStatus = (status: string) => {
-    return status.toLowerCase() === "absent" ? "No Show" : 
-           status.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
   };
 
   if (loading) {
@@ -364,7 +353,6 @@ const MyCycling = () => {
                     joinedEvents.map((event) => {
                       const { dateStr, timeStr } = formatMatchDateTime(event.event_date, event.start_time);
                       const statusLabel = getMatchStatus(event.event_date, event.start_time);
-                      const attendeeStatus = event.attendee_status || "registered";
                       return (
                         <div
                           key={event.id_uuid}
@@ -395,18 +383,13 @@ const MyCycling = () => {
                               </p>
                             </div>
                           </div>
-                          <div className="mt-4 flex gap-2 items-center">
+                          <div className="mt-4 flex gap-2">
                             <Button
                               className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg"
                               onClick={() => navigate(`/cycling/${event.slug}`)}
                             >
                               View Details
                             </Button>
-                            <span
-                              className={`px-2 py-1 text-xs font-medium rounded border ${getAttendeeStatusStyles(attendeeStatus)}`}
-                            >
-                              {getAttendeeDisplayStatus(attendeeStatus)}
-                            </span>
                           </div>
                         </div>
                       );
