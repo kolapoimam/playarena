@@ -9,6 +9,9 @@ import {
   DollarSignIcon,
   Users,
   ChevronDown,
+  Trophy,
+  Volleyball,
+  Medal,
 } from "lucide-react";
 import {
   Dialog,
@@ -99,6 +102,57 @@ const CyclingDetailsDialogue: React.FC<CyclingDetailsDialogueProps> = ({
     return new Date(dateString).toLocaleDateString("en-NG", options);
   };
 
+  const handleImageLoad = () => {
+    setIsImageLoaded(true);
+  };
+
+  const handleDownload = useCallback(async () => {
+    if (!cardRef.current || !isImageLoaded) {
+      toast({
+        title: "Error",
+        description: "Card is not ready for download.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsDownloading(true);
+    try {
+      const canvas = await html2canvas(cardRef.current, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        scrollX: 0,
+        scrollY: -window.scrollY,
+      });
+
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob((blob) => resolve(blob), "image/png")
+      );
+
+      if (!blob) throw new Error("Failed to convert canvas to Blob");
+
+      const filename = `SportCliq-Cycling-${event.title.replace(/\s+/g, "-")}.png`;
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Error generating image:", error);
+      toast({
+        title: "Error",
+        description: "Failed to download card.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDownloading(false);
+    }
+  }, [isImageLoaded, event, toast, backgroundColor]);
+
   const handleShare = () => {
     const url = `${window.location.origin}/cycling/${event.slug}`;
     const shareText = `Join my cycling event: ${event.title} at ${event.start_landmark.name}, ${event.start_landmark.state} on ${formatDate(event.event_date)} at ${event.start_time}. ${attendees.length}/${event.max_attendees} spots taken. Powered by SportCliq. ${url}`;
@@ -161,85 +215,6 @@ const CyclingDetailsDialogue: React.FC<CyclingDetailsDialogueProps> = ({
     window.open(facebookUrl, "_blank");
   };
 
-  const handleImageLoad = () => {
-    setIsImageLoaded(true);
-  };
-
-  const handleDownload = useCallback(async () => {
-    if (!cardRef.current || !isImageLoaded) {
-      toast({
-        title: "Error",
-        description: "Card is not ready for download.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsDownloading(true);
-    try {
-      const logoSrc = backgroundColor === '#4CAF50' || backgroundColor === '#000000' || backgroundColor === '#2196F3' || backgroundColor === '#9C27B0' ? "/playarenadark.png" : "/playarenalight.png";
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.src = logoSrc;
-      await new Promise<void>((resolve) => {
-        img.onload = () => resolve();
-        img.onerror = () => {
-          console.warn("Failed to load logo");
-          resolve();
-        };
-      });
-
-      const canvas = await html2canvas(cardRef.current, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-      });
-
-      const blob = await new Promise<Blob | null>((resolve) =>
-        canvas.toBlob((blob) => resolve(blob), "image/png")
-      );
-
-      if (!blob) throw new Error("Failed to convert canvas to Blob");
-
-      const filename = `SportCliq-Cycling-${event.title.replace(/\s+/g, "-")}.png`;
-      const url = URL.createObjectURL(blob);
-
-      if (
-        navigator.share &&
-        navigator.canShare({
-          files: [new File([blob], filename, { type: "image/png" })],
-        })
-      ) {
-        try {
-          await navigator.share({
-            files: [new File([blob], filename, { type: "image/png" })],
-            title: event.title,
-            text: `Join my cycling event at ${event.start_landmark.name}!`,
-          });
-          URL.revokeObjectURL(url);
-          return;
-        } catch (shareError) {
-          console.warn("Share failed:", shareError);
-        }
-      }
-
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = filename;
-      link.click();
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error("Error generating image:", error);
-      toast({
-        title: "Error",
-        description: "Failed to download card.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsDownloading(false);
-    }
-  }, [isImageLoaded, event, toast, backgroundColor]);
-
   const isDarkBackground = backgroundColor === '#4CAF50' || backgroundColor === '#000000' || backgroundColor === '#2196F3' || backgroundColor === '#9C27B0';
   const logoSrc = isDarkBackground ? '/playarenadark.png' : '/playarenalight.png';
 
@@ -290,13 +265,13 @@ const CyclingDetailsDialogue: React.FC<CyclingDetailsDialogueProps> = ({
           if (!open) setBackgroundColor('#4CAF50');
         }}
       >
-        <DialogContent className="w-full max-w-[90vw] sm:max-w-[500px] rounded-2xl">
-          <DialogTitle className="text-xl font-bold text-gray-800 dark:text-white">Event Details</DialogTitle>
-          <DialogDescription>
-            <p className="text-gray-600 dark:text-gray-300 mb-4 text-center">
+        <DialogContent className="w-full max-w-[90vw] sm:max-w-[500px] rounded-2xl p-4 sm:p-6">
+          <DialogTitle className="text-xl font-bold text-gray-800 dark:text-white text-center">Event Details</DialogTitle>
+          <DialogDescription className="flex flex-col items-center">
+            <p className="text-gray-600 dark:text-gray-300 mb-4 text-sm text-center max-w-xs">
               Download or share this card to invite friends to your cycling event.
             </p>
-            <div className="relative">
+            <div className="relative w-full max-w-md">
               <select
                 value={backgroundColor}
                 onChange={(e) => setBackgroundColor(e.target.value)}
@@ -310,7 +285,7 @@ const CyclingDetailsDialogue: React.FC<CyclingDetailsDialogueProps> = ({
               </select>
               <div
                 ref={cardRef}
-                className="relative bg-gradient-to-r from-green-500 to-green-700 rounded-lg p-6 text-white shadow-xl max-w-md mx-auto overflow-hidden border-4 border-dashed border-white/30 mt-4"
+                className="relative bg-gradient-to-r from-green-500 to-green-700 rounded-lg p-6 text-white shadow-xl mx-auto overflow-hidden border-4 border-dashed border-white/30 animate-ticket-reveal"
                 style={{
                   backgroundImage: 'linear-gradient(45deg, rgba(255,255,255,0.1) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.1) 75%, transparent 75%, transparent)',
                   backgroundSize: '40px 40px',
@@ -345,43 +320,32 @@ const CyclingDetailsDialogue: React.FC<CyclingDetailsDialogueProps> = ({
                   />
                   <Bike className="h-6 w-6" />
                 </div>
+                <div className="flex items-center justify-around mb-4">
+                  <Trophy className="h-6 w-6 text-yellow-300" />
+                  <Volleyball className="h-6 w-6 text-red-500" />
+                  <Medal className="h-6 w-6 text-blue-300" />
+                </div>
                 <h2 className="text-2xl font-bold mb-2 tracking-tight font-condensed uppercase text-center">{event.title}</h2>
                 <div className="text-center mb-4">
-                  <p className="text-sm"><MapPin className="inline h-4 w-4 mr-1" /> {event.start_landmark.name}, {event.start_landmark.state}</p>
-                  <p className="text-sm"><Calendar className="inline h-4 w-4 mr-1" /> {formatDate(event.event_date)} at {event.start_time}</p>
-                  <p className="text-sm"><DollarSignIcon className="inline h-4 w-4 mr-1" /> {event.is_free ? "Free" : event.price ? `₦${event.price.toLocaleString("en-NG")}` : "Free"}</p>
-                  <p className="text-sm"><Users className="inline h-4 w-4 mr-1" /> {attendees.length}/{event.max_attendees} spots</p>
+                  <p className="text-sm text-white"><MapPin className="inline h-4 w-4 mr-1 text-white" /> {event.start_landmark.name}, {event.start_landmark.state}</p>
+                  <p className="text-sm text-white"><Calendar className="inline h-4 w-4 mr-1 text-white" /> {formatDate(event.event_date)} at {event.start_time}</p>
+                  <p className="text-sm text-white"><DollarSignIcon className="inline h-4 w-4 mr-1 text-white" /> {event.is_free ? "Free" : event.price ? `₦${event.price.toLocaleString("en-NG")}` : "Free"}</p>
+                  <p className="text-sm text-white"><Users className="inline h-4 w-4 mr-1 text-white" /> {attendees.length}/{event.max_attendees} spots</p>
                 </div>
               </div>
             </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400 my-4 text-center">
+            <p className="text-sm text-gray-500 dark:text-gray-400 my-4 text-center max-w-xs">
               <strong>Note:</strong> Share this card to invite friends to your event.
             </p>
-            <div className="flex justify-center gap-4 px-6 py-4">
+            <div className="flex justify-center w-full">
               <Button
-                className="flex-1 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg px-6 py-3 shadow-sm transition-colors duration-200 border-0 max-w-xs"
+                className="bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg px-6 py-3 shadow-sm transition-colors duration-200 border-0 max-w-xs w-full sm:w-auto"
                 onClick={handleDownload}
                 disabled={!isImageLoaded || isDownloading}
+                aria-label="Download cycling details card as image"
               >
                 <Download size={16} className="mr-2" />
                 {isDownloading ? "Downloading..." : "Download"}
-              </Button>
-              <Button
-                className="flex-1 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg px-6 py-3 shadow-sm transition-colors duration-200 border-0 max-w-xs"
-                onClick={handleShare}
-                disabled={isDownloading}
-              >
-                <Share2 size={16} className="mr-2" />
-                Share
-              </Button>
-            </div>
-            <div className="flex justify-center">
-              <Button
-                className="bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 transition-colors"
-                onClick={() => setDownloadDialogOpen(false)}
-                disabled={isDownloading}
-              >
-                Close
               </Button>
             </div>
           </DialogDescription>
