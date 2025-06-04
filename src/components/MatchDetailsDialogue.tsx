@@ -26,7 +26,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import html2canvas from "html2canvas";
-import jsPDF from "jspdf";
 
 type Venue = {
   id: string;
@@ -176,19 +175,28 @@ const MatchDetailsDialogue: React.FC<MatchDetailsDialogueProps> = ({ match }) =>
         scrollY: -window.scrollY,
       });
 
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'px',
-        format: [canvas.width, canvas.height],
-      });
-      pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
-      pdf.save(`SportCliq-Match-${match.title.replace(/\s+/g, '-')}.pdf`);
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob((blob) => resolve(blob), "image/png")
+      );
+
+      if (!blob) {
+        throw new Error("Failed to convert canvas to Blob");
+      }
+
+      const filename = `SportCliq-Match-${match.title.replace(/\s+/g, '-')}.png`;
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
     } catch (error) {
-      console.error("Error generating PDF:", error);
+      console.error("Error generating image:", error);
       toast({
         title: "Error",
-        description: "Failed to download match card as PDF.",
+        description: "Failed to download match card as image.",
         variant: "destructive",
       });
     } finally {
@@ -329,7 +337,7 @@ const MatchDetailsDialogue: React.FC<MatchDetailsDialogueProps> = ({ match }) =>
                 className="bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg px-6 py-3 shadow-sm transition-colors duration-200 border-0 max-w-xs w-full sm:w-auto"
                 onClick={handleDownload}
                 disabled={!isImageLoaded || isDownloading}
-                aria-label="Download match card as PDF"
+                aria-label="Download match card as image"
               >
                 <Download size={16} className="mr-2" />
                 {isDownloading ? "Downloading..." : "Download"}
