@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/form";
 import { ArrowLeft, Calendar, Clock, MapPin, Users, Loader } from "lucide-react";
 import CyclingSuccessDialog from "@/components/CyclingSuccessDialog";
-import Navbar from "./@/components/Navbar";
+import Navbar from '@/components/Navbar';
 
 type Landmark = {
   name: string;
