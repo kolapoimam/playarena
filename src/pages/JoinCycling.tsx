@@ -91,29 +91,29 @@ const JoinCycling = () => {
   const [successDialogOpen, setSuccessDialogOpen] = useState(false);
   const [confirmationCode, setConfirmationCode] = useState<string | null>(null);
 
-  const form = useForm({
-    resolver: zodResolver(formSchema),
-    defaultValues: { name: "", phone: "", is_own_bike: false, is_rental_bike: false },
-  });
+const form = useForm({
+  resolver: zodResolver(formSchema),
+  defaultValues: { name: "", phone: "", is_own_bike: false, is_rental_bike: false },
+});
 
-  const defaultEmail = form.getValues("phone")
-    ? `${form.getValues("phone")}@sportcycling.net`
-    : undefined;
+// Use the fixed default email instead of generating from phone
+const defaultEmail = "payments@sportcliq.com";
 
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const { data: session } = await supabase.auth.getSession();
-        if (session.session) {
-          setUserId(session.session.user.id);
-        }
-      } catch (err: any) {
-        console.error('No authentication found:', err);
-        // No redirect; allow non-logged-in users to proceed
+useEffect(() => {
+  const checkAuth = async () => {
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      if (session.session) {
+        setUserId(session.session.user.id);
       }
-    };
-    checkAuth();
-  }, []);
+    } catch (err: any) {
+      console.error('No authentication found:', err);
+      // No redirect; allow non-logged-in users to proceed
+    }
+  };
+  checkAuth();
+}, []);
+
 
   useEffect(() => {
     const script = document.createElement("script");
@@ -255,15 +255,6 @@ const JoinCycling = () => {
       toast({
         title: 'Invalid Amount',
         description: 'Minimum payment is ₦1.00.',
-        variant: 'error',
-      });
-      return;
-    }
-
-    if (!defaultEmail || !defaultEmail.includes('@') || defaultEmail.length < 5) {
-      toast({
-        title: 'Invalid Email',
-        description: 'Enter a valid phone number.',
         variant: 'error',
       });
       return;
