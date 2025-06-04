@@ -64,59 +64,59 @@ const CyclingDetails = ({ event: initialEvent, cashout, handleCancel, loading, i
   const [localWalletBalance, setLocalWalletBalance] = useState<number>(walletBalance || 0);
   const [event, setEvent] = useState<CyclingEvent | null>(initialEvent);
 
-  const fetchEventDetails = async () => {
-    if (!initialEvent?.id_uuid) return;
-    try {
-      const { data: eventData, error: eventError } = await supabase
-        .from("cycling_events")
-        .select(`
+const fetchEventDetails = async () => {
+  if (!initialEvent?.id_uuid) return;
+  try {
+    const { data: eventData, error: eventError } = await supabase
+      .from("cycling_events")
+      .select(`
+        id_uuid,
+        slug,
+        title,
+        event_date,
+        start_time,
+        event_start_time,
+        event_end_time,
+        max_attendees,
+        host_id,
+        host_name,
+        host_phone,
+        supercode,
+        is_free,
+        price,
+        cancellation_status,
+        status,
+        start_landmark_id,
+        start_landmark_name,
+        cycling_attendees!cycling_attendees_cycling_event_id_uuid_fkey (
           id_uuid,
-          slug,
-          title,
-          event_date,
-          start_time,
-          event_start_time,
-          event_end_time,
-          max_attendees,
-          host_id,
-          host_name,
-          host_phone,
-          supercode,
-          is_free,
-          price,
-          cancellation_status,
+          attendee_name,
+          attendee_phone,
           status,
-          start_landmark_id,
-          start_landmark_name,
-          cycling_attendees (
-            id_uuid,
-            attendee_name,
-            attendee_phone,
-            status,
-            confirmation_code,
-            details,
-            number_of_slots
-          )
-        `)
-        .eq("id_uuid", initialEvent.id_uuid)
-        .single();
+          confirmation_code,
+          details,
+          number_of_slots
+        )
+      `)
+      .eq("id_uuid", initialEvent.id_uuid)
+      .single();
 
-      if (eventError) {
-        console.error("Event fetch error:", eventError);
-        throw eventError;
-      }
+    if (eventError) {
+      console.error("Event fetch error:", eventError);
+      throw eventError;
+    }
 
-      if (!eventData.start_landmark_name) {
-        console.warn(`No start_landmark_name for event ${initialEvent.id_uuid}`);
-      }
+    if (!eventData.start_landmark_name) {
+      console.warn(`No start_landmark_name for event ${initialEvent.id_uuid}`);
+    }
 
-      setEvent(eventData as CyclingEvent);
-    } catch (error) {
-      console.error("Error fetching event details:", error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch event details. Please try again.",
-        variant: "destructive",
+    setEvent(eventData as CyclingEvent);
+  } catch (error) {
+    console.error("Error fetching event details:", error);
+    toast({
+      title: "Error",
+      description: "Failed to fetch event details. Please try again.",
+      variant: "destructive",
       });
     }
   };
@@ -155,17 +155,20 @@ const CyclingDetails = ({ event: initialEvent, cashout, handleCancel, loading, i
         }
 
         // Fetch wallet balance
-        const { data: walletData, error: walletError } = await supabase
-          .from("cycling_wallets")
-          .select("balance")
-          .eq("host_id", event.host_id)
-          .maybeSingle();
+const { data: walletData, error: walletError } = await supabase
+  .from("cycling_wallets")
+  .select("balance")
+  .eq("host_id", event.host_id)
+  .maybeSingle();
 
-        if (walletError) {
-          console.error("Wallet fetch error:", walletError);
-        } else if (walletData?.balance !== undefined) {
-          balance = walletData.balance;
-        }
+if (walletError) {
+  console.error("Wallet fetch error:", walletError);
+  balance = defaultBalance; // Use calculated balance
+} else if (walletData?.balance !== undefined) {
+  balance = walletData.balance;
+} else {
+  balance = defaultBalance; // No wallet found
+}
 
         if (balance < 0) balance = 0;
         setLocalWalletBalance(balance);
