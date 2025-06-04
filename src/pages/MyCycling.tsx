@@ -4,9 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Bike, Calendar, Clock, MapPin, Users, Copy } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ArrowLeft, Bike, Calendar, MapPin, Copy } from "lucide-react";
 import Navbar from "@/components/Navbar";
-import { format } from "date-fns";
+import { format, parse } from "date-fns";
 import { utcToZonedTime } from "date-fns-tz";
 import { DateTime } from "luxon";
 
@@ -136,16 +137,25 @@ const MyCycling = () => {
 
   const formatMatchDateTime = (date: string, time: string) => {
     try {
+      // Parse event_date (e.g., '2025-06-20 00:00:00+00') to extract YYYY-MM-DD
       const dateObj = new Date(date);
       if (isNaN(dateObj.getTime())) throw new Error("Invalid date");
       const dateStr = format(dateObj, "yyyy-MM-dd");
-      const isoDateTime = `${dateStr}T${time.padStart(5, "0")}:00Z`; // Ensure HH:mm format
+
+      // Parse start_time (e.g., '07:00 AM') to HH:mm format
+      const parsedTime = parse(time, "h:mm a", new Date());
+      if (isNaN(parsedTime.getTime())) throw new Error("Invalid time");
+      const timeStr = format(parsedTime, "HH:mm");
+
+      // Combine date and time for UTC parsing
+      const isoDateTime = `${dateStr}T${timeStr}:00Z`;
       const zonedDate = utcToZonedTime(new Date(isoDateTime), "Africa/Lagos");
       return {
         dateStr: format(zonedDate, "EEE, dd MMM yyyy"),
         timeStr: format(zonedDate, "h:mm a"),
       };
-    } catch {
+    } catch (err) {
+      console.error("Date/time parsing error:", err);
       return { dateStr: "Invalid Date", timeStr: "Invalid Time" };
     }
   };
@@ -155,7 +165,13 @@ const MyCycling = () => {
       const dateObj = new Date(matchDate);
       if (isNaN(dateObj.getTime())) throw new Error("Invalid date");
       const dateStr = format(dateObj, "yyyy-MM-dd");
-      const isoDateTime = `${dateStr}T${startTime.padStart(5, "0")}:00Z`;
+
+      // Parse start_time (e.g., '07:00 AM') to HH:mm
+      const parsedTime = parse(startTime, "h:mm a", new Date());
+      if (isNaN(parsedTime.getTime())) throw new Error("Invalid time");
+      const timeStr = format(parsedTime, "HH:mm");
+
+      const isoDateTime = `${dateStr}T${timeStr}:00Z`;
       const now = DateTime.now().setZone("Africa/Lagos");
       const matchDateTime = DateTime.fromISO(isoDateTime, { zone: "utc" }).setZone("Africa/Lagos");
       const endDateTime = matchDateTime.plus({ hours: 1 }); // Assume 1-hour duration
@@ -237,149 +253,156 @@ const MyCycling = () => {
 
       <div className="flex-grow overflow-y-auto">
         <div className="container mx-auto px-4 py-6">
-          <Tabs defaultValue="hosting" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 bg-gray-100 dark:bg-gray-700 rounded-t-lg">
-              <TabsTrigger
-                value="hosting"
-                className="data-[state=active]:bg-green-500 data-[state=active]:text-white"
-              >
-                Hosting
-              </TabsTrigger>
-              <TabsTrigger
-                value="cycling"
-                className="data-[state=active]:bg-green-500 data-[state=active]:text-white"
-              >
-                Cycling
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent value="hosting">
-              {hostedEvents.length > 0 ? (
-                hostedEvents.map((event) => {
-                  const { dateStr, timeStr } = formatMatchDateTime(event.event_date, event.start_time);
-                  const statusLabel = getMatchStatus(event.event_date, event.start_time);
-                  return (
-                    <div
-                      key={event.id_uuid}
-                      className="w-full p-4 mb-4 bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700"
-                    >
-                      <div className="flex justify-between items-start">
-                        <div className="space-y-2">
-                          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{event.title}</h3>
-                          <div className="flex items-center gap-2">
-                            <span className={`text-xs font-medium px-2 py-1 rounded-full ${statusLabel.className}`}>
-                              {statusLabel.text}
-                            </span>
-                          </div>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
-                            <Calendar size={16} className="mr-2" />
-                            {dateStr} at {timeStr}
-                          </p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
-                            <MapPin size={16} className="mr-2" />
-                            {event.start_landmark.name}, {event.start_landmark.state}
-                          </p>
-                          <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
-                            <span>Super Code:</span>
-                            <span className="flex items-center gap-1">
-                              <span>{event.supercode || "N/A"}</span>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => {
-                                  navigator.clipboard.writeText(event.supercode || "");
-                                  toast({
-                                    title: "Success",
-                                    description: "Super code copied!",
-                                  });
-                                }}
-                                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
-                              >
-                                <Copy size={12} />
-                              </Button>
-                            </span>
-                          </div>
-                          <p className="text-base font-medium text-gray-900 dark:text-gray-100">
-                            Slots: <span className="text-green-600 dark:text-green-400">{event.attendees.length}</span>/{event.max_attendees}
-                          </p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
-                            <Bike size={16} className="mr-2" />
-                            Organized by: {event.host_name || "Unknown"}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="mt-4 flex gap-2">
-                        <Button
-                          className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg"
-                          onClick={() => navigate(`/cycling/${event.slug}`)}
+          <Card className="w-full bg-white dark:bg-gray-800 border-none shadow-xl rounded-xl">
+            <CardHeader>
+              <CardTitle className="text-xl font-semibold text-green-700 dark:text-green-400 flex items-center">
+                <Bike className="mr-2 h-6 w-6" />
+                My Cycling
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Tabs defaultValue="hosting" className="w-full">
+                <TabsList className="grid w-full grid-cols-2 bg-gray-100 dark:bg-gray-700 rounded-t-lg">
+                  <TabsTrigger
+                    value="hosting"
+                    className="data-[state=active]:bg-green-500 data-[state=active]:text-white"
+                  >
+                    Hosting
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="cycling"
+                    className="data-[state=active]:bg-green-500 data-[state=active]:text-white"
+                  >
+                    Cycling
+                  </TabsTrigger>
+                </TabsList>
+                <TabsContent value="hosting">
+                  {hostedEvents.length > 0 ? (
+                    hostedEvents.map((event) => {
+                      const { dateStr, timeStr } = formatMatchDateTime(event.event_date, event.start_time);
+                      const statusLabel = getMatchStatus(event.event_date, event.start_time);
+                      return (
+                        <div
+                          key={event.id_uuid}
+                          className="w-full p-4 mb-4 bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700"
                         >
-                          View Details
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })
-              ) : (
-                <p className="text-sm text-gray-600 dark:text-gray-400 p-4">
-                  No hosted cycling events found.
-                </p>
-              )}
-            </TabsContent>
-            <TabsContent value="cycling">
-              {joinedEvents.length > 0 ? (
-                joinedEvents.map((event) => {
-                  const { dateStr, timeStr } = formatMatchDateTime(event.event_date, event.start_time);
-                  const statusLabel = getMatchStatus(event.event_date, event.start_time);
-                  return (
-                    <div
-                      key={event.id_uuid}
-                      className="w-full p-4 mb-4 bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700"
-                    >
-                      <div className="flex justify-between items-start">
-                        <div className="space-y-2">
-                          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{event.title}</h3>
-                          <div className="flex items-center gap-2">
-                            <span className={`text-xs font-medium px-2 py-1 rounded-full ${statusLabel.className}`}>
-                              {statusLabel.text}
-                            </span>
+                          <div className="flex justify-between items-start">
+                            <div className="space-y-2">
+                              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{event.title}</h3>
+                              <div className="flex items-center gap-2">
+                                <span className={`text-xs font-medium px-2 py-1 rounded-full ${statusLabel.className}`}>
+                                  {statusLabel.text}
+                                </span>
+                              </div>
+                              <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
+                                <Calendar size={16} className="mr-2" />
+                                {dateStr} at {timeStr}
+                              </p>
+                              <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
+                                <MapPin size={16} className="mr-2" />
+                                {event.start_landmark.name}, {event.start_landmark.state}
+                              </p>
+                              <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                                <span>Super Code:</span>
+                                <span className="flex items-center gap-1">
+                                  <span>{event.supercode || "N/A"}</span>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(event.supercode || "");
+                                      toast({
+                                        title: "Success",
+                                        description: "Super code copied!",
+                                      });
+                                    }}
+                                    className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                  >
+                                    <Copy size={12} />
+                                  </Button>
+                                </span>
+                              </div>
+                              <p className="text-base font-medium text-gray-900 dark:text-gray-100">
+                                Slots: <span className="text-green-600 dark:text-green-400">{event.attendees.length}</span>/{event.max_attendees}
+                              </p>
+                              <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
+                                <Bike size={16} className="mr-2" />
+                                Organized by: {event.host_name || "Unknown"}
+                              </p>
+                            </div>
                           </div>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
-                            <Calendar size={16} className="mr-2" />
-                            {dateStr} at {timeStr}
-                          </p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
-                            <MapPin size={16} className="mr-2" />
-                            {event.start_landmark.name}, {event.start_landmark.state}
-                          </p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
-                            Confirmation Code: {event.confirmation_code || "N/A"}
-                          </p>
-                          <p className="text-base font-medium text-gray-900 dark:text-gray-100">
-                            Slots: <span className="text-green-600 dark:text-green-400">{event.attendees.length}</span>/{event.max_attendees}
-                          </p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
-                            <Bike size={16} className="mr-2" />
-                            Organized by: {event.host_name || "Unknown"}
-                          </p>
+                          <div className="mt-4 flex gap-2">
+                            <Button
+                              className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg"
+                              onClick={() => navigate(`/cycling/${event.slug}`)}
+                            >
+                              View Details
+                            </Button>
+                          </div>
                         </div>
-                      </div>
-                      <div className="mt-4 flex gap-2">
-                        <Button
-                          className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg"
-                          onClick={() => navigate(`/cycling/${event.slug}`)}
+                      );
+                    })
+                  ) : (
+                    <p className="text-sm text-gray-600 dark:text-gray-400 p-4">
+                      No hosted cycling events found.
+                    </p>
+                  )}
+                </TabsContent>
+                <TabsContent value="cycling">
+                  {joinedEvents.length > 0 ? (
+                    joinedEvents.map((event) => {
+                      const { dateStr, timeStr } = formatMatchDateTime(event.event_date, event.start_time);
+                      const statusLabel = getMatchStatus(event.event_date, event.start_time);
+                      return (
+                        <div
+                          key={event.id_uuid}
+                          className="w-full p-4 mb-4 bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700"
                         >
-                          View Details
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })
-              ) : (
-                <p className="text-sm text-gray-600 dark:text-gray-400 p-4">
-                  No joined cycling events found.
-                </p>
-              )}
-            </TabsContent>
-          </Tabs>
+                          <div className="flex justify-between items-start">
+                            <div className="space-y-2">
+                              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{event.title}</h3>
+                              <div className="flex items-center gap-2">
+                                <span className={`text-xs font-medium px-2 py-1 rounded-full ${statusLabel.className}`}>
+                                  {statusLabel.text}
+                                </span>
+                              </div>
+                              <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
+                                <Calendar size={16} className="mr-2" />
+                                {dateStr} at {timeStr}
+                              </p>
+                              <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
+                                <MapPin size={16} className="mr-2" />
+                                {event.start_landmark.name}, {event.start_landmark.state}
+                              </p>
+                              <p className="text-sm text-gray-600 dark:text-gray-400">
+                                Confirmation Code: {event.confirmation_code || "N/A"}
+                              </p>
+                              <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
+                                <Bike size={16} className="mr-2" />
+                                Organized by: {event.host_name || "Unknown"}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="mt-4 flex gap-2">
+                            <Button
+                              className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg"
+                              onClick={() => navigate(`/cycling/${event.slug}`)}
+                            >
+                              View Details
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <p className="text-sm text-gray-600 dark:text-gray-400 p-4">
+                      No joined cycling events found.
+                    </p>
+                  )}
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
         </div>
       </div>
       <div className="pb-28">
