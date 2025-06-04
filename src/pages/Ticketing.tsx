@@ -66,7 +66,7 @@ const Ticketing = () => {
   const [submitting, setSubmitting] = useState(false);
   const [paystackLoaded, setPaystackLoaded] = useState(false);
   const [availableTickets, setAvailableTickets] = useState<number | null>(null);
-  const defaultEmail = "kolapoimam1@gmail.com";
+  const defaultEmail = "payments@sportcliq.com";
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
