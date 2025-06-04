@@ -3,22 +3,22 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
+import { supabase } from "@@/integrations/supabase/client";
+import { useToast } from "@@/hooks/use-toast";
+import { Button } from "@@/components/ui/button";
+import { Input } from "@@/components/ui/input";
+import { Checkbox } from "@@/components/ui/checkbox";
 import {
   Form,
   FormControl,
   FormField,
-  FormItem,
   FormLabel,
+  FormItem,
   FormMessage,
-} from "@/components/ui/form";
+} from "@@/components/ui/form";
 import { ArrowLeft, Calendar, Clock, MapPin, Users, Loader } from "lucide-react";
-import CyclingSuccessDialog from "@/components/CyclingSuccessDialog";
-import Navbar from "@/components/Navbar";
+import CyclingSuccessDialog from "@@/components/CyclingSuccessDialog";
+import Navbar from "./@/components/Navbar";
 
 type Landmark = {
   name: string;
@@ -66,7 +66,7 @@ const formSchema = z
     (data) => data.is_own_bike !== data.is_rental_bike,
     {
       message: "You must select exactly one option: either 'Bring Own Bike' or 'Rent a Bike'.",
-      path: ["is_rental_bike"], // Error will appear under the rental bike field
+      path: ["is_rental_bike"],
     }
   );
 
@@ -77,6 +77,7 @@ const JoinCycling = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
+  const [userId, setUserId] = useState<string | null>(null);
   const [paymentReference, setPaymentReference] = useState<string | null>(
     searchParams.get("reference") || searchParams.get("trxref")
   );
@@ -99,17 +100,28 @@ const JoinCycling = () => {
     ? `${form.getValues("phone")}@sportcliq.com`
     : "default@sportcliq.com";
 
-    useEffect(() => {
+  useEffect(() => {
     const checkAuth = async () => {
-      const { data: session } = await supabase.auth.getSession();
-      if (session.session) {
+      try {
+        const { data: session } = await supabase.auth.getSession();
+        if (!session.session) {
+          navigate('/login');
+          return;
+        }
         setUserId(session.session.user.id);
+      } catch (err: any) {
+        console.error('Auth error:', err);
+        toast({
+          title: 'Authentication Error',
+          description: 'Please log in to join an event.',
+          variant: 'destructive',
+        });
+        navigate('/login');
       }
     };
     checkAuth();
-  }, []);
-  
-  // Load Paystack script
+  }, [navigate, toast]);
+
   useEffect(() => {
     const script = document.createElement("script");
     script.src = "https://js.paystack.co/v2/inline.js";
@@ -126,7 +138,6 @@ const JoinCycling = () => {
     return () => document.body.removeChild(script);
   }, [toast]);
 
-  // Fetch event
   useEffect(() => {
     if (!slug) return;
     const fetchEvent = async () => {
@@ -170,7 +181,7 @@ const JoinCycling = () => {
         toast({
           title: 'Error',
           description: err.message || 'Failed to load event.',
-          variant: 'error',
+          variant: 'destructive',
         });
         navigate('/cycling-activities');
       } finally {
@@ -180,7 +191,6 @@ const JoinCycling = () => {
     fetchEvent();
   }, [slug, navigate, toast]);
 
-  // Verify payment with retry logic
   useEffect(() => {
     if (!paymentReference || !event?.id_uuid) return;
 
@@ -218,7 +228,7 @@ const JoinCycling = () => {
         toast({
           title: 'Payment Verification Error',
           description: 'Failed to verify your payment. Please try again or contact support.',
-          variant: 'error',
+          variant: 'destructive',
         });
       } finally {
         setVerifyingPayment(false);
@@ -233,7 +243,7 @@ const JoinCycling = () => {
       toast({
         title: 'Error',
         description: 'Event not configured for payment.',
-        variant: 'error',
+        variant: 'destructive',
       });
       return;
     }
@@ -242,17 +252,17 @@ const JoinCycling = () => {
       toast({
         title: 'Error',
         description: 'Paystack not available.',
-        variant: 'error',
+        variant: 'destructive',
       });
       return;
     }
 
-    const amountInNaira = event.price; // Send amount in naira
+    const amountInNaira = event.price;
     if (!Number.isInteger(amountInNaira * 100) || amountInNaira * 100 < 100) {
       toast({
         title: 'Invalid Amount',
         description: 'Minimum payment is ₦1.00.',
-        variant: 'error',
+        variant: 'destructive',
       });
       return;
     }
@@ -261,7 +271,7 @@ const JoinCycling = () => {
       toast({
         title: 'Invalid Email',
         description: 'Enter a valid phone number.',
-        variant: 'error',
+        variant: 'destructive',
       });
       return;
     }
@@ -272,7 +282,7 @@ const JoinCycling = () => {
       toast({
         title: 'Error',
         description: 'Invalid event configuration.',
-        variant: 'error',
+        variant: 'destructive',
       });
       return;
     }
@@ -322,7 +332,7 @@ const JoinCycling = () => {
           toast({
             title: 'Payment Cancelled',
             description: 'Payment process cancelled.',
-            variant: 'error',
+            variant: 'destructive',
           });
           setJoining(false);
         },
@@ -332,7 +342,7 @@ const JoinCycling = () => {
       toast({
         title: 'Payment Error',
         description: error.message || 'Failed to initiate payment.',
-        variant: 'error',
+        variant: 'destructive',
       });
       setJoining(false);
     }
@@ -343,7 +353,7 @@ const JoinCycling = () => {
       toast({
         title: 'Error',
         description: 'Event not loaded or invalid.',
-        variant: 'error',
+        variant: 'destructive',
       });
       return;
     }
@@ -352,8 +362,18 @@ const JoinCycling = () => {
       toast({
         title: 'Error',
         description: 'Event is full.',
-        variant: 'error',
+        variant: 'destructive',
       });
+      return;
+    }
+
+    if (!userId) {
+      toast({
+        title: 'Authentication Error',
+        description: 'Please log in to join an event.',
+        variant: 'destructive',
+      });
+      navigate('/login');
       return;
     }
 
@@ -378,9 +398,28 @@ const JoinCycling = () => {
         is_rental_bike: event.is_rental_available ? data.is_rental_bike : null,
       };
 
-      const { error } = await supabase.from('cycling_attendees').insert(attendeeData);
+      const { data: attendeeRecord, error: attendeeError } = await supabase
+        .from('cycling_attendees')
+        .insert(attendeeData)
+        .select('id_uuid')
+        .single();
 
-      if (error) throw error;
+      if (attendeeError || !attendeeRecord) {
+        throw new Error(`Failed to create attendee: ${attendeeError?.message || 'No attendee data'}`);
+      }
+
+      const { error: userJoinedError } = await supabase
+        .from('user_joined_cycling')
+        .insert({
+          user_id: userId,
+          cycling_event_id: event.id_uuid,
+          attendee_id: attendeeRecord.id_uuid,
+        });
+
+      if (userJoinedError) {
+        console.error('Error inserting into user_joined_cycling:', userJoinedError);
+        throw new Error(`Failed to record joined event: ${userJoinedError.message}`);
+      }
 
       setConfirmationCode(confirmationCode);
       setSuccessDialogOpen(true);
@@ -399,7 +438,7 @@ const JoinCycling = () => {
       toast({
         title: 'Error',
         description: error.message || 'Failed to join event.',
-        variant: 'error',
+        variant: 'destructive',
       });
     } finally {
       setJoining(false);
@@ -459,8 +498,8 @@ const JoinCycling = () => {
 
       <div className="p-6">
         <div className="bg-card rounded-lg shadow-md p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-2">{event.title}</h2>
-          <div className="text-muted-foreground mb-2 space-y-1">
+          <h2 className="text-xl font-semibold mb-4">{event.title}</h2>
+          <div className="text-muted-foreground mb-4 space-y-2">
             <div className="flex items-center gap-2">
               <Calendar size={16} />
               <span>{formatDate(event.event_date)}</span>
@@ -563,7 +602,7 @@ const JoinCycling = () => {
                                     }}
                                   />
                                 </FormControl>
-                                <label className="text-sm font-medium">Bring Own Bike</label>
+                                <FormLabel className="text-sm font-medium">Bring Own Bike</FormLabel>
                               </FormItem>
                             )}
                           />
@@ -585,7 +624,7 @@ const JoinCycling = () => {
                                     }}
                                   />
                                 </FormControl>
-                                <label className="text-sm font-medium">Rent a Bike</label>
+                                <FormLabel className="text-sm font-medium">Rent a Bike</FormLabel>
                               </FormItem>
                             )}
                           />
@@ -629,7 +668,7 @@ const JoinCycling = () => {
                               Joining...
                             </>
                           ) : (
-                            "Join Event"
+                            "Complete Registration"
                           )}
                         </Button>
                       </>
@@ -678,9 +717,9 @@ const JoinCycling = () => {
               host_name: event.host_name,
             }}
             selectedLandmark={event.start_landmark}
-            confirmationCode={confirmationCode}
+            supercode={confirmationCode}
             eventSlug={event.slug}
-            onNavigate={() => navigate(`/cycling-activities`)}
+            onNavigate={() => navigate(`/cycling/${event.slug}`)}
           />
         )}
       </div>
