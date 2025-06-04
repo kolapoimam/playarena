@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Loader, Calendar, MapPin, Clock, Users, DollarSign, Download, Volleyball, Phone, MessageSquare } from "lucide-react";
+import { ArrowLeft, Loader, Calendar, MapPin, Clock, Trophy, Users, DollarSign, Download, Volleyball, Phone, MessageSquare } from "lucide-react";
 import {
   Form,
   FormControl,
@@ -767,61 +767,29 @@ const JoinMatch = () => {
   setIsImageLoaded(false);
   if (!open) setBackgroundOption("field");
 }}>
-  <DialogContent className="w-full max-w-[90vw] sm:max-w-[500px] rounded-2xl">
-    <DialogTitle className="text-xl font-bold text-gray-800 dark:text-white">Registration Successful</DialogTitle>
-    <DialogDescription>
-      <p className="text-gray-600 dark:text-gray-300 mb-4 text-center">
+  <DialogContent className="w-full max-w-[90vw] sm:max-w-[500px] rounded-2xl p-4 sm:p-6">
+    <DialogTitle className="text-xl font-bold text-gray-800 dark:text-white text-center">Registration Successful</DialogTitle>
+    <DialogDescription className="flex flex-col items-center">
+      <p className="text-gray-600 dark:text-gray-300 mb-4 text-sm text-center max-w-xs">
         You have successfully registered for the match for {selectedSlots} slot{selectedSlots > 1 ? "s" : ""}.
       </p>
-      <div className="relative">
+      <div className="relative w-full max-w-md">
         <div className="mb-4">
           <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Background:</label>
-          <div className="flex items-center space-x-4 mt-2">
-            <label className="flex items-center space-x-2">
-              <input
-                type="radio"
-                value="field"
-                checked={backgroundOption === "field"}
-                onChange={() => setBackgroundOption("field")}
-                className="form-radio text-playarena-500"
-              />
-              <span>Default</span>
-            </label>
-            <label className="flex items-center space-x-2">
-              <input
-                type="radio"
-                value="white"
-                checked={backgroundOption === "white"}
-                onChange={() => setBackgroundOption("white")}
-                className="form-radio text-playarena-500"
-              />
-              <span>White</span>
-            </label>
-            <label className="flex items-center space-x-2">
-              <input
-                type="radio"
-                value="green"
-                checked={backgroundOption === "green"}
-                onChange={() => setBackgroundOption("green")}
-                className="form-radio text-playarena-500"
-              />
-              <span>Green</span>
-            </label>
-            <label className="flex items-center space-x-2">
-              <input
-                type="radio"
-                value="black"
-                checked={backgroundOption === "black"}
-                onChange={() => setBackgroundOption("black")}
-                className="form-radio text-playarena-500"
-              />
-              <span>Black</span>
-            </label>
-          </div>
+          <select
+            value={backgroundOption}
+            onChange={(e) => setBackgroundOption(e.target.value)}
+            className="mt-2 w-full p-2 border rounded-lg"
+          >
+            <option value="field">Default</option>
+            <option value="white">White</option>
+            <option value="green">Green</option>
+            <option value="black">Black</option>
+          </select>
         </div>
         <div 
           ref={cardRef}
-          className="relative bg-gradient-to-r from-green-500 to-green-700 rounded-lg p-6 text-white shadow-xl max-w-md mx-auto overflow-hidden border-4 border-dashed border-white/30 mt-4"
+          className="relative bg-gradient-to-r from-green-500 to-green-700 rounded-lg p-6 text-white shadow-xl mx-auto overflow-hidden border-4 border-dashed border-white/30 animate-ticket-reveal"
           style={{
             backgroundImage: backgroundOption === "field" ? "linear-gradient(45deg, rgba(255,255,255,0.1) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.1) 75%, transparent 75%, transparent)" : "",
             backgroundSize: backgroundOption === "field" ? "40px 40px" : "",
@@ -857,7 +825,12 @@ const JoinMatch = () => {
                 setIsImageLoaded(true);
               }}
             />
-            <Volleyball className={`h-6 w-6 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
+            <Trophy className={`h-6 w-6 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
+          </div>
+          <div className="flex items-center justify-around mb-4">
+            <Trophy className={`h-6 w-6 ${backgroundOption === "white" ? "text-yellow-300" : "text-yellow-100"}`} />
+            <Volleyball className={`h-6 w-6 ${backgroundOption === "white" ? "text-red-500" : "text-red-300"}`} />
+            <Medal className={`h-6 w-6 ${backgroundOption === "white" ? "text-blue-300" : "text-blue-100"}`} />
           </div>
           <h2 className={`text-2xl font-bold mb-2 tracking-tight font-condensed uppercase text-center ${backgroundOption === "white" ? "text-black" : "text-white"}`}>{match?.title}</h2>
           <div className="text-center mb-4">
@@ -872,26 +845,18 @@ const JoinMatch = () => {
           </div>
         </div>
       </div>
-      <p className="text-sm text-gray-500 dark:text-gray-400 my-4 text-center">
+      <p className="text-sm text-gray-500 dark:text-gray-400 my-4 text-center max-w-xs">
         <strong>Note:</strong> Save this card to present your confirmation code at check-in.
       </p>
-      <div className="flex justify-center gap-4 px-6 py-4">
+      <div className="flex justify-center w-full">
         <Button 
-          className="flex-1 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg px-6 py-3 shadow-sm transition-colors duration-200 border-0 max-w-xs"
+          className="bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg px-6 py-3 shadow-sm transition-colors duration-200 border-0 max-w-xs w-full sm:w-auto"
           onClick={handleDownload}
-          disabled={!isImageLoaded}
+          disabled={!isImageLoaded || isDownloading}
+          aria-label="Download registration card as image"
         >
           <Download size={16} className="mr-2" />
-          Download
-        </Button>
-        <Button 
-          className="flex-1 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg px-6 py-3 shadow-sm transition-colors duration-200 border-0 max-w-xs"
-          onClick={() => {
-            setSuccessDialogOpen(false);
-            navigate(`/match/${match.slug}`);
-          }}
-        >
-          Close
+          {isDownloading ? "Downloading..." : "Download"}
         </Button>
       </div>
     </DialogDescription>
