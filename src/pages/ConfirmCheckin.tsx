@@ -416,223 +416,223 @@ const ConfirmCheckin = () => {
     return !!match.players?.length;
   };
 
-const handleCancelEvent = async () => {
-  if (isCyclingEvent && cyclingEvent) {
-    if (cyclingEvent.cancellation_status) return;
+  const handleCancelEvent = async () => {
+    if (isCyclingEvent && cyclingEvent) {
+      if (cyclingEvent.cancellation_status) return;
 
-    const eventDateTime = new Date(`${cyclingEvent.event_date}T${cyclingEvent.start_time}`);
-    const now = new Date();
-    const timeToStartMinutes = differenceInMinutes(eventDateTime, now);
-    if (timeToStartMinutes <= 0) {
-      toast({
-        title: "Error",
-        description: "Cannot cancel event after it has started.",
-        variant: "destructive",
-      });
-      setIsCancelDialogOpen(false);
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const { error: eventError } = await supabase
-        .from("cycling_events")
-        .update({
-          status: "cancelled",
-          cancellation_status: true,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id_uuid", cyclingEvent.id_uuid);
-
-      if (eventError) throw eventError;
-
-      const { error: attendeesError } = await supabase
-        .from("cycling_attendees")
-        .update({
-          status: "canceled",
-          updated_at: new Date().toISOString(),
-        })
-        .eq("cycling_event_id_uuid", cyclingEvent.id_uuid);
-
-      if (attendeesError) throw attendeesError;
-
-      toast({
-        title: "Success",
-        description: "Cycling event canceled successfully.",
-      });
-      await fetchEvent();
-    } catch (error: any) {
-      console.error("Error cancelling cycling event:", error);
-      toast({
-        title: "Error",
-        description: "Failed to cancel cycling event. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-      setIsCancelDialogOpen(false);
-    }
-  } else if (match && !match.cancellation_status) {
-    const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
-    const now = new Date();
-    const timeToStart = differenceInMinutes(matchDateTime, now);
-    if (timeToStart <= 0) {
-      toast({
-        title: "Error",
-        description: "Cannot cancel match after it has started.",
-        variant: "destructive",
-      });
-      setIsCancelDialogOpen(false);
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const { error: matchError } = await supabase
-        .from("matches")
-        .update({
-          status: "canceled",
-          cancellation_status: true,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", match.id);
-
-      if (matchError) throw matchError;
-
-      const { error: playersError } = await supabase
-        .from("players")
-        .update({
-          status: "canceled",
-          player_status: "Absent",
-          updated_at: new Date().toISOString(),
-        })
-        .eq("match_id", match.id);
-
-      if (playersError) throw playersError;
-
-      toast({
-        title: "Success",
-        description: "Match canceled successfully.",
-      });
-      await fetchEvent();
-    } catch (error: any) {
-      console.error("Error cancelling match:", error);
-      toast({
-        title: "Error",
-        description: "Failed to cancel match.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-      setIsCancelDialogOpen(false);
-    }
+      const eventDateTime = new Date(`${cyclingEvent.event_date}T${cyclingEvent.start_time}`);
+      const now = new Date();
+      const timeToStartMinutes = differenceInMinutes(eventDateTime, now);
+      if (timeToStartMinutes <= 0) {
+        toast({
+          title: "Error",
+          description: "Cannot cancel event after it has started.",
+          variant: "destructive",
+        });
+        setIsCancelDialogOpen(false);
+        return;
       }
-    };
 
-    useEffect(() => {
-      resetState();
-      if (superCode && codeSchema.safeParse(superCode).success()) {
-        fetchEvent();
+      setLoading(true);
+      try {
+        const { error: eventError } = await supabase
+          .from("cycling_events")
+          .update({
+            status: "cancelled",
+            cancellation_status: true,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id_uuid", cyclingEvent.id_uuid);
+
+        if (eventError) throw eventError;
+
+        const { error: attendeesError } = await supabase
+          .from("cycling_attendees")
+          .update({
+            status: "canceled",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("cycling_event_id_uuid", cyclingEvent.id_uuid);
+
+        if (attendeesError) throw attendeesError;
+
+        toast({
+          title: "Success",
+          description: "Cycling event canceled successfully.",
+        });
+        await fetchEvent();
+      } catch (error: any) {
+        console.error("Error cancelling cycling event:", error);
+        toast({
+          title: "Error",
+          description: "Failed to cancel cycling event. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+        setIsCancelDialogOpen(false);
       }
-    }, [superCode, isCyclingEvent]);
+    } else if (match && !match.cancellation_status) {
+      const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
+      const now = new Date();
+      const timeToStart = differenceInMinutes(matchDateTime, now);
+      if (timeToStart <= 0) {
+        toast({
+          title: "Error",
+          description: "Cannot cancel match after it has started.",
+          variant: "destructive",
+        });
+        setIsCancelDialogOpen(false);
+        return;
+      }
 
-useEffect(() => {
-  if (isCyclingEvent && cyclingEvent?.id_uuid) {
-    const subscription = supabase
-      .channel(`attendees_cycling_${cyclingEvent?.id_uuid}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "cycling_attendees",
-          filter: `cycling_event_id_uuid=eq.${cyclingEvent?.id_uuid}`,
-        },
-        (payload) => {
-          console.log("Attendee update received", payload);
-          fetchEvent();
-        }
-      )
-      .subscribe();
+      setLoading(true);
+      try {
+        const { error: matchError } = await supabase
+          .from("matches")
+          .update({
+            status: "canceled",
+            cancellation_status: true,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", match.id);
 
-    return () => {
-      supabase.removeChannel(subscription);
-    };
-  } else if (match?.id) {
-    const subscription = supabase
-      .channel(`players_match_${match.id}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "players",
-          filter: `match_id=eq.${match.id}`,
-        },
-        (payload) => {
-          console.log("Player update received", payload);
-          fetchEvent();
-        }
-      )
-      .subscribe();
+        if (matchError) throw matchError;
 
-    return () => {
-      supabase.removeChannel(subscription);
-    };
-  }
-}, [match?.id, cyclingEvent?.id_uuid, isCyclingEvent]);
+        const { error: playersError } = await supabase
+          .from("players")
+          .update({
+            status: "canceled",
+            player_status: "Absent",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("match_id", match.id);
 
-    return (
-      <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
-        <header className="sticky top-0 z-50 dark:bg-gray-50 bg-green-500 text-white">
-          <div className="p-4 flex items-center justify-between">
-            <Button
-              variant="ghost"
-              onClick={() => navigate(-1)}
-              className="text-white hover:text-gray-300"
-            >
-              <ArrowLeft size={18} className="mr-2" />
-              Back
-            </Button>
-            <h2 className="text-xl font-bold">Manage Events</h2>
-            <div className="w-10"></div>
+        if (playersError) throw playersError;
+
+        toast({
+          title: "Success",
+          description: "Match canceled successfully.",
+        });
+        await fetchEvent();
+      } catch (error: any) {
+        console.error("Error cancelling match:", error);
+        toast({
+          title: "Error",
+          description: "Failed to cancel match.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+        setIsCancelDialogOpen(false);
+      }
+    }
+  };
+
+  useEffect(() => {
+    resetState();
+    if (superCode && codeSchema.safeParse(superCode).success) {
+      fetchEvent();
+    }
+  }, [superCode, isCyclingEvent]);
+
+  useEffect(() => {
+    if (isCyclingEvent && cyclingEvent?.id_uuid) {
+      const subscription = supabase
+        .channel(`attendees_cycling_${cyclingEvent?.id_uuid}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "cycling_attendees",
+            filter: `cycling_event_id_uuid=eq.${cyclingEvent?.id_uuid}`,
+          },
+          (payload) => {
+            console.log("Attendee update received", payload);
+            fetchEvent();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(subscription);
+      };
+    } else if (match?.id) {
+      const subscription = supabase
+        .channel(`players_match_${match.id}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "players",
+            filter: `match_id=eq.${match.id}`,
+          },
+          (payload) => {
+            console.log("Player update received", payload);
+            fetchEvent();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(subscription);
+      };
+    }
+  }, [match?.id, cyclingEvent?.id_uuid, isCyclingEvent]);
+
+  return (
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
+      <header className="sticky top-0 z-50 dark:bg-gray-50 bg-green-500 text-white">
+        <div className="p-4 flex items-center justify-between">
+          <Button
+            variant="ghost"
+            onClick={() => navigate(-1)}
+            className="text-white hover:text-gray-300"
+          >
+            <ArrowLeft size={18} className="mr-2" />
+            Back
+          </Button>
+          <h2 className="text-xl font-bold">Manage Events</h2>
+          <div className="w-10"></div>
+        </div>
+      </header>
+
+      <div className="max-w-4xl mx-auto p-4 mt-4 pb-24">
+        {superCode.length < 6 && (
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6 border border-gray-200 dark:border-gray-700">
+            <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">
+              Select Event Type
+            </h2>
+            <div className="flex gap-4">
+              <Toggle
+                pressed={!isCyclingEvent}
+                onPressedChange={() => {
+                  setIsCyclingEvent(false);
+                  setSuperCode("");
+                  resetState();
+                }}
+                className="flex-1 py-2 text-center bg-gray-100 dark:bg-gray-700 rounded-lg data-[state=on]:bg-green-500 data-[state=on]:text-white"
+              >
+                Match
+              </Toggle>
+              <Toggle
+                pressed={isCyclingEvent}
+                onPressedChange={() => {
+                  setIsCyclingEvent(true);
+                  setSuperCode("");
+                  resetState();
+                }}
+                className="flex-1 py-2 text-center bg-gray-100 dark:bg-gray-700 rounded-lg data-[state=on]:bg-green-500 data-[state=on]:text-white"
+              >
+                Cycling Event
+              </Toggle>
+            </div>
           </div>
-        </header>
+        )}
 
-        <div className="max-w-4xl mx-auto p-4 mt-4 pb-24">
-          {superCode.length < 6
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6 border border-gray-200 dark:border-gray-700">
-              <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">
-                Select Event Type
-              </h2>
-              <div className="flex gap-4">
-                <Toggle
-                  pressed={!isCyclingEvent}
-                  onPressedChange={() => {
-                    setIsCyclingEvent(false);
-                    setSuperCode("");
-                    resetState();
-                  }}
-                  className="flex-1 py-2 text-center bg-gray-100 dark:bg-gray-700 rounded-lg data-[state=on]:bg-green-500 data-[state=on]:text-white"
-                >
-                  Match
-                </Toggle>
-                <Toggle
-                  pressed={isCyclingEvent}
-                  onPressedChange={() => {
-                    setIsCyclingEvent(true);
-                    setSuperCode("");
-                    resetState();
-                  }}
-                  className="flex-1 py-2 text-center bg-gray-100 dark:bg-gray-700 rounded-lg data-[state=on]:bg-green-500 data-[state=on]:text-white"
-                >
-                  Cycling Event
-                  </Toggle>
-                );
-              </div>
-            </div>;
-
-        if (isCyclingEvent) ? (
+        {isCyclingEvent ? (
           <CyclingCodeInput
             superCode={superCode}
             setSuperCode={setSuperCode}
@@ -659,154 +659,149 @@ useEffect(() => {
             recentSuperCodes={recentSuperCodes}
             setRecentSuperCodes={setRecentSuperCodes}
             setIsCyclingEvent={setIsCyclingEvent}
-            setCyclingEvent={setCyclingSuperCode}
+            setCyclingEvent={setCyclingEvent}
           />
-        );
+        )}
 
         {loading && (
           <div className="flex items-center py-4">
             <Loader2 className="animate-spin text-green-600" size={24} />
             <span className="ml-3 text-gray-700">Loading...</span>
           </div>
-        );
+        )}
 
-        if(error && !loading && !loading (
-          error
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 text-center">
-              <AlertCircle
-                size={36}
-                className="text-red-600 dark:text-red-400 mx-auto"
-              />
-              <h2 className="text-lg font-semibold text-red-600 dark:text-red-400">
-                Error
-              </h2>
-              <p className="mt-2 text-gray-500 dark:text-gray-400">{error}</p>
-            </div>
-        );
+        {error && !loading && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 text-center">
+            <AlertCircle
+              size={36}
+              className="text-red-600 dark:text-red-400 mx-auto"
+            />
+            <h2 className="text-lg font-semibold text-red-600 dark:text-red-400">
+              Error
+            </h2>
+            <p className="mt-2 text-gray-500 dark:text-gray-400">{error}</p>
+          </div>
+        )}
 
-        if(eventNotFound && !loading && !error && (
+        {eventNotFound && !loading && !error && (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-4">
             <AlertCircle
               size={36}
               className="text-red-400 dark:text-red-400 mx-auto"
             />
-            <h2
-              className="text-lg font-semibold text-center text-red-600 dark:text-red-400"
-            >
+            <h2 className="text-lg font-semibold text-center text-red-600 dark:text-red-400">
               Event Not Found
             </h2>
             <p className="mt-2 text-center text-gray-600 dark:text-gray-400">
               No {isCyclingEvent ? "cycling event" : "match"} found with super code "
-              <strong>{superCode}</strong>.
+              <strong>{superCode}</strong>".
             </p>
           </div>
-        );
+        )}
 
         {(match || cyclingEvent) && !error && (
           <Tabs defaultValue="details" className="w-full">
             <div className="sticky top-16 z-10 bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
-              <TabsList
-                className="w-full grid grid-cols-3 bg-gray-100 dark:bg-gray-700 rounded-lg h-12">
-                  <TabsTrigger
-                    value="details"
-                    className="data-[state=active]:bg-green-500 data-[state=active]:text-white py-2 text-sm font-semibold rounded-lg"
-                  >
-                    Details
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="manage"
-                    className="data-[state=active]:bg-green-500 data-[state=active]:text-white py-2 text-sm font-semibold rounded-lg"
-                  >
-                    Manage
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="cashout"
-                    className="data-[state=active]:bg-green-500 data-[state=active]:text-white py-2 text-sm "
-                  >
-                    Cashout
-                  </TabsTrigger>
-                </TabsList>
+              <TabsList className="w-full grid grid-cols-3 bg-gray-100 dark:bg-gray-700 rounded-lg h-12">
+                <TabsTrigger
+                  value="details"
+                  className="data-[state=active]:bg-green-500 data-[state=active]:text-white py-2 text-sm font-semibold rounded-lg"
+                >
+                  Details
+                </TabsTrigger>
+                <TabsTrigger
+                  value="manage"
+                  className="data-[state=active]:bg-green-500 data-[state=active]:text-white py-2 text-sm font-semibold rounded-lg"
+                >
+                  Manage
+                </TabsTrigger>
+                <TabsTrigger
+                  value="cashout"
+                  className="data-[state=active]:bg-green-500 data-[state=active]:text-white py-2 text-sm"
+                >
+                  Cashout
+                </TabsTrigger>
+              </TabsList>
+            </div>
+            <TabsContent value="details" className="mt-0 pb-8">
+              <div className="max-w-4xl mx-auto">
+                {isCyclingEvent ? (
+                  <CyclingDetails
+                    event={cyclingEvent}
+                    cashout={cashout}
+                    handleCancel={() => setIsCancelDialogOpen(true)}
+                    loading={loading}
+                    eventPast={isEventPast()}
+                    walletBalance={walletBalance}
+                  />
+                ) : (
+                  <MatchDetails
+                    match={match}
+                    cashout={cashout}
+                    handleCancel={() => setIsCancelDialogOpen(true)}
+                    loading={loading}
+                    isMatchPast={isEventPast()}
+                  />
+                )}
               </div>
-              <TabsContent value="details" className="mt-0 pb-8">
-                <div className="max-w-4xl mx-auto">
-                  {isCyclingEvent ? (
-                    <CyclingDetails
-                      event={cyclingEvent}
-                      cashout={cashout}
-                      handleCancel={() => setIsCancelDialogOpen(true)}
-                      loading={loading}
-                      eventPast={isEventPast()}
-                      walletBalance={walletBalance}
-                    />
-                  ) : (
-                    <MatchDetails
-                      match={match}
-                      cashout={cashout}
-                      handleCancel={() => setMatchIsCancelDialogOpen(true)}
-                      loading={loading}
-                      isMatchPast={isEventPast()}
-                    />
-                  )}
-                </div>
-              </TabsContent>
-              <TabsContent value="manage" className="mt-0">
-                <div className="max-w-4xl mx-auto">
-                  {isCyclingEvent ? (
-                    <AttendeesManagement
-                      event={cyclingEvent}
-                      tempIdentifier={tempIdentifier}
-                      attendeeStatuses={playerStatuses}
-                      setAttendeeStatuses={setPlayerStatuses}
-                      checkinCodes={checkinCodes}
-                      setCheckinCodes={setCheckinCodes}
-                      checkinCodeErrors={checkinCodeErrors}
-                      setCheckinCodeErrors={setCheckinCodeErrors}
-                      fetchEvent={fetchEvent}
-                      loading={loading}
-                      setLoading={setLoading}
-                      isEventPast={isEventPast()}
-                      canConfirmAttendees={canConfirmAttendees()}
-                      navigate={navigate}
-                    />
-                  ) : (
-                    <PlayerManagement
-                      match={match}
-                      tempIdentifier={tempIdentifier}
-                      playerStatuses={playerStatuses}
-                      setPlayerStatuses={setPlayerStatuses}
-                      checkinCodes={checkinCodes}
-                      setCheckinCodes={setCheckinCodes}
-                      checkinCodeErrors={checkinCodeErrors}
-                      setCheckinCodeErrors={setCheckinCodeErrors}
-                      fetchMatch={fetchEvent}
-                      loading={loading}
-                      setLoading={setLoading}
-                      isMatchPast={isEventPast()}
-                      canConfirmPlayers={canConfirmAttendees()}
-                      handleCancelMatch={() => setIsCancelDialogOpen(true)}
-                      navigate={navigate}
-                    />
-                  )}
-                </div>
-              </TabsContent>
-              <TabsContent value="cashout" className="mt-0">
-                <div className="max-w-4xl mx-auto">
-                  {isCyclingEvent ? (
-                    <HostCashout
-                      event={cyclingEvent}
-                      tempIdentifier={tempIdentifier}
-                    />
-                  ) : (
-                    <OrganizerCashout
-                      match={match}
-                      tempIdentifier={tempIdentifier}
-                    />
-                  )}
-                </div>
-              </TabsContent>
-            </Tabs>
-          )
-        );
+            </TabsContent>
+            <TabsContent value="manage" className="mt-0">
+              <div className="max-w-4xl mx-auto">
+                {isCyclingEvent ? (
+                  <AttendeesManagement
+                    event={cyclingEvent}
+                    tempIdentifier={tempIdentifier}
+                    attendeeStatuses={playerStatuses}
+                    setAttendeeStatuses={setPlayerStatuses}
+                    checkinCodes={checkinCodes}
+                    setCheckinCodes={setCheckinCodes}
+                    checkinCodeErrors={checkinCodeErrors}
+                    setCheckinCodeErrors={setCheckinCodeErrors}
+                    fetchEvent={fetchEvent}
+                    loading={loading}
+                    setLoading={setLoading}
+                    isEventPast={isEventPast()}
+                    canConfirmAttendees={canConfirmAttendees()}
+                    navigate={navigate}
+                  />
+                ) : (
+                  <PlayerManagement
+                    match={match}
+                    tempIdentifier={tempIdentifier}
+                    playerStatuses={playerStatuses}
+                    setPlayerStatuses={setPlayerStatuses}
+                    checkinCodes={checkinCodes}
+                    setCheckinCodes={setCheckinCodes}
+                    checkinCodeErrors={checkinCodeErrors}
+                    setCheckinCodeErrors={setCheckinCodeErrors}
+                    fetchMatch={fetchEvent}
+                    loading={loading}
+                    setLoading={setLoading}
+                    isMatchPast={isEventPast()}
+                    canConfirmPlayers={canConfirmAttendees()}
+                    handleCancelMatch={() => setIsCancelDialogOpen(true)}
+                    navigate={navigate}
+                  />
+                )}
+              </div>
+            </TabsContent>
+            <TabsContent value="cashout" className="mt-0">
+              <div className="max-w-4xl mx-auto">
+                {isCyclingEvent ? (
+                  <HostCashout
+                    event={cyclingEvent}
+                    tempIdentifier={tempIdentifier}
+                  />
+                ) : (
+                  <OrganizerCashout
+                    match={match}
+                    tempIdentifier={tempIdentifier}
+                  />
+                )}
+              </div>
+            </TabsContent>
+          </Tabs>
+        )}
 
         <Dialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
           <DialogContent className="max-w-sm rounded-2xl p-6">
