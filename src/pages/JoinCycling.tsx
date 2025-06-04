@@ -207,7 +207,7 @@ useEffect(() => {
             } else {
               throw new Error('Payment verification failed: Invalid payment details');
             }
-          } catch (err) (error: any) {
+} catch (error: any) {
             console.error(`Verification attempt ${attempt} failed: ${error.message}. Retrying...`);
             if (attempt === retries) {
               throw error;
