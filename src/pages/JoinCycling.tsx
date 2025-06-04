@@ -52,15 +52,23 @@ type CyclingEvent = {
 
 type PaymentStatus = "pending" | "success" | "failed";
 
-const formSchema = z.object({
-  name: z
-    .string()
-    .min(3, "Name must be at least 3 characters")
-    .max(50, "Name cannot exceed 50 characters"),
-  phone: z.string().regex(/^[0-9]{11}$/, "Phone number must be exactly 11 digits"),
-  is_own_bike: z.boolean().optional(),
-  is_rental_bike: z.boolean().optional(),
-});
+const formSchema = z
+  .object({
+    name: z
+      .string()
+      .min(3, "Name must be at least 3 characters")
+      .max(50, "Name cannot exceed 50 characters"),
+    phone: z.string().regex(/^[0-9]{11}$/, "Phone number must be exactly 11 digits"),
+    is_own_bike: z.boolean().optional(),
+    is_rental_bike: z.boolean().optional(),
+  })
+  .refine(
+    (data) => data.is_own_bike !== data.is_rental_bike,
+    {
+      message: "You must select exactly one option: either 'Bring Own Bike' or 'Rent a Bike'.",
+      path: ["is_rental_bike"], // Error will appear under the rental bike field
+    }
+  );
 
 type FormValues = z.infer<typeof formSchema>;
 
@@ -145,9 +153,9 @@ const JoinCycling = () => {
         const { data: attendeesData, error: attendeesError } = await supabase
           .from("cycling_attendees")
           .select("id_uuid, attendee_name, attendee_phone, confirmation_code, payment_status, cycling_event_id_uuid")
-          .eq("cycling_attendee_id_uuid", data.id_uuid);
+          .eq("cycling_event_id_uuid", data.id_uuid);
         if (!attendeesError) setAttendees(attendeesData || []);
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error:', err);
         toast({
           title: 'Error',
@@ -159,56 +167,56 @@ const JoinCycling = () => {
         setLoading(false);
       }
     };
-    fetchEvent(event);
-  }, []);
+    fetchEvent();
+  }, [slug, navigate, toast]);
 
   // Verify payment with retry logic
- useEffect(() => {
-  if (!paymentReference || !event?.id_uuid) return;
+  useEffect(() => {
+    if (!paymentReference || !event?.id_uuid) return;
 
-  const verifyPayment = async (retries = 3, delay = 1000) => {
-    setVerifyingPayment(true);
-    try {
-      for (let attempt = 1; attempt <= retries; attempt++) {
-        try {
-          const { data, error } = await supabase.functions.invoke('verify-paystack-transaction', {
-            body: { reference: paymentReference },
-          });
-          if (error) throw error;
-          const { verified, event_id, slug: resourceSlug } = data;
-          if (verified && event_id === event.id_uuid && resourceSlug === event.slug) {
-            setPaymentStatus('success');
-            toast({
-              title: 'Payment Successful',
-              description: 'Your payment was processed successfully. Please complete your registration.',
+    const verifyPayment = async (retries = 3, delay = 1000) => {
+      setVerifyingPayment(true);
+      try {
+        for (let attempt = 1; attempt <= retries; attempt++) {
+          try {
+            const { data, error } = await supabase.functions.invoke('verify-paystack-transaction', {
+              body: { reference: paymentReference },
             });
-            return;
-          } else {
-            throw new Error('Payment verification failed: Invalid payment details');
+            if (error) throw error;
+            const { verified, event_id, slug: resourceSlug } = data;
+            if (verified && event_id === event.id_uuid && resourceSlug === event.slug) {
+              setPaymentStatus('success');
+              toast({
+                title: 'Payment Successful',
+                description: 'Your payment was processed successfully. Please complete your registration.',
+              });
+              return;
+            } else {
+              throw new Error('Payment verification failed: Invalid payment details');
+            }
+          } catch (error: any) {
+            if (attempt === retries) {
+              throw error;
+            }
+            console.warn(`Verification attempt ${attempt} failed: ${error.message}. Retrying...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
           }
-        } catch (error) {
-          if (attempt === retries) {
-            throw error;
-          }
-          console.warn(`Verification attempt ${attempt} failed: ${error.message}. Retrying...`);
-          await new Promise(resolve => setTimeout(resolve, delay));
         }
+      } catch (error: any) {
+        console.error('Error verifying payment:', error.message);
+        setPaymentStatus('failed');
+        toast({
+          title: 'Payment Verification Error',
+          description: 'Failed to verify your payment. Please try again or contact support.',
+          variant: 'error',
+        });
+      } finally {
+        setVerifyingPayment(false);
       }
-    } catch (error) {
-      console.error('Error verifying payment:', error.message);
-      setPaymentStatus('failed');
-      toast({
-        title: 'Payment Verification Error',
-        description: 'Failed to verify your payment. Please try again or contact support.',
-        variant: 'error',
-      });
-    } finally {
-      setVerifyingPayment(false);
-    }
-  };
+    };
 
-  verifyPayment();
-}, [paymentReference, event, toast]);
+    verifyPayment();
+  }, [paymentReference, event, toast]);
 
   const handlePaymentInitiation = async () => {
     if (!event || event.is_free || !event.price) {
@@ -309,7 +317,7 @@ const JoinCycling = () => {
           setJoining(false);
         },
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error initiating payment:', error);
       toast({
         title: 'Payment Error',
@@ -376,7 +384,7 @@ const JoinCycling = () => {
         .select('id_uuid, attendee_name, attendee_phone, confirmation_code, payment_status, cycling_event_id_uuid')
         .eq('cycling_event_id_uuid', event.id_uuid);
       if (updatedAttendees) setAttendees(updatedAttendees);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error joining event:', error);
       toast({
         title: 'Error',
@@ -537,7 +545,12 @@ const JoinCycling = () => {
                                 <FormControl>
                                   <Checkbox
                                     checked={field.value}
-                                    onCheckedChange={field.onChange}
+                                    onCheckedChange={(checked) => {
+                                      field.onChange(checked);
+                                      if (checked) {
+                                        form.setValue("is_rental_bike", false);
+                                      }
+                                    }}
                                   />
                                 </FormControl>
                                 <label className="text-sm font-medium">Bring Own Bike</label>
@@ -554,7 +567,12 @@ const JoinCycling = () => {
                                 <FormControl>
                                   <Checkbox
                                     checked={field.value}
-                                    onCheckedChange={field.onChange}
+                                    onCheckedChange={(checked) => {
+                                      field.onChange(checked);
+                                      if (checked) {
+                                        form.setValue("is_own_bike", false);
+                                      }
+                                    }}
                                   />
                                 </FormControl>
                                 <label className="text-sm font-medium">Rent a Bike</label>
@@ -562,6 +580,7 @@ const JoinCycling = () => {
                             )}
                           />
                         )}
+                        <FormMessage className="text-red-500" />
                       </div>
                     )}
                     {event.is_free && (
