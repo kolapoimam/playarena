@@ -21,6 +21,7 @@ type CyclingEvent = {
   is_free: boolean;
   price?: number;
   cancellation_status: boolean;
+  start_landmark_name: string;
   status: string;
   start_landmark_id: string;
   duration_type: string;
