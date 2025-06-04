@@ -148,7 +148,7 @@ const MatchDetailsDialogue: React.FC<MatchDetailsDialogueProps> = ({ match }) =>
     const url = `${window.location.origin}/match/${match.slug}`;
     const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
     const shareText = `Join my Football Match: ${match.title} at ${match.venue?.name || 'unknown venue'} on ${formatDate(match.match_date)} by ${formatTime(match.match_time)}. ${totalPlayerSlots}/${match.total_slots} slots. Powered by Sport Cliq. ${match.is_private ? ` (Access Password: ${match.access_password})` : ''}`;
-    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(shareText)}`;
+    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}"e=${encodeURIComponent(shareText)}`;
     window.open(facebookUrl, '_blank');
   };
 
@@ -246,108 +246,96 @@ const MatchDetailsDialogue: React.FC<MatchDetailsDialogueProps> = ({ match }) =>
         setIsImageLoaded(false);
         if (!open) setBackgroundColor('#4CAF50');
       }}>
-        <DialogContent className="w-full max-w-[90vw] sm:max-w-[500px] rounded-2xl">
-          <DialogTitle className="text-xl font-bold text-gray-800 dark:text-white">Match Details</DialogTitle>
-          <DialogDescription>
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Match Details</h2>
-              <p className="text-gray-600 dark:text-gray-300 mb-4 text-sm text-center">
-                Your match details are ready. Save or share this card to invite players.
-              </p>
-              <div className="relative">
-                <div
-                  ref={cardRef}
-                  className="relative bg-gradient-to-r from-green-500 to-green-700 rounded-lg p-6 text-white shadow-xl max-w-md mx-auto overflow-hidden border-4 border-dashed border-white/30 animate-ticket-reveal"
-                  style={{
-                    backgroundImage: 'linear-gradient(45deg, rgba(255,255,255,0.1) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.1) 75%, transparent 75%, transparent)',
-                    backgroundSize: '40px 40px',
-                    clipPath: 'polygon(10% 0%, 90% 0%, 100% 10%, 100% 90%, 90% 100%, 10% 100%, 0% 90%, 0% 10%)',
-                    backgroundColor: backgroundColor,
-                  }}
-                >
-                  {/* Perforated Edge Semi-Circles */}
-                  <div className="absolute top-0 left-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '20%' }} />
-                  <div className="absolute top-0 left-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '50%' }} />
-                  <div className="absolute top-0 left-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '80%' }} />
-                  <div className="absolute top-0 right-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '20%' }} />
-                  <div className="absolute top-0 right-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '50%' }} />
-                  <div className="absolute top-0 right-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '80%' }} />
+        <DialogContent className="w-full max-w-[90vw] sm:max-w-[500px] rounded-2xl p-4 sm:p-6">
+          <DialogTitle className="text-xl font-bold text-gray-800 dark:text-white text-center">Match Details</DialogTitle>
+          <DialogDescription className="flex flex-col items-center">
+            <p className="text-gray-600 dark:text-gray-300 mb-4 text-center max-w-xs">
+              Your match details are ready. Save or share this card to invite players.
+            </p>
+            <div className="relative w-full max-w-md">
+              <div
+                ref={cardRef}
+                className="relative bg-gradient-to-r from-purple-500 to-purple-700 rounded-lg p-6 text-white shadow-xl mx-auto overflow-hidden border-4 border-dashed border-white/30 animate-ticket-reveal"
+                style={{
+                  backgroundImage: 'linear-gradient(45deg, rgba(255,255,255,0.1) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.1) 75%, transparent 75%, transparent)',
+                  backgroundSize: '40px 40px',
+                  clipPath: 'polygon(10% 0%, 90% 0%, 100% 10%, 100% 90%, 90% 100%, 10% 100%, 0% 90%, 0% 10%)',
+                  backgroundColor: backgroundColor,
+                }}
+              >
+                {/* Perforated Edge Semi-Circles */}
+                <div className="absolute top-0 left-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '20%' }} />
+                <div className="absolute top-0 left-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '50%' }} />
+                <div className="absolute top-0 left-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '80%' }} />
+                <div className="absolute top-0 right-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '20%' }} />
+                <div className="absolute top-0 right-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '50%' }} />
+                <div className="absolute top-0 right-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '80%' }} />
 
-                  {/* Ticket Content */}
-                  <div className="flex items-center justify-between mb-4">
-                    <img 
-                      src={logoSrc}
-                      alt="PlayArena Logo" 
-                      className="h-10 w-auto"
-                      crossOrigin="anonymous"
-                      onLoad={handleImageLoad}
-                      onError={() => {
-                        toast({
-                          title: "Error",
-                          description: "Failed to load logo image.",
-                          variant: "destructive",
-                        });
-                        setIsImageLoaded(true);
-                      }}
-                    />
-                    <Trophy className="h-6 w-6" />
-                  </div>
-                  <div className="flex items-center justify-around mb-4">
-                    <Trophy className="h-6 w-6 text-yellow-300" />
-                    <Volleyball className="h-6 w-6 text-red-500" />
-                    <Medal className="h-6 w-6 text-blue-300" />
-                  </div>
-                  <h2 className="text-2xl font-bold mb-2 tracking-tight font-condensed uppercase text-center">{match.title}</h2>
-                  <div className="text-center mb-4">
-                    <p className="text-sm"><MapPin className="inline h-4 w-4 mr-1" /> {match.venue?.name || "Venue"}, {match.venue?.city || ""}</p>
-                    <p className="text-sm"><Calendar className="inline h-4 w-4 mr-1" /> {formatDate(match.match_date)} at {formatTime(match.match_time)}</p>
-                    <p className="text-sm"><DollarSign className="inline h-4 w-4 mr-1" /> {match.is_paid ? `Paid (₦${match.price?.toFixed(2)})` : "Free"}</p>
-                    <p className="text-sm"><Users className="inline h-4 w-4 mr-1" /> {totalPlayerSlots}/{match.total_slots} slots booked</p>
-                    {match.is_private && (
-                      <div className="bg-white text-green-600 rounded-md p-4 text-center shadow-inner">
-                        <p className="text-sm font-medium uppercase tracking-wide">Access Password</p>
-                        <p className="text-4xl font-bold tracking-wider mt-1 font-mono">{match.access_password || "N/A"}</p>
-                      </div>
-                    )}
-                  </div>
+                {/* Ticket Content */}
+                <div className="flex items-center justify-between mb-4">
+                  <img 
+                    src={logoSrc}
+                    alt="PlayArena Logo" 
+                    className="h-10 w-auto"
+                    crossOrigin="anonymous"
+                    onLoad={handleImageLoad}
+                    onError={() => {
+                      toast({
+                        title: "Error",
+                        description: "Failed to load logo image.",
+                        variant: "destructive",
+                      });
+                      setIsImageLoaded(true);
+                    }}
+                  />
+                  <Trophy className="h-6 w-6" />
                 </div>
-                <select
-                  value={backgroundColor}
-                  onChange={(e) => setBackgroundColor(e.target.value)}
-                  className="mt-4 w-full p-2 border rounded-lg"
-                >
-                  <option value="#4CAF50">Green</option>
-                  <option value="#FF5722">Orange</option>
-                  <option value="#2196F3">Blue</option>
-                  <option value="#9C27B0">Purple</option>
-                  <option value="#000000">Black</option>
-                </select>
+                <div className="flex items-center justify-around mb-4">
+                  <Trophy className="h-6 w-6 text-yellow-300" />
+                  <Volleyball className="h-6 w-6 text-red-500" />
+                  <Medal className="h-6 w-6 text-blue-300" />
+                </div>
+                <h2 className="text-2xl font-bold mb-2 tracking-tight font-condensed uppercase text-center">{match.title}</h2>
+                <div className="text-center mb-4">
+                  <p className="text-sm"><MapPin className="inline h-4 w-4 mr-1" /> {match.venue?.name || "Venue"}, {match.venue?.city || ""}</p>
+                  <p className="text-sm"><Calendar className="inline h-4 w-4 mr-1" /> {formatDate(match.match_date)} at {formatTime(match.match_time)}</p>
+                  <p className="text-sm"><DollarSign className="inline h-4 w-4 mr-1" /> {match.is_paid ? `Paid (₦${match.price?.toFixed(2)})` : "Free"}</p>
+                  <p className="text-sm"><Users className="inline h-4 w-4 mr-1" /> {totalPlayerSlots}/{match.total_slots} slots booked</p>
+                  {match.is_private && (
+                    <div className="bg-white text-green-600 rounded-md p-4 text-center shadow-inner">
+                      <p className="text-sm font-medium uppercase tracking-wide">Access Password</p>
+                      <p className="text-4xl font-bold tracking-wider mt-1 font-mono">{match.access_password || "N/A"}</p>
+                    </div>
+                  )}
+                </div>
               </div>
-              <p className="text-sm text-gray-500 dark:text-gray-400 my-4 text-center">
-                <strong>Note:</strong> Save or download this card to share match details with friends.
-              </p>
-              <div className="flex justify-center gap-4 px-6 py-4">
-                <Button 
-                  className="flex-1 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg px-6 py-3 shadow-sm transition-colors duration-200 border-0 max-w-xs"
-                  onClick={handleDownload}
-                  disabled={!isImageLoaded || isDownloading}
-                  aria-label="Download match card as PDF"
-                >
-                  <Download size={16} className="mr-2" />
-                  {isDownloading ? "Downloading..." : "Download"}
-                </Button>
-                <Button 
-                  className="flex-1 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg px-6 py-3 shadow-sm transition-colors duration-200 border-0 max-w-xs"
-                  onClick={handleShare}
-                  disabled={isDownloading}
-                  aria-label="Share match card"
-                >
-                  <Share2 size={16} className="mr-2" />
-                  Share
-                </Button>
-              </div>
+              <select
+                value={backgroundColor}
+                onChange={(e) => setBackgroundColor(e.target.value)}
+                className="mt-4 w-full p-2 border rounded-lg"
+              >
+                <option value="#4CAF50">Green</option>
+                <option value="#FF5722">Orange</option>
+                <option value="#2196F3">Blue</option>
+                <option value="#9C27B0">Purple</option>
+                <option value="#000000">Black</option>
+              </select>
             </div>
-            <div className="flex justify-center">
+            <p className="text-sm text-gray-500 dark:text-gray-400 my-4 text-center max-w-xs">
+              <strong>Note:</strong> Save or download this card to share match details with friends.
+            </p>
+            <div className="flex justify-center w-full">
+              <Button 
+                className="bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg px-6 py-3 shadow-sm transition-colors duration-200 border-0 max-w-xs w-full sm:w-auto"
+                onClick={handleDownload}
+                disabled={!isImageLoaded || isDownloading}
+                aria-label="Download match card as PDF"
+              >
+                <Download size={16} className="mr-2" />
+                {isDownloading ? "Downloading..." : "Download"}
+              </Button>
+            </div>
+            <div className="flex justify-center mt-4">
               <Button 
                 className="bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 transition-colors"
                 onClick={() => setDownloadDialogOpen(false)}
