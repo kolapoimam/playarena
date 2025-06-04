@@ -416,117 +416,116 @@ const ConfirmCheckin = () => {
     return !!match.players?.length;
   };
 
-  const handleCancelEvent = async () => {
-    if (isCyclingEvent && cyclingEvent) {
-      if (cyclingEvent.cancellation_status) return;
+const handleCancelEvent = async () => {
+  if (isCyclingEvent && cyclingEvent) {
+    if (cyclingEvent.cancellation_status) return;
 
-      const eventDateTime = new Date(`${cyclingEvent.event_date}T${cyclingEvent.start_time}`);
-      const now = new Date();
-      const timeToStartMinutes = differenceInMinutes(eventDateTime, now);
-      if (timeToStartMinutes <= 0) {
-        toast({
-          title: "Error",
-          description: "Cannot cancel event after it has started.",
-          variant: "destructive",
-        });
-        setIsCancelDialogOpen(false);
-        return;
-      }
+    const eventDateTime = new Date(`${cyclingEvent.event_date}T${cyclingEvent.start_time}`);
+    const now = new Date();
+    const timeToStartMinutes = differenceInMinutes(eventDateTime, now);
+    if (timeToStartMinutes <= 0) {
+      toast({
+        title: "Error",
+        description: "Cannot cancel event after it has started.",
+        variant: "destructive",
+      });
+      setIsCancelDialogOpen(false);
+      return;
+    }
 
-      setLoading(true);
-      try {
-        const { error: eventError } = await supabase
-          .from("cycling_events")
-          .update({
-            status: "cancelled",
-            cancellation_status: true,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", cyclingEvent.id_uuid);
+    setLoading(true);
+    try {
+      const { error: eventError } = await supabase
+        .from("cycling_events")
+        .update({
+          status: "cancelled",
+          cancellation_status: true,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id_uuid", cyclingEvent.id_uuid);
 
-        if (eventError) throw eventError;
+      if (eventError) throw eventError;
 
-        const { error: attendeesError } = await supabase
-          .from("cycling_attendees")
-          .update({
-            status: "canceled",
-            updated_at: new Date().toISOString(),
-          })
-            .eq("event_id", cyclingEvent.id_uuid);
+      const { error: attendeesError } = await supabase
+        .from("cycling_attendees")
+        .update({
+          status: "canceled",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("cycling_event_id_uuid", cyclingEvent.id_uuid);
 
-        if (attendeesError) throw attendeesError;
+      if (attendeesError) throw attendeesError;
 
-        toast({
-          title: "Success",
-          description: "Cycling event canceled successfully.",
-          setSuccess
-        );
-        await fetchEvent();
-      } catch (error: any) {
-          console.error("Error cancelling cycling event:", error);
-          toast({
-            title:="Error",
-            description: "Failed to cancel cycling event. Please try again.",
-            variant:="destructive"
-          });
-        } finally {
-          setLoading(false);
-          setIsCancelDialogOpen(false);
-        }
-      } else if (match && !match.cancellation_status) {
-        const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
-        const now = new Date();
-        const timeToStartMinutes = differenceInMinutes(matchDateTime, now);
-        if (timeToStartMinutes <= 0) {
-          toast({
-            title: "Error",
-            description: "Cannot cancel match after it has started.",
-            variant: "destructive",
-          });
-          setIsCancelDialogOpen(false);
-          return;
-        }
+      toast({
+        title: "Success",
+        description: "Cycling event canceled successfully.",
+      });
+      await fetchEvent();
+    } catch (error: any) {
+      console.error("Error cancelling cycling event:", error);
+      toast({
+        title: "Error",
+        description: "Failed to cancel cycling event. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+      setIsCancelDialogOpen(false);
+    }
+  } else if (match && !match.cancellation_status) {
+    const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
+    const now = new Date();
+    const timeToStartMinutes = differenceInMinutes(matchDateTime, now);
+    if (timeToStartMinutes <= 0) {
+      toast({
+        title: "Error",
+        description: "Cannot cancel match after it has started.",
+        variant: "destructive",
+      });
+      setIsCancelDialogOpen(false);
+      return;
+    }
 
-        setLoading(true);
-        try {
-          .catchconst { error: matchError } = await supabase
-            .from("matches")
-            .update({
-              status:="canceled",
-              cancellation_status: true,              updated_at
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", match.id);
+    setLoading(true);
+    try {
+      const { error: matchError } = await supabase
+        .from("matches")
+        .update({
+          status: "canceled",
+          cancellation_status: true,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", match.id);
 
-          if (matchError) throw matchError;
+      if (matchError) throw matchError;
 
-          const { error: playersError } = await supabase
-            .from("players")
-            .update({
-              status:="canceled",
-              player_status:="Absent",
-              updated_at: new Date().toISOString(),
-            })
-            .eq("match_id", match.id);
+      const { error: playersError } = await supabase
+        .from("players")
+        .update({
+          status: "canceled",
+          player_status: "Absent",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("match_id", match.id);
 
-          if (playersError) throw playersError;
+      if (playersError) throw playersError;
 
-          toast({
-            title: "Success",
-            description: to"Match canceled successfully.",
-          });
-          await fetchEvent();
-        } catch (error: any) {
-          console.error("Error cancelling match:", error);
-          toast({
-            title: "Error",
-            description: "Failed to cancel match.",
-            variant: "destructive",
-          });
-        } finally {
-          setLoading(false);
-          setIsCancelDialogOpen(false);
-        }
+      toast({
+        title: "Success",
+        description: "Match canceled successfully.",
+      });
+      await fetchEvent();
+    } catch (error: any) {
+      console.error("Error cancelling match:", error);
+      toast({
+        title: "Error",
+        description: "Failed to cancel match.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+      setIsCancelDialogOpen(false);
+    }
       }
     };
 
