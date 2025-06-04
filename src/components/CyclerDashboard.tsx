@@ -54,15 +54,15 @@ const CyclerDashboard = ({ profile }: CyclerDashboardProps) => {
       .select("id_uuid, created_at, start_landmark_id", { count: "exact" })
       .eq("host_id", userId);
 
-    let attendeesQuery = supabase
-      .from("user_joined_cycling")
-      .select(`
-        id,
-        created_at,
-        attendee_id,
-        cycling_attendees(id, cycling_event_id_uuid, confirmation_code, status)
-      `)
-      .eq("user_id", userId);
+let attendeesQuery = supabase
+  .from("user_joined_cycling")
+  .select(`
+    id,
+    created_at,
+    attendee_id,
+    cycling_attendees(id_uuid, cycling_event_id_uuid, confirmation_code, status)
+  `)
+  .eq("user_id", userId);
 
     let cashoutsQuery = supabase
       .from("cycling_cashouts")
@@ -129,9 +129,9 @@ const CyclerDashboard = ({ profile }: CyclerDashboardProps) => {
       }
 
       // Extract attendees data
-      const attendeesData = joinedData
-        ?.map((item) => item.cycling_attendees)
-        .filter((attendee) => attendee !== null) || [];
+const attendeesData = joinedData
+  ?.map((item) => item.cycling_attendees)
+  .filter((attendee) => attendee !== null) || [];
 
       // Calculate total spent by joining attendees with events
       let totalSpent = 0;
