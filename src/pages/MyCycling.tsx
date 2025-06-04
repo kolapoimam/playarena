@@ -24,7 +24,7 @@ type CyclingEvent = {
   max_attendees: number;
   attendees: { id_uuid: string }[];
   start_landmark: Landmark;
-  supercode?: string; // Changed from super_code to supercode
+  supercode?: string;
   host_name?: string;
   confirmation_code?: string;
 };
@@ -74,7 +74,7 @@ const MyCycling = () => {
               event_date,
               start_time,
               max_attendees,
-              supercode, // Changed from super_code to supercode
+              supercode,
               host_name,
               attendees:cycling_attendees!cycling_attendees_cycling_event_id_uuid_fkey(id_uuid),
               start_landmark:landmarks!cycling_events_start_landmark_id_fkey(name, state)
@@ -281,12 +281,12 @@ const MyCycling = () => {
                           <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
                             <span>Super Code:</span>
                             <span className="flex items-center gap-1">
-                              <span>{event.supercode || "N/A"}</span> // Changed from super_code to supercode
+                              <span>{event.supercode || "N/A"}</span>
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => {
-                                  navigator.clipboard.writeText(event.supercode || ""); // Changed from super_code to supercode
+                                  navigator.clipboard.writeText(event.supercode || "");
                                   toast({
                                     title: "Success",
                                     description: "Super code copied!",
