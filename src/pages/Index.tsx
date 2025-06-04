@@ -606,7 +606,7 @@ const Index = () => {
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15.93l-3.95-3.95 1.41-1.41L11 14.17l5.59-5.59 1.41 1.41L11 15.93z" />
               </svg>
-              Organize Football Match
+              Organize Footballers
             </Button>
             <Button
               onClick={() => handleOrganizeSelect("cycling")}
@@ -615,7 +615,7 @@ const Index = () => {
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M15.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM5 12c-2.8 0-5 2.2-5 5s2.2 5 5 5 5-2.2 5-5-2.2-5-5-5zm0 8.5c-1.9 0-3.5-1.6-3.5-3.5s1.6-3.5 3.5-3.5 3.5 1.6 3.5 3.5-1.6 3.5-3.5 3.5zm5.8-10l2.4-2.4.8.8c1.3 1.3 3 2.1 5.1 2.1V9c-1.5 0-2.7-.6-3.6-1.5l-1.9-1.9c-.5-.4-1-.6-1.6-.6s-1.1.2-1.4.6L7.8 8.4c-.4.4-.6.9-.6 1.4 0 .6.2 1.1.6 1.4L11 14v5h2v-6.2l-2.2-2.3L12 9.1l-2.2 2.2c-.4-.4-.9-.6-1.4-.6s-1 .2-1.4.6L5 13.3V11H3v3.7l3.3-3.3c.4-.4.9-.6 1.4-.6s1 .2 1.4.6l2.2 2.2 2.2-2.2c.4-.4.6-.9.6-1.4 0-.5-.2-1-.6-1.4z" />
               </svg>
-              Organize Cycling Event
+              Host Cyclers
             </Button>
           </div>
         </DialogContent>
