@@ -187,23 +187,16 @@ const HostCycling = () => {
     const checkAuth = async () => {
       try {
         const { data: session } = await supabase.auth.getSession();
-        if (!session.session) {
-          navigate('/login');
-          return;
+        if (session.session) {
+          setUserId(session.session.user.id);
         }
-        setUserId(session.session.user.id);
       } catch (err: any) {
         console.error('Auth error:', err);
-        toast({
-          title: 'Authentication Error',
-          description: 'Please log in to host an event.',
-          variant: 'destructive',
-        });
-        navigate('/login');
+        // No redirect; allow non-logged-in users to proceed
       }
     };
     checkAuth();
-  }, [navigate, toast]);
+  }, []);
 
   useEffect(() => {
     const fetchLandmarks = async () => {
@@ -305,16 +298,6 @@ const HostCycling = () => {
   };
 
   const onSubmit = async (data: FormValues) => {
-    if (!userId) {
-      toast({
-        title: 'Authentication Error',
-        description: 'Please log in to host an event.',
-        variant: 'destructive',
-      });
-      navigate('/login');
-      return;
-    }
-
     setFormIsLoading(true);
     try {
       if (!data.start_landmark_id) {
@@ -383,16 +366,19 @@ const HostCycling = () => {
         throw new Error(`Failed to create event: ${eventError?.message || 'No event data'}`);
       }
 
-      const { error: userHostedError } = await supabase
-        .from('user_hosted_cycling')
-        .insert({
-          user_id: userId,
-          cycling_event_id: eventData.id_uuid,
-        });
+      // Only insert into user_hosted_cycling if user is logged in
+      if (userId) {
+        const { error: userHostedError } = await supabase
+          .from('user_hosted_cycling')
+          .insert({
+            user_id: userId,
+            cycling_event_id: eventData.id_uuid,
+          });
 
-      if (userHostedError) {
-        console.error('Error inserting into user_hosted_cycling:', userHostedError);
-        throw new Error(`Failed to record hosted event: ${userHostedError.message}`);
+        if (userHostedError) {
+          console.error('Error inserting into user_hosted_cycling:', userHostedError);
+          throw new Error(`Failed to record hosted event: ${userHostedError.message}`);
+        }
       }
 
       const { data: apiData, error: apiError } = await supabase
