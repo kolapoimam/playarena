@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Calendar, MapPin, ArrowLeft, Ticket, Copy, Award, Volleyball, Clock } from "lucide-react";
+import { Calendar, MapPin, ArrowLeft, Ticket, Copy, Trophy, Volleyball, Clock, Medal } from "lucide-react";
 import { format } from "date-fns";
 import Navbar from "@/components/Navbar";
 import html2canvas from "html2canvas";
@@ -194,9 +194,9 @@ const TicketReceipt = () => {
                 <Ticket className="h-6 w-6" />
               </div>
               <div className="flex items-center justify-around mb-4">
-                <Award className="h-6 w-6 text-yellow-300" />
+                <Trophy className="h-6 w-6 text-yellow-300" />
                 <Volleyball className="h-6 w-6 text-red-500" />
-                <Clock className="h-6 w-6 text-blue-300" />
+                <Medal className="h-6 w-6 text-blue-300" />
               </div>
               <h2 className="text-2xl font-bold mb-2 tracking-tight font-condensed uppercase text-center">{ticket.match.title}</h2>
               <div className="text-center mb-4">
