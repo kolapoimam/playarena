@@ -3,10 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Calendar, Clock, MapPin, Users } from "lucide-react";
 import Navbar from "@/components/Navbar";
+import { format } from "date-fns";
+import { utcToZonedTime } from "date-fns-tz";
+import { DateTime } from "luxon";
 
 type Landmark = {
   name: string;
@@ -39,7 +41,6 @@ const MyCycling = () => {
         if (session.session) {
           setUserId(session.session.user.id);
         } else {
-          // Don't redirect; allow non-logged-in users to see empty state
           setUserId(null);
         }
       } catch (err: any) {
@@ -59,7 +60,6 @@ const MyCycling = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // Fetch hosted events
         const { data: hostedData, error: hostedError } = await supabase
           .from("user_hosted_cycling")
           .select(`
@@ -84,7 +84,6 @@ const MyCycling = () => {
 
         setHostedEvents(hosted);
 
-        // Fetch joined events
         const { data: joinedData, error: joinedError } = await supabase
           .from("user_joined_cycling")
           .select(`
@@ -123,53 +122,34 @@ const MyCycling = () => {
     fetchData();
   }, [userId, toast]);
 
-  const formatDate = (dateString: string) => {
-    const options: Intl.DateTimeFormatOptions = {
-      weekday: "short",
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    };
-    return new Date(dateString).toLocaleDateString("en-NG", options);
+  const formatMatchDateTime = (date: string, time: string) => {
+    if (!date || !time || isNaN(new Date(`${date}T${time}Z`).getTime())) {
+      return { dateStr: "Invalid Date", timeStr: "Invalid Time" };
+    }
+    try {
+      const zonedDate = utcToZonedTime(new Date(`${date}T${time}Z`), "Africa/Lagos");
+      const dateStr = format(zonedDate, "EEE, dd MMM yyyy");
+      const timeStr = format(zonedDate, "h:mm a");
+      return { dateStr, timeStr };
+    } catch {
+      return { dateStr: "Invalid Date", timeStr: "Invalid Time" };
+    }
   };
 
-  const renderEventCard = (event: CyclingEvent) => (
-    <Card
-      key={event.id_uuid}
-      className="cursor-pointer hover:shadow-lg transition-shadow"
-      onClick={() => navigate(`/cycling/${event.slug}`)}
-    >
-      <CardHeader>
-        <CardTitle className="text-lg">{event.title}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-2 text-sm text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <Calendar size={16} />
-            <span>{formatDate(event.event_date)}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Clock size={16} />
-            <span>{event.start_time}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <MapPin size={16} />
-            <span>{event.start_landmark.name}, {event.start_landmark.state}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Users size={16} />
-            <span>
-              Attendees: {event.attendees.length} / {event.max_attendees}
-            </span>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
+  const getMatchStatus = (matchDate: string, startTime: string) => {
+    const now = DateTime.now().setZone("Africa/Lagos");
+    const matchDateTime = DateTime.fromISO(`${matchDate}T${startTime}`, { zone: "utc" }).setZone("Africa/Lagos");
+    const endDateTime = matchDateTime.plus({ hours: 1 }); // Assume 1-hour duration
+
+    if (now < matchDateTime) return { text: "Upcoming", className: "bg-blue-100 text-blue-800" };
+    if (now.hasSame(matchDateTime, "day") && now < matchDateTime) return { text: "Today", className: "bg-green-100 text-green-700" };
+    if (now >= matchDateTime && now <= endDateTime) return { text: "Live", className: "bg-green-100 text-green-800" };
+    return { text: "Passed", className: "bg-gray-100 text-gray-800" };
+  };
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-[50vh]">
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
       </div>
     );
@@ -177,83 +157,181 @@ const MyCycling = () => {
 
   if (!userId) {
     return (
-      <div className="min-h-screen pb-24">
+      <div className="min-h-screen flex flex-col bg-gray-100 dark:bg-gray-900">
         <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg">
-          <div className="flex items-center justify-between">
-            <Button variant="ghost" onClick={() => navigate(-1)} className="text-white hover:bg-green-600">
-              <ArrowLeft size={18} className="mr-2" />
+          <div className="flex items-center justify-between max-w-7xl mx-auto">
+            <Button
+              variant="ghost"
+              onClick={() => navigate(-1)}
+              className="text-white hover:bg-green-600"
+            >
+              <ArrowLeft className="w-5 h-5 mr-2" />
               Back
             </Button>
-            <h1 className="text-2xl font-bold">My Cycling</h1>
+            <div className="text-center">
+              <h1 className="text-2xl font-bold">My Cycling</h1>
+            </div>
             <div className="w-10"></div>
           </div>
         </header>
-        <div className="p-6 text-center">
-          <p className="text-muted-foreground">Please log in to view your cycling events.</p>
-          <Button
-            className="mt-4 bg-green-500 hover:bg-green-600 text-white"
-            onClick={() => navigate("/login")}
-          >
-            Log In
-          </Button>
+        <div className="flex-grow overflow-y-auto">
+          <div className="container mx-auto px-4 py-6">
+            <p className="text-sm text-gray-600 dark:text-gray-400 p-4 text-center">
+              Please log in to view your cycling events.
+            </p>
+            <Button
+              className="mx-auto block px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg"
+              onClick={() => navigate("/login")}
+            >
+              Log In
+            </Button>
+          </div>
         </div>
-        <Navbar />
+        <div className="pb-28">
+          <Navbar />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen pb-24">
+    <div className="min-h-screen flex flex-col bg-gray-100 dark:bg-gray-900">
       <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg">
-        <div className="flex items-center justify-between">
-          <Button variant="ghost" onClick={() => navigate(-1)} className="text-white hover:bg-green-600">
-            <ArrowLeft size={18} className="mr-2" />
+        <div className="flex items-center justify-between max-w-7xl mx-auto">
+          <Button
+            variant="ghost"
+            onClick={() => navigate(-1)}
+            className="text-white hover:bg-green-600"
+          >
+            <ArrowLeft className="w-5 h-5 mr-2" />
             Back
           </Button>
-          <h1 className="text-2xl font-bold">My Cycling</h1>
+          <div className="text-center">
+            <h1 className="text-2xl font-bold">My Cycling</h1>
+          </div>
           <div className="w-10"></div>
         </div>
       </header>
 
-      <div className="p-6">
-        <Tabs defaultValue="hosted" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="hosted">Hosted Events</TabsTrigger>
-            <TabsTrigger value="joined">Joined Events</TabsTrigger>
-          </TabsList>
-          <TabsContent value="hosted" className="space-y-4">
-            {hostedEvents.length === 0 ? (
-              <div className="text-center py-8 bg-gray-100 dark:bg-gray-800 rounded-lg">
-                <p className="text-muted-foreground">You haven't hosted any cycling events yet.</p>
-                <Button
-                  className="mt-4 bg-green-500 hover:bg-green-600 text-white"
-                  onClick={() => navigate("/host-cycling")}
-                >
-                  Host a Cycling Event
-                </Button>
-              </div>
-            ) : (
-              hostedEvents.map(renderEventCard)
-            )}
-          </TabsContent>
-          <TabsContent value="joined" className="space-y-4">
-            {joinedEvents.length === 0 ? (
-              <div className="text-center py-8 bg-gray-100 dark:bg-gray-800 rounded-lg">
-                <p className="text-muted-foreground">You haven't joined any cycling events yet.</p>
-                <Button
-                  className="mt-4 bg-green-500 hover:bg-green-600 text-white"
-                  onClick={() => navigate("/cycling-activities")}
-                >
-                  Find Cycling Events
-                </Button>
-              </div>
-            ) : (
-              joinedEvents.map(renderEventCard)
-            )}
-          </TabsContent>
-        </Tabs>
+      <div className="flex-grow overflow-y-auto">
+        <div className="container mx-auto px-4 py-6">
+          <Tabs defaultValue="hosting" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 bg-gray-100 dark:bg-gray-700 rounded-t-lg">
+              <TabsTrigger
+                value="hosting"
+                className="data-[state=active]:bg-green-500 data-[state=active]:text-white"
+              >
+                Hosting
+              </TabsTrigger>
+              <TabsTrigger
+                value="cycling"
+                className="data-[state=active]:bg-green-500 data-[state=active]:text-white"
+              >
+                Cycling
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="hosting">
+              {hostedEvents.length > 0 ? (
+                hostedEvents.map((event) => {
+                  const { dateStr, timeStr } = formatMatchDateTime(event.event_date, event.start_time);
+                  const statusLabel = getMatchStatus(event.event_date, event.start_time);
+                  return (
+                    <div
+                      key={event.id_uuid}
+                      className="w-full p-4 mb-4 bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700"
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="space-y-2">
+                          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{event.title}</h3>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-xs font-medium px-2 py-1 rounded-full ${statusLabel.className}`}>
+                              {statusLabel.text}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
+                            <Calendar size={16} className="mr-2" />
+                            {dateStr} at {timeStr}
+                          </p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
+                            <MapPin size={16} className="mr-2" />
+                            {event.start_landmark.name}, {event.start_landmark.state}
+                          </p>
+                          <p className="text-base font-medium text-gray-900 dark:text-gray-100">
+                            Attendees: <span className="text-green-600 dark:text-green-400">{event.attendees.length}</span>/{event.max_attendees}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="mt-4 flex gap-2">
+                        <Button
+                          className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg"
+                          onClick={() => navigate(`/cycling/${event.slug}`)}
+                        >
+                          View Details
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="text-sm text-gray-600 dark:text-gray-400 p-4">
+                  No hosted cycling events found.
+                </p>
+              )}
+            </TabsContent>
+            <TabsContent value="cycling">
+              {joinedEvents.length > 0 ? (
+                joinedEvents.map((event) => {
+                  const { dateStr, timeStr } = formatMatchDateTime(event.event_date, event.start_time);
+                  const statusLabel = getMatchStatus(event.event_date, event.start_time);
+                  return (
+                    <div
+                      key={event.id_uuid}
+                      className="w-full p-4 mb-4 bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700"
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="space-y-2">
+                          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{event.title}</h3>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-xs font-medium px-2 py-1 rounded-full ${statusLabel.className}`}>
+                              {statusLabel.text}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
+                            <Calendar size={16} className="mr-2" />
+                            {dateStr} at {timeStr}
+                          </p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
+                            <MapPin size={16} className="mr-2" />
+                            {event.start_landmark.name}, {event.start_landmark.state}
+                          </p>
+                          <p className="text-base font-medium text-gray-900 dark:text-gray-100">
+                            Attendees: <span className="text-green-600 dark:text-green-400">{event.attendees.length}</span>/{event.max_attendees}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="mt-4 flex gap-2">
+                        <Button
+                          className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg"
+                          onClick={() => navigate(`/cycling/${event.slug}`)}
+                        >
+                          View Details
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="text-sm text-gray-600 dark:text-gray-400 p-4">
+                  No joined cycling events found.
+                </p>
+              )}
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
-      <Navbar />
+      <div className="pb-28">
+        <Navbar />
+      </div>
     </div>
   );
 };
