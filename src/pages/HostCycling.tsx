@@ -183,6 +183,16 @@ const HostCycling = () => {
     },
   });
 
+    useEffect(() => {
+    const checkAuth = async () => {
+      const { data: session } = await supabase.auth.getSession();
+      if (session.session) {
+        setUserId(session.session.user.id);
+      }
+    };
+    checkAuth();
+  }, []);
+  
   useEffect(() => {
     const fetchLandmarks = async () => {
       try {
