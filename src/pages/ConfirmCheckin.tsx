@@ -146,124 +146,122 @@ const ConfirmCheckin = () => {
   };
 
   const fetchEvent = async () => {
-    const validation = codeSchema.safeParse(superCode);
-    if (!validation.success) {
-      setSuperCodeError(validation.error.errors[0].message);
-      setEventNotFound(false);
-      resetState();
-      return;
-    }
-    setSuperCodeError(null);
+  const validation = codeSchema.safeParse(superCode);
+  if (!validation.success) {
+    setSuperCodeError(validation.error.errors[0].message);
     setEventNotFound(false);
-    setLoading(true);
-    try {
-      if (isCyclingEvent) {
-        const { data, error } = await supabase
-          .from("cycling_events_view")
-          .select(`
-            id_uuid, slug, title, event_date, start_time, max_attendees, host_id, host_name, host_phone, supercode, is_free, price, status, start_landmark_id, start_landmark, cycling_attendees
-          `)
-          .eq("supercode", superCode)
-          .single();
+    resetState();
+    return;
+  }
+  setSuperCodeError(null);
+  setEventNotFound(false);
+  setLoading(true);
+  try {
+    if (isCyclingEvent) {
+      // Query cycling_events directly to avoid PGRST201
+      const { data, error } = await supabase
+        .from("cycling_events")
+        .select(`
+          id_uuid, slug, title, event_date, start_time, max_attendees, host_id, host_name, host_phone, supercode, is_free, price, status, start_landmark_id,
+          start_landmark:landmarks!cycling_events_start_landmark_id_fkey(name, state),
+          cycling_attendees!cycling_attendees_cycling_event_id_uuid_fkey(id_uuid, attendee_name, attendee_phone, status, confirmation_code, number_of_slots, payment_status, is_own_bike, is_rental_bike)
+        `)
+        .eq("supercode", superCode)
+        .single();
 
-        if (error) throw error;
+      if (error) throw error;
 
-        if (!data) {
-          setEventNotFound(true);
-          resetState();
-          toast({
-            title: "Event Not Found",
-            description: `No cycling event found with super code ${superCode}. Please check the code and try again.`,
-            variant: "destructive",
-          });
-          return;
-        }
-
-const cyclingData: CyclingEvent = {
-  ...data,
-  location: data.start_landmark
-    ? {
-        name: data.start_landmark.name ?? "Unknown Location",
-        city: data.start_landmark.state ?? "Unknown City",
+      if (!data) {
+        setEventNotFound(true);
+        resetState();
+        toast({
+          title: "Event Not Found",
+          description: `No cycling event found with super code ${superCode}. Please check the code and try again.`,
+          variant: "destructive",
+        });
+        return;
       }
-    : null,
-  cycling_attendees: Array.isArray(data.cycling_attendees) ? data.cycling_attendees.map(attendee => ({
-    ...attendee,
-    status: attendee.status || "registered",
-    details: attendee.details || { phone: attendee.attendee_phone || "N/A" },
-  })) : [],
-  cancellation_status: data.cancellation_status ?? false,
-  status: data.status ?? "upcoming",
-};
 
-        setCyclingEvent(cyclingData);
-        setPlayerStatuses(
-          (cyclingData.cycling_attendees || []).map((attendee) => ({
-            id: attendee.id_uuid,
-            status: attendee.status,
-            checkinCode: "",
-          }))
-        );
-
-        // Fetch wallet balance using host_id from the event
-if (cyclingData.host_id) {
-  const { data: walletData, error: walletError } = await supabase
-    .from("cycling_wallets")
-    .select("balance")
-    .eq("host_id", cyclingData.host_id)
-    .maybeSingle();
-
-  if (walletError) {
-    console.error("Error fetching wallet balance:", walletError);
-    setWalletBalance(0);
-  } else if (walletData?.balance !== undefined) {
-    setWalletBalance(walletData.balance);
-  } else {
-    setWalletBalance(0);const cyclingData: CyclingEvent = {
-          }
-        }
-
-        try {
-          const { data: cashoutData, error: cashoutError } = await supabase
-            .from("cashouts")
-            .select("*")
-            .eq("super_code", superCode)
-            .eq("cycling_event_id_uuid", cyclingData.id_uuid)
-            .eq("temp_identifier", tempIdentifier)
-            .maybeSingle();
-
-          if (cashoutError) {
-            if (
-              cashoutError.code === "42703" &&
-              cashoutError.message.includes("temp_identifier")
-            ) {
-              console.warn(
-                "temp_identifier column not found in cashouts table. Please run the migration to add this column."
-              );
-              setCashout(null);
-              toast({
-                title: "Warning",
-                description:
-                  "Cashout information is unavailable due to a missing database column. Please contact support.",
-                variant: "default",
-              });
-            } else {
-              throw cashoutError;
+      const cyclingData: CyclingEvent = {
+        ...data,
+        location: data.start_landmark
+          ? {
+              name: data.start_landmark.name ?? "Unknown Location",
+              city: data.start_landmark.state ?? "Unknown City",
             }
-          } else {
-            setCashout(cashoutData);
-          }
-        } catch (cashoutError: any) {
-          console.error("Error fetching cashout", cashoutError.message);
+          : null,
+        cycling_attendees: Array.isArray(data.cycling_attendees)
+          ? data.cycling_attendees.map(attendee => ({
+              ...attendee,
+              status: attendee.status || "registered",
+              details: { phone: attendee.attendee_phone || "N/A" },
+            }))
+          : [],
+        cancellation_status: data.cancellation_status ?? false,
+        status: data.status ?? "upcoming",
+      };
+
+      setCyclingEvent(cyclingData);
+      setPlayerStatuses(
+        (cyclingData.cycling_attendees || []).map((attendee) => ({
+          id: attendee.id_uuid,
+          status: attendee.status,
+          checkinCode: "",
+        }))
+      );
+
+      // Fetch wallet balance
+      if (cyclingData.host_id) {
+        const { data: walletData, error: walletError } = await supabase
+          .from("cycling_wallets")
+          .select("balance")
+          .eq("host_id", cyclingData.host_id)
+          .maybeSingle();
+
+        if (walletError) {
+          console.error("Error fetching wallet balance:", walletError);
+          setWalletBalance(0);
+        } else {
+          setWalletBalance(walletData?.balance ?? 0);
+        }
+      }
+
+      // Fetch cashout
+      try {
+        const { data: cashoutData, error: cashoutError } = await supabase
+          .from("cycling_cashouts")
+          .select("*")
+          .eq("supercode", superCode)
+          .eq("cycling_event_id_uuid", cyclingData.id_uuid)
+          .eq("temp_identifier", tempIdentifier)
+          .maybeSingle();
+
+        if (cashoutError) {
+          console.error("Error fetching cashout:", cashoutError);
           setCashout(null);
           toast({
             title: "Error",
             description: "Failed to fetch cashout information. Please try again later.",
             variant: "destructive",
           });
+        } else {
+          setCashout(cashoutData);
         }
+      } catch (cashoutError: any) {
+        console.error("Error fetching cashout:", cashoutError.message);
+        setCashout(null);
+        toast({
+          title: "Error",
+          description: "Failed to fetch cashout information. Please try again later.",
+          variant: "destructive",
+        });
+      }
 
-        if (cyclingData.event_end_time && isPast(new Date(cyclingData.event_end_time))) {
+      // Update absent attendees for past events
+      if (cyclingData.event_date && cyclingData.start_time) {
+        const eventEndTime = new Date(`${cyclingData.event_date}T${cyclingData.start_time}`);
+        eventEndTime.setHours(eventEndTime.getHours() + 1); // Assume 1-hour duration
+        if (isPast(eventEndTime)) {
           const updates =
             cyclingData.cycling_attendees
               ?.filter((p) => p.status === "registered" && p.status !== "checked_in")
@@ -274,144 +272,136 @@ if (cyclingData.host_id) {
                     status: "absent",
                     updated_at: new Date().toISOString(),
                   })
-                  .eq("id", p.id)
+                  .eq("id_uuid", p.id_uuid)
               ) || [];
-
           await Promise.all(updates);
         }
-      } else {
-        const { data, error } = await supabase
-          .from("matches")
-          .select(`
-            id, slug, title, match_date, match_time, match_start_time, match_end_time, total_slots, organizer_id, organizer_name, super_code, is_paid, price, cancellation_status, status,
-            venue:venues(name, city),
-            players(id, player_name, status, confirmation_code, details, number_of_slots)
-          `)
-          .eq("super_code", superCode)
-          .single();
+      }
+    } else {
+      // Match query (unchanged)
+      const { data, error } = await supabase
+        .from("matches")
+        .select(`
+          id, slug, title, match_date, match_time, match_start_time, match_end_time, total_slots, organizer_id, organizer_name, super_code, is_paid, price, cancellation_status, status,
+          venue:venues(name, city),
+          players(id, player_name, status, confirmation_code, details, number_of_slots)
+        `)
+        .eq("super_code", superCode)
+        .single();
 
-        if (error) throw error;
+      if (error) throw error;
 
-        if (!data) {
-          setEventNotFound(true);
-          resetState();
-          toast({
-            title: "Match Not Found",
-            description: `No match found with super code ${superCode}. Please check the code and try again.`,
-            variant: "destructive",
-          });
-          return;
-        }
+      if (!data) {
+        setEventNotFound(true);
+        resetState();
+        toast({
+          title: "Match Not Found",
+          description: `No match found with super code ${superCode}. Please check the code and try again.`,
+          variant: "destructive",
+        });
+        return;
+      }
 
-        const matchData: Match = {
-          ...data,
-          venue: data.venue
-            ? {
-                name: data.venue.name ?? "Unknown Venue",
-                city: data.venue.city ?? "Unknown City",
-              }
-            : null,
-          players: Array.isArray(data.players) ? data.players : [],
-          cancellation_status: data.cancellation_status ?? false,
-          status: data.status ?? "upcoming",
-        };
-
-        setMatch(matchData);
-        setPlayerStatuses(
-          (matchData.players || []).map((player) => ({
-            id: player.id,
-            status: player.status,
-            checkinCode: "",
-          }))
-        );
-
-        // Fetch wallet balance using organizer_id from the match
-        if (matchData.organizer_id) {
-          const { data: walletData, error: walletError } = await supabase
-            .from("wallets")
-            .select("balance")
-            .eq("organizer_id", matchData.organizer_id)
-            .single();
-
-          if (walletError) {
-            console.error("Error fetching wallet balance:", walletError);
-            setWalletBalance(null);
-          } else if (walletData) {
-            setWalletBalance(walletData.balance);
-          }
-        }
-
-        try {
-          const { data: cashoutData, error: cashoutError } = await supabase
-            .from("cashouts")
-            .select("*")
-            .eq("super_code", superCode)
-            .eq("match_id", matchData.id)
-            .eq("temp_identifier", tempIdentifier)
-            .maybeSingle();
-
-          if (cashoutError) {
-            if (
-              cashoutError.code === "42703" &&
-              cashoutError.message.includes("temp_identifier")
-            ) {
-              console.warn(
-                "temp_identifier column not found in cashouts table. Please run the migration to add this column."
-              );
-              setCashout(null);
-              toast({
-                title: "Warning",
-                description:
-                  "Cashout information is unavailable due to a missing database column. Please contact support.",
-                variant: "default",
-              });
-            } else {
-              throw cashoutError;
+      const matchData: Match = {
+        ...data,
+        venue: data.venue
+          ? {
+              name: data.venue.name ?? "Unknown Venue",
+              city: data.venue.city ?? "Unknown City",
             }
-          } else {
-            setCashout(cashoutData);
-          }
-        } catch (cashoutError: any) {
-          console.error("Error fetching cashout", cashoutError.message);
+          : null,
+        players: Array.isArray(data.players) ? data.players : [],
+        cancellation_status: data.cancellation_status ?? false,
+        status: data.status ?? "upcoming",
+      };
+
+      setMatch(matchData);
+      setPlayerStatuses(
+        (matchData.players || []).map((player) => ({
+          id: player.id,
+          status: player.status,
+          checkinCode: "",
+        }))
+      );
+
+      // Fetch wallet balance
+      if (matchData.organizer_id) {
+        const { data: walletData, error: walletError } = await supabase
+          .from("wallets")
+          .select("balance")
+          .eq("organizer_id", matchData.organizer_id)
+          .maybeSingle();
+
+        if (walletError) {
+          console.error("Error fetching wallet balance:", walletError);
+          setWalletBalance(0);
+        } else {
+          setWalletBalance(walletData?.balance ?? 0);
+        }
+      }
+
+      // Fetch cashout
+      try {
+        const { data: cashoutData, error: cashoutError } = await supabase
+          .from("cashouts")
+          .select("*")
+          .eq("super_code", superCode)
+          .eq("match_id", matchData.id)
+          .eq("temp_identifier", tempIdentifier)
+          .maybeSingle();
+
+        if (cashoutError) {
+          console.error("Error fetching cashout:", cashoutError);
           setCashout(null);
           toast({
             title: "Error",
             description: "Failed to fetch cashout information. Please try again later.",
             variant: "destructive",
           });
+        } else {
+          setCashout(cashoutData);
         }
-
-        if (matchData.match_end_time && isPast(new Date(matchData.match_end_time))) {
-          const updates =
-            matchData.players
-              ?.filter((p) => p.status === "registered" && p.status !== "checked_in")
-              .map((p) =>
-                supabase
-                  .from("players")
-                  .update({
-                    status: "absent",
-                    player_status: "Absent",
-                    updated_at: new Date().toISOString(),
-                  })
-                  .eq("id", p.id)
-              ) || [];
-
-          await Promise.all(updates);
-        }
+      } catch (cashoutError: any) {
+        console.error("Error fetching cashout:", cashoutError.message);
+        setCashout(null);
+        toast({
+          title: "Error",
+          description: "Failed to fetch cashout information. Please try again later.",
+          variant: "destructive",
+        });
       }
-    } catch (error: any) {
-      console.error("Error fetching event", error.message, error.details || error);
-      setEventNotFound(true);
-      resetState();
-      toast({
-        title: "Error",
-        description: error.message.includes("0 rows")
-          ? `No event found with super code ${superCode}. Please try again.`
-          : "An error occurred while fetching the event. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
+
+      // Update absent players for past matches
+      if (matchData.match_end_time && isPast(new Date(matchData.match_end_time))) {
+        const updates =
+          matchData.players
+            ?.filter((p) => p.status === "registered" && p.status !== "checked_in")
+            .map((p) =>
+              supabase
+                .from("players")
+                .update({
+                  status: "absent",
+                  player_status: "Absent",
+                  updated_at: new Date().toISOString(),
+                })
+                .eq("id", p.id)
+            ) || [];
+        await Promise.all(updates);
+      }
+    }
+  } catch (error: any) {
+    console.error("Error fetching event:", error.message, error.details || error);
+    setEventNotFound(true);
+    resetState();
+    toast({
+      title: "Error",
+      description: error.message.includes("0 rows")
+        ? `No event found with super code ${superCode}. Please try again.`
+        : "An error occurred while fetching the event. Please try again.",
+      variant: "destructive",
+    });
+  } finally {
+    setLoading(false);
     }
   };
 
