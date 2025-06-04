@@ -1,4 +1,3 @@
-
 import { useRef, useState } from "react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -41,6 +40,7 @@ type MatchSuccessDialogProps = {
 const MatchSuccessDialog = ({ open, onOpenChange, formValues, selectedVenue, supercode, matchSlug, onNavigate }: MatchSuccessDialogProps) => {
   const { toast } = useToast();
   const [isDownloading, setIsDownloading] = useState(false);
+  const [backgroundColor, setBackgroundColor] = useState('#4CAF50'); // Default green
   const cardRef = useRef<HTMLDivElement>(null);
 
   const handleShare = () => {
@@ -116,9 +116,10 @@ const MatchSuccessDialog = ({ open, onOpenChange, formValues, selectedVenue, sup
     }
     setIsDownloading(true);
     try {
+      const logoSrc = backgroundColor === '#4CAF50' || backgroundColor === '#000000' || backgroundColor === '#2196F3' || backgroundColor === '#9C27B0' ? "/playarenadark.png" : "/playarenalight.png";
       const img = new Image();
       img.crossOrigin = "anonymous";
-      img.src = "/playarenadark.png";
+      img.src = logoSrc;
       await new Promise((resolve) => {
         img.onload = resolve;
         img.onerror = () => {
@@ -177,6 +178,9 @@ const MatchSuccessDialog = ({ open, onOpenChange, formValues, selectedVenue, sup
     }
   };
 
+  const isDarkBackground = backgroundColor === '#4CAF50' || backgroundColor === '#000000' || backgroundColor === '#2196F3' || backgroundColor === '#9C27B0';
+  const logoSrc = isDarkBackground ? '/playarenadark.png' : '/playarenalight.png';
+
   return (
     <>
       <div className="flex gap-3">
@@ -230,45 +234,59 @@ const MatchSuccessDialog = ({ open, onOpenChange, formValues, selectedVenue, sup
               Your match has been created. Below is your unique 6-digit Supercode for check-ins on match day.
               {formValues.is_private && " Also, share the access password with invited players."}
             </p>
-            <div 
-              ref={cardRef}
-              className="relative bg-gradient-to-r from-green-500 to-green-700 rounded-lg p-6 text-white shadow-xl max-w-md mx-auto overflow-hidden border-4 border-dashed border-white/30"
-              style={{
-                backgroundImage: 'linear-gradient(45deg, rgba(255,255,255,0.1) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.1) 75%, transparent 75%, transparent)',
-                backgroundSize: '40px 40px',
-                clipPath: 'polygon(10% 0%, 90% 0%, 100% 10%, 100% 90%, 90% 100%, 10% 100%, 0% 90%, 0% 10%)',
-              }}
-            >
-              {/* Perforated Edge Semi-Circles */}
-              <div className="absolute top-0 left-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '20%' }} />
-              <div className="absolute top-0 left-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '50%' }} />
-              <div className="absolute top-0 left-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '80%' }} />
-              <div className="absolute top-0 right-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '20%' }} />
-              <div className="absolute top-0 right-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '50%' }} />
-              <div className="absolute top-0 right-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '80%' }} />
+            <div className="relative">
+              <select
+                value={backgroundColor}
+                onChange={(e) => setBackgroundColor(e.target.value)}
+                className="mt-4 w-full p-2 border rounded-lg"
+              >
+                <option value="#4CAF50">Green</option>
+                <option value="#FF5722">Orange</option>
+                <option value="#2196F3">Blue</option>
+                <option value="#9C27B0">Purple</option>
+                <option value="#000000">Black</option>
+              </select>
+              <div 
+                ref={cardRef}
+                className="relative bg-gradient-to-r from-green-500 to-green-700 rounded-lg p-6 text-white shadow-xl max-w-md mx-auto overflow-hidden border-4 border-dashed border-white/30 mt-4"
+                style={{
+                  backgroundImage: 'linear-gradient(45deg, rgba(255,255,255,0.1) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.1) 75%, transparent 75%, transparent)',
+                  backgroundSize: '40px 40px',
+                  clipPath: 'polygon(10% 0%, 90% 0%, 100% 10%, 100% 90%, 90% 100%, 10% 100%, 0% 90%, 0% 10%)',
+                  backgroundColor: backgroundColor,
+                }}
+              >
+                {/* Perforated Edge Semi-Circles */}
+                <div className="absolute top-0 left-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '20%' }} />
+                <div className="absolute top-0 left-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '50%' }} />
+                <div className="absolute top-0 left-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '80%' }} />
+                <div className="absolute top-0 right-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '20%' }} />
+                <div className="absolute top-0 right-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '50%' }} />
+                <div className="absolute top-0 right-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '80%' }} />
 
-              {/* Ticket Content */}
-              <div className="flex items-center justify-between mb-4">
-                <img 
-                  src="/playarenadark.png" 
-                  alt="PlayArena Logo" 
-                  className="h-10 w-auto"
-                />
-                <Trophy className="h-6 w-6" />
-              </div>
-              <h2 className="text-2xl font-bold mb-2 tracking-tight font-condensed uppercase text-center">{formValues.title || "Your Match"}</h2>
-              <div className="text-center mb-4">
-                <p className="text-sm"><MapPin className="inline h-4 w-4 mr-1" /> {selectedVenue?.name || "Venue"}</p>
-                <p className="text-sm"><CalendarIcon className="inline h-4 w-4 mr-1" /> {formValues.match_date ? format(formValues.match_date, "PPP") : "Date"}</p>
-                <p className="text-sm"><Clock className="inline h-4 w-4 mr-1" /> From {formValues.start_time || "Start"} to {formValues.end_time || "End"}</p>
-                <p className="text-sm"><User className="inline h-4 w-4 mr-1" /> Organized by {formValues.organizer_name || "Organizer"}</p>
-                {formValues.is_private && (
-                  <p className="text-sm font-semibold">Access Password: <span className="font-mono">{formValues.access_password || "N/A"}</span></p>
-                )}
-              </div>
-              <div className="bg-white text-green-600 rounded-md p-4 text-center shadow-inner">
-                <p className="text-sm font-medium uppercase tracking-wide">Supercode</p>
-                <p className="text-4xl font-bold tracking-wider mt-1 font-mono">{supercode || "N/A"}</p>
+                {/* Ticket Content */}
+                <div className="flex items-center justify-between mb-4">
+                  <img 
+                    src={logoSrc}
+                    alt="PlayArena Logo" 
+                    className="h-10 w-auto"
+                  />
+                  <Trophy className="h-6 w-6" />
+                </div>
+                <h2 className="text-2xl font-bold mb-2 tracking-tight font-condensed uppercase text-center">{formValues.title || "Your Match"}</h2>
+                <div className="text-center mb-4">
+                  <p className="text-sm"><MapPin className="inline h-4 w-4 mr-1" /> {selectedVenue?.name || "Venue"}</p>
+                  <p className="text-sm"><CalendarIcon className="inline h-4 w-4 mr-1" /> {formValues.match_date ? format(formValues.match_date, "PPP") : "Date"}</p>
+                  <p className="text-sm"><Clock className="inline h-4 w-4 mr-1" /> From {formValues.start_time || "Start"} to {formValues.end_time || "End"}</p>
+                  <p className="text-sm"><User className="inline h-4 w-4 mr-1" /> Organized by {formValues.organizer_name || "Organizer"}</p>
+                  {formValues.is_private && (
+                    <p className="text-sm font-semibold">Access Password: <span className="font-mono">{formValues.access_password || "N/A"}</span></p>
+                  )}
+                </div>
+                <div className="bg-white text-green-600 rounded-md p-4 text-center shadow-inner">
+                  <p className="text-sm font-medium uppercase tracking-wide">Supercode</p>
+                  <p className="text-4xl font-bold tracking-wider mt-1 font-mono">{supercode || "N/A"}</p>
+                </div>
               </div>
             </div>
             <p className="text-sm text-gray-500 dark:text-gray-400 my-4 text-center">
@@ -284,38 +302,22 @@ const MatchSuccessDialog = ({ open, onOpenChange, formValues, selectedVenue, sup
                 <Download size={16} className="mr-2" />
                 {isDownloading ? "Downloading..." : "Download Supercode"}
               </Button>
-              <Button
-              className="flex-1 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg px-6 py-3 shadow-sm transition-colors duration-200 border-0 max-w-xs"
-              onClick={handleShare}
-              onClick={() => {
-                if (!isDownloading && matchSlug) {
-                  onOpenChange(false);
-                  onNavigate(matchSlug);
-                }
-              }}
-              disabled={isDownloading}
-            >
-              <Share2 size={16} className="mr-2" />
-              Share
-            </Button>
-          </div>
-          <div className="flex justify-center">
-            <Button 
-              className="bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 transition-colors"
-              onClick={() => {
-                if (!isDownloading && matchSlug) {
-                  onOpenChange(false);
-                  onNavigate(matchSlug);
-                }
-              }}
-              disabled={isDownloading}
-            >
-              Go to Match Details
-            </Button>
-          </div>
-        </DialogDescription>
-      </DialogContent>
-    </Dialog>
+              <Button 
+                className="flex-1 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg px-6 py-3 shadow-sm transition-colors duration-200 border-0 max-w-xs"
+                onClick={() => {
+                  if (!isDownloading && matchSlug) {
+                    onOpenChange(false);
+                    onNavigate(matchSlug);
+                  }
+                }}
+                disabled={isDownloading}
+              >
+                Close
+              </Button>
+            </div>
+          </DialogDescription>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
