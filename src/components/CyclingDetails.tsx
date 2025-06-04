@@ -277,13 +277,6 @@ if (walletError) {
               Cancelled
             </span>
           )}
-          {cashout && (
-            <span
-              className={`inline-block px-3 py-1 text-sm font-medium rounded border ${getStatusStyles(cashout.status)}`}
-            >
-              Cashout: {cashout.status}
-            </span>
-          )}
         </div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
@@ -337,13 +330,6 @@ if (walletError) {
         <div className="mt-4 p-4 rounded bg-red-100 dark:bg-red-900">
           <p className="text-red-700 dark:text-red-300">
             This event has been cancelled. Attendees will be contacted for a refund.
-          </p>
-        </div>
-      )}
-      {cashout && (
-        <div className="mt-4 p-4 rounded-lg bg-yellow-100 dark:bg-yellow-900">
-          <p className="text-yellow-700 dark:text-yellow-300">
-            Your cashout request is {cashout.status}. Expected amount: {calculateExpectedAmount()}
           </p>
         </div>
       )}
