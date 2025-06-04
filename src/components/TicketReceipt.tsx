@@ -168,7 +168,7 @@ const TicketReceipt = () => {
             onClick={() => navigate(`/match/${ticket.match.slug}`)}
           >
             <ArrowLeft size={18} className="mr-2" />
-            Back to Match
+            Back
           </Button>
           <h1 className="text-2xl font-bold">Your Ticket</h1>
           <div className="w-10"></div>
@@ -238,26 +238,26 @@ const TicketReceipt = () => {
           <p className="text-sm text-gray-500 dark:text-gray-400 my-4 text-center">
             <strong>Note:</strong> Save or download this ticket code. You'll need it for entry on match day.
           </p>
-          <div className="flex gap-3">
-            <Button
-              className="flex-1 bg-gradient-to-r from-green-500 to-green-700 text-white font-medium rounded-lg px-6 py-3 shadow-lg hover:from-green-600 hover:to-green-800 transition-all duration-300 border-2 border-dashed border-white/30 animate-ticket-reveal"
-              onClick={handleDownload}
-              disabled={isDownloading}
-              aria-label="Download ticket as PDF"
-            >
-              <Download size={18} className="mr-2" />
-              {isDownloading ? "Downloading..." : "Download PDF"}
-            </Button>
-            <Button
-              className="flex-1 bg-gradient-to-r from-green-500 to-green-700 text-white font-medium rounded-lg px-6 py-3 shadow-lg hover:from-green-600 hover:to-green-800 transition-all duration-300 border-2 border-dashed border-white/30 animate-ticket-reveal"
-              onClick={handleShare}
-              disabled={isDownloading}
-              aria-label="Share ticket receipt"
-            >
-              <Share2 size={18} className="mr-2" />
-              Share
-            </Button>
-          </div>
+<div className="flex gap-2 px-4 py-4">
+  <Button
+    className="flex-1 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg px-6 py-3 shadow-sm transition-colors duration-200 border-0"
+    onClick={handleDownload}
+    disabled={isDownloading}
+    aria-label="Download ticket as PDF"
+  >
+    <Download size={16} className="mr-2" />
+    {isDownloading ? "Downloading..." : "Download"}
+  </Button>
+  <Button
+    className="flex-1 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg px-6 py-3 shadow-sm transition-colors duration-200 border-0"
+    onClick={handleShare}
+    disabled={isDownloading}
+    aria-label="Share ticket receipt"
+  >
+    <Share2 size={16} className="mr-2" />
+    Share
+  </Button>
+</div>
         </div>
       </div>
       <Navbar />
