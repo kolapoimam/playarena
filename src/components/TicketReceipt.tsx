@@ -102,11 +102,12 @@ const TicketReceipt = () => {
 
   const handleShare = () => {
     const shareUrl = window.location.href;
+    const shareText = `Check out my ticket for ${ticket?.match.title}! 🎟️ Ticket Code: ${ticket?.ticket_code}`;
     if (navigator.share) {
       navigator
         .share({
           title: "My SportCliq Ticket Receipt",
-          text: `Check out my ticket for ${ticket?.match.title}! 🎟️`,
+          text: shareText,
           url: shareUrl,
         })
         .then(() => {
@@ -155,7 +156,7 @@ const TicketReceipt = () => {
     );
   }
 
-  const isDarkBackground = backgroundColor === '#4CAF50' || backgroundColor === '#000000';
+  const isDarkBackground = backgroundColor === '#4CAF50' || backgroundColor === '#000000' || backgroundColor === '#2196F3' || backgroundColor === '#9C27B0';
   const logoSrc = isDarkBackground ? '/playarenadark.png' : '/playarenalight.png';
 
   return (
@@ -238,7 +239,7 @@ const TicketReceipt = () => {
           <p className="text-sm text-gray-500 dark:text-gray-400 my-4 text-center">
             <strong>Note:</strong> Save or download this ticket code. You'll need it for entry on match day.
           </p>
-<div className="flex gap-2 px-4 py-4">
+<div className="flex justify-between gap-4 px-6 py-4">
   <Button
     className="flex-1 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg px-6 py-3 shadow-sm transition-colors duration-200 border-0"
     onClick={handleDownload}
