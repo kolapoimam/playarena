@@ -1,10 +1,17 @@
+
 import { useRef, useState } from "react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { MapPin, CalendarIcon, Clock, User, Bike, Share2, Download } from "lucide-react";
+import { MapPin, CalendarIcon, Clock, User, Bike, Share2, Download, ChevronDown } from "lucide-react";
 import { format } from "date-fns";
 import html2canvas from "html2canvas";
 import { useToast } from "@/hooks/use-toast";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 type FormValues = {
   title: string;
@@ -42,6 +49,7 @@ const CyclingSuccessDialog = ({
 }: CyclingSuccessDialogProps) => {
   const { toast } = useToast();
   const [isDownloading, setIsDownloading] = useState(false);
+  const [backgroundColor, setBackgroundColor] = useState('#4CAF50'); // Default green
   const cardRef = useRef<HTMLDivElement>(null);
 
   const code = supercode || confirmationCode;
@@ -77,6 +85,68 @@ const CyclingSuccessDialog = ({
           : 'Unknown Date')
     : 'Unknown Date';
 
+  const handleShare = () => {
+    const shareUrl = `${window.location.origin}/cycling/${eventSlug}`;
+    const shareText = `Join my cycling event: ${formValues.title} on ${formattedDate} at ${formValues.start_time}. ${supercode ? `Supercode: ${supercode}` : `Confirmation Code: ${confirmationCode}`}`;
+    if (navigator.share) {
+      navigator
+        .share({
+          title: "My SportCliq Cycling Event",
+          text: shareText,
+          url: shareUrl,
+        })
+        .then(() => {
+          toast({
+            title: "Shared!",
+            description: "Event link shared successfully.",
+          });
+        })
+        .catch((error) => {
+          console.error("Error sharing:", error);
+          toast({
+            title: "Error",
+            description: "Failed to share the event.",
+            variant: "destructive",
+          });
+        });
+    } else {
+      try {
+        navigator.clipboard.writeText(shareText);
+        toast({
+          title: "Link copied!",
+          description: "Share it with your friends to join the event.",
+        });
+      } catch (err) {
+        toast({
+          title: "Failed to copy",
+          description: "Please try again or copy the URL manually.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  const shareToWhatsApp = () => {
+    const shareUrl = `${window.location.origin}/cycling/${eventSlug}`;
+    const shareText = `Join my cycling event: ${formValues.title} on ${formattedDate} at ${formValues.start_time}. ${supercode ? `Supercode: ${supercode}` : `Confirmation Code: ${confirmationCode}`}`;
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
+    window.open(whatsappUrl, "_blank");
+  };
+
+  const shareToTwitter = () => {
+    const shareUrl = `${window.location.origin}/cycling/${eventSlug}`;
+    const shareText = `Join my cycling event: ${formValues.title} on ${formattedDate} at ${formValues.start_time}. ${supercode ? `Supercode: ${supercode}` : `Confirmation Code: ${confirmationCode}`}`;
+    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
+    window.open(twitterUrl, "_blank");
+  };
+
+  const shareToFacebook = () => {
+    const shareUrl = `${window.location.origin}/cycling/${eventSlug}`;
+    const shareText = `Join my cycling event: ${formValues.title} on ${formattedDate} at ${formValues.start_time}. ${supercode ? `Supercode: ${supercode}` : `Confirmation Code: ${confirmationCode}`}`;
+    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(shareText)}`;
+    window.open(facebookUrl, "_blank");
+  };
+
   const handleDownload = async () => {
     if (!cardRef.current) {
       toast({
@@ -88,9 +158,10 @@ const CyclingSuccessDialog = ({
     }
     setIsDownloading(true);
     try {
+      const logoSrc = backgroundColor === '#4CAF50' || backgroundColor === '#000000' || backgroundColor === '#2196F3' || backgroundColor === '#9C27B0' ? "/playarenadark.png" : "/playarenalight.png";
       const img = new Image();
       img.crossOrigin = "anonymous";
-      img.src = "/playarenadark.png";
+      img.src = logoSrc;
       await new Promise<void>((resolve) => {
         img.onload = () => resolve();
         img.onerror = () => {
@@ -138,7 +209,7 @@ const CyclingSuccessDialog = ({
       link.download = filename;
       link.click();
       URL.revokeObjectURL(url);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error generating image:", error);
       toast({
         title: "Error",
@@ -150,131 +221,155 @@ const CyclingSuccessDialog = ({
     }
   };
 
-  const handleShare = () => {
-    const shareUrl = `${window.location.origin}/cycling/${eventSlug}`;
-    const shareText = `Join my cycling event: ${formValues.title} on ${formattedDate} at ${formValues.start_time}. ${supercode ? `Supercode: ${supercode}` : `Confirmation Code: ${confirmationCode}`}`;
-    if (navigator.share) {
-      navigator
-        .share({
-          title: "My SportCliq Cycling Event",
-          text: shareText,
-          url: shareUrl,
-        })
-        .then(() => {
-          toast({
-            title: "Shared!",
-            description: "Event link shared successfully.",
-          });
-        })
-        .catch((error) => {
-          console.error("Error sharing:", error);
-          toast({
-            title: "Error",
-            description: "Failed to share the event.",
-            variant: "destructive",
-          });
-        });
-    } else {
-      toast({
-        title: "Sharing Not Supported",
-        description: "Your browser does not support sharing. Please copy the link manually.",
-        variant: "destructive",
-      });
-    }
-  };
+  const isDarkBackground = backgroundColor === '#4CAF50' || backgroundColor === '#000000' || backgroundColor === '#2196F3' || backgroundColor === '#9C27B0';
+  const logoSrc = isDarkBackground ? '/playarenadark.png' : '/playarenalight.png';
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(newOpen) => {
-        if (!newOpen && !isDownloading) {
-          onNavigate?.();
-        }
-        onOpenChange(newOpen);
-      }}
-    >
-      <DialogContent className="sm:max-w-[375px] rounded-2xl">
-        <DialogTitle className="text-xl font-bold text-gray-800 dark:text-white">
-          {supercode ? "Event Created Successfully!" : "Joined Event Successfully!"}
-        </DialogTitle>
-        <DialogDescription>
-          <p className="text-gray-600 dark:text-gray-300 mb-4 text-sm">
-            {supercode
-              ? "Your cycling event has been created. Below is your unique 6-digit supercode for check-ins."
-              : "You have joined the cycling event. Below is your 6-digit confirmation code for check-in."}
-          </p>
-          <div
-            ref={cardRef}
-            className="relative bg-gradient-to-r from-green-500 to-green-700 rounded-lg p-6 text-white shadow-xl max-w-md mx-auto overflow-hidden border-4 border-dashed border-white/30"
-            style={{
-              backgroundImage: 'linear-gradient(45deg, rgba(255,255,255,0.1) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.1) 75%, transparent 75%, transparent)',
-              backgroundSize: '40px 40px',
-              clipPath: 'polygon(10% 0%, 90% 0%, 100% 10%, 100% 90%, 90% 100%, 10% 100%, 0% 90%, 0% 10%)',
-            }}
-          >
-            {/* Perforated Edge Semi-Circles */}
-            <div className="absolute top-0 left-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '20%' }} />
-            <div className="absolute top-0 left-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '50%' }} />
-            <div className="absolute top-0 left-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '80%' }} />
-            <div className="absolute top-0 right-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '20%' }} />
-            <div className="absolute top-0 right-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '50%' }} />
-            <div className="absolute top-0 right-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '80%' }} />
-
-            {/* Ticket Content */}
-            <div className="flex items-center justify-between mb-4">
-              <img src="/playarenadark.png" alt="SportCliq Logo" className="h-10 w-auto" />
-              <Bike className="h-6 w-6" />
-            </div>
-            <h2 className="text-2xl font-bold mb-2 tracking-tight font-condensed uppercase text-center">{formValues.title || 'Untitled Event'}</h2>
-            <div className="text-center mb-4">
-              <p className="text-sm"><MapPin className="inline h-4 w-4 mr-1" /> {selectedLandmark.name || 'Unknown Location'}, {selectedLandmark.state || 'Unknown State'}</p>
-              <p className="text-sm"><CalendarIcon className="inline h-4 w-4 mr-1" /> {formattedDate}</p>
-              <p className="text-sm"><Clock className="inline h-4 w-4 mr-1" /> {formValues.start_time || 'Unknown Time'}</p>
-              <p className="text-sm font-semibold"><User className="inline h-4 w-4 mr-1" /> Hosted by {formValues.host_name || 'Unknown Host'}</p>
-            </div>
-            <div className="bg-white text-green-600 rounded-md p-4 text-center shadow-inner">
-              <p className="text-sm font-medium uppercase tracking-wide">{supercode ? "Supercode" : "Confirmation Code"}</p>
-              <p className="text-4xl font-bold tracking-wider mt-1 font-mono">{code}</p>
-            </div>
-          </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400 my-4 text-center">
-            <strong>Note:</strong> Save or download this code for check-in on event day.
-          </p>
-          <div className="flex justify-center gap-4 px-6 py-4">
-            <Button
-              className="flex-1 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg px-6 py-3 shadow-sm transition-colors duration-200 border-0 max-w-xs"
-              onClick={handleDownload}
-              disabled={isDownloading}
+    <>
+      <div className="flex gap-3 mt-6">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button 
+              variant="outline" 
+              className="flex-1"
             >
-              <Download size={16} className="mr-2" />
-              {isDownloading ? "Downloading..." : "Download"}
-            </Button>
-            <Button
-              className="flex-1 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg px-6 py-3 shadow-sm transition-colors duration-200 border-0 max-w-xs"
-              onClick={handleShare}
-              disabled={isDownloading}
-            >
-              <Share2 size={16} className="mr-2" />
+              <Share2 size={18} className="mr-2" />
               Share
+              <ChevronDown size={16} className="ml-2" />
             </Button>
-          </div>
-          <div className="flex justify-center">
-            <Button
-              className="bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 transition-colors"
-              onClick={() => {
-                if (!isDownloading) {
-                  onOpenChange(false);
-                  onNavigate?.();
-                }
-              }}
-              disabled={isDownloading}
-            >
-              Go to Events
-            </Button>
-          </div>
-        </DialogDescription>
-      </DialogContent>
-    </Dialog>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-[200px]">
+            <DropdownMenuItem onClick={shareToWhatsApp}>
+              Share to WhatsApp
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={shareToTwitter}>
+              Share to Twitter
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={shareToFacebook}>
+              Share to Facebook
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleShare}>
+              Share via Device
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <Button 
+          variant="outline"
+          className="flex-1"
+          onClick={handleDownload}
+          disabled={isDownloading}
+        >
+          <Download size={18} className="mr-2" />
+          {isDownloading ? "Downloading..." : "Download"}
+        </Button>
+      </div>
+
+      <Dialog
+        open={open}
+        onOpenChange={(newOpen) => {
+          if (!newOpen && !isDownloading) {
+            onNavigate?.();
+          }
+          onOpenChange(newOpen);
+        }}
+      >
+        <DialogContent className="w-full max-w-[90vw] sm:max-w-[500px] rounded-2xl">
+          <DialogTitle className="text-xl font-bold text-gray-800 dark:text-white">
+            {supercode ? "Event Created Successfully!" : "Joined Event Successfully!"}
+          </DialogTitle>
+          <DialogDescription>
+            <p className="text-gray-600 dark:text-gray-300 mb-4 text-center text-sm">
+              {supercode
+                ? "Your cycling event has been created. Below is your unique 6-digit supercode for check-ins."
+                : "You have joined the cycling event. Below is your 6-digit confirmation code for check-in."}
+            </p>
+            <div className="relative">
+              <select
+                value={backgroundColor}
+                onChange={(e) => setBackgroundColor(e.target.value)}
+                className="mt-4 w-full p-2 border rounded-lg"
+              >
+                <option value="#4CAF50">Green</option>
+                <option value="#FF5722">Orange</option>
+                <option value="#2196F3">Blue</option>
+                <option value="#9C27B0">Purple</option>
+                <option value="#000000">Black</option>
+              </select>
+              <div
+                ref={cardRef}
+                className="relative bg-gradient-to-r from-green-500 to-green-700 rounded-lg p-6 text-white shadow-xl max-w-md mx-auto overflow-hidden border-4 border-dashed border-white/30 mt-4"
+                style={{
+                  backgroundImage: 'linear-gradient(45deg, rgba(255,255,255,0.1) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.1) 75%, transparent 75%, transparent)',
+                  backgroundSize: '40px 40px',
+                  clipPath: 'polygon(10% 0%, 90% 0%, 100% 10%, 100% 90%, 90% 100%, 10% 100%, 0% 90%, 0% 10%)',
+                  backgroundColor: backgroundColor,
+                }}
+              >
+                {/* Perforated Edge Semi-Circles */}
+                <div className="absolute top-0 left-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '20%' }} />
+                <div className="absolute top-0 left-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '50%' }} />
+                <div className="absolute top-0 left-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '80%' }} />
+                <div className="absolute top-0 right-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '20%' }} />
+                <div className="absolute top-0 right-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '50%' }} />
+                <div className="absolute top-0 right-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '80%' }} />
+
+                {/* Ticket Content */}
+                <div className="flex items-center justify-between mb-4">
+                  <img src={logoSrc} alt="SportCliq Logo" className="h-10 w-auto" />
+                  <Bike className="h-6 w-6" />
+                </div>
+                <h2 className="text-2xl font-bold mb-2 tracking-tight font-condensed uppercase text-center">{formValues.title || 'Untitled Event'}</h2>
+                <div className="text-center mb-4">
+                  <p className="text-sm"><MapPin className="inline h-4 w-4 mr-1" /> {selectedLandmark.name || 'Unknown Location'}, {selectedLandmark.state || 'Unknown State'}</p>
+                  <p className="text-sm"><CalendarIcon className="inline h-4 w-4 mr-1" /> {formattedDate}</p>
+                  <p className="text-sm"><Clock className="inline h-4 w-4 mr-1" /> {formValues.start_time || 'Unknown Time'}</p>
+                  <p className="text-sm font-semibold"><User className="inline h-4 w-4 mr-1" /> Hosted by {formValues.host_name || 'Unknown Host'}</p>
+                </div>
+                <div className="bg-white text-green-600 rounded-md p-4 text-center shadow-inner">
+                  <p className="text-sm font-medium uppercase tracking-wide">{supercode ? "Supercode" : "Confirmation Code"}</p>
+                  <p className="text-4xl font-bold tracking-wider mt-1 font-mono">{code}</p>
+                </div>
+              </div>
+            </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400 my-4 text-center">
+              <strong>Note:</strong> Save or download this code for check-in on event day.
+            </p>
+            <div className="flex justify-center gap-4 px-6 py-4">
+              <Button
+                className="flex-1 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg px-6 py-3 shadow-sm transition-colors duration-200 border-0 max-w-xs"
+                onClick={handleDownload}
+                disabled={isDownloading}
+              >
+                <Download size={16} className="mr-2" />
+                {isDownloading ? "Downloading..." : "Download"}
+              </Button>
+              <Button
+                className="flex-1 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg px-6 py-3 shadow-sm transition-colors duration-200 border-0 max-w-xs"
+                onClick={handleShare}
+                disabled={isDownloading}
+              >
+                <Share2 size={16} className="mr-2" />
+                Share
+              </Button>
+            </div>
+            <div className="flex justify-center">
+              <Button
+                className="bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 transition-colors"
+                onClick={() => {
+                  if (!isDownloading) {
+                    onOpenChange(false);
+                    onNavigate?.();
+                  }
+                }}
+                disabled={isDownloading}
+              >
+                Go to Events
+              </Button>
+            </div>
+          </DialogDescription>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
 
