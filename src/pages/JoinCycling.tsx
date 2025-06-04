@@ -3,11 +3,11 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { supabase } from "@@/integrations/supabase/client";
-import { useToast } from "@@/hooks/use-toast";
-import { Button } from "@@/components/ui/button";
-import { Input } from "@@/components/ui/input";
-import { Checkbox } from "@@/components/ui/checkbox";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Form,
   FormControl,
@@ -15,9 +15,9 @@ import {
   FormLabel,
   FormItem,
   FormMessage,
-} from "@@/components/ui/form";
+} from "@/components/ui/form";
 import { ArrowLeft, Calendar, Clock, MapPin, Users, Loader } from "lucide-react";
-import CyclingSuccessDialog from "@@/components/CyclingSuccessDialog";
+import CyclingSuccessDialog from "@/components/CyclingSuccessDialog";
 import Navbar from "./@/components/Navbar";
 
 type Landmark = {
