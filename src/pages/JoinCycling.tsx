@@ -131,58 +131,58 @@ const JoinCycling = () => {
     return () => document.body.removeChild(script);
   }, [toast]);
 
-  useEffect(() => {
-    if (!slug) return;
-    const fetchEvent = async () => {
-      try {
-        setLoading(true);
-        const { data, error } = await supabase
-          .from("cycling_events")
-          .select(`
-            id_uuid,
-            slug,
-            title,
-            event_date,
-            start_time,
-            max_attendees,
-            is_free,
-            price,
-            host_name,
-            host_phone,
-            is_own_bike,
-            is_rental_available,
-            start_landmark:landmarks!cycling_events_start_landmark_id_fkey(name, state)
-          `)
-          .eq("slug", slug)
-          .single();
-        if (error) throw error;
+useEffect(() => {
+  if (!slug) return;
+  const fetchEvent = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("cycling_events")
+        .select(`
+          id_uuid,
+          slug,
+          title,
+          event_date,
+          start_time,
+          max_attendees,
+          is_free,
+          price,
+          host_name,
+          host_phone,
+          is_own_bike,
+          is_rental_available,
+          start_landmark:landmarks!cycling_events_start_landmark_id_fkey(name, state)
+        `)
+        .eq("slug", slug)
+        .single();
+      if (error) throw error;
 
-        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-        if (!uuidRegex.test(data.id_uuid)) {
-          throw new Error(`Invalid event ID format: ${data.id_uuid}`);
-        }
-
-        setEvent(data);
-
-        const { data: attendeesData, error: attendeesError } = await supabase
-          .from("cycling_attendees")
-          .select("id_uuid, attendee_name, attendee_phone, confirmation_code, payment_status, cycling_event_id_uuid")
-          .eq("cycling_event_id_uuid", data.id_uuid);
-        if (!attendeesError) setAttendees(attendeesData || []);
-      } catch (err: any) {
-        console.error('Error:", err);
-        toast({
-          title: 'Error',
-          description: err.message || 'Failed to load event.',
-          variant: 'error',
-        });
-        navigate('/cycling-activities');
-      } finally {
-        setLoading(false);
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(data.id_uuid)) {
+        throw new Error(`Invalid event ID format: ${data.id_uuid}`);
       }
-    };
-    fetchEvent();
-  }, [slug, navigate, toast]);
+
+      setEvent(data);
+
+      const { data: attendeesData, error: attendeesError } = await supabase
+        .from("cycling_attendees")
+        .select("id_uuid, attendee_name, attendee_phone, confirmation_code, payment_status, cycling_event_id_uuid")
+        .eq("cycling_event_id_uuid", data.id_uuid);
+      if (!attendeesError) setAttendees(attendeesData || []);
+    } catch (err: any) {
+      console.error('Error:', err); // Corrected line
+      toast({
+        title: 'Error',
+        description: err.message || 'Failed to load event.',
+        variant: 'error',
+      });
+      navigate('/cycling-activities');
+    } finally {
+      setLoading(false);
+    }
+  };
+  fetchEvent();
+}, [slug, navigate, toast]);
 
   useEffect(() => {
     if (!paymentReference || !event?.id_uuid) return;
