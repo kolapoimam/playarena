@@ -409,6 +409,8 @@ const ConfirmCheckin = () => {
           status: data.status ?? "upcoming",
         };
 
+        console.log("Fetched match data:", matchData); // Debug log
+
         setMatch(matchData);
         setPlayerStatuses(
           (matchData.players || []).map((player) => ({
@@ -714,15 +716,15 @@ const ConfirmCheckin = () => {
         )
         .subscribe();
 
-      const ticketSalesSubscription = supabase
-        .channel(`ticket_sales_${match.id}`)
+      const ticketSalesLoading = supabase
+        .channel(`loading_${match.id}`)
         .on(
           "postgres_changes",
           {
             event: "*",
             schema: "public",
-            table: "ticket_sales",
-            filter: `match_id=eq.${match.id}`,
+            table: "loading_sales",
+            filter: `match_id=eq.match.id`,
           },
           (payload) => {
             console.log("Ticket sales update received", payload);
@@ -734,19 +736,19 @@ const ConfirmCheckin = () => {
       return () => {
         supabase.removeChannel(playerSubscription);
         supabase.removeChannel(ticketSubscription);
-        supabase.removeChannel(ticketSalesSubscription);
+        supabase.removeChannel(ticketSalesLoading);
       };
     }
-  }, [match?.id, cyclingEvent?.id_uuid, isCyclingEvent]);
+  }, [cyclingEvent?.id_uuid, match?.id, isCyclingEvent]);
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
-      <header className="sticky top-0 z-50 dark:bg-gray-50 bg-green-500 text-white">
+      <header className="w-full sticky top-0 z-50 dark:bg-gray-50 bg-green-500 text-white">
         <div className="p-4 flex items-center justify-between">
           <Button
             variant="ghost"
             onClick={() => navigate(-1)}
-            className="text-white hover:text-gray-300"
+            className="text-white hover:bg-gray-700"
           >
             <ArrowLeft size={18} className="mr-2" />
             Back
@@ -764,7 +766,7 @@ const ConfirmCheckin = () => {
             </h2>
             <div className="flex gap-4">
               <Toggle
-                pressed={!isCyclingEvent}
+                pressed={isCyclingEvent}
                 onPressedChange={() => {
                   setIsCyclingEvent(false);
                   setSuperCode("");
@@ -783,7 +785,7 @@ const ConfirmCheckin = () => {
                 }}
                 className="flex-1 py-2 text-center bg-gray-100 dark:bg-gray-700 rounded-lg data-[state=on]:bg-green-500 data-[state=on]:text-white"
               >
-                Cycling Event
+                Cycling Events
               </Toggle>
             </div>
           </div>
@@ -851,7 +853,7 @@ const ConfirmCheckin = () => {
             </h2>
             <p className="mt-2 text-center text-gray-600 dark:text-gray-400">
               No {isCyclingEvent ? "cycling event" : "match"} found with super code "
-              <strong>{superCode}</strong>".
+              <strong>{superCode}</strong>.
             </p>
           </div>
         )}
@@ -862,19 +864,19 @@ const ConfirmCheckin = () => {
               <TabsList className="w-full grid grid-cols-3 bg-gray-100 dark:bg-gray-700 rounded-lg h-12">
                 <TabsTrigger
                   value="details"
-                  className="data-[state=active]:bg-green-500 data-[state=active]:text-white py-2 text-sm font-semibold rounded-lg"
+                  className="data-[state=active]:bg-green-500 text-white py-2 text-sm font-semibold rounded-lg"
                 >
                   Details
                 </TabsTrigger>
                 <TabsTrigger
                   value="manage"
-                  className="data-[state=active]:bg-green-500 data-[state=active]:text-white py-2 text-sm font-semibold rounded-lg"
+                  className="data-[state=active]:bg-green-500 text-white py-2 text-sm font-semibold rounded-lg"
                 >
                   Manage
                 </TabsTrigger>
                 <TabsTrigger
                   value="cashout"
-                  className="data-[state=active]:bg-green-500 data-[state=active]:text-white py-2 text-sm"
+                  className="data-[state=active]:bg-green-500 text-white py-2 text-sm"
                 >
                   Cashout
                 </TabsTrigger>
@@ -946,9 +948,13 @@ const ConfirmCheckin = () => {
                           <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
                             Ticket Sales
                           </h2>
-                          {match.ticket_sales && (
+                          {match.ticket_sales?.total_amount != null ? (
                             <span className="px-2 py-1 text-xs font-medium rounded border bg-green-500 text-white border-green-600">
                               Total Ticket Sales: ${match.ticket_sales.total_amount.toFixed(2)}
+                            </span>
+                          ) : (
+                            <span className="px-2 py-1 text-xs font-medium rounded border bg-gray-500 text-white border-gray-600">
+                              Total Ticket Sales: $0.00
                             </span>
                           )}
                         </div>
@@ -961,11 +967,11 @@ const ConfirmCheckin = () => {
                           canConfirmTickets={canConfirmAttendees()}
                           navigate={navigate}
                         />
-                        {match.ticket_sales && match.ticket_sales.settlement_status === "Pending" && (
+                        {match.ticket_sales && match.ticket_sales.settlement_status === "Pending" && match.ticket_sales.total_amount > 0 && (
                           <Button
                             onClick={() => setCashoutDialogOpen(true)}
-                            className="mt-4 bg-purple-500 hover:bg-purple-600 text-white"
-                            disabled={isEventPast() || !match.ticket_sales.total_amount}
+                            className="mt-4 bg-purple-600 hover:bg-purple-700 text-white"
+                            disabled={isEventPast()}
                           >
                             Request Cashout
                           </Button>
@@ -1040,8 +1046,8 @@ const ConfirmCheckin = () => {
             <DialogHeader>
               <DialogTitle>Request Cashout for Ticket Sales</DialogTitle>
               <DialogDescription>
-                Enter your bank details to request a cashout of{" "}
-                {match?.ticket_sales?.total_amount.toFixed(2) || "0.00"} for checked-in tickets.
+                Enter your bank details to request cashout of{" "}
+                {match?.ticket_sales?.total_amount != null ? match.ticket_sales.total_amount.toFixed(2) : "0.00"} for checked-in tickets.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
@@ -1086,7 +1092,7 @@ const ConfirmCheckin = () => {
               </Button>
               <Button
                 onClick={handleCashout}
-                className=" background-color: #6B46C1 hover:bg-purple-600 text-white"
+                className="bg-purple-600 hover:bg-purple-700 text-white"
                 disabled={cashoutLoading}
               >
                 {cashoutLoading ? (
@@ -1095,15 +1101,14 @@ const ConfirmCheckin = () => {
                     Processing...
                   </>
                 ) : (
-                  "Submit Cashout"
+                  "Confirm Cashout"
                 )}
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
-
-        <Navbar />
       </div>
+      <Navbar />
     </div>
   );
 };
