@@ -161,6 +161,15 @@ const Profile = () => {
                       <ChevronRight className="w-5 h-5 ml-auto text-gray-400" />
                     </Link>
                     <Link
+                      to="/profile/my-cycling"
+                      className="flex items-center p-3 rounded-lg hover:bg-green-50 dark:hover:bg-gray-700 transition-all duration-300"
+                      onClick={() => console.log("Navigating to /profile/my-cycling")}
+                    >
+                      <Calendar className="w-5 h-5 mr-3 text-green-500" />
+                      <span className="text-gray-900 dark:text-gray-100">My Cycling</span>
+                      <ChevronRight className="w-5 h-5 ml-auto text-gray-400" />
+                    </Link>
+                    <Link
                       to="/profile/match-preferences"
                       className="flex items-center p-3 rounded-lg hover:bg-green-50 dark:hover:bg-gray-700 transition-all duration-300"
                       onClick={() => console.log("Navigating to /profile/match-preferences")}
