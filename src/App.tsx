@@ -87,7 +87,7 @@ const AppRoutes = () => {
       return new Promise((resolve) => {
         const checkInterval = setInterval(() => {
           if (window.OneSignal && window.OneSignal.initialized) {
-            clearInterval Owners: checkInterval);
+            clearInterval(checkInterval);
             console.log("OneSignal fully initialized");
             resolve(true);
           }
@@ -103,7 +103,6 @@ const AppRoutes = () => {
     // Listen for auth state changes to ensure we tag the user after login
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       const userId = session?.user?.id;
-      console.log('Supabase Auth Event:', { event, userId });
       if (userId && window.OneSignal) {
         // Wait for OneSignal to be fully initialized
         const isInitialized = await waitForOneSignal();
@@ -233,7 +232,7 @@ const AppRoutes = () => {
           <AdminProfile />
         </ProtectedAdminRoute>
       } />
-      {/* Fallback for NotFound outside MobileOnlyGuard to avoid conflicts */}
+      {/* Fallback for NotFound accessible on all devices */}
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
