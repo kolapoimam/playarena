@@ -42,7 +42,17 @@ const MatchJoinersDialog = ({
   const [backgroundColor, setBackgroundColor] = useState('#4CAF50'); // Default green
   const cardRef = useRef<HTMLDivElement>(null);
 
-  const formatDate = (dateString: string) => {
+  // Log props for debugging
+  console.log('MatchJoinersDialog props:', {
+    open,
+    match,
+    confirmationCode,
+    selectedSlots,
+    totalPlayerSlots,
+  });
+
+  const formatDate = (dateString: string | undefined) => {
+    if (!dateString) return "Unknown Date";
     const options: Intl.DateTimeFormatOptions = {
       weekday: "short",
       day: "numeric",
@@ -52,7 +62,8 @@ const MatchJoinersDialog = ({
     return new Date(dateString).toLocaleDateString("en-NG", options);
   };
 
-  const formatTime = (timeString: string) => {
+  const formatTime = (timeString: string | undefined) => {
+    if (!timeString) return "Unknown Time";
     const [hours, minutes] = timeString.split(":");
     const date = new Date();
     date.setHours(parseInt(hours), parseInt(minutes), 0, 0);
@@ -90,7 +101,7 @@ const MatchJoinersDialog = ({
         throw new Error("Failed to convert canvas to Blob");
       }
 
-      const filename = `SportCliq-ConfirmationCode-${match?.title.replace(/\s+/g, '-')}.png`;
+      const filename = `SportCliq-ConfirmationCode-${(match?.title || 'Untitled-Match').replace(/\s+/g, '-')}.png`;
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
@@ -114,15 +125,10 @@ const MatchJoinersDialog = ({
   const isDarkBackground = backgroundColor === '#4CAF50' || backgroundColor === '#000000' || backgroundColor === '#2196F3' || backgroundColor === '#9C27B0';
   const logoSrc = isDarkBackground ? '/playarenadark.png' : '/playarenalight.png';
 
-  if (!match || !confirmationCode) {
-    console.error('Invalid props in MatchJoinersDialog, closing dialog');
-    toast({
-      title: "Error",
-      description: "Some match information is missing.",
-      variant: "destructive",
-    });
-    onOpenChange(false);
-    return null;
+  // If props are missing, use fallback values but keep dialog open
+  const isValid = match && confirmationCode;
+  if (!isValid) {
+    console.warn('MatchJoinersDialog: Some props are missing, using fallbacks');
   }
 
   return (
@@ -141,6 +147,7 @@ const MatchJoinersDialog = ({
         <DialogDescription className="flex flex-col items-center">
           <p className="text-gray-600 dark:text-gray-300 mb-4 text-sm text-center max-w-xs">
             You have successfully registered for the match for {selectedSlots} slot{selectedSlots > 1 ? "s" : ""}.
+            {!isValid && " Some match details may be missing."}
           </p>
           <div className="relative w-full max-w-md">
             <select
@@ -197,23 +204,23 @@ const MatchJoinersDialog = ({
                 <Medal className="h-6 w-6 text-blue-300" />
               </div>
               <h2 className="text-2xl font-bold mb-2 tracking-tight font-condensed uppercase text-center">
-                {match.title || 'Untitled Match'}
+                {match?.title || 'Untitled Match'}
               </h2>
               <div className="text-center mb-4">
                 <p className="text-sm">
-                  <MapPin className="inline h-4 w-4 mr-1" /> {match.venue?.name || 'Unknown Venue'}, {match.venue?.city || ''}
+                  <MapPin className="inline h-4 w-4 mr-1" /> {match?.venue?.name || 'Unknown Venue'}, {match?.venue?.city || 'Unknown City'}
                 </p>
                 <p className="text-sm">
-                  <Calendar className="inline h-4 w-4 mr-1" /> {formatDate(match.match_date)} at {formatTime(match.match_time)}
+                  <Calendar className="inline h-4 w-4 mr-1" /> {formatDate(match?.match_date)} at {formatTime(match?.match_time)}
                 </p>
                 <p className="text-sm">
-                  <DollarSign className="inline h-4 w-4 mr-1" /> {match.is_paid ? `Paid (₦${match.price?.toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} x${selectedSlots})` : "Free"}
+                  <DollarSign className="inline h-4 w-4 mr-1" /> {match?.is_paid && match?.price ? `Paid (₦${match.price.toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} x${selectedSlots})` : "Free"}
                 </p>
                 <p className="text-sm">
-                  <Users className="inline h-4 w-4 mr-1" /> {totalPlayerSlots}/{match.total_slots} slots booked
+                  <Users className="inline h-4 w-4 mr-1" /> {totalPlayerSlots}/{match?.total_slots || 0} slots booked
                 </p>
                 <p className="text-sm font-semibold">
-                  Confirmation Code: <span className="font-mono">{confirmationCode}</span>
+                  Confirmation Code: <span className="font-mono">{confirmationCode || 'N/A'}</span>
                 </p>
                 {selectedSlots > 1 && (
                   <p className="text-sm">
@@ -223,7 +230,7 @@ const MatchJoinersDialog = ({
               </div>
               <div className="bg-white text-green-600 rounded-md p-4 text-center shadow-inner">
                 <p className="text-sm font-medium uppercase tracking-wide">Confirmation Code</p>
-                <p className="text-4xl font-bold tracking-wider mt-1 font-mono">{confirmationCode}</p>
+                <p className="text-4xl font-bold tracking-wider mt-1 font-mono">{confirmationCode || 'N/A'}</p>
               </div>
             </div>
           </div>
