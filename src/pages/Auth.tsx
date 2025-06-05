@@ -118,16 +118,14 @@ const Auth = () => {
         },
       });
 
-      // Only throw an error if one is explicitly returned
+      // If no error, the browser will redirect to Google's OAuth page
+      // No toast should be shown here, as this is the expected behavior
       if (error) {
         console.error("Google OAuth error:", error.message); // Log for debugging
         throw error;
       }
 
-      // Note: After successful initiation, the browser redirects to Google's OAuth page,
-      // so the code below this point won't execute until the redirect callback occurs.
-
-      // After redirect, get user data
+      // Note: Code below this point executes only after OAuth redirect callback
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError) {
         console.error("User data error:", userError.message); // Log for debugging
@@ -160,21 +158,19 @@ const Auth = () => {
         navigate("/profile");
       }
     } catch (error) {
-      // Handle specific errors
-      if (error.code === "user_cancelled") {
-        toast({
-          title: "Login Cancelled",
-          description: "You cancelled the Google login. Please try again if you wish to proceed.",
-          variant: "destructive",
-        });
+      // Suppress toast for errors that occur during redirect initiation
+      if (error.message.includes("redirect") || error.code === "user_cancelled") {
+        console.warn("OAuth redirect initiated or user cancelled, no toast displayed:", error.message);
+        // No toast for redirect-related errors or user cancellation
       } else if (error.message.includes("network")) {
+        console.error("Network error during Google OAuth:", error.message);
         toast({
           title: "Network Error",
           description: "Unable to connect to the server. Please check your internet connection and try again.",
           variant: "destructive",
         });
       } else {
-        console.error("Unexpected Google OAuth error:", error.message); // Log for debugging
+        console.error("Unexpected Google OAuth error:", error.message);
         toast({
           title: "Authentication Error",
           description: "Unable to complete Google login. Please try again later or contact support.",
