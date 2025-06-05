@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Users, Calendar, DollarSign, AlertCircle, TrendingUp, Building2 } from 'lucide-react';
+import { Users, Calendar, DollarSign, AlertCircle, TrendingUp, Building2, Bell } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { adminOperations, AdminMetrics } from '@/lib/admin';
@@ -23,22 +23,9 @@ const AdminDashboard = () => {
     const fetchMetrics = async () => {
       try {
         const data = await adminOperations.getMetrics();
-        if (data) {
-          setMetrics(data);
-        } else {
-          // Fallback to default metrics if no data is returned
-          setMetrics({
-            total_users: 0,
-            total_events: 0,
-            pending_cashouts: 0,
-            total_revenue: 0,
-            active_venues: 0,
-            new_notifications: 0
-          });
-        }
+        setMetrics(data);
       } catch (error) {
         console.error('Error fetching metrics:', error);
-        // Set default metrics on error to prevent UI from breaking
         setMetrics({
           total_users: 0,
           total_events: 0,
@@ -139,6 +126,17 @@ const AdminDashboard = () => {
             <CardContent>
               <div className="text-2xl font-bold">{metrics.active_venues}</div>
               <p className="text-xs text-muted-foreground">Verified venues</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">New Notifications</CardTitle>
+              <Bell className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{metrics.new_notifications}</div>
+              <p className="text-xs text-muted-foreground">New cashout requests</p>
             </CardContent>
           </Card>
         </div>
