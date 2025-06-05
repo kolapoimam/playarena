@@ -361,7 +361,7 @@ const JoinCycling = () => {
         attendee_name: data.name,
         attendee_phone: data.phone,
         confirmation_code: confirmationCode,
-        payment_status: event sistent,
+payment_status: event.is_free || paymentStatus === 'success',
         is_own_bike: event.is_own_bike ? data.is_own_bike : null,
         is_rental_bike: event.is_rental_available ? data.is_rental_bike : null,
       };
