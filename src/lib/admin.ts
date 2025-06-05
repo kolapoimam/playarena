@@ -9,6 +9,12 @@ export interface AdminMetrics {
   total_revenue: number;
   active_venues: number;
   new_notifications: number;
+  user_growth: { period: string; count: number }[];
+  event_trends: { period: string; match_count: number; cycling_count: number }[];
+  revenue_breakdown: { match: number; cycling: number; venue: number };
+  commission_breakdown: { match: number; cycling: number; venue: number };
+  top_sports: { sport: string; count: number }[];
+  top_venues: { id: string; name: string; bookings: number; revenue: number }[];
 }
 
 export interface AdminUser {
@@ -90,7 +96,13 @@ export const adminOperations = {
           pending_cashouts: 0,
           total_revenue: 0,
           active_venues: 0,
-          new_notifications: 0
+          new_notifications: 0,
+          user_growth: [],
+          event_trends: [],
+          revenue_breakdown: { match: 0, cycling: 0, venue: 0 },
+          commission_breakdown: { match: 0, cycling: 0, venue: 0 },
+          top_sports: [],
+          top_venues: []
         };
       }
 
@@ -101,7 +113,13 @@ export const adminOperations = {
         pending_cashouts: metrics.pending_cashouts || 0,
         total_revenue: metrics.total_revenue || 0,
         active_venues: metrics.active_venues || 0,
-        new_notifications: metrics.new_notifications || 0
+        new_notifications: metrics.new_notifications || 0,
+        user_growth: [],
+        event_trends: [],
+        revenue_breakdown: { match: 0, cycling: 0, venue: 0 },
+        commission_breakdown: { match: 0, cycling: 0, venue: 0 },
+        top_sports: [],
+        top_venues: []
       };
     } catch (error: any) {
       console.error('Unexpected error in getMetrics:', {
@@ -114,8 +132,186 @@ export const adminOperations = {
         pending_cashouts: 0,
         total_revenue: 0,
         active_venues: 0,
-        new_notifications: 0
+        new_notifications: 0,
+        user_growth: [],
+        event_trends: [],
+        revenue_breakdown: { match: 0, cycling: 0, venue: 0 },
+        commission_breakdown: { match: 0, cycling: 0, venue: 0 },
+        top_sports: [],
+        top_venues: []
       };
+    }
+  },
+
+  // Get analytics data
+  async getAnalytics(
+    timeRange: '7d' | '30d' | '90d' | '1y' | 'custom',
+    customStart?: string,
+    customEnd?: string
+  ): Promise<AdminMetrics> {
+    try {
+      const now = new Date();
+      let startDate: string;
+      switch (timeRange) {
+        case '7d':
+          startDate = new Date(now.setDate(now.getDate() - 7)).toISOString();
+          break;
+        case '30d':
+          startDate = new Date(now.setDate(now.getDate() - 30)).toISOString();
+          break;
+        case '90d':
+          startDate = new Date(now.setDate(now.getDate() - 90)).toISOString();
+          break;
+        case '1y':
+          startDate = new Date(now.setFullYear(now.getFullYear() - 1)).toISOString();
+          break;
+        case 'custom':
+          if (!customStart || !customEnd) throw new Error('Custom date range requires start and end dates');
+          startDate = new Date(customStart).toISOString();
+          break;
+        default:
+          startDate = new Date(now.setDate(now.getDate() - 30)).toISOString();
+      }
+      const endDate = customEnd ? new Date(customEnd).toISOString() : new Date().toISOString();
+
+      // User growth (weekly/monthly)
+      const { data: userGrowthData } = await supabase
+        .from('profiles')
+        .select('created_at')
+        .gte('created_at', startDate)
+        .lte('created_at', endDate);
+      const userGrowth = [];
+      const period = timeRange === '1y' ? 'month' : 'week';
+      const groupedUsers = userGrowthData?.reduce((acc: any, user: any) => {
+        const date = new Date(user.created_at);
+        const key = period === 'month'
+          ? `${date.getFullYear()}-${date.getMonth() + 1}`
+          : `${date.getFullYear()}-W${Math.floor(date.getDate() / 7) + 1}`;
+        acc[key] = (acc[key] || 0) + 1;
+        return acc;
+      }, {}) || {};
+      for (const [key, count] of Object.entries(groupedUsers)) {
+        userGrowth.push({ period: key, count });
+      }
+
+      // Event trends
+      const { data: matchEvents } = await supabase
+        .from('matches')
+        .select('created_at')
+        .gte('created_at', startDate)
+        .lte('created_at', endDate);
+      const { data: cyclingEvents } = await supabase
+        .from('cycling_events')
+        .select('created_at')
+        .gte('created_at', startDate)
+        .lte('created_at', endDate);
+      const eventTrends = [];
+      const groupedEvents = { matches: {}, cycling: {} };
+      for (const event of matchEvents || []) {
+        const date = new Date(event.created_at);
+        const key = period === 'month'
+          ? `${date.getFullYear()}-${date.getMonth() + 1}`
+          : `${date.getFullYear()}-W${Math.floor(date.getDate() / 7) + 1}`;
+        groupedEvents.matches[key] = (groupedEvents.matches[key] || 0) + 1;
+      }
+      for (const event of cyclingEvents || []) {
+        const date = new Date(event.created_at);
+        const key = period === 'month'
+          ? `${date.getFullYear()}-${date.getMonth() + 1}`
+          : `${date.getFullYear()}-W${Math.floor(date.getDate() / 7) + 1}`;
+        groupedEvents.cycling[key] = (groupedEvents.cycling[key] || 0) + 1;
+      }
+      const allPeriods = new Set([...Object.keys(groupedEvents.matches), ...Object.keys(groupedEvents.cycling)]);
+      for (const p of allPeriods) {
+        eventTrends.push({
+          period: p,
+          match_count: groupedEvents.matches[p] || 0,
+          cycling_count: groupedEvents.cycling[p] || 0
+        });
+      }
+
+      // Revenue breakdown
+      const { data: matchRevenue } = await supabase
+        .from('tickets')
+        .select('total_price')
+        .gte('created_at', startDate)
+        .lte('created_at', endDate);
+      const { data: cyclingRevenue } = await supabase
+        .from('cycling_attendees')
+        .select('amount')
+        .gte('created_at', startDate)
+        .lte('created_at', endDate);
+      const { data: venueRevenue } = await supabase
+        .from('venue_booking_cashout')
+        .select('amount')
+        .gte('created_at', startDate)
+        .lte('created_at', endDate);
+      const revenue_breakdown = {
+        match: matchRevenue?.reduce((sum, t) => sum + (t.total_price || 0), 0) || 0,
+        cycling: cyclingRevenue?.reduce((sum, t) => sum + (t.amount || 0), 0) || 0,
+        venue: venueRevenue?.reduce((sum, v) => sum + (v.amount || 0), 0) || 0
+      };
+
+      // Commission breakdown
+      const commission_breakdown = {
+        match: revenue_breakdown.match * 0.05,
+        cycling: revenue_breakdown.cycling * 0.05,
+        venue: revenue_breakdown.venue * 0.10
+      };
+
+      // Top sports
+      const { data: matchSports } = await supabase
+        .from('matches')
+        .select('match_type')
+        .gte('created_at', startDate)
+        .lte('created_at', endDate);
+      const { data: cyclingCount } = await supabase
+        .from('cycling_events')
+        .select('id')
+        .gte('created_at', startDate)
+        .lte('created_at', endDate);
+      const sportCounts = matchSports?.reduce((acc: any, m: any) => {
+        acc[m.match_type] = (acc[m.match_type] || 0) + 1;
+        return acc;
+      }, { Cycling: cyclingCount?.length || 0 }) || { Cycling: cyclingCount?.length || 0 };
+      const top_sports = Object.entries(sportCounts).map(([sport, count]) => ({ sport, count: count as number }));
+
+      // Top venues
+      const { data: venueBookings } = await supabase
+        .from('bookings')
+        .select('venue_id, venues!inner(name)')
+        .gte('created_at', startDate)
+        .lte('created_at', endDate);
+      const venueRevenueData = venueRevenue || [];
+      const venueCounts = venueBookings?.reduce((acc: any, b: any) => {
+        const venueId = b.venue_id;
+        acc[venueId] = acc[venueId] || { name: b.venues.name, bookings: 0, revenue: 0 };
+        acc[venueId].bookings += 1;
+        acc[venueId].revenue = venueRevenueData
+          .filter((v: any) => v.venue_id === venueId)
+          .reduce((sum: number, v: any) => sum + (v.amount || 0), 0);
+        return acc;
+      }, {}) || {};
+      const top_venues = Object.entries(venueCounts)
+        .map(([id, v]: [string, any]) => ({ id, name: v.name, bookings: v.bookings, revenue: v.revenue }))
+        .sort((a, b) => b.bookings - a.bookings)
+        .slice(0, 5);
+
+      // Base metrics
+      const baseMetrics = await adminOperations.getMetrics();
+
+      return {
+        ...baseMetrics,
+        user_growth: userGrowth,
+        event_trends: eventTrends,
+        revenue_breakdown,
+        commission_breakdown,
+        top_sports,
+        top_venues
+      };
+    } catch (error: any) {
+      console.error('Error in getAnalytics:', error);
+      throw new Error(`Failed to fetch analytics: ${error.message}`);
     }
   },
 
