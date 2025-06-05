@@ -219,7 +219,7 @@ const MyCycling = () => {
             </p>
             <Button
               className="mx-auto block px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg"
-              onClick={() => navigate("/login")}
+              onClick={() => navigate("/auth")}
             >
               Log In
             </Button>
