@@ -186,7 +186,7 @@ const JoinCycling = () => {
   useEffect(() => {
     if (!paymentReference || !event?.id_uuid) return;
 
-    const verifyPayment = async (ret ries = 3, delay = 1000) => {
+    const verifyPayment = async (retries = 3, delay = 1000) => {
       setVerifyingPayment(true);
       try {
         for (let attempt = 1; attempt <= retries; attempt++) {
@@ -301,6 +301,7 @@ const JoinCycling = () => {
       const paystack = new window.PaystackPop();
       paystack.resumeTransaction(access_code, {
         onSuccess: (transaction: { reference: string }) => {
+          console.log('Payment successful, transaction:', transaction);
           setPaymentReference(transaction.reference);
           setPaymentStatus('success');
           toast({
@@ -310,9 +311,10 @@ const JoinCycling = () => {
           setJoining(false);
         },
         onCancel: () => {
+          console.log('Payment cancelled');
           toast({
             title: 'Payment Cancelled',
-            description: 'Payment process cancelled.',
+            description: 'Payment processing cancelled.',
             variant: 'error',
           });
           setJoining(false);
