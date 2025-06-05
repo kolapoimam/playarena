@@ -228,14 +228,10 @@ const MatchJoinersDialog = ({
                   </p>
                 )}
               </div>
-              <div className="bg-white text-green-600 rounded-md p-4 text-center shadow-inner">
-                <p className="text-sm font-medium uppercase tracking-wide">Confirmation Code</p>
-                <p className="text-4xl font-bold tracking-wider mt-1 font-mono">{confirmationCode || 'N/A'}</p>
-              </div>
             </div>
           </div>
           <p className="text-sm text-gray-500 dark:text-gray-400 my-4 text-center max-w-xs">
-            <strong>Note:</strong> Save or share this code. You'll need it on match day.
+            <strong>Note:</strong> Save this code. You'll need it on match day.
           </p>
           <div className="flex justify-center w-full">
             <Button 
