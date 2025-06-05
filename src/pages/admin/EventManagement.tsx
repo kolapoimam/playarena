@@ -277,7 +277,6 @@ const EventManagement = () => {
                   <TableHead>Status</TableHead>
                   <TableHead>Participants</TableHead>
                   <TableHead>Venue</TableHead>
-                  <TableHead>Landmark</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -296,7 +295,6 @@ const EventManagement = () => {
                     </TableCell>
                     <TableCell>{event.participants}</TableCell>
                     <TableCell>{event.venue}</TableCell>
-                    <TableCell>{event.landmark || 'N/A'}</TableCell>
                     <TableCell>
                       <div className="flex items-center space-x-2">
                         <Dialog>
@@ -327,10 +325,18 @@ const EventManagement = () => {
                                     <p className="text-sm font-medium">Venue</p>
                                     <p className="text-lg">{selectedEvent.venue}</p>
                                   </div>
-                                  <div>
-                                    <p className="text-sm font-medium">Landmark</p>
-                                    <p className="text-lg">{selectedEvent.landmark || 'N/A'}</p>
-                                  </div>
+                                  {selectedEvent.type === 'cycling_event' && (
+                                    <>
+                                      <div>
+                                        <p className="text-sm font-medium">Start Landmark</p>
+                                        <p className="text-lg">{selectedEvent.landmark || 'N/A'}</p>
+                                      </div>
+                                      <div>
+                                        <p className="text-sm font-medium">End Landmark</p>
+                                        <p className="text-lg">{selectedEvent.end_landmark || 'N/A'}</p>
+                                      </div>
+                                    </>
+                                  )}
                                   <div>
                                     <p className="text-sm font-medium">Participants</p>
                                     <p className="text-2xl font-bold">{selectedEvent.participants}</p>
