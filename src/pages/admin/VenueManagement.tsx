@@ -5,33 +5,46 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Search, Eye, Check, X, MapPin, Phone, Mail } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Search, Eye, Check, X, MapPin, Phone, Mail, Trash2, ToggleRight } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
-import { supabase } from '@/lib/supabase';
-
-interface Venue {
-  id: string;
-  name: string;
-  city: string;
-  state: string;
-  address: string;
-  status: 'pending' | 'verified' | 'rejected';
-  owner_name: string;
-  owner_email: string;
-  owner_phone: string;
-  created_at: string;
-  events_count: number;
-  revenue: number;
-}
+import { supabase } from '@/integrations/supabase/client';
+import { adminOperations, Venue } from '@/lib/admin';
 
 const VenueManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [cityFilter, setCityFilter] = useState('all');
+  const [cities, setCities] = useState<string[]>([]);
   const [selectedVenue, setSelectedVenue] = useState<Venue | null>(null);
   const [venues, setVenues] = useState<Venue[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [adminRole, setAdminRole] = useState<'admin' | 'super_admin' | null>(null);
+
+  const getAdminId = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    return user?.id || 'placeholder-admin-id'; // Replace with actual auth logic
+  };
+
+  useEffect(() => {
+    const fetchAdminRole = async () => {
+      try {
+        const adminId = await getAdminId();
+        const { data, error } = await supabase
+          .from('admins')
+          .select('role')
+          .eq('id', adminId)
+          .single();
+        if (error) throw error;
+        setAdminRole(data.role);
+      } catch (err) {
+        console.error('Error fetching admin role:', err);
+        setError('Failed to fetch admin role');
+      }
+    };
+    fetchAdminRole();
+  }, []);
 
   useEffect(() => {
     const fetchVenues = async () => {
@@ -39,63 +52,42 @@ const VenueManagement = () => {
         setLoading(true);
         setError(null);
 
-        let query = supabase
+        const { venues, total } = await adminOperations.getVenues(
+          1,
+          50,
+          statusFilter,
+          cityFilter
+        );
+
+        setVenues(venues);
+
+        // Fetch unique cities for filter
+        const { data: cityData } = await supabase
           .from('venues')
-          .select(`
-            *,
-            owner:profiles(full_name, email, phone),
-            events:matches(count),
-            revenue:venue_booking_cashout(sum(amount))
-          `);
-
-        if (statusFilter !== 'all') {
-          query = query.eq('status', statusFilter);
-        }
-
-        const { data, error: fetchError } = await query;
-
-        if (fetchError) throw fetchError;
-
-        const formattedVenues = data.map(venue => ({
-          id: venue.id,
-          name: venue.name,
-          city: venue.city,
-          state: venue.state,
-          address: venue.address,
-          status: venue.status,
-          owner_name: venue.owner?.full_name,
-          owner_email: venue.owner?.email,
-          owner_phone: venue.owner?.phone,
-          created_at: venue.created_at,
-          events_count: venue.events?.[0]?.count || 0,
-          revenue: venue.revenue?.[0]?.sum || 0
-        }));
-
-        setVenues(formattedVenues);
+          .select('city')
+          .distinct();
+        setCities(cityData?.map(c => c.city) || []);
       } catch (err: any) {
         setError(err.message);
+        console.error('Error fetching venues:', err);
       } finally {
         setLoading(false);
       }
     };
 
     fetchVenues();
-  }, [statusFilter]);
+  }, [statusFilter, cityFilter]);
 
   const handleVerifyVenue = async (venueId: string) => {
     try {
-      const { error: updateError } = await supabase
-        .from('venues')
-        .update({ status: 'verified' })
-        .eq('id', venueId);
-
-      if (updateError) throw updateError;
-
+      const adminId = await getAdminId();
+      await adminOperations.toggleVenueStatus(venueId, 'pending', adminId);
       setVenues(venues.map(v => 
         v.id === venueId ? { ...v, status: 'verified' } : v
       ));
     } catch (err: any) {
       setError(err.message);
+      console.error('Error verifying venue:', err);
     }
   };
 
@@ -113,6 +105,31 @@ const VenueManagement = () => {
       ));
     } catch (err: any) {
       setError(err.message);
+      console.error('Error rejecting venue:', err);
+    }
+  };
+
+  const handleToggleVenueStatus = async (venue: Venue) => {
+    try {
+      const adminId = await getAdminId();
+      await adminOperations.toggleVenueStatus(venue.id, venue.status, adminId);
+      setVenues(venues.map(v => 
+        v.id === venue.id ? { ...v, status: v.status === 'verified' ? 'pending' : 'verified' } : v
+      ));
+    } catch (err: any) {
+      setError(err.message);
+      console.error('Error toggling venue status:', err);
+    }
+  };
+
+  const handleDeleteVenue = async (venueId: string) => {
+    try {
+      const adminId = await getAdminId();
+      await adminOperations.deleteVenue(venueId, adminId);
+      setVenues(venues.filter(v => v.id !== venueId));
+    } catch (err: any) {
+      setError(err.message);
+      console.error('Error deleting venue:', err);
     }
   };
 
@@ -121,7 +138,7 @@ const VenueManagement = () => {
       venue.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       venue.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
       venue.state.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      venue.owner_name?.toLowerCase().includes(searchTerm.toLowerCase());
+      venue.owner_name.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesSearch;
   });
 
@@ -204,12 +221,12 @@ const VenueManagement = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-col md:flex-row gap-4">
-                <Input
+              <Input
                 placeholder="Search venues..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
                 className="md:w-64"
-                />
+              />
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-full md:w-48">
                   <SelectValue placeholder="Filter by status" />
@@ -219,6 +236,17 @@ const VenueManagement = () => {
                   <SelectItem value="pending">Pending</SelectItem>
                   <SelectItem value="verified">Verified</SelectItem>
                   <SelectItem value="rejected">Rejected</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={cityFilter} onValueChange={setCityFilter}>
+                <SelectTrigger className="w-full md:w-48">
+                  <SelectValue placeholder="Filter by city" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Cities</SelectItem>
+                  {cities.map(city => (
+                    <SelectItem key={city} value={city}>{city}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -235,10 +263,12 @@ const VenueManagement = () => {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>ID</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Location</TableHead>
                   <TableHead>Owner</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Booking Fee</TableHead>
                   <TableHead>Events</TableHead>
                   <TableHead>Revenue</TableHead>
                   <TableHead>Actions</TableHead>
@@ -247,6 +277,7 @@ const VenueManagement = () => {
               <TableBody>
                 {filteredVenues.map((venue) => (
                   <TableRow key={venue.id}>
+                    <TableCell className="font-mono text-xs">{venue.id}</TableCell>
                     <TableCell className="font-medium">{venue.name}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
@@ -280,6 +311,7 @@ const VenueManagement = () => {
                         {venue.status}
                       </Badge>
                     </TableCell>
+                    <TableCell>₦{venue.booking_fee.toLocaleString()}</TableCell>
                     <TableCell>{venue.events_count}</TableCell>
                     <TableCell>₦{venue.revenue.toLocaleString()}</TableCell>
                     <TableCell>
@@ -294,7 +326,7 @@ const VenueManagement = () => {
                               <Eye className="h-4 w-4" />
                             </Button>
                           </DialogTrigger>
-                          <DialogContent className="max-w-2xl">
+                          <DialogContent className="max-w-3xl">
                             <DialogHeader>
                               <DialogTitle>Venue Details</DialogTitle>
                               <DialogDescription>
@@ -312,9 +344,9 @@ const VenueManagement = () => {
                                     <p className="text-sm font-medium">Location</p>
                                     <p className="text-lg">{selectedVenue.city}, {selectedVenue.state}</p>
                                   </div>
-                                  </div>
+                                </div>
 
-                                  <div>
+                                <div>
                                   <p className="text-sm font-medium mb-2">Owner Details</p>
                                   <div className="bg-muted p-4 rounded-lg space-y-2">
                                     <p><span className="font-medium">Name:</span> {selectedVenue.owner_name}</p>
@@ -322,37 +354,105 @@ const VenueManagement = () => {
                                     <p><span className="font-medium">Phone:</span> {selectedVenue.owner_phone}</p>
                                   </div>
                                 </div>
-                                
+
+                                <div>
+                                  <p className="text-sm font-medium mb-2">Booking History</p>
+                                  {selectedVenue.booking_history.length > 0 ? (
+                                    <Table>
+                                      <TableHeader>
+                                        <TableRow>
+                                          <TableHead>ID</TableHead>
+                                          <TableHead>Date</TableHead>
+                                          <TableHead>Amount</TableHead>
+                                          <TableHead>Status</TableHead>
+                                        </TableRow>
+                                      </TableHeader>
+                                      <TableBody>
+                                        {selectedVenue.booking_history.map(booking => (
+                                          <TableRow key={booking.id}>
+                                            <TableCell>{booking.id}</TableCell>
+                                            <TableCell>{new Date(booking.created_at).toLocaleDateString()}</TableCell>
+                                            <TableCell>₦{booking.amount.toLocaleString()}</TableCell>
+                                            <TableCell>{booking.status}</TableCell>
+                                          </TableRow>
+                                        ))}
+                                      </TableBody>
+                                    </Table>
+                                  ) : (
+                                    <p className="text-muted-foreground">No booking history available</p>
+                                  )}
+                                </div>
+
+                                <div>
+                                  <p className="text-sm font-medium mb-2">Verification Documents</p>
+                                  {selectedVenue.documents.length > 0 ? (
+                                    <div className="space-y-2">
+                                      {selectedVenue.documents.map(doc => (
+                                        <div key={doc.id} className="flex items-center justify-between bg-muted p-2 rounded">
+                                          <span>{doc.document_type}</span>
+                                          <a href={doc.document_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                                            View Document
+                                          </a>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <p className="text-muted-foreground">No documents uploaded</p>
+                                  )}
+                                </div>
+
                                 <div className="grid grid-cols-2 gap-4">
                                   <div>
                                     <p className="text-sm font-medium">Total Events</p>
                                     <p className="text-2xl font-bold">{selectedVenue.events_count}</p>
                                   </div>
-                                <div>
+                                  <div>
                                     <p className="text-sm font-medium">Total Revenue</p>
                                     <p className="text-2xl font-bold">₦{selectedVenue.revenue.toLocaleString()}</p>
                                   </div>
                                 </div>
 
-                                {selectedVenue.status === 'pending' && (
                                 <div className="flex space-x-4">
-                                  <Button
-                                      onClick={() => handleVerifyVenue(selectedVenue.id)}
+                                  {selectedVenue.status === 'pending' && (
+                                    <>
+                                      <Button
+                                        onClick={() => handleVerifyVenue(selectedVenue.id)}
+                                        className="flex-1"
+                                      >
+                                        <Check className="h-4 w-4 mr-2" />
+                                        Verify Venue
+                                      </Button>
+                                      <Button
+                                        variant="destructive"
+                                        onClick={() => handleRejectVenue(selectedVenue.id)}
+                                        className="flex-1"
+                                      >
+                                        <X className="h-4 w-4 mr-2" />
+                                        Reject Venue
+                                      </Button>
+                                    </>
+                                  )}
+                                  {selectedVenue.status !== 'rejected' && (
+                                    <Button
+                                      variant="outline"
+                                      onClick={() => handleToggleVenueStatus(selectedVenue)}
                                       className="flex-1"
                                     >
-                                      <Check className="h-4 w-4 mr-2" />
-                                      Verify Venue
+                                      <ToggleRight className="h-4 w-4 mr-2" />
+                                      Toggle Status
                                     </Button>
+                                  )}
+                                  {adminRole === 'super_admin' && (
                                     <Button
                                       variant="destructive"
-                                      onClick={() => handleRejectVenue(selectedVenue.id)}
-                                    className="flex-1"
-                                  >
-                                      <X className="h-4 w-4 mr-2" />
-                                      Reject Venue
-                                  </Button>
+                                      onClick={() => handleDeleteVenue(selectedVenue.id)}
+                                      className="flex-1"
+                                    >
+                                      <Trash2 className="h-4 w-4 mr-2" />
+                                      Delete Venue
+                                    </Button>
+                                  )}
                                 </div>
-                                )}
                               </div>
                             )}
                           </DialogContent>
@@ -360,23 +460,43 @@ const VenueManagement = () => {
 
                         {venue.status === 'pending' && (
                           <>
-                        <Button
-                          variant="ghost"
-                          size="sm"
+                            <Button
+                              variant="ghost"
+                              size="sm"
                               onClick={() => handleVerifyVenue(venue.id)}
                               className="text-green-600 hover:text-green-700"
                             >
                               <Check className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
                               onClick={() => handleRejectVenue(venue.id)}
-                          className="text-red-600 hover:text-red-700"
-                        >
+                              className="text-red-600 hover:text-red-700"
+                            >
                               <X className="h-4 w-4" />
-                        </Button>
+                            </Button>
                           </>
+                        )}
+                        {venue.status !== 'rejected' && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleToggleVenueStatus(venue)}
+                            className="text-blue-600 hover:text-blue-700"
+                          >
+                            <ToggleRight className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {adminRole === 'super_admin' && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteVenue(venue.id)}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         )}
                       </div>
                     </TableCell>
