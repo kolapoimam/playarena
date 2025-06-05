@@ -3,7 +3,7 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase-js";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -255,9 +255,8 @@ const JoinCycling = () => {
     }
 
     const amountInNaira = Number(event.price); // event.price is in Naira
-    const amountInKobo = amountInNaira * 100; // Convert to kobo for Paystack
 
-    if (!Number.isFinite(amountInKobo) || amountInKobo < 100) {
+    if (!Number.isFinite(amountInNaira) || amountInNaira < 1) {
       toast({
         title: 'Invalid Amount',
         description: 'Minimum payment is ₦1.00.',
@@ -282,7 +281,7 @@ const JoinCycling = () => {
       const response = await supabase.functions.invoke('initialize-paystack-transaction', {
         body: {
           email: defaultEmail,
-          amount: amountInKobo, // Send kobo to Paystack
+          amount: amountInNaira, // Send Naira to Paystack
           event_id: event.id_uuid,
           slug: event.slug,
           title: event.title,
