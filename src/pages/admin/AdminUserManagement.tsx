@@ -6,29 +6,41 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Search, Eye, Ban, UserCheck } from 'lucide-react';
+import { Search, Eye, Ban, UserCheck, ChevronLeft, ChevronRight } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { adminOperations, AdminUser } from '@/lib/admin';
 
 const AdminUserManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [dateFilter, setDateFilter] = useState<'today' | 'last_7_days' | 'custom' | ''>('');
+  const [customDateStart, setCustomDateStart] = useState('');
+  const [customDateEnd, setCustomDateEnd] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<'Organizer' | 'Host' | 'Cycler' | 'Player' | 'Venue Owner' | 'User' | 'all'>('all');
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [users, setUsers] = useState<AdminUser[]>([]);
+  const [totalUsers, setTotalUsers] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const usersPerPage = 20;
 
   // Fetch users
   useEffect(() => {
     const fetchUsers = async () => {
       try {
         setLoading(true);
-        const { users } = await adminOperations.getUsers(
-          1,
-          50,
-          statusFilter === 'all' ? undefined : statusFilter
+        const { users, total } = await adminOperations.getUsers(
+          currentPage,
+          usersPerPage,
+          statusFilter === 'all' ? undefined : statusFilter,
+          dateFilter || undefined,
+          customDateStart || undefined,
+          customDateEnd || undefined,
+          categoryFilter === 'all' ? undefined : categoryFilter
         );
         setUsers(users);
+        setTotalUsers(total);
         setError(null);
       } catch (err: any) {
         setError(err.message || 'Failed to fetch users. Please check the database schema and try again.');
@@ -39,7 +51,7 @@ const AdminUserManagement = () => {
     };
 
     fetchUsers();
-  }, [statusFilter]);
+  }, [currentPage, statusFilter, dateFilter, customDateStart, customDateEnd, categoryFilter]);
 
   const handleSuspendUser = async (userId: string) => {
     try {
@@ -67,9 +79,12 @@ const AdminUserManagement = () => {
 
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.email.toLowerCase().includes(searchTerm.toLowerCase());
+                         user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (user.super_code && user.super_code.toLowerCase().includes(searchTerm.toLowerCase()));
     return matchesSearch;
   });
+
+  const totalPages = Math.ceil(totalUsers / usersPerPage);
 
   if (loading) {
     return (
@@ -107,7 +122,7 @@ const AdminUserManagement = () => {
           <CardContent className="space-y-4">
             <div className="flex flex-col md:flex-row gap-4">
               <Input
-                placeholder="Search users..."
+                placeholder="Search by name, super code, or confirmation code..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="md:w-64"
@@ -122,6 +137,47 @@ const AdminUserManagement = () => {
                   <SelectItem value="suspended">Suspended</SelectItem>
                 </SelectContent>
               </Select>
+              <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value as any)}>
+                <SelectTrigger className="w-full md:w-48">
+                  <SelectValue placeholder="Filter by category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  <SelectItem value="Organizer">Organizer</SelectItem>
+                  <SelectItem value="Host">Host</SelectItem>
+                  <SelectItem value="Cycler">Cycler</SelectItem>
+                  <SelectItem value="Player">Player</SelectItem>
+                  <SelectItem value="Venue Owner">Venue Owner</SelectItem>
+                  <SelectItem value="User">User</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={dateFilter} onValueChange={(value) => setDateFilter(value as any)}>
+                <SelectTrigger className="w-full md:w-48">
+                  <SelectValue placeholder="Filter by date" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">No Date Filter</SelectItem>
+                  <SelectItem value="today">Today</SelectItem>
+                  <SelectItem value="last_7_days">Last 7 Days</SelectItem>
+                  <SelectItem value="custom">Custom Date</SelectItem>
+                </SelectContent>
+              </Select>
+              {dateFilter === 'custom' && (
+                <div className="flex gap-2">
+                  <Input
+                    type="date"
+                    value={customDateStart}
+                    onChange={(e) => setCustomDateStart(e.target.value)}
+                    className="w-full md:w-48"
+                  />
+                  <Input
+                    type="date"
+                    value={customDateEnd}
+                    onChange={(e) => setCustomDateEnd(e.target.value)}
+                    className="w-full md:w-48"
+                  />
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -129,37 +185,47 @@ const AdminUserManagement = () => {
         {/* Users Table */}
         <Card>
           <CardHeader>
-            <CardTitle>Users ({filteredUsers.length})</CardTitle>
+            <CardTitle>Users ({filteredUsers.length} of {totalUsers})</CardTitle>
             <CardDescription>View and manage all user accounts</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>ID</TableHead>
                   <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Phone</TableHead>
+                  <TableHead>Event</TableHead>
+                  <TableHead>Venue/Landmark</TableHead>
+                  <TableHead>Value</TableHead>
+                  <TableHead>Slots Paid For</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Joined</TableHead>
-                  <TableHead>Matches</TableHead>
+                  <TableHead>Total Earned</TableHead>
+                  <TableHead>Total Spent</TableHead>
+                  <TableHead>Super Code</TableHead>
+                  <TableHead>Last Cashout</TableHead>
+                  <TableHead>Last Activity</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredUsers.map((user) => (
                   <TableRow key={user.id}>
-                    <TableCell className="font-mono text-xs">{user.id}</TableCell>
                     <TableCell className="font-medium">{user.name}</TableCell>
-                    <TableCell>{user.email}</TableCell>
-                    <TableCell>{user.phone}</TableCell>
+                    <TableCell>{user.event_name || 'N/A'}</TableCell>
+                    <TableCell>{user.venue_name || 'N/A'}</TableCell>
+                    <TableCell>{user.value}</TableCell>
+                    <TableCell>{user.slots_paid_for}</TableCell>
                     <TableCell>
-                      <Badge variant={user.status === 'active' ? 'secondary' : 'destructive'}>
-                        {user.status}
-                      </Badge>
+                      {user.event_status ? (
+                        <Badge variant={user.event_status === 'Checked In' ? 'secondary' : user.event_status === 'Registered' ? 'default' : 'destructive'}>
+                          {user.event_status}
+                        </Badge>
+                      ) : 'N/A'}
                     </TableCell>
-                    <TableCell>{new Date(user.created_at).toLocaleDateString()}</TableCell>
-                    <TableCell>{user.matches[0]?.count || 0}</TableCell>
+                    <TableCell>₦{user.total_earned.toLocaleString()}</TableCell>
+                    <TableCell>₦{user.total_spent.toLocaleString()}</TableCell>
+                    <TableCell>{user.super_code || 'N/A'}</TableCell>
+                    <TableCell>{user.last_cashout ? new Date(user.last_cashout).toLocaleString() : 'N/A'}</TableCell>
+                    <TableCell>{new Date(user.last_activity).toLocaleString()}</TableCell>
                     <TableCell>
                       <div className="flex items-center space-x-2">
                         <Dialog>
@@ -172,27 +238,47 @@ const AdminUserManagement = () => {
                               <Eye className="h-4 w-4" />
                             </Button>
                           </DialogTrigger>
-                          <DialogContent className="max-w-2xl">
+                          <DialogContent className="max-w-3xl rounded-xl">
                             <DialogHeader>
                               <DialogTitle>User Details</DialogTitle>
                               <DialogDescription>
-                                View details for user {selectedUser?.id}
+                                View details for user {selectedUser?.name}
                               </DialogDescription>
                             </DialogHeader>
                             {selectedUser && (
                               <div className="space-y-6">
                                 <div className="grid grid-cols-2 gap-4">
                                   <div>
+                                    <p className="text-sm font-medium">Name</p>
+                                    <p className="text-lg">{selectedUser.name}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-medium">Email</p>
+                                    <p className="text-lg">{selectedUser.email}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-medium">Phone</p>
+                                    <p className="text-lg">{selectedUser.phone || 'N/A'}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-medium">Category</p>
+                                    <p className="text-lg">{selectedUser.category}</p>
+                                  </div>
+                                  <div>
                                     <p className="text-sm font-medium">Events Organized</p>
-                                    <p className="text-2xl font-bold">{selectedUser.events_organized[0]?.count || 0}</p>
+                                    <p className="text-lg">{selectedUser.events_organized}</p>
                                   </div>
                                   <div>
                                     <p className="text-sm font-medium">Events Participated</p>
-                                    <p className="text-2xl font-bold">{selectedUser.events_participated[0]?.count || 0}</p>
+                                    <p className="text-lg">{selectedUser.events_participated}</p>
                                   </div>
                                   <div>
-                                    <p className="text-sm font-medium">Matches</p>
-                                    <p className="text-2xl font-bold">{selectedUser.matches[0]?.count || 0}</p>
+                                    <p className="text-sm font-medium">Total Earned</p>
+                                    <p className="text-lg">₦{selectedUser.total_earned.toLocaleString()}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-medium">Total Spent</p>
+                                    <p className="text-lg">₦{selectedUser.total_spent.toLocaleString()}</p>
                                   </div>
                                 </div>
                                 <div>
@@ -203,25 +289,29 @@ const AdminUserManagement = () => {
                                     ))}
                                   </div>
                                 </div>
-                                {selectedUser.status === 'active' ? (
+                                <div className="grid grid-cols-2 gap-4">
                                   <Button
-                                    variant="destructive"
-                                    onClick={() => handleSuspendUser(selectedUser.id)}
+                                    variant={selectedUser.status === 'active' ? 'destructive' : 'secondary'}
+                                    onClick={() => selectedUser.status === 'active' ? handleSuspendUser(selectedUser.id) : handleActivateUser(selectedUser.id)}
                                     className="w-full"
                                   >
-                                    <Ban className="h-4 w-4 mr-2" />
-                                    Suspend User
+                                    {selectedUser.status === 'active' ? (
+                                      <>
+                                        <Ban className="h-4 w-4 mr-2" />
+                                        Suspend User
+                                      </>
+                                    ) : (
+                                      <>
+                                        <UserCheck className="h-4 w-4 mr-2" />
+                                        Activate User
+                                      </>
+                                    )}
                                   </Button>
-                                ) : (
-                                  <Button
-                                    variant="secondary"
-                                    onClick={() => handleActivateUser(selectedUser.id)}
-                                    className="w-full"
-                                  >
-                                    <UserCheck className="h-4 w-4 mr-2" />
-                                    Activate User
+                                  {/* Placeholder for additional actions */}
+                                  <Button variant="outline" className="w-full">
+                                    Custom Action
                                   </Button>
-                                )}
+                                </div>
                               </div>
                             )}
                           </DialogContent>
@@ -251,6 +341,26 @@ const AdminUserManagement = () => {
                 ))}
               </TableBody>
             </Table>
+            {/* Pagination Controls */}
+            <div className="flex justify-between items-center mt-4">
+              <Button
+                variant="outline"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(currentPage - 1)}
+              >
+                <ChevronLeft className="h-4 w-4 mr-2" />
+                Previous
+              </Button>
+              <span>Page {currentPage} of {totalPages}</span>
+              <Button
+                variant="outline"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(currentPage + 1)}
+              >
+                Next
+                <ChevronRight className="h-4 w-4 ml-2" />
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
