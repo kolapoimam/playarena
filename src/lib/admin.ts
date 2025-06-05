@@ -1,4 +1,3 @@
-// admin.ts
 import { createClient } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -83,6 +82,25 @@ export interface AdminNotification {
   sent_at: string;
   link: string;
   unread: boolean;
+}
+
+// New Venue interface
+export interface Venue {
+  id: string;
+  name: string;
+  city: string;
+  state: string;
+  address: string;
+  status: 'pending' | 'verified' | 'rejected';
+  owner_name: string;
+  owner_email: string;
+  owner_phone: string;
+  created_at: string;
+  events_count: number;
+  revenue: number;
+  booking_fee: number;
+  booking_history: { id: string; created_at: string; amount: number; status: string }[];
+  documents: { id: string; document_type: string; document_url: string }[];
 }
 
 // Database Operations
@@ -184,7 +202,7 @@ export const adminOperations = {
           startDate = new Date(customStart).toISOString();
           break;
         default:
-          startDate = new Date(now.setDate(now.getDate() - 30)).toISOString();
+          startDate = new Date(now.setDate(now.getDate() - 30).toISOString();
       }
       const endDate = customEnd ? new Date(customEnd).toISOString() : new Date().toISOString();
 
@@ -595,7 +613,7 @@ export const adminOperations = {
         venue: m.venues?.name || 'TBD',
         landmark: 'N/A', // Placeholder: Adjust based on venue-landmark link
         tickets_sold: m.total_tickets_sold || 0,
-        feedback: m.feedback_summaries?.summary?.average || 0,
+        feedback: m.feedback_summaries?.['summary']?.average || 0,
         type: 'match' as const
       })),
       ...cyclingRes.data.map(c => ({
@@ -606,10 +624,10 @@ export const adminOperations = {
         date: c.event_date,
         status: c.status,
         participants: c.cycling_attendees?.[0]?.count || 0,
-        venue: 'N/A', // Cycling events may not have venues
-        landmark: c.landmarks?.name || 'N/A',
-        tickets_sold: 0, // No tickets for cycling events
-        feedback: 0, // No feedback for cycling events
+        venue: 'N/A',
+        landmark: c.landmarks?.['name'] || 'N/A',
+        tickets_sold: 0,
+        feedback: 0,
         type: 'cycling_event' as const
       }))
     ];
@@ -673,7 +691,7 @@ export const adminOperations = {
         details: updates,
         event_type: type,
         target_table: table,
-        timestamp: new Date().toISOString()
+        updated_at: new Date().toISOString()
       });
   },
 
@@ -740,7 +758,7 @@ export const adminOperations = {
       .range((page - 1) * limit, page * limit - 1);
 
     if (error) {
-      console.error('Supabase query error in getCashouts:', error);
+      console.error('Supabase error in getCashouts:', error);
       throw new Error(`Failed to fetch cashouts: ${error.message}`);
     }
 
@@ -752,7 +770,7 @@ export const adminOperations = {
       status: cashout.status,
       requested_at: cashout.created_at,
       event_details: cashout.venues?.name || 'Unknown',
-      checked_in_participants: cashout.checked_in_participants || 0,
+      checked_in_participants: cashout.checked_in_events || 0,
       bank_details: cashout.profiles?.bank_details || {
         account_name: cashout.account_holder_name || '',
         bank_name: cashout.bank_name || '',
@@ -776,7 +794,7 @@ export const adminOperations = {
 
     const { data: cashoutData, error: fetchError } = await supabase
       .from('venue_booking_cashout')
-      .select('amount,account_holder_name')
+      .select('status,amount')
       .eq('id', id)
       .single();
 
@@ -806,7 +824,7 @@ export const adminOperations = {
         details: {
           old_status: cashoutData.status,
           new_status: status,
-          rejection_reason: rejectionReason
+          rejection_reason
         },
         event_type: 'cashout',
         target_table: 'venue_booking_cashout',
@@ -866,18 +884,18 @@ export const adminOperations = {
 
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
-        password,
+        password
       });
 
       if (authError) {
         console.error('Supabase auth error:', authError);
-        throw new Error(`Failed to create admin user: ${authError.message}`);
+        throw new Error(`Failed to create admin: ${authError.message}`);
       }
 
       const { data: adminData, error: adminError } = await supabase
         .from('admins')
         .insert({
-          user_id: authData.user?.id,
+          id: authData.user?.id,
           email,
           role: 'super_admin',
           permissions: ['*'],
@@ -893,8 +911,156 @@ export const adminOperations = {
 
       return adminData;
     } catch (error: any) {
-      console.error('Admin creation error:', error);
+      console.error('Error creating admin:', error);
       throw new Error(`Failed to create admin: ${error.message}`);
+    }
+  },
+
+  // New venue-related functions
+  async getVenues(
+    page: number = 1,
+    limit: number = 50,
+    status?: string,
+    city?: string
+  ): Promise<{ venues: Venue[], total: number }> {
+    try {
+      let query = supabase
+        .from('venues')
+        .select(
+          `
+            id,
+            name,
+            city,
+            state,
+            address,
+            status,
+            created_at,
+            booking_fee,
+            owner:profiles(full_name, email, phone),
+            events:matches(count),
+            revenue:venue_booking_cashout(sum(amount)),
+            bookings:venue_bookings(id, created_at, amount, status),
+            documents:venue_documents(id, document_type, document_url)
+          `,
+          { count: 'exact' }
+        );
+
+      if (status && status !== 'all') {
+        query = query.eq('status', status);
+      }
+      if (city && city !== 'all') {
+        query = query.eq('city', city);
+      }
+
+      query = query.range((page - 1) * limit, page * limit - 1);
+
+      const { data, error, count } = await query;
+
+      if (error) {
+        console.error('Supabase query error in getVenues:', error);
+        throw new Error(`Failed to fetch venues: ${error.message}`);
+      }
+
+      const venues: Venue[] = data.map(venue => ({
+        id: venue.id,
+        name: venue.name,
+        city: venue.city,
+        state: venue.state,
+        address: venue.address,
+        status: venue.status,
+        owner_name: venue.owner?.full_name || 'Unknown',
+        owner_email: venue.owner?.email || 'N/A',
+        owner_phone: venue.owner?.phone || 'N/A',
+        created_at: venue.created_at,
+        events_count: venue.events?.[0]?.count || 0,
+        revenue: venue.revenue?.[0]?.sum || 0,
+        booking_fee: venue.booking_fee || 0,
+        booking_history: venue.bookings?.map(b => ({
+          id: b.id,
+          created_at: b.created_at,
+          amount: b.amount,
+          status: b.status
+        })) || [],
+        documents: venue.documents?.map(d => ({
+          id: d.id,
+          document_type: d.document_type,
+          document_url: d.document_url
+        })) || []
+      }));
+
+      return { venues, total: count || 0 };
+    } catch (err: any) {
+      console.error('Error in getVenues:', err);
+      throw new Error(`Failed to fetch venues: ${err.message}`);
+    }
+  },
+
+  async toggleVenueStatus(venueId: string, currentStatus: string, adminId: string): Promise<void> {
+    const newStatus = currentStatus === 'verified' ? 'pending' : 'verified';
+    try {
+      const { error: venueError } = await supabase
+        .from('venues')
+        .update({ status: newStatus })
+        .eq('id', venueId);
+
+      if (venueError) {
+        console.error('Supabase error in toggleVenueStatus (venues):', venueError);
+        throw new Error(`Failed to update venue status: ${venueError.message}`);
+      }
+
+      const bookingStatus = newStatus === 'verified' ? 'active' : 'disabled';
+      const { error: bookingError } = await supabase
+        .from('venue_bookings')
+        .update({ status: bookingStatus })
+        .eq('venue_id', venueId)
+        .neq('status', 'completed');
+
+      if (bookingError) {
+        console.error('Supabase error in toggleVenueStatus (bookings):', bookingError);
+        throw new Error(`Failed to update booking status: ${bookingError.message}`);
+      }
+
+      await supabase
+        .from('admin_actions')
+        .insert({
+          admin_id: adminId,
+          action_type: 'toggle_status',
+          target_id: venueId,
+          details: { old_status: currentStatus, new_status: newStatus },
+          event_type: 'venue',
+          target_table: 'venues',
+          timestamp: new Date().toISOString()
+        });
+    } catch (err: any) {
+      console.error('Error in toggleVenueStatus:', err);
+      throw new Error(`Failed to toggle venue status: ${err.message}`);
+    }
+  },
+
+  async deleteVenue(venueId: string, adminId: string): Promise<void> {
+    try {
+      const { data: admin, error: adminError } = await supabase
+        .from('admins')
+        .select('id')
+        .eq('id', adminId)
+        .single();
+
+      if (adminError || admin?.role !== 'super_admin') {
+        throw new Error('Only super admins can delete venues');
+      }
+
+      const { error } = await supabase
+        .from('venues')
+        .delete()
+        .eq('id', venueId);
+
+      if (error) {
+        console.error('Supabase error in deleteVenue:', error);
+        throw new Error(`Failed to delete venue: ${error.message}`);
+      }
+    } catch (err: any) {
+      console.error('Error in deleteVenue:', err);
+      throw new Error(`Failed to delete venue: ${err.message}`);
     }
   },
 };
