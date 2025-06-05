@@ -75,7 +75,7 @@ const MyVenue = () => {
             description: "User not authenticated",
             variant: "destructive",
           });
-          navigate("/login");
+          navigate("/auth");
           return;
         }
 
