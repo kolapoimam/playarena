@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { MapPin, CalendarIcon, Clock, User, Bike, Share2, Download, ChevronDown, Volleyball, Medal } from "lucide-react";
+import { MapPin, CalendarIcon, Clock, Trophy, User, Bike, Share2, Download, ChevronDown, Volleyball, Medal } from "lucide-react";
 import { format } from "date-fns";
 import html2canvas from "html2canvas";
 import { useToast } from "@/hooks/use-toast";
