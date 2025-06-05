@@ -1,12 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
-import { supabase } from './supabase';
+import { supabase } from '@/integrations/supabase/client';
 
 // Types
 export interface AdminMetrics {
-  total_organizers: number;
-  total_hosts: number;
-  total_players: number;
-  total_attendees: number;
+  total_users: number;
   total_events: number;
   pending_cashouts: number;
   total_revenue: number;
@@ -60,23 +57,33 @@ export interface AdminCashout {
 export const adminOperations = {
   // Get dashboard metrics
   async getMetrics(): Promise<AdminMetrics> {
-    const { data, error } = await supabase
-      .from('admin_metrics')
-      .select('*')
-      .eq('id', '509ef956-c36a-4b62-bdec-af565785c220')
-      .single();
-
+    const { data, error } = await supabase.rpc('get_admin_metrics');
+    
     if (error) {
-      console.error('Supabase error fetching admin_metrics:', error);
-      throw new Error(`Failed to fetch metrics: ${error.message}`);
+      console.error('Error fetching metrics:', error);
+      throw error;
     }
 
-    if (!data) {
-      console.warn('No admin_metrics data found for id: 509ef956-c36a-4b62-bdec-af565785c220');
-      throw new Error('No metrics data found');
+    if (!data || data.length === 0) {
+      return {
+        total_users: 0,
+        total_events: 0,
+        pending_cashouts: 0,
+        total_revenue: 0,
+        active_venues: 0,
+        new_notifications: 0
+      };
     }
 
-    return data as AdminMetrics;
+    const metrics = data[0];
+    return {
+      total_users: metrics.total_users || 0,
+      total_events: metrics.total_events || 0,
+      pending_cashouts: metrics.pending_cashouts || 0,
+      total_revenue: metrics.total_revenue || 0,
+      active_venues: metrics.active_venues || 0,
+      new_notifications: metrics.new_notifications || 0
+    };
   },
 
   // Get users with pagination and filters
