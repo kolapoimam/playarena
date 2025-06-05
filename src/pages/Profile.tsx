@@ -16,8 +16,16 @@ const Profile = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchUser = async () => {
+    const checkAuthAndFetchUser = async () => {
       try {
+        // Check if user is authenticated
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        if (authError || !user) {
+          // Redirect to /auth if user is not authenticated
+          navigate("/auth", { replace: true });
+          return;
+        }
+
         setIsLoading(true);
         const { data, error: userError } = await supabase.auth.getUser();
         if (userError) throw userError;
@@ -54,10 +62,10 @@ const Profile = () => {
         setIsLoading(false);
       }
     };
-    fetchUser();
+    checkAuthAndFetchUser();
 
     window.scrollTo(0, 0);
-  }, []);
+  }, [navigate]);
 
   const handleLogout = async () => {
     try {
