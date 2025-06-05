@@ -71,6 +71,17 @@ export interface AdminCashout {
   rejection_reason?: string;
 }
 
+export interface AdminNotification {
+  id: string;
+  target_type: 'cashout' | 'booking' | 'event';
+  category: string;
+  title: string;
+  message: string;
+  sent_at: string;
+  link: string;
+  unread: boolean;
+}
+
 // Database Operations
 export const adminOperations = {
   // Get dashboard metrics
@@ -485,7 +496,7 @@ export const adminOperations = {
         event_status: eventStatus,
         total_earned: totalEarned,
         total_spent: totalSpent,
-        super_code: user.super_code || null, // Assumed field; adjust if needed
+        super_code: user.super_code || null,
         last_cashout: lastCashout,
         last_activity: lastActivity,
         category: userCategory
@@ -536,16 +547,36 @@ export const adminOperations = {
   },
 
   // Get cashouts with pagination and filters
-  async getCashouts(page: number = 1, limit: number = 10, status?: string): Promise<{ cashouts: AdminCashout[], total: number }> {
+  async getCashouts(
+    page: number = 1,
+    limit: number = 10,
+    status?: string,
+    dateFilter?: 'today' | 'last_7_days' | 'custom',
+    customDateStart?: string,
+    customDateEnd?: string
+  ): Promise<{ cashouts: AdminCashout[], total: number }> {
     let query = supabase
       .from('venue_booking_cashout')
       .select(
-        '*,organizer:profiles(full_name, bank_details),venue:venues(name)',
+        '*,venues!inner(name),profiles!inner(full_name, bank_details)',
         { count: 'exact' }
       );
 
     if (status) {
       query = query.eq('status', status);
+    }
+
+    if (dateFilter) {
+      const now = new Date();
+      if (dateFilter === 'today') {
+        query = query.gte('created_at', new Date(now.setHours(0, 0, 0, 0)).toISOString());
+      } else if (dateFilter === 'last_7_days') {
+        query = query.gte('created_at', new Date(now.setDate(now.getDate() - 7)).toISOString());
+      } else if (dateFilter === 'custom' && customDateStart && customDateEnd) {
+        query = query
+          .gte('created_at', customDateStart)
+          .lte('created_at', customDateEnd);
+      }
     }
 
     const { data, error, count } = await query
@@ -558,17 +589,17 @@ export const adminOperations = {
 
     const cashouts = data.map(cashout => ({
       id: cashout.id,
-      organizer_name: cashout.organizer?.full_name || 'Unknown',
-      organizer_type: cashout.type || 'Unknown',
+      organizer_name: cashout.profiles?.full_name || 'Unknown',
+      organizer_type: cashout.venue_id ? 'Venue Owner' : 'Event Organizer',
       amount: cashout.amount || 0,
       status: cashout.status,
       requested_at: cashout.created_at,
-      event_details: cashout.venue?.name || 'Unknown',
+      event_details: cashout.venues?.name || 'Unknown',
       checked_in_participants: cashout.checked_in_participants || 0,
-      bank_details: cashout.organizer?.bank_details || {
-        account_name: '',
-        bank_name: '',
-        account_number: '',
+      bank_details: cashout.profiles?.bank_details || {
+        account_name: cashout.account_holder_name || '',
+        bank_name: cashout.bank_name || '',
+        account_number: cashout.account_number || '',
       },
       rejection_reason: cashout.rejection_reason,
     }));
@@ -586,6 +617,17 @@ export const adminOperations = {
       updateData.rejection_reason = rejectionReason;
     }
 
+    const { data: cashoutData, error: fetchError } = await supabase
+      .from('venue_booking_cashout')
+      .select('amount,account_holder_name')
+      .eq('id', id)
+      .single();
+
+    if (fetchError) {
+      console.error('Supabase error fetching cashout:', fetchError);
+      throw new Error(`Failed to fetch cashout: ${fetchError.message}`);
+    }
+
     const { error } = await supabase
       .from('venue_booking_cashout')
       .update(updateData)
@@ -595,38 +637,52 @@ export const adminOperations = {
       console.error('Supabase error in updateCashoutStatus:', error);
       throw new Error(`Failed to update cashout status: ${error.message}`);
     }
+
+    // Log to admin_actions (trigger handles this, but we can add manual logging if needed)
+    const adminId = 'placeholder-admin-id'; // Replace with actual admin ID from auth context
+    await supabase
+      .from('admin_actions')
+      .insert({
+        admin_id: adminId,
+        action_type: 'update_status',
+        target_id: id,
+        details: {
+          old_status: cashoutData.status,
+          new_status: status,
+          rejection_reason: rejectionReason
+        },
+        event_type: 'cashout',
+        target_table: 'venue_booking_cashout',
+        timestamp: new Date().toISOString()
+      });
+
+    // Notification is handled by database trigger
   },
 
-  // Update user status
-  async updateUserStatus(id: string, status: string): Promise<void> {
-    const { error } = await supabase
-      .from('profiles')
-      .update({
-        status,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', id);
+  // Get notifications
+  async getNotifications(limit: number = 10): Promise<AdminNotification[]> {
+    const { data, error } = await supabase
+      .from('notifications')
+      .select('id,target_type,category,title,message,sent_at,link,unread')
+      .in('target_type', ['cashout', 'booking', 'event'])
+      .order('sent_at', { ascending: false })
+      .limit(limit);
 
     if (error) {
-      console.error('Supabase error in updateUserStatus:', error);
-      throw new Error(`Failed to update user status: ${error.message}`);
+      console.error('Supabase query error in getNotifications:', error);
+      throw new Error(`Failed to fetch notifications: ${error.message}`);
     }
-  },
 
-  // Update event status
-  async updateEventStatus(id: string, status: string): Promise<void> {
-    const { error } = await supabase
-      .from('matches')
-      .update({
-        status,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', id);
-
-    if (error) {
-      console.error('Supabase error in updateEventStatus:', error);
-      throw new Error(`Failed to update event status: ${error.message}`);
-    }
+    return data.map(n => ({
+      id: n.id,
+      target_type: n.target_type,
+      category: n.category,
+      title: n.title,
+      message: n.message,
+      sent_at: n.sent_at,
+      link: n.link || '/admin',
+      unread: n.unread
+    }));
   },
 
   // Create first admin
