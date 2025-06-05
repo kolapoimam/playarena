@@ -91,29 +91,26 @@ const JoinCycling = () => {
   const [successDialogOpen, setSuccessDialogOpen] = useState(false);
   const [confirmationCode, setConfirmationCode] = useState<string | null>(null);
 
-const form = useForm({
-  resolver: zodResolver(formSchema),
-  defaultValues: { name: "", phone: "", is_own_bike: false, is_rental_bike: false },
-});
+  const form = useForm({
+    resolver: zodResolver(formSchema),
+    defaultValues: { name: "", phone: "", is_own_bike: false, is_rental_bike: false },
+  });
 
-// Use the fixed default email instead of generating from phone
-const defaultEmail = "payments@sportcliq.com";
+  const defaultEmail = "payments@sportcliq.com";
 
-useEffect(() => {
-  const checkAuth = async () => {
-    try {
-      const { data: session } = await supabase.auth.getSession();
-      if (session.session) {
-        setUserId(session.session.user.id);
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const { data: session } = await supabase.auth.getSession();
+        if (session.session) {
+          setUserId(session.session.user.id);
+        }
+      } catch (err: any) {
+        console.error('No authentication found:', err);
       }
-    } catch (err: any) {
-      console.error('No authentication found:', err);
-      // No redirect; allow non-logged-in users to proceed
-    }
-  };
-  checkAuth();
-}, []);
-
+    };
+    checkAuth();
+  }, []);
 
   useEffect(() => {
     const script = document.createElement("script");
@@ -170,7 +167,7 @@ useEffect(() => {
           .eq("cycling_event_id_uuid", data.id_uuid);
         if (!attendeesError) setAttendees(attendeesData || []);
       } catch (err: any) {
-        console.error('Error:', err); // Fixed previously (line 173)
+        console.error('Error:', err);
         toast({
           title: 'Error',
           description: err.message || 'Failed to load event.',
@@ -215,7 +212,7 @@ useEffect(() => {
             await new Promise(resolve => setTimeout(resolve, delay));
           }
         }
-      } catch (error: any) { // Fixed previously (line 210)
+      } catch (error: any) {
         console.error('Error verifying payment:', error);
         setPaymentStatus('failed');
         toast({
@@ -250,8 +247,8 @@ useEffect(() => {
       return;
     }
 
-    const amountInNaira = event.price;
-    if (!Number.isInteger(amountInNaira * 100) || amountInNaira * 100 < 100) {
+    const amountInNaira = event.price * 100; // Convert to kobo for Paystack
+    if (!Number.isInteger(amountInNaira) || amountInNaira < 100) {
       toast({
         title: 'Invalid Amount',
         description: 'Minimum payment is ₦1.00.',
@@ -262,7 +259,7 @@ useEffect(() => {
 
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(event.id_uuid)) {
-      console.error('Error:', 'Invalid event_id format:', event.id_uuid); // Fixed line (line 274)
+      console.error('Invalid event_id format:', event.id_uuid);
       toast({
         title: 'Error',
         description: 'Invalid event configuration.',
@@ -273,30 +270,29 @@ useEffect(() => {
 
     try {
       setJoining(true);
-      const { data: response, error } = await supabase.functions.invoke('initialize-paystack-transaction', {
+      const response = await supabase.functions.invoke('initialize-paystack-transaction', {
         body: {
           email: defaultEmail,
           amount: amountInNaira,
           event_id: event.id_uuid,
-          resource_type: 'cycling',
           slug: event.slug,
           title: event.title,
           callback_url: `${window.location.origin}/join-cycling/${event.slug}`,
           metadata: {
-            id: event.id_uuid,
+            event_id: event.id_uuid,
             resource_type: 'cycling',
             user_phone: form.getValues('phone') || 'unknown',
           },
         },
       });
 
-      if (error) {
-        throw new Error(error.message || 'Failed to initialize payment');
+      if (response.error) {
+        throw new Error(response.error.message || 'Failed to initialize payment');
       }
 
-      const access_code = response.data?.access_code;
+      const { access_code } = response.data;
       if (!access_code) {
-        throw new Error('No access code returned');
+        throw new Error('No access code returned from payment initialization');
       }
 
       const paystack = new window.PaystackPop();
@@ -365,7 +361,7 @@ useEffect(() => {
         attendee_name: data.name,
         attendee_phone: data.phone,
         confirmation_code: confirmationCode,
-        payment_status: event.is_free || paymentStatus === 'success',
+        payment_status: event sistent,
         is_own_bike: event.is_own_bike ? data.is_own_bike : null,
         is_rental_bike: event.is_rental_available ? data.is_rental_bike : null,
       };
@@ -380,7 +376,6 @@ useEffect(() => {
         throw new Error(`Failed to create attendee: ${attendeeError?.message || 'No attendee data'}`);
       }
 
-      // Only insert into user_joined_cycling if user is logged in
       if (userId) {
         const { error: userJoinedError } = await supabase
           .from('user_joined_cycling')
@@ -477,7 +472,9 @@ useEffect(() => {
 
       <div className="p-6">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-2">{event.title}</h2>
+          <h2 className="text-xl font-semibold mb-2">{ਮ
+
+">{event.title}</h2>
           <div className="text-muted-foreground mb-4 space-y-1">
             <div className="flex items-center gap-2">
               <Calendar size={16} />
