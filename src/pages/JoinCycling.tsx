@@ -42,7 +42,7 @@ type CyclingEvent = {
   start_time: string;
   max_attendees: number;
   is_free: boolean;
-  price?: number;
+  price?: number; // Price in Naira
   host_name: string;
   host_phone: string;
   start_landmark: Landmark;
@@ -72,6 +72,8 @@ const formSchema = z
 
 type FormValues = z.infer<typeof formSchema>;
 
+const formatter = new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN' });
+
 const JoinCycling = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
@@ -91,7 +93,7 @@ const JoinCycling = () => {
   const [successDialogOpen, setSuccessDialogOpen] = useState(false);
   const [confirmationCode, setConfirmationCode] = useState<string | null>(null);
 
-  const form = useForm({
+  const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: { name: "", phone: "", is_own_bike: false, is_rental_bike: false },
   });
@@ -198,7 +200,7 @@ const JoinCycling = () => {
               setPaymentStatus('success');
               toast({
                 title: 'Payment Successful',
-                description: 'Your payment was processed successfully. Please complete your registration.',
+                description: `Payment of ${formatter.format((event.price || 0))} processed successfully. Please complete your registration.`,
               });
               return;
             } else {
@@ -247,8 +249,10 @@ const JoinCycling = () => {
       return;
     }
 
-    const amountInNaira = event.price * 100; // Convert to kobo for Paystack
-    if (!Number.isInteger(amountInNaira) || amountInNaira < 100) {
+    const amountInNaira = Number(event.price); // event.price is in Naira
+    const amountInKobo = amountInNaira * 100; // Convert to kobo for Paystack
+
+    if (!Number.isFinite(amountInKobo) || amountInKobo < 100) {
       toast({
         title: 'Invalid Amount',
         description: 'Minimum payment is ₦1.00.',
@@ -273,7 +277,7 @@ const JoinCycling = () => {
       const response = await supabase.functions.invoke('initialize-paystack-transaction', {
         body: {
           email: defaultEmail,
-          amount: amountInNaira,
+          amount: amountInKobo, // Send kobo to Paystack
           event_id: event.id_uuid,
           slug: event.slug,
           title: event.title,
@@ -302,7 +306,7 @@ const JoinCycling = () => {
           setPaymentStatus('success');
           toast({
             title: 'Payment Initiated',
-            description: 'Complete your registration.',
+            description: `Payment of ${formatter.format(amountInNaira)} initiated. Complete your registration.`,
           });
           setJoining(false);
         },
@@ -361,7 +365,7 @@ const JoinCycling = () => {
         attendee_name: data.name,
         attendee_phone: data.phone,
         confirmation_code: confirmationCode,
-payment_status: event.is_free || paymentStatus === 'success',
+        payment_status: event.is_free || paymentStatus === 'success',
         is_own_bike: event.is_own_bike ? data.is_own_bike : null,
         is_rental_bike: event.is_rental_available ? data.is_rental_bike : null,
       };
@@ -492,7 +496,7 @@ payment_status: event.is_free || paymentStatus === 'success',
             </div>
             {!event.is_free && (
               <div className="flex items-center gap-2 mt-2 font-medium text-green-600">
-                <span>Price: ₦{(event.price || 0).toFixed(2)}</span>
+                <span>Price: {formatter.format(event.price || 0)}</span>
               </div>
             )}
           </div>
@@ -549,7 +553,7 @@ payment_status: event.is_free || paymentStatus === 'success',
                           <FormControl>
                             <Input
                               type="tel"
-                              inputMode="numeric"
+                              inputMode breastroke="numeric"
                               placeholder="Enter 11-digit phone number"
                               {...field}
                               className="border-gray-300 dark:border-gray-600 rounded-md focus:ring-green-500 focus:border-green-500"
@@ -663,7 +667,7 @@ payment_status: event.is_free || paymentStatus === 'success',
                     This is a paid event. Please complete the payment to join.
                   </p>
                   <div className="flex items-center gap-2 text-sm font-medium mt-2">
-                    <span>Total: ₦{(event.price || 0).toFixed(2)}</span>
+                    <span>Total: {formatter.format(event.price || 0)}</span>
                   </div>
                   <Button
                     type="button"
@@ -677,7 +681,7 @@ payment_status: event.is_free || paymentStatus === 'success',
                         Processing...
                       </>
                     ) : (
-                      `Pay Now (₦${(event.price || 0).toFixed(2)})`
+                      `Pay Now (${formatter.format(event.price || 0)})`
                     )}
                   </Button>
                 </>
@@ -697,13 +701,11 @@ payment_status: event.is_free || paymentStatus === 'success',
             start_time: event.start_time,
             host_name: event.host_name,
           }}
-          selected_event={{
-            id_uuid: event.id_uuid,
+          selectedLandmark={{
             name: event.start_landmark.name,
             state: event.start_landmark.state,
-            slug: event.slug,
           }}
-          confirmation_code={confirmationCode}
+          confirmationCode={confirmationCode}
           eventSlug={event.slug}
           onNavigate={handleNavigate}
         />
