@@ -7,26 +7,10 @@ import { useNavigate } from 'react-router-dom';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { adminOperations, AdminMetrics } from '@/lib/admin';
 
-// Update AdminMetrics type to reflect new columns
-interface AdminMetrics {
-  total_organizers: number;
-  total_hosts: number;
-  total_players: number;
-  total_attendees: number;
-  total_events: number;
-  pending_cashouts: number;
-  total_revenue: number;
-  active_venues: number;
-  new_notifications: number;
-}
-
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const [metrics, setMetrics] = useState<AdminMetrics>({
-    total_organizers: 0,
-    total_hosts: 0,
-    total_players: 0,
-    total_attendees: 0,
+    total_users: 0,
     total_events: 0,
     pending_cashouts: 0,
     total_revenue: 0,
@@ -42,12 +26,9 @@ const AdminDashboard = () => {
         if (data) {
           setMetrics(data);
         } else {
-          console.warn('No metrics data returned');
+          // Fallback to default metrics if no data is returned
           setMetrics({
-            total_organizers: 0,
-            total_hosts: 0,
-            total_players: 0,
-            total_attendees: 0,
+            total_users: 0,
             total_events: 0,
             pending_cashouts: 0,
             total_revenue: 0,
@@ -59,10 +40,7 @@ const AdminDashboard = () => {
         console.error('Error fetching metrics:', error);
         // Set default metrics on error to prevent UI from breaking
         setMetrics({
-          total_organizers: 0,
-          total_hosts: 0,
-          total_players: 0,
-          total_attendees: 0,
+          total_users: 0,
           total_events: 0,
           pending_cashouts: 0,
           total_revenue: 0,
@@ -111,45 +89,12 @@ const AdminDashboard = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Match Organizers</CardTitle>
+              <CardTitle className="text-sm font-medium">Total Users</CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{metrics.total_organizers.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground">Active organizers</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Cycling Hosts</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{metrics.total_hosts.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground">Active hosts</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Players</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{metrics.total_players.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground">Active players</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Cyclists</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{metrics.total_attendees.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground">Active cyclists</p>
+              <div className="text-2xl font-bold">{metrics.total_users.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground">Active users</p>
             </CardContent>
           </Card>
 
