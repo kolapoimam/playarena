@@ -90,16 +90,6 @@ const Auth = () => {
           }
         } else {
           navigate("/profile");
-        }
-      }
-    } catch (error) {
-      toast({
-        title: "Authentication Error",
-        description: "Unable to complete login. Please try again later or contact support.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
     }
   };
 
