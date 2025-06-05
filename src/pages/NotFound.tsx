@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { Goal, Football, ArrowLeft } from "lucide-react";
+import { Trophy, Volleyball, ArrowLeft } from "lucide-react";
 
 export default function NotFound() {
   const navigate = useNavigate();
@@ -8,10 +8,10 @@ export default function NotFound() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 to-primary/10 flex items-center justify-center p-4">
       <div className="max-w-2xl w-full text-center space-y-8">
-        {/* Animated Soccer Ball */}
+        {/* Animated Volleyball Ball */}
         <div className="relative w-32 h-32 mx-auto">
           <div className="absolute inset-0 animate-bounce">
-            <Soccer className="w-full h-full text-primary" />
+            <Volleyball className="w-full h-full text-primary" />
           </div>
         </div>
 
@@ -34,7 +34,7 @@ export default function NotFound() {
             </p>
           </div>
           <div className="bg-background/50 p-4 rounded-lg border">
-            <Soccer className="w-8 h-8 text-primary mx-auto mb-2" />
+            <Volleyball className="w-8 h-8 text-primary mx-auto mb-2" />
             <p className="text-sm text-muted-foreground">
               Even VAR couldn't help us find this page
             </p>
