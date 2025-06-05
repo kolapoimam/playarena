@@ -1,3 +1,4 @@
+// admin.ts
 import { createClient } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -47,11 +48,13 @@ export interface AdminEvent {
   sport: string;
   organizer: string;
   date: string;
-  status: 'upcoming' | 'active' | 'completed' | 'cancelled';
+  status: string;
   participants: number;
   venue: string;
+  landmark?: string;
   tickets_sold: number;
   feedback: number;
+  type: 'match' | 'cycling_event';
 }
 
 export interface AdminCashout {
@@ -73,7 +76,7 @@ export interface AdminCashout {
 
 export interface AdminNotification {
   id: string;
-  target_type: 'cashout' | 'booking' | 'event';
+  target_type: 'cashout' | 'booking' | 'event' | 'match' | 'cycling_event';
   category: string;
   title: string;
   message: string;
@@ -507,43 +510,197 @@ export const adminOperations = {
   },
 
   // Get events with pagination and filters
-  async getEvents(page: number = 1, limit: number = 10, status?: string, sport?: string): Promise<{ events: AdminEvent[], total: number }> {
-    let query = supabase
+  async getEvents(
+    page: number = 1,
+    limit: number = 10,
+    status?: string,
+    sport?: string,
+    dateFrom?: string,
+    dateTo?: string
+  ): Promise<{ events: AdminEvent[], total: number }> {
+    // Fetch matches
+    let matchesQuery = supabase
       .from('matches')
       .select(
-        '*,organizer:profiles(full_name),venue:venues(name),tickets_sold:tickets(count),feedback:match_feedback(avg(rating))',
+        `
+          id,
+          title,
+          match_date,
+          status,
+          organizer_name,
+          total_tickets_sold,
+          total_checked_in_players,
+          match_type,
+          venues!matches_venue_id_fkey(name),
+          feedback_summaries!matches_id_fkey(summary)
+        `,
         { count: 'exact' }
-      );
+      )
+      .eq('cancellation_status', false);
 
+    // Fetch cycling events
+    let cyclingQuery = supabase
+      .from('cycling_events')
+      .select(
+        `
+          id_uuid,
+          title,
+          event_date,
+          status,
+          host_name,
+          max_attendees,
+          duration_type,
+          landmarks!cycling_events_start_landmark_id_fkey(name),
+          cycling_attendees(count)
+        `,
+        { count: 'exact' }
+      )
+      .eq('cancellation_status', false);
+
+    // Apply filters
     if (status) {
-      query = query.eq('status', status);
+      matchesQuery = matchesQuery.eq('status', status);
+      cyclingQuery = cyclingQuery.eq('status', status);
     }
-    if (sport) {
-      query = query.eq('sport', sport);
+    if (sport && sport !== 'all') {
+      matchesQuery = matchesQuery.eq('match_type', sport);
+      cyclingQuery = cyclingQuery.ilike('duration_type', `%${sport}%`);
+    }
+    if (dateFrom && dateTo) {
+      matchesQuery = matchesQuery.gte('match_date', dateFrom).lte('match_date', dateTo);
+      cyclingQuery = cyclingQuery.gte('event_date', dateFrom).lte('event_date', dateTo);
     }
 
-    const { data, error, count } = await query
-      .range((page - 1) * limit, page * limit - 1);
+    // Pagination
+    matchesQuery = matchesQuery.range((page - 1) * limit, page * limit - 1);
+    cyclingQuery = cyclingQuery.range((page - 1) * limit, page * limit - 1);
+
+    // Execute queries
+    const [matchesRes, cyclingRes] = await Promise.all([matchesQuery, cyclingQuery]);
+
+    if (matchesRes.error || cyclingRes.error) {
+      console.error('Supabase query error in getEvents:', matchesRes.error || cyclingRes.error);
+      throw new Error(`Failed to fetch events: ${matchesRes.error?.message || cyclingRes.error?.message}`);
+    }
+
+    const events: AdminEvent[] = [
+      ...matchesRes.data.map(m => ({
+        id: m.id,
+        title: m.title,
+        sport: m.match_type || 'Unknown',
+        organizer: m.organizer_name || 'Unknown',
+        date: m.match_date,
+        status: m.status,
+        participants: m.total_checked_in_players || 0,
+        venue: m.venues?.name || 'TBD',
+        landmark: 'N/A', // Placeholder: Adjust based on venue-landmark link
+        tickets_sold: m.total_tickets_sold || 0,
+        feedback: m.feedback_summaries?.summary?.average || 0,
+        type: 'match' as const
+      })),
+      ...cyclingRes.data.map(c => ({
+        id: c.id_uuid,
+        title: c.title,
+        sport: c.duration_type || 'Cycling',
+        organizer: c.host_name || 'Unknown',
+        date: c.event_date,
+        status: c.status,
+        participants: c.cycling_attendees?.[0]?.count || 0,
+        venue: 'N/A', // Cycling events may not have venues
+        landmark: c.landmarks?.name || 'N/A',
+        tickets_sold: 0, // No tickets for cycling events
+        feedback: 0, // No feedback for cycling events
+        type: 'cycling_event' as const
+      }))
+    ];
+
+    const total = (matchesRes.count || 0) + (cyclingRes.count || 0);
+    return { events, total };
+  },
+
+  // Update event status
+  async updateEventStatus(eventId: string, status: string, type: 'match' | 'cycling_event'): Promise<void> {
+    const table = type === 'match' ? 'matches' : 'cycling_events';
+    const idField = type === 'match' ? 'id' : 'id_uuid';
+    const { error } = await supabase
+      .from(table)
+      .update({ status })
+      .eq(idField, eventId);
 
     if (error) {
-      console.error('Supabase query error in getEvents:', error);
-      throw new Error(`Failed to fetch events: ${error.message}`);
+      console.error(`Supabase error in updateEventStatus for ${type}:`, error);
+      throw new Error(`Failed to update ${type} status: ${error.message}`);
+    }
+  },
+
+  // Update event details
+  async updateEvent(
+    eventId: string,
+    type: 'match' | 'cycling_event',
+    updates: Partial<AdminEvent>,
+    adminId: string
+  ): Promise<void> {
+    const table = type === 'match' ? 'matches' : 'cycling_events';
+    const idField = type === 'match' ? 'id' : 'id_uuid';
+    const updateData: any = {
+      title: updates.title,
+      updated_at: new Date().toISOString()
+    };
+
+    if (type === 'match') {
+      updateData.match_date = updates.date;
+    } else {
+      updateData.event_date = updates.date;
     }
 
-    const events = data.map(event => ({
-      id: event.id,
-      title: event.title,
-      sport: event.sport,
-      organizer: event.organizer?.full_name || 'Unknown',
-      date: event.date,
-      status: event.status,
-      participants: event.participants || 0,
-      venue: event.venue?.name || 'Unknown',
-      tickets_sold: event.tickets_sold?.[0]?.count || 0,
-      feedback: event.feedback?.[0]?.avg || 0,
-    }));
+    const { error } = await supabase
+      .from(table)
+      .update(updateData)
+      .eq(idField, eventId);
 
-    return { events, total: count || 0 };
+    if (error) {
+      console.error(`Supabase error in updateEvent for ${type}:`, error);
+      throw new Error(`Failed to update ${type}: ${error.message}`);
+    }
+
+    // Log to admin_actions
+    await supabase
+      .from('admin_actions')
+      .insert({
+        admin_id: adminId,
+        action_type: 'update',
+        target_id: eventId,
+        details: updates,
+        event_type: type,
+        target_table: table,
+        timestamp: new Date().toISOString()
+      });
+  },
+
+  // Delete event (super admin only)
+  async deleteEvent(eventId: string, type: 'match' | 'cycling_event', adminId: string): Promise<void> {
+    // Check admin role
+    const { data: admin, error: adminError } = await supabase
+      .from('admins')
+      .select('role')
+      .eq('id', adminId)
+      .single();
+
+    if (adminError || admin?.role !== 'super_admin') {
+      throw new Error('Only super admins can delete events');
+    }
+
+    const table = type === 'match' ? 'matches' : 'cycling_events';
+    const idField = type === 'match' ? 'id' : 'id_uuid';
+    const { error } = await supabase
+      .from(table)
+      .delete()
+      .eq(idField, eventId);
+
+    if (error) {
+      console.error(`Supabase error in deleteEvent for ${type}:`, error);
+      throw new Error(`Failed to delete ${type}: ${error.message}`);
+    }
   },
 
   // Get cashouts with pagination and filters
@@ -638,7 +795,7 @@ export const adminOperations = {
       throw new Error(`Failed to update cashout status: ${error.message}`);
     }
 
-    // Log to admin_actions (trigger handles this, but we can add manual logging if needed)
+    // Log to admin_actions
     const adminId = 'placeholder-admin-id'; // Replace with actual admin ID from auth context
     await supabase
       .from('admin_actions')
@@ -655,8 +812,6 @@ export const adminOperations = {
         target_table: 'venue_booking_cashout',
         timestamp: new Date().toISOString()
       });
-
-    // Notification is handled by database trigger
   },
 
   // Get notifications
@@ -664,7 +819,7 @@ export const adminOperations = {
     const { data, error } = await supabase
       .from('notifications')
       .select('id,target_type,category,title,message,sent_at,link,unread')
-      .in('target_type', ['cashout', 'booking', 'event'])
+      .in('target_type', ['cashout', 'booking', 'event', 'match', 'cycling_event'])
       .order('sent_at', { ascending: false })
       .limit(limit);
 
