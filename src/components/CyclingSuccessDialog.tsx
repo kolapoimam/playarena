@@ -302,38 +302,6 @@ const CyclingSuccessDialog = ({
               <Download size={16} className="mr-2" />
               {isDownloading ? "Downloading..." : "Download Code"}
             </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button 
-                  className="bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg px-6 py-3 shadow-sm transition-colors duration-200 border-0 max-w-xs w-full sm:w-auto"
-                  disabled={isDownloading}
-                >
-                  <Share2 size={16} className="mr-2" />
-                  Share
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem onClick={handleShare}>Share via Device</DropdownMenuItem>
-                <DropdownMenuItem onClick={shareToWhatsApp}>Share to WhatsApp</DropdownMenuItem>
-                <DropdownMenuItem onClick={shareToTwitter}>Share to Twitter</DropdownMenuItem>
-                <DropdownMenuItem onClick={shareToFacebook}>Share to Facebook</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-          <div className="flex justify-center mt-4">
-            <Button
-              className="bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 transition-colors"
-              onClick={() => {
-                if (!isDownloading && eventSlug) {
-                  onOpenChange(false);
-                  onNavigate?.();
-                }
-              }}
-              disabled={isDownloading}
-            >
-              Go to Events
-            </Button>
-          </div>
         </DialogDescription>
       </DialogContent>
     </Dialog>
