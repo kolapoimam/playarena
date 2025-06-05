@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import Navbar from "@/components/Navbar";
@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Loader, Calendar, MapPin, Clock, Trophy, Medal, Users, DollarSign, Download, Volleyball, Phone, MessageSquare } from "lucide-react";
+import { ArrowLeft, Loader, Calendar, MapPin, Clock, Users, DollarSign, Phone, MessageSquare } from "lucide-react";
 import {
   Form,
   FormControl,
@@ -17,14 +17,8 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
 import { format, isToday, isPast } from "date-fns";
-import html2canvas from "html2canvas";
+import MatchJoinersDialog from "@/components/MatchJoinersDialog";
 
 type Match = {
   id: string;
@@ -72,12 +66,8 @@ const JoinMatch = () => {
   const [paystackLoaded, setPaystackLoaded] = useState(false);
   const [successDialogOpen, setSuccessDialogOpen] = useState(false);
   const [confirmationCode, setConfirmationCode] = useState<string | null>(null);
-  const [isImageLoaded, setIsImageLoaded] = useState(false);
-  const [isDownloading, setIsDownloading] = useState(false);
-  const [backgroundOption, setBackgroundOption] = useState("field");
   const [selectedSlots, setSelectedSlots] = useState(1);
   const [userId, setUserId] = useState<string | null>(null);
-  const cardRef = useRef<HTMLDivElement>(null);
   const defaultEmail = "payments@sportcliq.com";
 
   // Check authentication status
@@ -309,101 +299,6 @@ const JoinMatch = () => {
       setJoining(false);
     }
   };
-
-  const handleImageLoad = () => {
-    setIsImageLoaded(true);
-  };
-
-  const handleDownload = useCallback(async () => {
-    if (!cardRef.current || !isImageLoaded) {
-      toast({
-        title: "Error",
-        description: "Card is not ready for download. Please wait a moment and try again.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsDownloading(true);
-    try {
-      // Preload logo image
-      const logoSrc = backgroundOption === "white" ? "/playarenalight.png" : "/playarenadark.png";
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.src = logoSrc;
-      await new Promise((resolve, reject) => {
-        img.onload = resolve;
-        img.onerror = () => {
-          console.warn("Failed to load logo image for canvas");
-          resolve(null);
-        };
-      });
-
-      // Preload background image if using field
-      if (backgroundOption === "field") {
-        const bgImg = new Image();
-        bgImg.crossOrigin = "anonymous";
-        bgImg.src = "/football-field.jpg";
-        await new Promise((resolve, reject) => {
-          bgImg.onload = resolve;
-          bgImg.onerror = () => {
-            console.warn("Failed to load background image for canvas");
-            resolve(null);
-          };
-        });
-      }
-
-      const canvas = await html2canvas(cardRef.current, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        scrollX: 0,
-        scrollY: -window.scrollY,
-      });
-
-      const blob = await new Promise<Blob | null>((resolve) =>
-        canvas.toBlob((blob) => resolve(blob), "image/png")
-      );
-
-      if (!blob) {
-        throw new Error("Failed to convert canvas to Blob");
-      }
-
-      const filename = `PlayArena-Registration-${match?.title.replace(/\s+/g, '-')}.png`;
-      const url = URL.createObjectURL(blob);
-
-      if (navigator.share && (navigator as any).canShare?.({ files: [new File([blob], filename, { type: "image/png" })] })) {
-        try {
-          await navigator.share({
-            files: [new File([blob], filename, { type: "image/png" })],
-            title: match?.title,
-            text: `I've registered for ${match?.title} at ${match?.venue?.name || 'unknown venue'}!`,
-          });
-          URL.revokeObjectURL(url);
-          return;
-        } catch (shareError) {
-          console.warn("Share API failed, falling back to download:", shareError);
-        }
-      }
-
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error("Error generating image:", error);
-      toast({
-        title: "Error",
-        description: "Failed to download registration card. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsDownloading(false);
-    }
-  }, [isImageLoaded, match, toast, backgroundOption]);
 
   const onSubmit = async (data: any) => {
     if (!match || !slug) return;
@@ -761,109 +656,23 @@ const JoinMatch = () => {
         )}
       </div>
       <Navbar />
-
-<Dialog open={successDialogOpen} onOpenChange={(open) => {
-  setSuccessDialogOpen(open);
-  setIsImageLoaded(false);
-  if (!open) setBackgroundOption("field");
-}}>
-  <DialogContent className="w-full max-w-[90vw] sm:max-w-[500px] rounded-2xl p-4 sm:p-6">
-    <DialogTitle className="text-xl font-bold text-gray-800 dark:text-white text-center">Registration Successful</DialogTitle>
-    <DialogDescription className="flex flex-col items-center">
-      <p className="text-gray-600 dark:text-gray-300 mb-4 text-sm text-center max-w-xs">
-        You have successfully registered for the match for {selectedSlots} slot{selectedSlots > 1 ? "s" : ""}.
-      </p>
-      <div className="relative w-full max-w-md">
-        <div className="mb-4">
-          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Background:</label>
-          <select
-            value={backgroundOption}
-            onChange={(e) => setBackgroundOption(e.target.value)}
-            className="mt-2 w-full p-2 border rounded-lg"
-          >
-            <option value="field">Default</option>
-            <option value="white">White</option>
-            <option value="green">Green</option>
-            <option value="black">Black</option>
-          </select>
-        </div>
-        <div 
-          ref={cardRef}
-          className="relative bg-gradient-to-r from-green-500 to-green-700 rounded-lg p-6 text-white shadow-xl mx-auto overflow-hidden border-4 border-dashed border-white/30 animate-ticket-reveal"
-          style={{
-            backgroundImage: backgroundOption === "field" ? "linear-gradient(45deg, rgba(255,255,255,0.1) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.1) 75%, transparent 75%, transparent)" : "",
-            backgroundSize: backgroundOption === "field" ? "40px 40px" : "",
-            clipPath: 'polygon(10% 0%, 90% 0%, 100% 10%, 100% 90%, 90% 100%, 10% 100%, 0% 90%, 0% 10%)',
-            backgroundColor: backgroundOption !== "field" ? (backgroundOption === "white" ? "#FFFFFF" : backgroundOption === "green" ? "#4CAF50" : backgroundOption === "black" ? "#000000" : "#4CAF50") : "transparent",
-            ...(backgroundOption === "field" && {
-              backgroundBlendMode: "overlay",
-              backgroundColor: "rgba(0, 0, 0, 0.5)",
-            }),
-          }}
-        >
-          {/* Perforated Edge Semi-Circles */}
-          <div className="absolute top-0 left-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '20%' }} />
-          <div className="absolute top-0 left-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '50%' }} />
-          <div className="absolute top-0 left-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '80%' }} />
-          <div className="absolute top-0 right-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '20%' }} />
-          <div className="absolute top-0 right-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '50%' }} />
-          <div className="absolute top-0 right-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '80%' }} />
-
-          {/* Ticket Content */}
-          <div className="flex items-center justify-between mb-4">
-            <img 
-              src={backgroundOption === "white" ? "/playarenalight.png" : "/playarenadark.png"}
-              alt="PlayArena Logo" 
-              className="h-10 w-auto"
-              onLoad={handleImageLoad}
-              onError={() => {
-                toast({
-                  title: "Error",
-                  description: "Failed to load logo image.",
-                  variant: "destructive",
-                });
-                setIsImageLoaded(true);
-              }}
-            />
-            <Trophy className={`h-6 w-6 ${backgroundOption === "white" ? "text-black" : "text-white"}`} />
-          </div>
-          <div className="flex items-center justify-around mb-4">
-            <Trophy className={`h-6 w-6 ${backgroundOption === "white" ? "text-yellow-300" : "text-yellow-100"}`} />
-            <Volleyball className={`h-6 w-6 ${backgroundOption === "white" ? "text-red-500" : "text-red-300"}`} />
-            <Medal className={`h-6 w-6 ${backgroundOption === "white" ? "text-blue-300" : "text-blue-100"}`} />
-          </div>
-          <h2 className={`text-2xl font-bold mb-2 tracking-tight font-condensed uppercase text-center ${backgroundOption === "white" ? "text-black" : "text-white"}`}>{match?.title}</h2>
-          <div className="text-center mb-4">
-            <p className={`text-sm ${backgroundOption === "white" ? "text-black" : "text-white"}`}><MapPin className={`inline h-4 w-4 mr-1 ${backgroundOption === "white" ? "text-black" : "text-white"}`} /> {match?.venue?.name || "Venue"}, {match?.venue?.city || ""}</p>
-            <p className={`text-sm ${backgroundOption === "white" ? "text-black" : "text-white"}`}><Calendar className={`inline h-4 w-4 mr-1 ${backgroundOption === "white" ? "text-black" : "text-white"}`} /> {match && formatDate(match.match_date)} at {match && formatTime(match.match_time)}</p>
-            <p className={`text-sm ${backgroundOption === "white" ? "text-black" : "text-white"}`}><DollarSign className={`inline h-4 w-4 mr-1 ${backgroundOption === "white" ? "text-black" : "text-white"}`} /> {match?.is_paid ? `Paid (₦${match?.price?.toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} x${selectedSlots})` : "Free"}</p>
-            <p className={`text-sm ${backgroundOption === "white" ? "text-black" : "text-white"}`}><Users className={`inline h-4 w-4 mr-1 ${backgroundOption === "white" ? "text-black" : "text-white"}`} /> {totalPlayerSlots}/{match?.total_slots} slots booked</p>
-            <p className={`text-sm ${backgroundOption === "white" ? "text-black" : "text-white"}`}><span className="font-bold">Confirmation Code:</span> {confirmationCode}</p>
-            {selectedSlots > 1 && (
-              <p className={`text-sm ${backgroundOption === "white" ? "text-black" : "text-white"}`}><span className="font-bold">Slots Registered:</span> {selectedSlots}</p>
-            )}
-          </div>
-        </div>
-      </div>
-      <p className="text-sm text-gray-500 dark:text-gray-400 my-4 text-center max-w-xs">
-        <strong>Note:</strong> Save this card to present your confirmation code at check-in.
-      </p>
-      <div className="flex justify-center w-full">
-        <Button 
-          className="bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg px-6 py-3 shadow-sm transition-colors duration-200 border-0 max-w-xs w-full sm:w-auto"
-          onClick={handleDownload}
-          disabled={!isImageLoaded || isDownloading}
-          aria-label="Download registration card as image"
-        >
-          <Download size={16} className="mr-2" />
-          {isDownloading ? "Downloading..." : "Download"}
-        </Button>
-      </div>
-    </DialogDescription>
-  </DialogContent>
-</Dialog>
-      </div>
-    );
+      <MatchJoinersDialog
+        open={successDialogOpen}
+        onOpenChange={(open) => {
+          setSuccessDialogOpen(open);
+          if (!open) {
+            form.reset();
+            setPaymentStatus("pending");
+            setSelectedSlots(1);
+          }
+        }}
+        match={match}
+        confirmationCode={confirmationCode}
+        selectedSlots={selectedSlots}
+        totalPlayerSlots={totalPlayerSlots}
+      />
+    </div>
+  );
 };
 
 export default JoinMatch;
