@@ -106,7 +106,8 @@ const Auth = () => {
   const handleGoogleAuth = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
+      // Attempt to initiate Google OAuth
+      const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
           redirectTo: `${window.location.origin}/profile`,
@@ -116,10 +117,22 @@ const Auth = () => {
           },
         },
       });
-      if (error) throw error;
 
+      // Only throw an error if one is explicitly returned
+      if (error) {
+        console.error("Google OAuth error:", error.message); // Log for debugging
+        throw error;
+      }
+
+      // Note: After successful initiation, the browser redirects to Google's OAuth page,
+      // so the code below this point won't execute until the redirect callback occurs.
+
+      // After redirect, get user data
       const { data: userData, error: userError } = await supabase.auth.getUser();
-      if (userError) throw userError;
+      if (userError) {
+        console.error("User data error:", userError.message); // Log for debugging
+        throw userError;
+      }
 
       if (userData.user) {
         const identity = userData.user.identities?.find(id => id.provider === 'google');
@@ -141,17 +154,33 @@ const Auth = () => {
 
         if (profileError) {
           console.error("Profile upsert error:", profileError.message); // Log for debugging
-          // Continue to navigate to profile even if upsert fails, as auth succeeded
+          // Continue to navigate to profile even if upsert fails
         }
 
         navigate("/profile");
       }
     } catch (error) {
-      toast({
-        title: "Authentication Error",
-        description: "Unable to complete login. Please try again later or contact support.",
-        variant: "destructive",
-      });
+      // Handle specific errors
+      if (error.code === "user_cancelled") {
+        toast({
+          title: "Login Cancelled",
+          description: "You cancelled the Google login. Please try again if you wish to proceed.",
+          variant: "destructive",
+        });
+      } else if (error.message.includes("network")) {
+        toast({
+          title: "Network Error",
+          description: "Unable to connect to the server. Please check your internet connection and try again.",
+          variant: "destructive",
+        });
+      } else {
+        console.error("Unexpected Google OAuth error:", error.message); // Log for debugging
+        toast({
+          title: "Authentication Error",
+          description: "Unable to complete Google login. Please try again later or contact support.",
+          variant: "destructive",
+        });
+      }
     } finally {
       setLoading(false);
     }
