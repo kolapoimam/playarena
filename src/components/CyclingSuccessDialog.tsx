@@ -302,6 +302,7 @@ const CyclingSuccessDialog = ({
               <Download size={16} className="mr-2" />
               {isDownloading ? "Downloading..." : "Download Code"}
             </Button>
+          </div>
         </DialogDescription>
       </DialogContent>
     </Dialog>
