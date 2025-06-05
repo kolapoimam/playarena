@@ -5,18 +5,42 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Search, Eye, Ban, UserCheck, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Search, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
-import { adminOperations, AdminUser } from '@/lib/admin';
+import { adminOperations } from '@/lib/admin';
+
+interface AdminUser {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  event_name: string | null;
+  venue_name: string | null;
+  value: string;
+  slots_paid_for: number;
+  event_status: 'Registered' | 'Checked In' | 'Absent' | null;
+  total_earned: number;
+  total_spent: number;
+  super_code: string | null;
+  confirmation_code: string | null;
+  access_pin: string | null;
+  last_cashout: string | null;
+  last_activity: string;
+  category: 'Organizer' | 'Host' | 'Cycler' | 'Player' | 'Venue Owner';
+  events_organized: number;
+  events_participated: number;
+  badges: string[];
+  event_id: string | null;
+  event_type: 'match' | 'cycling' | null;
+}
 
 const AdminUserManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState<'Organizer' | 'Host' | 'Cycler' | 'Player' | 'Venue Owner' | 'all'>('all');
   const [dateFilter, setDateFilter] = useState<'today' | 'last_7_days' | 'custom' | ''>('');
   const [customDateStart, setCustomDateStart] = useState('');
   const [customDateEnd, setCustomDateEnd] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<'Organizer' | 'Host' | 'Cycler' | 'Player' | 'Venue Owner' | 'User' | 'all'>('all');
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [totalUsers, setTotalUsers] = useState(0);
@@ -33,17 +57,16 @@ const AdminUserManagement = () => {
         const { users, total } = await adminOperations.getUsers(
           currentPage,
           usersPerPage,
-          statusFilter === 'all' ? undefined : statusFilter,
+          categoryFilter === 'all' ? undefined : categoryFilter,
           dateFilter || undefined,
           customDateStart || undefined,
-          customDateEnd || undefined,
-          categoryFilter === 'all' ? undefined : categoryFilter
+          customDateEnd || undefined
         );
         setUsers(users);
         setTotalUsers(total);
         setError(null);
       } catch (err: any) {
-        setError(err.message || 'Failed to fetch users. Please check the database schema and try again.');
+        setError(err.message || 'Failed to fetch users.');
         console.error('Error fetching users:', err);
       } finally {
         setLoading(false);
@@ -51,36 +74,46 @@ const AdminUserManagement = () => {
     };
 
     fetchUsers();
-  }, [currentPage, statusFilter, dateFilter, customDateStart, customDateEnd, categoryFilter]);
+  }, [currentPage, categoryFilter, dateFilter, customDateStart, customDateEnd]);
 
-  const handleSuspendUser = async (userId: string) => {
+  // Handle status update
+  const handleStatusUpdate = async (userId: string, eventType: 'match' | 'cycling' | null, eventId: string | null, newStatus: 'Registered' | 'Checked In' | 'Absent') => {
+    if (!eventType || !eventId) {
+      setError('Event type or ID missing for status update.');
+      return;
+    }
     try {
-      await adminOperations.updateUserStatus(userId, 'suspended');
-      setUsers(users.map(u => 
-        u.id === userId ? { ...u, status: 'suspended' } : u
+      await adminOperations.updateUserStatus(userId, eventType, eventId, newStatus);
+      setUsers(users.map(u =>
+        u.id === userId && u.event_id === eventId ? { ...u, event_status: newStatus } : u
       ));
+      if (selectedUser?.id === userId && selectedUser.event_id === eventId) {
+        setSelectedUser({ ...selectedUser, event_status: newStatus });
+      }
     } catch (err) {
-      console.error('Error suspending user:', err);
-      setError('Failed to suspend user');
+      console.error('Error updating status:', err);
+      setError('Failed to update user status');
     }
   };
 
-  const handleActivateUser = async (userId: string) => {
+  // Handle custom action
+  const handleCustomAction = async (userId: string, actionType: string, targetTable: string) => {
     try {
-      await adminOperations.updateUserStatus(userId, 'active');
-      setUsers(users.map(u => 
-        u.id === userId ? { ...u, status: 'active' } : u
-      ));
+      await adminOperations.performCustomAction(userId, actionType, { targetTable });
+      console.log(`Performed ${actionType} for user ${userId} on ${targetTable}`);
     } catch (err) {
-      console.error('Error activating user:', err);
-      setError('Failed to activate user');
+      console.error('Error performing custom action:', err);
+      setError('Failed to perform action');
     }
   };
 
+  // Filter users by search term
   const filteredUsers = users.filter(user => {
-    const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (user.super_code && user.super_code.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesSearch = 
+      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (user.super_code && user.super_code.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (user.confirmation_code && user.confirmation_code.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (user.access_pin && user.access_pin.toLowerCase().includes(searchTerm.toLowerCase()));
     return matchesSearch;
   });
 
@@ -127,16 +160,6 @@ const AdminUserManagement = () => {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="md:w-64"
               />
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full md:w-48">
-                  <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="suspended">Suspended</SelectItem>
-                </SelectContent>
-              </Select>
               <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value as any)}>
                 <SelectTrigger className="w-full md:w-48">
                   <SelectValue placeholder="Filter by category" />
@@ -148,7 +171,6 @@ const AdminUserManagement = () => {
                   <SelectItem value="Cycler">Cycler</SelectItem>
                   <SelectItem value="Player">Player</SelectItem>
                   <SelectItem value="Venue Owner">Venue Owner</SelectItem>
-                  <SelectItem value="User">User</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={dateFilter} onValueChange={(value) => setDateFilter(value as any)}>
@@ -208,7 +230,7 @@ const AdminUserManagement = () => {
               </TableHeader>
               <TableBody>
                 {filteredUsers.map((user) => (
-                  <TableRow key={user.id}>
+                  <TableRow key={`${user.id}-${user.event_id}`}>
                     <TableCell className="font-medium">{user.name}</TableCell>
                     <TableCell>{user.event_name || 'N/A'}</TableCell>
                     <TableCell>{user.venue_name || 'N/A'}</TableCell>
@@ -216,14 +238,24 @@ const AdminUserManagement = () => {
                     <TableCell>{user.slots_paid_for}</TableCell>
                     <TableCell>
                       {user.event_status ? (
-                        <Badge variant={user.event_status === 'Checked In' ? 'secondary' : user.event_status === 'Registered' ? 'default' : 'destructive'}>
-                          {user.event_status}
-                        </Badge>
+                        <Select
+                          value={user.event_status}
+                          onValueChange={(value) => handleStatusUpdate(user.id, user.event_type, user.event_id, value as 'Registered' | 'Checked In' | 'Absent')}
+                        >
+                          <SelectTrigger className="w-[120px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Registered">Registered</SelectItem>
+                            <SelectItem value="Checked In">Checked In</SelectItem>
+                            <SelectItem value="Absent">Absent</SelectItem>
+                          </SelectContent>
+                        </Select>
                       ) : 'N/A'}
                     </TableCell>
                     <TableCell>₦{user.total_earned.toLocaleString()}</TableCell>
                     <TableCell>₦{user.total_spent.toLocaleString()}</TableCell>
-                    <TableCell>{user.super_code || 'N/A'}</TableCell>
+                    <TableCell>{user.super_code || user.confirmation_code || user.access_pin || 'N/A'}</TableCell>
                     <TableCell>{user.last_cashout ? new Date(user.last_cashout).toLocaleString() : 'N/A'}</TableCell>
                     <TableCell>{new Date(user.last_activity).toLocaleString()}</TableCell>
                     <TableCell>
@@ -242,7 +274,7 @@ const AdminUserManagement = () => {
                             <DialogHeader>
                               <DialogTitle>User Details</DialogTitle>
                               <DialogDescription>
-                                View details for user {selectedUser?.name}
+                                View and manage details for {selectedUser?.name}
                               </DialogDescription>
                             </DialogHeader>
                             {selectedUser && (
@@ -280,6 +312,36 @@ const AdminUserManagement = () => {
                                     <p className="text-sm font-medium">Total Spent</p>
                                     <p className="text-lg">₦{selectedUser.total_spent.toLocaleString()}</p>
                                   </div>
+                                  <div>
+                                    <p className="text-sm font-medium">Super Code</p>
+                                    <p className="text-lg">{selectedUser.super_code || selectedUser.confirmation_code || selectedUser.access_pin || 'N/A'}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-medium">Last Cashout</p>
+                                    <p className="text-lg">{selectedUser.last_cashout ? new Date(selectedUser.last_cashout).toLocaleString() : 'N/A'}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-medium">Last Activity</p>
+                                    <p className="text-lg">{new Date(selectedUser.last_activity).toLocaleString()}</p>
+                                  </div>
+                                  {selectedUser.event_status && (
+                                    <div>
+                                      <p className="text-sm font-medium">Event Status</p>
+                                      <Select
+                                        value={selectedUser.event_status}
+                                        onValueChange={(value) => handleStatusUpdate(selectedUser.id, selectedUser.event_type, selectedUser.event_id, value as 'Registered' | 'Checked In' | 'Absent')}
+                                      >
+                                        <SelectTrigger className="w-[120px]">
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="Registered">Registered</SelectItem>
+                                          <SelectItem value="Checked In">Checked In</SelectItem>
+                                          <SelectItem value="Absent">Absent</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                  )}
                                 </div>
                                 <div>
                                   <p className="text-sm font-medium mb-2">Badges Earned</p>
@@ -290,51 +352,30 @@ const AdminUserManagement = () => {
                                   </div>
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
-                                  <Button
-                                    variant={selectedUser.status === 'active' ? 'destructive' : 'secondary'}
-                                    onClick={() => selectedUser.status === 'active' ? handleSuspendUser(selectedUser.id) : handleActivateUser(selectedUser.id)}
-                                    className="w-full"
+                                  <Select
+                                    onValueChange={(value) => handleCustomAction(selectedUser.id, value, selectedUser.event_type === 'match' ? 'user_joined_matches' : selectedUser.event_type === 'cycling' ? 'user_joined_cycling' : 'profiles')}
                                   >
-                                    {selectedUser.status === 'active' ? (
-                                      <>
-                                        <Ban className="h-4 w-4 mr-2" />
-                                        Suspend User
-                                      </>
-                                    ) : (
-                                      <>
-                                        <UserCheck className="h-4 w-4 mr-2" />
-                                        Activate User
-                                      </>
-                                    )}
-                                  </Button>
-                                  {/* Placeholder for additional actions */}
-                                  <Button variant="outline" className="w-full">
-                                    Custom Action
+                                    <SelectTrigger className="w-full">
+                                      <SelectValue placeholder="Select Custom Action" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="suspend">Suspend User</SelectItem>
+                                      <SelectItem value="activate">Activate User</SelectItem>
+                                      <SelectItem value="reset_password">Reset Password</SelectItem>
+                                      <SelectItem value="send_notification">Send Notification</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <Button
+                                    variant="outline"
+                                    onClick={() => handleCustomAction(selectedUser.id, 'custom_action', selectedUser.event_type === 'match' ? 'user_joined_matches' : selectedUser.event_type === 'cycling' ? 'user_joined_cycling' : 'profiles')}
+                                  >
+                                    Perform Action
                                   </Button>
                                 </div>
                               </div>
                             )}
                           </DialogContent>
                         </Dialog>
-                        {user.status === 'active' ? (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleSuspendUser(user.id)}
-                            className="text-yellow-600 hover:text-yellow-700"
-                          >
-                            <Ban className="h-4 w-4" />
-                          </Button>
-                        ) : (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleActivateUser(user.id)}
-                            className="text-green-600 hover:text-green-700"
-                          >
-                            <UserCheck className="h-4 w-4" />
-                          </Button>
-                        )}
                       </div>
                     </TableCell>
                   </TableRow>
