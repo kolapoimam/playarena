@@ -1,5 +1,20 @@
 import { createClient } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import * as OneSignal from '@onesignal/node-onesignal';
+import { Resend } from '@resend/emails';
+
+// OneSignal Configuration
+const onesignalAppId = import.meta.env.VITE_ONESIGNAL_APP_ID;
+const onesignalApiKey = import.meta.env.VITE_ONESIGNAL_API_KEY;
+const onesignalClient = new OneSignal.DefaultApi(
+  new OneSignal.Configuration({
+    appId: onesignalAppId,
+    authKey: onesignalApiKey
+  })
+);
+
+// Resend Configuration
+const resend = new Resend(import.meta.env.VITE_RESEND_API_KEY);
 
 // Types
 export interface AdminMetrics {
@@ -75,16 +90,18 @@ export interface AdminCashout {
 
 export interface AdminNotification {
   id: string;
-  target_type: 'cashout' | 'booking' | 'event' | 'match' | 'cycling_event';
+  target_type: 'cashout' | 'booking' | 'event' | 'match' | 'cycling_event' | 'user' | 'all';
   category: string;
   title: string;
   message: string;
   sent_at: string;
   link: string;
   unread: boolean;
+  type: 'push' | 'email' | 'both';
+  recipients: number;
+  status: 'sent' | 'failed';
 }
 
-// New Venue interface
 export interface Venue {
   id: string;
   name: string;
@@ -202,7 +219,7 @@ export const adminOperations = {
           startDate = new Date(customStart).toISOString();
           break;
         default:
-          startDate = new Date(now.setDate(now.getDate() - 30).toISOString();
+          startDate = new Date(now.setDate(now.getDate() - 30)).toISOString();
       }
       const endDate = customEnd ? new Date(customEnd).toISOString() : new Date().toISOString();
 
@@ -611,9 +628,9 @@ export const adminOperations = {
         status: m.status,
         participants: m.total_checked_in_players || 0,
         venue: m.venues?.name || 'TBD',
-        landmark: 'N/A', // Placeholder: Adjust based on venue-landmark link
+        landmark: 'N/A',
         tickets_sold: m.total_tickets_sold || 0,
-        feedback: m.feedback_summaries?.['summary']?.average || 0,
+        feedback: m.feedback_summaries?.summary?.average || 0,
         type: 'match' as const
       })),
       ...cyclingRes.data.map(c => ({
@@ -625,7 +642,7 @@ export const adminOperations = {
         status: c.status,
         participants: c.cycling_attendees?.[0]?.count || 0,
         venue: 'N/A',
-        landmark: c.landmarks?.['name'] || 'N/A',
+        landmark: c.landmarks?.name || 'N/A',
         tickets_sold: 0,
         feedback: 0,
         type: 'cycling_event' as const
@@ -691,7 +708,7 @@ export const adminOperations = {
         details: updates,
         event_type: type,
         target_table: table,
-        updated_at: new Date().toISOString()
+        timestamp: new Date().toISOString()
       });
   },
 
@@ -758,7 +775,7 @@ export const adminOperations = {
       .range((page - 1) * limit, page * limit - 1);
 
     if (error) {
-      console.error('Supabase error in getCashouts:', error);
+      console.error('Supabase query error in getCashouts:', error);
       throw new Error(`Failed to fetch cashouts: ${error.message}`);
     }
 
@@ -770,13 +787,13 @@ export const adminOperations = {
       status: cashout.status,
       requested_at: cashout.created_at,
       event_details: cashout.venues?.name || 'Unknown',
-      checked_in_participants: cashout.checked_in_events || 0,
+      checked_in_participants: cashout.checked_in_participants || 0,
       bank_details: cashout.profiles?.bank_details || {
         account_name: cashout.account_holder_name || '',
         bank_name: cashout.bank_name || '',
-        account_number: cashout.account_number || '',
+        account_number: cashout.account_number || ''
       },
-      rejection_reason: cashout.rejection_reason,
+      rejection_reason: cashout.rejection_reason
     }));
 
     return { cashouts, total: count || 0 };
@@ -786,7 +803,7 @@ export const adminOperations = {
   async updateCashoutStatus(id: string, status: string, rejectionReason?: string): Promise<void> {
     const updateData: { status: string; updated_at: string; rejection_reason?: string } = {
       status,
-      updated_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     };
     if (rejectionReason) {
       updateData.rejection_reason = rejectionReason;
@@ -794,7 +811,7 @@ export const adminOperations = {
 
     const { data: cashoutData, error: fetchError } = await supabase
       .from('venue_booking_cashout')
-      .select('status,amount')
+      .select('amount,account_holder_name')
       .eq('id', id)
       .single();
 
@@ -814,7 +831,8 @@ export const adminOperations = {
     }
 
     // Log to admin_actions
-    const adminId = 'placeholder-admin-id'; // Replace with actual admin ID from auth context
+    const { data: { user } } = await supabase.auth.getUser();
+    const adminId = user?.id || 'unknown';
     await supabase
       .from('admin_actions')
       .insert({
@@ -824,7 +842,7 @@ export const adminOperations = {
         details: {
           old_status: cashoutData.status,
           new_status: status,
-          rejection_reason
+          rejection_reason: rejectionReason
         },
         event_type: 'cashout',
         target_table: 'venue_booking_cashout',
@@ -832,14 +850,36 @@ export const adminOperations = {
       });
   },
 
-  // Get notifications
-  async getNotifications(limit: number = 10): Promise<AdminNotification[]> {
-    const { data, error } = await supabase
+  // Get notifications with filters
+  async getNotifications(
+    limit: number = 10,
+    dateFilter?: '7d' | '30d' | 'custom' | 'all',
+    customStart?: string,
+    customEnd?: string,
+    targetType?: string
+  ): Promise<AdminNotification[]> {
+    let query = supabase
       .from('notifications')
-      .select('id,target_type,category,title,message,sent_at,link,unread')
-      .in('target_type', ['cashout', 'booking', 'event', 'match', 'cycling_event'])
+      .select('id,target_type,category,title,message,sent_at,link,unread,type,recipients,status')
       .order('sent_at', { ascending: false })
       .limit(limit);
+
+    if (dateFilter && dateFilter !== 'all') {
+      const now = new Date();
+      if (dateFilter === '7d') {
+        query = query.gte('sent_at', new Date(now.setDate(now.getDate() - 7)).toISOString());
+      } else if (dateFilter === '30d') {
+        query = query.gte('sent_at', new Date(now.setDate(now.getDate() - 30)).toISOString());
+      } else if (dateFilter === 'custom' && customStart && customEnd) {
+        query = query.gte('sent_at', customStart).lte('sent_at', customEnd);
+      }
+    }
+
+    if (targetType && targetType !== 'all') {
+      query = query.eq('target_type', targetType);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error('Supabase query error in getNotifications:', error);
@@ -854,69 +894,164 @@ export const adminOperations = {
       message: n.message,
       sent_at: n.sent_at,
       link: n.link || '/admin',
-      unread: n.unread
+      unread: n.unread,
+      type: n.type,
+      recipients: n.recipients || 0,
+      status: n.status
     }));
   },
 
-  // Create first admin
-  async createFirstAdmin(email: string, password: string, secretKey: string): Promise<any> {
+  // Send notification
+  async sendNotification(
+    notificationType: 'push' | 'email' | 'both',
+    targetType: 'all' | 'user' | 'event' | 'organizers' | 'venue_owners',
+    targetId: string,
+    message: string
+  ): Promise<void> {
     try {
-      console.log('Received secret key:', secretKey);
-      console.log('Expected secret key:', import.meta.env.VITE_FIRST_ADMIN_SECRET);
+      const { data: { user } } = await supabase.auth.getUser();
+      const adminId = user?.id;
+      if (!adminId) throw new Error('Admin not authenticated');
 
-      if (secretKey !== import.meta.env.VITE_FIRST_ADMIN_SECRET) {
-        throw new Error('Invalid secret key');
+      let recipients: string[] = [];
+      let recipientEmails: string[] = [];
+      let recipientsCount = 0;
+
+      // Determine recipients based on targetType
+      if (targetType === 'all') {
+        const { data } = await supabase.from('profiles').select('id,email');
+        recipients = data?.map(p => p.id) ?? [];
+        recipientEmails = data?.map(p => p.email) ?? [];
+        recipientsCount = recipients.length;
+      } else if (targetType === 'user') {
+        const { data } = await supabase
+          .from('profiles')
+          .select('id,email')
+          .eq('id', targetId)
+          .single();
+        if (data) {
+          recipients = [data.id];
+          recipientEmails = [data.email];
+          recipientsCount = 1;
+        }
+      } else if (targetType === 'event') {
+        const { data: matchParticipants } = await supabase
+          .from('user_joined_matches')
+          .select('user_id,profiles!inner(email)')
+          .eq('match_id', targetId);
+        const { data: cyclingParticipants } = await supabase
+          .from('user_joined_cycling')
+          .select('user_id,profiles!inner(email)')
+          .eq('cycling_event_id', targetId);
+        recipients = [
+          ...(matchParticipants?.map(p => p.user_id) ?? []),
+          ...(cyclingParticipants?.map(p => p.user_id) ?? [])
+        ];
+        recipientEmails = [
+          ...(matchParticipants?.map(p => p.profiles.email) ?? []),
+          ...(cyclingParticipants?.map(p => p.profiles.email) ?? [])
+        ];
+        recipientsCount = recipients.length;
+      } else if (targetType === 'organizers') {
+        const { data } = await supabase
+          .from('matches')
+          .select('organizer_id,profiles!inner(email)')
+          .not('organizer_id', 'is', null);
+        recipients = [...new Set(data?.map(m => m.organizer_id) ?? [])];
+        recipientEmails = [...new Set(data?.map(m => m.profiles.email) ?? [])];
+        recipientsCount = recipients.length;
+      } else if (targetType === 'venue_owners') {
+        const { data } = await supabase
+          .from('venues')
+          .select('user_id,profiles!inner(email)')
+          .not('user_id', 'is', null);
+        recipients = [...new Set(data?.map(v => v.user_id) ?? [])];
+        recipientEmails = [...new Set(data?.map(v => v.profiles.email) ?? [])];
+        recipientsCount = recipients.length;
       }
 
-      const { data: existingAdmins, error: checkError } = await supabase
-        .from('admins')
-        .select('id')
-        .limit(1);
-
-      if (checkError) {
-        console.error('Supabase error checking existing admins:', checkError);
-        throw new Error(`Failed to check existing admins: ${checkError.message}`);
+      if (recipientsCount === 0) {
+        throw new Error('No valid recipients found');
       }
 
-      if (existingAdmins && existingAdmins.length > 0) {
-        throw new Error('Admin already exists');
+      const title = message.substring(0, 50) + (message.length > 50 ? '...' : '');
+      let status: 'sent' | 'failed' = 'sent';
+
+      // Send push notification
+      if (notificationType === 'push' || notificationType === 'both') {
+        const notification = new OneSignal.Notification();
+        notification.app_id = onesignalAppId;
+        notification.title = { en: title };
+        notification.contents = { en: message };
+        if (targetType === 'all') {
+          notification.included_segments = ['All'];
+        } else {
+          notification.include_external_user_ids = recipients;
+        }
+        try {
+          await onesignalClient.createNotification(notification);
+        } catch (error: any) {
+          console.error('OneSignal error:', error);
+          status = 'failed';
+        }
       }
 
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password
+      // Send email
+      if (notificationType === 'email' || notificationType === 'both') {
+        try {
+          // Batch emails to avoid Resend limits
+          const batchSize = 50;
+          for (let i = 0; i < recipientEmails.length; i += batchSize) {
+            const batch = recipientEmails.slice(i, i + batchSize);
+            await resend.emails.send({
+              from: 'SportCliq <notifications@sportcliq.com>',
+              to: batch,
+              subject: title,
+              text: message
+            });
+          }
+        } catch (error: any) {
+          console.error('Resend error:', error);
+          status = 'failed';
+        }
+      }
+
+      // Store in notifications table
+      const { error: dbError } = await supabase.from('notifications').insert({
+        target_type: targetType,
+        category: 'admin',
+        title,
+        message,
+        sent_at: new Date().toISOString(),
+        link: '/admin',
+        unread: true,
+        type: notificationType,
+        recipients: recipientsCount,
+        status
       });
 
-      if (authError) {
-        console.error('Supabase auth error:', authError);
-        throw new Error(`Failed to create admin: ${authError.message}`);
+      if (dbError) {
+        console.error('Supabase error in sendNotification:', dbError);
+        throw new Error(`Failed to store notification: ${dbError.message}`);
       }
 
-      const { data: adminData, error: adminError } = await supabase
-        .from('admins')
-        .insert({
-          id: authData.user?.id,
-          email,
-          role: 'super_admin',
-          permissions: ['*'],
-          is_active: true,
-        })
-        .select()
-        .single();
-
-      if (adminError) {
-        console.error('Supabase error creating admin record:', adminError);
-        throw new Error(`Failed to create admin record: ${adminError.message}`);
-      }
-
-      return adminData;
+      // Log to admin_actions
+      await supabase.from('admin_actions').insert({
+        admin_id: adminId,
+        action_type: 'send_notification',
+        target_id: targetId || 'all',
+        details: { type: notificationType, target_type: targetType, message },
+        event_type: 'notification',
+        target_table: 'notifications',
+        timestamp: new Date().toISOString()
+      });
     } catch (error: any) {
-      console.error('Error creating admin:', error);
-      throw new Error(`Failed to create admin: ${error.message}`);
+      console.error('Error in sendNotification:', error);
+      throw new Error(`Failed to send notification: ${error.message}`);
     }
   },
 
-  // New venue-related functions
+  // Get venues
   async getVenues(
     page: number = 1,
     limit: number = 50,
@@ -938,8 +1073,8 @@ export const adminOperations = {
             booking_fee,
             owner:profiles(full_name, email, phone),
             events:matches(count),
-            revenue:venue_booking_cashout(sum(amount)),
-            bookings:venue_bookings(id, created_at, amount, status),
+            revenue:venue_booking_cashout(amount),
+            bookings:bookings(id, created_at, amount, status),
             documents:venue_documents(id, document_type, document_url)
           `,
           { count: 'exact' }
@@ -962,7 +1097,7 @@ export const adminOperations = {
       }
 
       const venues: Venue[] = data.map(venue => ({
-        id: venue.id,
+ id: venue.id,
         name: venue.name,
         city: venue.city,
         state: venue.state,
@@ -973,15 +1108,15 @@ export const adminOperations = {
         owner_phone: venue.owner?.phone || 'N/A',
         created_at: venue.created_at,
         events_count: venue.events?.[0]?.count || 0,
-        revenue: venue.revenue?.[0]?.sum || 0,
+        revenue: venue.revenue?.reduce((sum: number, r: any) => sum + (r.amount || 0), 0) || 0,
         booking_fee: venue.booking_fee || 0,
-        booking_history: venue.bookings?.map(b => ({
+        booking_history: venue.bookings?.map((b: any) => ({
           id: b.id,
           created_at: b.created_at,
           amount: b.amount,
           status: b.status
         })) || [],
-        documents: venue.documents?.map(d => ({
+        documents: venue.documents?.map((d: any) => ({
           id: d.id,
           document_type: d.document_type,
           document_url: d.document_url
@@ -995,7 +1130,12 @@ export const adminOperations = {
     }
   },
 
-  async toggleVenueStatus(venueId: string, currentStatus: string, adminId: string): Promise<void> {
+  // Toggle venue status
+  async toggleVenueStatus(venueId: string, currentStatus: string): Promise<void> {
+    const { data: { user } } = await supabase.auth.getUser();
+    const adminId = user?.id;
+    if (!adminId) throw new Error('Admin not authenticated');
+
     const newStatus = currentStatus === 'verified' ? 'pending' : 'verified';
     try {
       const { error: venueError } = await supabase
@@ -1037,11 +1177,16 @@ export const adminOperations = {
     }
   },
 
-  async deleteVenue(venueId: string, adminId: string): Promise<void> {
+  // Delete venue (super admin only)
+  async deleteVenue(venueId: string): Promise<void> {
+    const { data: { user } } = await supabase.auth.getUser();
+    const adminId = user?.id;
+    if (!adminId) throw new Error('Admin not authenticated');
+
     try {
       const { data: admin, error: adminError } = await supabase
         .from('admins')
-        .select('id')
+        .select('role')
         .eq('id', adminId)
         .single();
 
@@ -1063,4 +1208,60 @@ export const adminOperations = {
       throw new Error(`Failed to delete venue: ${err.message}`);
     }
   },
+
+  // Create first admin
+  async createFirstAdmin(email: string, password: string, secretKey: string): Promise<any> {
+    try {
+      if (secretKey !== import.meta.env.VITE_FIRST_ADMIN_SECRET) {
+        throw new Error('Invalid secret key');
+      }
+
+      const { data: existingAdmins, error: checkError } = await supabase
+        .from('admins')
+        .select('id')
+        .limit(1);
+
+      if (checkError) {
+        console.error('Supabase error checking existing admins:', checkError);
+        throw new Error(`Failed to check existing admins: ${checkError.message}`);
+      }
+
+      if (existingAdmins && existingAdmins.length > 0) {
+        throw new Error('Admin already exists');
+      }
+
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password
+      });
+
+      if (authError) {
+        console.error('Supabase auth error:', authError);
+        throw new Error(`Failed to create admin user: ${authError.message}`);
+      }
+
+      const { data: adminData, error: adminError } = await supabase
+        .from('admins')
+        .insert({
+          id: authData.user?.id,
+          email,
+          role: 'super_admin',
+          status: 'active',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (adminError) {
+        console.error('Supabase error creating admin record:', adminError);
+        throw new Error(`Failed to create admin record: ${adminError.message}`);
+      }
+
+      return adminData;
+    } catch (error: any) {
+      console.error('Admin creation error:', error);
+      throw new Error(`Failed to create admin: ${error.message}`);
+    }
+  }
 };
