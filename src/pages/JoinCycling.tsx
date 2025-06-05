@@ -472,9 +472,7 @@ payment_status: event.is_free || paymentStatus === 'success',
 
       <div className="p-6">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-2">{ਮ
-
-">{event.title}</h2>
+          <h2 className="text-xl font-semibold mb-2">{event.title}</h2>
           <div className="text-muted-foreground mb-4 space-y-1">
             <div className="flex items-center gap-2">
               <Calendar size={16} />
