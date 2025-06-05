@@ -67,7 +67,7 @@ const MyMatches = () => {
       // Fetch profile
       const { data: session } = await supabase.auth.getSession();
       if (!session.session) {
-        navigate("/login");
+        navigate("/auth");
         return;
       }
 
