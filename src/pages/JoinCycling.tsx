@@ -42,7 +42,7 @@ type CyclingEvent = {
   start_time: string;
   max_attendees: number;
   is_free: boolean;
-  price?: number; // Price in kobo
+  price?: number; // Price in Naira
   host_name: string;
   host_phone: string;
   start_landmark: Landmark;
@@ -72,7 +72,12 @@ const formSchema = z
 
 type FormValues = z.infer<typeof formSchema>;
 
-const formatter = new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN' });
+const formatter = new Intl.NumberFormat('en-NG', {
+  style: 'currency',
+  currency: 'NGN',
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
 
 const JoinCycling = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -200,7 +205,7 @@ const JoinCycling = () => {
               setPaymentStatus('success');
               toast({
                 title: 'Payment Successful',
-                description: `Payment of ${formatter.format((event.price || 0) / 100)} processed successfully. Please complete your registration.`,
+                description: `Payment of ${formatter.format(event.price || 0)} processed successfully. Please complete your registration.`,
               });
               return;
             } else {
@@ -249,7 +254,8 @@ const JoinCycling = () => {
       return;
     }
 
-    const amountInKobo = Number(event.price); // event.price is in kobo
+    const amountInNaira = Number(event.price); // event.price is in Naira
+    const amountInKobo = amountInNaira * 100; // Convert to kobo for Paystack
 
     if (!Number.isFinite(amountInKobo) || amountInKobo < 100) {
       toast({
@@ -276,7 +282,7 @@ const JoinCycling = () => {
       const response = await supabase.functions.invoke('initialize-paystack-transaction', {
         body: {
           email: defaultEmail,
-          amount: amountInKobo, // Send kobo directly to Paystack
+          amount: amountInKobo, // Send kobo to Paystack
           event_id: event.id_uuid,
           slug: event.slug,
           title: event.title,
@@ -306,7 +312,7 @@ const JoinCycling = () => {
           setPaymentStatus('success');
           toast({
             title: 'Payment Initiated',
-            description: `Payment of ${formatter.format(amountInKobo / 100)} initiated. Complete your registration.`,
+            description: `Payment of ${formatter.format(amountInNaira)} initiated. Complete your registration.`,
           });
           setJoining(false);
         },
@@ -497,7 +503,7 @@ const JoinCycling = () => {
             </div>
             {!event.is_free && (
               <div className="flex items-center gap-2 mt-2 font-medium text-green-600">
-                <span>Price: {formatter.format((event.price || 0) / 100)}</span>
+                <span>Price: {formatter.format(event.price || 0)}</span>
               </div>
             )}
           </div>
@@ -668,7 +674,7 @@ const JoinCycling = () => {
                     This is a paid event. Please complete the payment to join.
                   </p>
                   <div className="flex items-center gap-2 text-sm font-medium mt-2">
-                    <span>Total: {formatter.format((event.price || 0) / 100)}</span>
+                    <span>Total: {formatter.format(event.price || 0)}</span>
                   </div>
                   <Button
                     type="button"
@@ -682,7 +688,7 @@ const JoinCycling = () => {
                         Processing...
                       </>
                     ) : (
-                      `Pay Now (${formatter.format((event.price || 0) / 100)})`
+                      `Pay Now (${formatter.format(event.price || 0)})`
                     )}
                   </Button>
                 </>
