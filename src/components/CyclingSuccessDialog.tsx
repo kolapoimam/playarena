@@ -64,19 +64,32 @@ const CyclingSuccessDialog = ({
     onNavigate,
   });
 
-  // Relaxed prop validation with fallbacks
-  const isValid = open && code && formValues?.title && formValues?.start_time && formValues?.host_name && selectedLandmark?.name && eventSlug;
-  if (!isValid && open) {
-    console.error('Invalid props in CyclingSuccessDialog, closing dialog');
-    toast({
-      title: "Error",
-      description: "Some event information is missing. Event was created successfully.",
-      variant: "destructive",
-    });
-    onOpenChange(false);
-    return null;
+  // Validate props
+  const isValid = open &&
+    code &&
+    formValues?.title &&
+    formValues?.start_time &&
+    formValues?.host_name &&
+    selectedLandmark &&
+    selectedLandmark.name &&
+    selectedLandmark.state &&
+    eventSlug;
+
+  // Handle invalid props
+  if (!isValid) {
+    if (open) {
+      console.error('Invalid props in CyclingSuccessDialog, closing dialog');
+      toast({
+        title: "Error",
+        description: "Some event information is missing. Event was created successfully.",
+        variant: "destructive",
+      });
+      onOpenChange(false);
+    }
+    return null; // Prevent rendering if props are invalid
   }
 
+  // Format event date safely
   const formattedDate = formValues.event_date
     ? (formValues.event_date instanceof Date
         ? format(formValues.event_date, "PPP")
@@ -199,7 +212,7 @@ const CyclingSuccessDialog = ({
     window.open(facebookUrl, "_blank");
   };
 
-  const isDarkBackground = backgroundColor === '#4CAF50' || backgroundColor === '#000000' || backgroundColor === '#2196F3' || backgroundColor === '#9C27B0';
+  const isDarkBackground = ['#4CAF50', '#000000', '#2196F3', '#9C27B0'].includes(backgroundColor);
   const logoSrc = isDarkBackground ? '/playarenadark.png' : '/playarenalight.png';
 
   return (
@@ -280,7 +293,7 @@ const CyclingSuccessDialog = ({
                   backgroundImage: 'linear-gradient(45deg, rgba(255,255,255,0.1) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.1) 75%, transparent 75%, transparent)',
                   backgroundSize: '40px 40px',
                   clipPath: 'polygon(10% 0%, 90% 0%, 100% 10%, 100% 90%, 90% 100%, 10% 100%, 0% 90%, 0% 10%)',
-                  backgroundColor: backgroundColor,
+                  backgroundColor,
                 }}
               >
                 {/* Perforated Edge Semi-Circles */}
@@ -315,15 +328,31 @@ const CyclingSuccessDialog = ({
                   <Volleyball className="h-6 w-6 text-red-500" />
                   <Medal className="h-6 w-6 text-blue-300" />
                 </div>
-                <h2 className="text-2xl font-bold mb-2 tracking-tight font-condensed uppercase text-center">{formValues.title || 'Untitled Event'}</h2>
+                <h2 className="text-2xl font-bold mb-2 tracking-tight font-condensed uppercase text-center">
+                  {formValues.title ?? 'Untitled Event'}
+                </h2>
                 <div className="text-center mb-4">
-                  <p className="text-sm"><MapPin className="inline h-4 w-4 mr-1 text-white" /> {selectedLandmark.name || 'Unknown Location'}, {selectedLandmark.state || 'Unknown State'}</p>
-                  <p className="text-sm"><CalendarIcon className="inline h-4 w-4 mr-1 text-white" /> {formattedDate}</p>
-                  <p className="text-sm"><Clock className="inline h-4 w-4 mr-1 text-white" /> {formValues.start_time || 'Unknown Time'}</p>
-                  <p className="text-sm font-semibold"><User className="inline h-4 w-4 mr-1 text-white" /> Hosted by {formValues.host_name || 'Unknown Host'}</p>
+                  <p className="text-sm">
+                    <MapPin className="inline h-4 w-4 mr-1 text-white" /> 
+                    {selectedLandmark.name ?? 'Unknown Location'}, {selectedLandmark.state ?? 'Unknown State'}
+                  </p>
+                  <p className="text-sm">
+                    <CalendarIcon className="inline h-4 w-4 mr-1 text-white" /> 
+                    {formattedDate}
+                  </p>
+                  <p className="text-sm">
+                    <Clock className="inline h-4 w-4 mr-1 text-white" /> 
+                    {formValues.start_time ?? 'Unknown Time'}
+                  </p>
+                  <p className="text-sm font-semibold">
+                    <User className="inline h-4 w-4 mr-1 text-white" /> 
+                    Hosted by {formValues.host_name ?? 'Unknown Host'}
+                  </p>
                 </div>
                 <div className="bg-white text-green-600 rounded-md p-4 text-center shadow-inner">
-                  <p className="text-sm font-medium uppercase tracking-wide">{supercode ? "Supercode" : "Confirmation Code"}</p>
+                  <p className="text-sm font-medium uppercase tracking-wide">
+                    {supercode ? "Supercode" : "Confirmation Code"}
+                  </p>
                   <p className="text-4xl font-bold tracking-wider mt-1 font-mono">{code}</p>
                 </div>
               </div>
