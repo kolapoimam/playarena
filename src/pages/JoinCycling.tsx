@@ -42,7 +42,7 @@ type CyclingEvent = {
   start_time: string;
   max_attendees: number;
   is_free: boolean;
-  price?: number; // Price in Naira
+  price?: number; // Price in kobo
   host_name: string;
   host_phone: string;
   start_landmark: Landmark;
@@ -186,7 +186,7 @@ const JoinCycling = () => {
   useEffect(() => {
     if (!paymentReference || !event?.id_uuid) return;
 
-    const verifyPayment = async (retries = 3, delay = 1000) => {
+    const verifyPayment = async (ret ries = 3, delay = 1000) => {
       setVerifyingPayment(true);
       try {
         for (let attempt = 1; attempt <= retries; attempt++) {
@@ -200,7 +200,7 @@ const JoinCycling = () => {
               setPaymentStatus('success');
               toast({
                 title: 'Payment Successful',
-                description: `Payment of ${formatter.format((event.price || 0))} processed successfully. Please complete your registration.`,
+                description: `Payment of ${formatter.format((event.price || 0) / 100)} processed successfully. Please complete your registration.`,
               });
               return;
             } else {
@@ -249,8 +249,7 @@ const JoinCycling = () => {
       return;
     }
 
-    const amountInNaira = Number(event.price); // event.price is in Naira
-    const amountInKobo = amountInNaira * 100; // Convert to kobo for Paystack
+    const amountInKobo = Number(event.price); // event.price is in kobo
 
     if (!Number.isFinite(amountInKobo) || amountInKobo < 100) {
       toast({
@@ -277,7 +276,7 @@ const JoinCycling = () => {
       const response = await supabase.functions.invoke('initialize-paystack-transaction', {
         body: {
           email: defaultEmail,
-          amount: amountInKobo, // Send kobo to Paystack
+          amount: amountInKobo, // Send kobo directly to Paystack
           event_id: event.id_uuid,
           slug: event.slug,
           title: event.title,
@@ -306,7 +305,7 @@ const JoinCycling = () => {
           setPaymentStatus('success');
           toast({
             title: 'Payment Initiated',
-            description: `Payment of ${formatter.format(amountInNaira)} initiated. Complete your registration.`,
+            description: `Payment of ${formatter.format(amountInKobo / 100)} initiated. Complete your registration.`,
           });
           setJoining(false);
         },
@@ -496,7 +495,7 @@ const JoinCycling = () => {
             </div>
             {!event.is_free && (
               <div className="flex items-center gap-2 mt-2 font-medium text-green-600">
-                <span>Price: {formatter.format(event.price || 0)}</span>
+                <span>Price: {formatter.format((event.price || 0) / 100)}</span>
               </div>
             )}
           </div>
@@ -553,7 +552,7 @@ const JoinCycling = () => {
                           <FormControl>
                             <Input
                               type="tel"
-                              inputMode breastroke="numeric"
+                              inputMode="numeric"
                               placeholder="Enter 11-digit phone number"
                               {...field}
                               className="border-gray-300 dark:border-gray-600 rounded-md focus:ring-green-500 focus:border-green-500"
@@ -667,7 +666,7 @@ const JoinCycling = () => {
                     This is a paid event. Please complete the payment to join.
                   </p>
                   <div className="flex items-center gap-2 text-sm font-medium mt-2">
-                    <span>Total: {formatter.format(event.price || 0)}</span>
+                    <span>Total: {formatter.format((event.price || 0) / 100)}</span>
                   </div>
                   <Button
                     type="button"
@@ -681,7 +680,7 @@ const JoinCycling = () => {
                         Processing...
                       </>
                     ) : (
-                      `Pay Now (${formatter.format(event.price || 0)})`
+                      `Pay Now (${formatter.format((event.price || 0) / 100)})`
                     )}
                   </Button>
                 </>
