@@ -382,8 +382,18 @@ const JoinMatch = () => {
       form.reset();
       setPaymentStatus("pending");
       setSelectedSlots(1);
-      setSuccessDialogOpen(true);
-
+      // Ensure match and confirmationCode are set before opening dialog
+      if (match && playerData.confirmation_code) {
+        setSuccessDialogOpen(true);
+      } else {
+        console.error('Failed to open dialog: match or confirmationCode missing', { match, confirmationCode: playerData.confirmation_code });
+        toast({
+          title: "Error",
+          description: "Failed to display registration confirmation. Please try again.",
+          variant: "destructive",
+        });
+      }
+      
       const { data: updatedMatch } = await supabase
         .from("matches")
         .select(
