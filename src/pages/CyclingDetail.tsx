@@ -19,7 +19,6 @@ import Navbar from "@/components/Navbar";
 import AttendeesTable from "@/components/AttendeesTable";
 import { addHours, addMinutes } from "date-fns";
 import { DateTime } from "luxon";
-import { Skeleton } from "@/components/ui/skeleton";
 
 type Landmark = {
   name: string;
@@ -229,7 +228,7 @@ const CyclingDetail = () => {
     const endDateTime = eventDateTime.plus({ milliseconds: durationInMs });
 
     const formatGoogleDate = (date: DateTime) => {
-      const pad = (num: number) => num.toString(). قطعات de reposição padStart(2, "0");
+      const pad = (num: number) => num.toString().padStart(2, "0");
       return `${date.year}${pad(date.month)}${pad(date.day)}T${pad(date.hour)}${pad(date.minute)}${pad(date.second)}`;
     };
     const googleCalendarUrl = `https://www.google.com/calendar/render?action=TEMPLATE` +
@@ -267,77 +266,30 @@ const CyclingDetail = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen pb-24">
-        <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg">
-          <div className="flex items-center justify-between">
-            <Button
-              variant="ghost"
-              onClick={() => navigate(-1)}
-              className="text-white hover:bg-green-600"
-            >
-              <ArrowLeft size={18} className="mr-2" />
-              Back
-            </Button>
-            <div className="text-center">
-              <h1 className="text-2xl font-bold">Event Details</h1>
-            </div>
-            <div className="w-10"></div>
-          </div>
-        </header>
-        <div className="p-4">
-          <Skeleton className="h-8 w-3/4 mb-2" /> {/* Title */}
-          <Skeleton className="h-6 w-1/2 mb-2" /> {/* Host */}
-          <div className="min-h-[40px] mb-4">
-            <Skeleton className="h-10 w-full" /> {/* Alert Placeholder */}
-          </div>
-          <div className="space-y-4">
-            <div className="border rounded-lg p-4 bg-card shadow-md relative">
-              <Skeleton className="h-6 w-1/4 mb-3" /> {/* Event Details Header */}
-              <div className="space-y-3">
-                <Skeleton className="h-5 w-1/2" /> {/* Date */}
-                <Skeleton className="h-5 w-1/2" /> {/* Time */}
-                <Skeleton className="h-5 w-3/4" /> {/* Location */}
-                <Skeleton className="h-5 w-1/2" /> {/* Duration */}
-                <Skeleton className="h-5 w-1/2" /> {/* Attendees */}
-                <Skeleton className="h-5 w-1/2" /> {/* Bike Info */}
-                <Skeleton className="h-5 w-1/4" /> {/* Cost */}
-                <Skeleton className="h-10 w-full" /> {/* Notes */}
-              </div>
-            </div>
-            <Skeleton className="h-64 w-full" /> {/* AttendeesTable Placeholder */}
-          </div>
+      <div className="p-4">
+        <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4">
+          <ArrowLeft size={18} className="mr-2" />
+          Back
+        </Button>
+        <div className="text-center py-8">
+          <h2 className="text-xl font-semibold mb-2">Loading...</h2>
+          <p className="text-muted-foreground">Fetching event details...</p>
         </div>
-        <Navbar />
       </div>
     );
   }
 
   if (!event) {
     return (
-      <div className="min-h-screen pb-24">
-        <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg">
-          <div className="flex items-center justify-between">
-            <Button
-              variant="ghost"
-              onClick={() => navigate(-1)}
-              className="text-white hover:bg-green-600"
-            >
-              <ArrowLeft size={18} className="mr-2" />
-              Back
-            </Button>
-            <div className="text-center">
-              <h1 className="text-2xl font-bold">Event Details</h1>
-            </div>
-            <div className="w-10"></div>
-          </div>
-        </header>
-        <div className="p-4">
-          <div className="text-center py-8">
-            <h2 className="text-2xl font-semibold mb-2">Event Not Found</h2>
-            <p className="text-muted-foreground">The event doesn't exist or has been removed.</p>
-          </div>
+      <div className="p-4">
+        <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4">
+          <ArrowLeft size={18} className="mr-2" />
+          Back
+        </Button>
+        <div className="text-center py-8">
+          <h2 className="text-2xl font-semibold mb-2">Event Not Found</h2>
+          <p className="text-muted-foreground">The event doesn't exist or has been removed.</p>
         </div>
-        <Navbar />
       </div>
     );
   }
@@ -365,7 +317,7 @@ const CyclingDetail = () => {
 
       <div className="p-4">
         <h1 className="text-2xl font-bold mb-2">{event.title}</h1>
-        <div className="flex justify-between items-center mb-2">
+        <div className="flex justify-between items-center mb-4">
           <div className="flex items-center gap-2">
             <p className="text-muted-foreground">Hosted by {event.host_name}</p>
             <img 
@@ -376,27 +328,23 @@ const CyclingDetail = () => {
           </div>
         </div>
 
-        <div className="min-h-[40px] mb-4">
-          {isEnded ? (
-            <div className="bg-gray-100 border border-gray-200 text-gray-700 px-4 py-3 rounded">
-              This event has passed
-            </div>
-          ) : isStarted ? (
-            <div className="bg-blue-100 border border-blue-200 text-blue-700 px-4 py-3 rounded">
-              This event has started!
-            </div>
-          ) : isFull ? (
-            <div className="bg-red-100 border border-red-200 text-red-700 px-4 py-3 rounded">
-              This event is completely filled up!
-            </div>
-          ) : status === "today" ? (
-            <div className="bg-green-100 border border-green-200 text-green-700 px-4 py-3 rounded">
-              This event is happening today!
-            </div>
-          ) : (
-            <div className="min-h-[0px] mb-2"></div>
-          )}
-        </div>
+        {isEnded ? (
+          <div className="bg-gray-100 border border-gray-200 text-gray-700 px-4 py-3 rounded mb-4">
+            This event has passed
+          </div>
+        ) : isStarted ? (
+          <div className="bg-blue-100 border border-blue-200 text-blue-700 px-4 py-3 rounded mb-4">
+            This event has started!
+          </div>
+        ) : isFull ? (
+          <div className="bg-red-100 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
+            This event is completely filled up!
+          </div>
+        ) : status === "today" ? (
+          <div className="bg-green-100 border border-green-200 text-green-700 px-4 py-3 rounded mb-4">
+            This event is happening today!
+          </div>
+        ) : null}
 
         <div className="space-y-4">
           <div className="border rounded-lg p-4 bg-card shadow-md relative">
