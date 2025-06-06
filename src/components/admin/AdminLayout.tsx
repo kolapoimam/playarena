@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -16,8 +17,7 @@ import {
   Menu,
   LogOut,
   ChevronLeft,
-  ChevronRight,
-  User
+  ChevronRight
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import NotificationDropdown from './NotificationDropdown';
@@ -44,7 +44,6 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
     { label: 'Analytics', path: '/admin/analytics', icon: BarChart },
     { label: 'Notifications', path: '/admin/notifications', icon: Bell },
     { label: 'Audit Log', path: '/admin/audit', icon: FileText },
-    { label: 'Profile', path: '/admin/profile', icon: User },
   ];
 
   if (isSuperAdmin) {
@@ -57,7 +56,6 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
     { label: 'Events', path: '/admin/events', icon: Calendar },
     { label: 'Cashouts', path: '/admin/cashouts', icon: DollarSign },
     { label: 'Notifications', path: '/admin/notifications', icon: Bell },
-    { label: 'Profile', path: '/admin/profile', icon: User },
   ];
 
   const handleLogout = () => {
