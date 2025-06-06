@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Search, Eye, Ban, Trash2, Edit } from 'lucide-react';
 import { Label } from '@/components/ui/label';
-import { DatePicker } from '@/components/ui/date-picker'; // Assumed component
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { adminOperations, AdminEvent } from '@/lib/admin';
 import { supabase } from '@/integrations/supabase/client';
