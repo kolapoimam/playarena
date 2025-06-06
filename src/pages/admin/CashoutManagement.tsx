@@ -22,7 +22,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/Table";
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -32,7 +32,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components";
+import { Input } from "@/components/ui/input";
 import { Check, X, Eye, Clock } from "lucide-react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { adminOperations, AdminCashout } from "@/lib/admin";
