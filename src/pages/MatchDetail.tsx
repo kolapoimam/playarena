@@ -67,6 +67,9 @@ const MatchDetail = () => {
   const [loading, setLoading] = useState(true);
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [password, setPassword] = useState("");
+  const [dialogOpen, setDialogOpen] = useState(false); // State to control MatchDetailsDialogue
+  const [confirmationCode, setConfirmationCode] = useState<string | null>(null); // State for confirmation code
+  const [selectedSlots, setSelectedSlots] = useState(1); // Default to 1 slot
 
   useEffect(() => {
     if (!slug) return;
@@ -215,7 +218,7 @@ const MatchDetail = () => {
     
     const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
     const matchEndTime = addHours(matchDateTime, 2); // Match duration is 2 hours
-    const now = new Date("2025-05-18T19:45:00+01:00"); // 07:45 PM WAT, May 18, 2025
+    const now = new Date("2025-06-06T18:46:00+01:00"); // Current date and time: 06:46 PM WAT, June 06, 2025
     
     const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
     const isFull = totalPlayerSlots >= match.total_slots;
@@ -252,6 +255,15 @@ const MatchDetail = () => {
 
     window.open(googleCalendarUrl, '_blank', 'width=600,height=600');
     setTimeout(() => navigate(`/match/${slug}`), 1000);
+  };
+
+  // Handle joining the match
+  const handleJoinMatch = () => {
+    if (!match) return;
+    const code = Math.random().toString(36).substring(2, 8).toUpperCase(); // Generate a random confirmation code
+    setConfirmationCode(code);
+    setSelectedSlots(1); // Default to 1 slot
+    setDialogOpen(true); // Open the dialog
   };
 
   if (loading) {
@@ -463,11 +475,22 @@ const MatchDetail = () => {
           />
           
           <MatchDetailsDialogue 
+            open={dialogOpen}
+            onOpenChange={setDialogOpen}
             match={match}
-            formatDate={formatDate}
-            formatTime={formatTime}
+            confirmationCode={confirmationCode}
+            selectedSlots={selectedSlots}
             totalPlayerSlots={totalPlayerSlots}
           />
+          
+          {!isFull && !isEnded && (
+            <Button 
+              className="w-full bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg px-6 py-3 shadow-sm transition-colors duration-200"
+              onClick={handleJoinMatch}
+            >
+              Join This Match
+            </Button>
+          )}
         </div>
       </div>
       <Navbar />
