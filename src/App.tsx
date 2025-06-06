@@ -10,7 +10,6 @@ import InstallPrompt from "@/components/InstallPrompt";
 import { useGoogleAnalytics } from "@/hooks/useGoogleAnalytics";
 import * as gtag from "@/lib/gtag";
 import { supabase } from "@/integrations/supabase/client";
-import MobileOnlyGuard from "@/components/MobileOnlyGuard";
 
 // Import all page components
 import Index from "@/pages/Index";
@@ -68,7 +67,6 @@ import VenueManagement from "@/pages/admin/VenueManagement";
 import AnalyticsDashboard from "@/pages/admin/AnalyticsDashboard";
 import AuditLog from "@/pages/admin/AuditLog";
 import NotificationManagement from '@/pages/admin/NotificationManagement';
-import AdminProfile from '@/pages/admin/AdminProfile';
 
 const queryClient = new QueryClient();
 
@@ -103,7 +101,6 @@ const AppRoutes = () => {
     // Listen for auth state changes to ensure we tag the user after login
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       const userId = session?.user?.id;
-      console.log('Supabase Auth Event:', { event, userId });
       if (userId && window.OneSignal) {
         // Wait for OneSignal to be fully initialized
         const isInitialized = await waitForOneSignal();
@@ -134,53 +131,53 @@ const AppRoutes = () => {
 
   return (
     <Routes>
-      {/* Non-Admin Routes Wrapped in MobileOnlyGuard */}
-      <Route element={<MobileOnlyGuard />}>
-        <Route path="/" element={<Index />} />
-        <Route path="/search" element={<Search />} />
-        <Route path="/activities" element={<Activities />} />
-        <Route path="/matches" element={<Matches />} />
-        <Route path="/cycling-activities" element={<CyclingActivity />} />
-        <Route path="/guides" element={<Guides />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/profile/view-profile" element={<ViewProfile />} />
-        <Route path="/profile/notifications" element={<Notifications />} />
-        <Route path="/profile/account-details" element={<AccountDetails />} />
-        <Route path="/profile/my-matches" element={<MyMatches />} />
-        <Route path="/profile/my-cycling" element={<MyCycling />} />
-        <Route path="/profile/match-preferences" element={<MatchPreferences />} />
-        <Route path="/profile/wallet" element={<Wallet />} />
-        <Route path="/profile/my-venue" element={<MyVenue />} />
-        <Route path="/profile/my-bookings" element={<MyBookings />} />
-        <Route path="/profile/booking-code" element={<BookingCode />} />
-        <Route path="/auth" element={<Auth />} />
-        <Route path="/auth/callback" element={<AuthCallback />} />
-        <Route path="/confirm" element={<Confirm />} />
-        <Route path="/organize" element={<Organize />} />
-        <Route path="/host-cycling" element={<HostCycling />} />
-        <Route path="/venue-create" element={<VenueCreate />} />
-        <Route path="/venues" element={<VenueDirectory />} />
-        <Route path="/landmarks" element={<LandmarkDirectory />} />
-        <Route path="/confirm-checkin" element={<ConfirmCheckin />} />
-        <Route path="/feedback" element={<Feedback />} />
-        <Route path="/ticketing/:slug/*" element={<Ticketing />} />
-        <Route path="/terms-privacy" element={<TermsAndPrivacy />} />
-        <Route path="/match/:slug" element={<MatchDetail />} />
-        <Route path="/join/:slug" element={<JoinMatch />} />
-        <Route path="/cycling/:slug" element={<CyclingDetail />} />
-        <Route path="/join-cycling/:slug" element={<JoinCycling />} />
-        <Route path="/venue/:slug" element={<VenueDetail />} />
-        <Route path="/landmark/:slug" element={<LandmarkDetail />} />
-        <Route path="/match/:slug/team-management" element={<TeamManagement />} />
-        <Route path="/highlights/:slug" element={<MatchHighlights />} />
-        <Route path="/match-id/:id" element={<MatchRedirect />} />
-        <Route path="/venue-id/:id" element={<VenueRedirect />} />
-        <Route path="/venuemanager/dashboard/:venueId" element={<VenueManagerDashboard />} />
-        <Route path="/venues-bookings/:venueSlug" element={<VenueBookings />} />
-        <Route path="/venue/:slug/book" element={<VenueBookingForm />} />
-      </Route>
-
-      {/* Admin Routes (Not Wrapped in MobileOnlyGuard) */}
+      <Route path="/" element={<Index />} />
+      <Route path="/search" element={<Search />} />
+      <Route path="/activities" element={<Activities />} />
+      <Route path="/matches" element={<Matches />} />
+      <Route path="/cycling-activities" element={<CyclingActivity />} />
+      <Route path="/guides" element={<Guides />} />
+      <Route path="/profile" element={<Profile />} />
+      <Route path="/profile/view-profile" element={<ViewProfile />} />
+      <Route path="/profile/notifications" element={<Notifications />} />
+      <Route
+        path="/profile/account-details"
+        element={<AccountDetails />}
+      />
+      <Route path="/profile/my-matches" element={<MyMatches />} />
+      <Route path="/profile/my-cycling" element={<MyCycling />} />
+      <Route path="/profile/match-preferences" element={<MatchPreferences />} />
+      <Route path="/profile/wallet" element={<Wallet />} />
+      <Route path="/profile/my-venue" element={<MyVenue />} />
+      <Route path="/profile/my-bookings" element={<MyBookings />} />
+      <Route path="/profile/booking-code" element={<BookingCode />} />
+      <Route path="/auth" element={<Auth />} />
+      <Route path="/auth/callback" element={<AuthCallback />} />
+      <Route path="/confirm" element={<Confirm />} />
+      <Route path="/organize" element={<Organize />} />
+      <Route path="/host-cycling" element={<HostCycling />} />
+      <Route path="/venue-create" element={<VenueCreate />} />
+      <Route path="/venues" element={<VenueDirectory />} />
+      <Route path="/landmarks" element={<LandmarkDirectory />} />
+      <Route path="/confirm-checkin" element={<ConfirmCheckin />} />
+      <Route path="/feedback" element={<Feedback />} />
+      <Route path="/ticketing/:slug/*" element={<Ticketing />} />
+      <Route path="/terms-privacy" element={<TermsAndPrivacy />} />
+      <Route path="/match/:slug" element={<MatchDetail />} />
+      <Route path="/join/:slug" element={<JoinMatch />} />
+      <Route path="/cycling/:slug" element={<CyclingDetail />} />
+      <Route path="/join-cycling/:slug" element={<JoinCycling />} />
+      <Route path="/venue/:slug" element={<VenueDetail />} />
+      <Route path="/landmark/:slug" element={<LandmarkDetail />} />
+      <Route path="/match/:slug/team-management" element={<TeamManagement />} />
+      <Route path="/highlights/:slug" element={<MatchHighlights />} />
+      <Route path="/match-id/:id" element={<MatchRedirect />} />
+      <Route path="/venue-id/:id" element={<VenueRedirect />} />
+      <Route path="/venuemanager/dashboard/:venueId" element={<VenueManagerDashboard />} />
+      <Route path="/venues-bookings/:venueSlug" element={<VenueBookings />} />
+      <Route path="/venue/:slug/book" element={<VenueBookingForm />} />
+      
+      {/* Admin Routes */}
       <Route path="/admin/setup" element={<FirstTimeSetup />} />
       <Route path="/admin/login" element={<AdminLogin />} />
       <Route path="/admin" element={
@@ -228,12 +225,7 @@ const AppRoutes = () => {
           <NotificationManagement />
         </ProtectedAdminRoute>
       } />
-      <Route path="/admin/profile" element={
-        <ProtectedAdminRoute>
-          <AdminProfile />
-        </ProtectedAdminRoute>
-      } />
-      {/* Fallback for NotFound outside MobileOnlyGuard to avoid conflicts */}
+      
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
