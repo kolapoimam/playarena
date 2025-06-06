@@ -1,19 +1,26 @@
-import { createRoot } from 'react-dom/client';
-import App from './App.tsx';
-import './index.css';
+import { createRoot } from 'react-dom/client'
+import App from './App.tsx'
+import './index.css'
 
-createRoot(document.getElementById('root')!).render(<App />);
+// First render the app
+const root = createRoot(document.getElementById('root')!)
+root.render(<App />)
 
-// ✅ PWA: Register service worker for Android & Chrome support
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker
-      .register('/service-worker.js')
-      .then((registration) => {
-        console.log('✅ Service Worker registered with scope:', registration.scope);
-      })
-      .catch((error) => {
-        console.error('❌ Service Worker registration failed:', error);
-      });
-  });
+// Then register service worker
+const registerServiceWorker = async () => {
+  if ('serviceWorker' in navigator) {
+    try {
+      const registration = await navigator.serviceWorker.register('/service-worker.js')
+      console.log('ServiceWorker registration successful with scope: ', registration.scope)
+    } catch (err) {
+      console.log('ServiceWorker registration failed: ', err)
+    }
+  }
+}
+
+// Wait for critical resources to load
+if (document.readyState === 'complete') {
+  registerServiceWorker()
+} else {
+  window.addEventListener('load', registerServiceWorker)
 }
