@@ -11,7 +11,7 @@ import {
   Users, 
   ArrowLeft, 
   ExternalLink,
-  Bell,
+  CalendarPlus,
   Lock
 } from "lucide-react";
 import {
@@ -67,9 +67,6 @@ const MatchDetail = () => {
   const [loading, setLoading] = useState(true);
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [password, setPassword] = useState("");
-  const [dialogOpen, setDialogOpen] = useState(false); // State to control MatchDetailsDialogue
-  const [confirmationCode, setConfirmationCode] = useState<string | null>(null); // State for confirmation code
-  const [selectedSlots, setSelectedSlots] = useState(1); // Default to 1 slot
 
   useEffect(() => {
     if (!slug) return;
@@ -218,7 +215,7 @@ const MatchDetail = () => {
     
     const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
     const matchEndTime = addHours(matchDateTime, 2); // Match duration is 2 hours
-    const now = new Date("2025-06-06T18:46:00+01:00"); // Current date and time: 06:46 PM WAT, June 06, 2025
+    const now = new Date("2025-05-18T19:45:00+01:00"); // 07:45 PM WAT, May 18, 2025
     
     const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
     const isFull = totalPlayerSlots >= match.total_slots;
@@ -249,21 +246,12 @@ const MatchDetail = () => {
         `Venue: ${match.venue?.name || 'Unknown'}, ${match.venue?.city || ''}\n\n` +
         `Additional Info: ${match.notes || 'No additional information provided'}\n\n` +
         `${match.is_private ? `Access Password: ${match.access_password}\n\n` : ''}` +
-        `Powered by @SportCliq`
+        `Powered by Sport Cliq`
       )}` +
       `&sf=true&output=xml`;
 
     window.open(googleCalendarUrl, '_blank', 'width=600,height=600');
     setTimeout(() => navigate(`/match/${slug}`), 1000);
-  };
-
-  // Handle joining the match
-  const handleJoinMatch = () => {
-    if (!match) return;
-    const code = Math.random().toString(36).substring(2, 8).toUpperCase(); // Generate a random confirmation code
-    setConfirmationCode(code);
-    setSelectedSlots(1); // Default to 1 slot
-    setDialogOpen(true); // Open the dialog
   };
 
   if (loading) {
@@ -364,16 +352,14 @@ const MatchDetail = () => {
             </TooltipProvider>
           )}
         </h1>
-<div className="flex justify-between items-center mb-4">
-  <div className="flex items-center gap-2">
-    <p className="text-muted-foreground">Organized by {match.organizer_name}</p>
-    <img
-      src="/green-verified.png"
-      alt="Verified"
-      className="inline-block w-5 h-5"
-    />
-  </div>
-</div>
+        <div className="flex justify-between items-center mb-4">
+          <div className="flex items-center gap-2">
+            <p className="text-muted-foreground">Organized by {match.organizer_name}</p>
+            <span className="inline-block px-2 py-1 text-xs font-medium rounded bg-green-100 text-green-700 border-green-300">
+              Verified
+            </span>
+          </div>
+        </div>
         
         {isEnded ? (
           <div className="bg-gray-100 border border-gray-200 text-gray-700 px-4 py-3 rounded mb-4">
@@ -391,16 +377,17 @@ const MatchDetail = () => {
         
         <div className="space-y-4">
           <div className="border rounded-lg p-4 bg-card shadow-md relative">
-<div className="absolute top-4 right-4 m-0 p-0">
-  <Button
-    variant="outline"
-    size="sm"
-    onClick={addToCalendar}
-    className="text-playarena-600 border-playarena-300 hover:bg-playarena-50 p-2 m-0"
-  >
-    <Bell size={16} className="mr-0" />
-  </Button>
-</div>
+            <div className="absolute top-4 right-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={addToCalendar}
+                className="text-playarena-600 border-playarena-300 hover:bg-playarena-50"
+              >
+                <CalendarPlus size={16} className="mr-1" />
+                Set Reminders
+              </Button>
+            </div>
             
             <h2 className="font-semibold mb-3">Match Details</h2>
             
@@ -475,22 +462,11 @@ const MatchDetail = () => {
           />
           
           <MatchDetailsDialogue 
-            open={dialogOpen}
-            onOpenChange={setDialogOpen}
             match={match}
-            confirmationCode={confirmationCode}
-            selectedSlots={selectedSlots}
+            formatDate={formatDate}
+            formatTime={formatTime}
             totalPlayerSlots={totalPlayerSlots}
           />
-          
-          {!isFull && !isEnded && (
-            <Button 
-              className="w-full bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg px-6 py-3 shadow-sm transition-colors duration-200"
-              onClick={handleJoinMatch}
-            >
-              Join This Match
-            </Button>
-          )}
         </div>
       </div>
       <Navbar />
