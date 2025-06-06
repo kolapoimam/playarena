@@ -87,7 +87,7 @@ const AppRoutes = () => {
       return new Promise((resolve) => {
         const checkInterval = setInterval(() => {
           if (window.OneSignal && window.OneSignal.initialized) {
-            clearInterval Owners: checkInterval);
+            clearInterval(checkInterval);
             console.log("OneSignal fully initialized");
             resolve(true);
           }
