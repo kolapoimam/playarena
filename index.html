@@ -62,19 +62,19 @@
   <div class="status-bar-bg"></div>
   <div id="root"></div>
   <!-- Scripts -->
-  <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
   <script type="module" src="/src/main.tsx"></script>
   <script>
-  // Prevent third-party script errors from breaking your React app
+  // More specific error handling - don't prevent all errors
   window.addEventListener('error', function(e) {
     if (e.filename && (
       e.filename.includes('jquery') || 
       e.filename.includes('function.js') ||
-      e.filename.includes('OneSignal')
+      e.filename.includes('OneSignal') ||
+      e.filename.includes('gptengineer')
     )) {
       console.warn('Suppressed third-party script error:', e.message);
-      e.preventDefault();
-      return true;
+      // Don't preventDefault for all errors - this was breaking React
+      return false;
     }
   });
   </script>
