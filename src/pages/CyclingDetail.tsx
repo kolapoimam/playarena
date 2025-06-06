@@ -287,7 +287,7 @@ const CyclingDetail = () => {
         <div className="p-4">
           <Skeleton className="h-8 w-3/4 mb-2" /> {/* Title */}
           <Skeleton className="h-6 w-1/2 mb-4" /> {/* Host */}
-          <div className="min-h-[40px] mb-2">
+          <div className="min-h-[40px] mb-4">
             <Skeleton className="h-10 w-full" /> {/* Alert Placeholder */}
           </div>
           <div className="space-y-4">
@@ -365,7 +365,7 @@ const CyclingDetail = () => {
 
       <div className="p-4">
         <h1 className="text-2xl font-bold mb-2">{event.title}</h1>
-        <div className="flex justify-between items-center mb-2">
+        <div className="flex justify-between items-center mb-4">
           <div className="flex items-center gap-2">
             <p className="text-muted-foreground">Hosted by {event.host_name}</p>
             <img 
@@ -376,7 +376,7 @@ const CyclingDetail = () => {
           </div>
         </div>
 
-        <div className={(isEnded || isStarted || isFull || status === "today") ? "min-h-[40px] mb-2" : "mb-2"}>
+        <div className="min-h-[40px] mb-4">
           {isEnded ? (
             <div className="bg-gray-100 border border-gray-200 text-gray-700 px-4 py-3 rounded">
               This event has passed
@@ -393,7 +393,9 @@ const CyclingDetail = () => {
             <div className="bg-green-100 border border-green-200 text-green-700 px-4 py-3 rounded">
               This event is happening today!
             </div>
-          ) : null}
+          ) : (
+            <div className="min-h-[40px]"></div> // Reserve space when no alert is shown
+          )}
         </div>
 
         <div className="space-y-4">
