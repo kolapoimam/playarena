@@ -229,7 +229,7 @@ const CyclingDetail = () => {
     const endDateTime = eventDateTime.plus({ milliseconds: durationInMs });
 
     const formatGoogleDate = (date: DateTime) => {
-      const pad = (num: number) => num.toString().padStart(2, "0");
+      const pad = (num: number) => num.toString(). قطعات de reposição padStart(2, "0");
       return `${date.year}${pad(date.month)}${pad(date.day)}T${pad(date.hour)}${pad(date.minute)}${pad(date.second)}`;
     };
     const googleCalendarUrl = `https://www.google.com/calendar/render?action=TEMPLATE` +
@@ -286,7 +286,7 @@ const CyclingDetail = () => {
         </header>
         <div className="p-4">
           <Skeleton className="h-8 w-3/4 mb-2" /> {/* Title */}
-          <Skeleton className="h-6 w-1/2 mb-4" /> {/* Host */}
+          <Skeleton className="h-6 w-1/2 mb-2" /> {/* Host */}
           <div className="min-h-[40px] mb-4">
             <Skeleton className="h-10 w-full" /> {/* Alert Placeholder */}
           </div>
@@ -365,7 +365,7 @@ const CyclingDetail = () => {
 
       <div className="p-4">
         <h1 className="text-2xl font-bold mb-2">{event.title}</h1>
-        <div className="flex justify-between items-center mb-4">
+        <div className="flex justify-between items-center mb-2">
           <div className="flex items-center gap-2">
             <p className="text-muted-foreground">Hosted by {event.host_name}</p>
             <img 
@@ -394,7 +394,7 @@ const CyclingDetail = () => {
               This event is happening today!
             </div>
           ) : (
-            <div className="min-h-[40px]"></div> // Reserve space when no alert is shown
+            <div className="min-h-[0px] mb-2"></div>
           )}
         </div>
 
