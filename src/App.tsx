@@ -11,7 +11,7 @@ import { useGoogleAnalytics } from "@/hooks/useGoogleAnalytics";
 import * as gtag from "@/lib/gtag";
 import { supabase } from "@/integrations/supabase/client";
 
-// Import all page components
+// Import page components
 import Index from "@/pages/Index";
 import Search from "@/pages/Search";
 import Activities from "@/pages/Activities";
@@ -55,18 +55,6 @@ import HostCycling from "@/pages/HostCycling";
 import LandmarkDirectory from "@/pages/LandmarkDirectory";
 import LandmarkDetail from "@/pages/LandmarkDetail";
 import AuthCallback from "@/pages/AuthCallback";
-
-// Import admin components
-import AdminLogin from "@/pages/admin/AdminLogin";
-import FirstTimeSetup from '@/pages/admin/FirstTimeSetup';
-import AdminDashboard from "@/pages/admin/AdminDashboard";
-import AdminUserManagement from "@/pages/admin/AdminUserManagement";
-import EventManagement from "@/pages/admin/EventManagement";
-import CashoutManagement from "@/pages/admin/CashoutManagement";
-import VenueManagement from "@/pages/admin/VenueManagement";
-import AnalyticsDashboard from "@/pages/admin/AnalyticsDashboard";
-import AuditLog from "@/pages/admin/AuditLog";
-import NotificationManagement from '@/pages/admin/NotificationManagement';
 
 const queryClient = new QueryClient();
 
@@ -176,56 +164,6 @@ const AppRoutes = () => {
       <Route path="/venuemanager/dashboard/:venueId" element={<VenueManagerDashboard />} />
       <Route path="/venues-bookings/:venueSlug" element={<VenueBookings />} />
       <Route path="/venue/:slug/book" element={<VenueBookingForm />} />
-      
-      {/* Admin Routes */}
-      <Route path="/admin/setup" element={<FirstTimeSetup />} />
-      <Route path="/admin/login" element={<AdminLogin />} />
-      <Route path="/admin" element={
-        <ProtectedAdminRoute>
-          <Navigate to="/admin/dashboard" replace />
-        </ProtectedAdminRoute>
-      } />
-      <Route path="/admin/dashboard" element={
-        <ProtectedAdminRoute>
-          <AdminDashboard />
-        </ProtectedAdminRoute>
-      } />
-      <Route path="/admin/users" element={
-        <ProtectedAdminRoute>
-          <AdminUserManagement />
-        </ProtectedAdminRoute>
-      } />
-      <Route path="/admin/events" element={
-        <ProtectedAdminRoute>
-          <EventManagement />
-        </ProtectedAdminRoute>
-      } />
-      <Route path="/admin/cashouts" element={
-        <ProtectedAdminRoute>
-          <CashoutManagement />
-        </ProtectedAdminRoute>
-      } />
-      <Route path="/admin/venues" element={
-        <ProtectedAdminRoute>
-          <VenueManagement />
-        </ProtectedAdminRoute>
-      } />
-      <Route path="/admin/analytics" element={
-        <ProtectedAdminRoute>
-          <AnalyticsDashboard />
-        </ProtectedAdminRoute>
-      } />
-      <Route path="/admin/audit" element={
-        <ProtectedAdminRoute>
-          <AuditLog />
-        </ProtectedAdminRoute>
-      } />
-      <Route path="/admin/notifications" element={
-        <ProtectedAdminRoute>
-          <NotificationManagement />
-        </ProtectedAdminRoute>
-      } />
-      
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
@@ -285,17 +223,6 @@ const App = () => {
       </MantineProvider>
     </QueryClientProvider>
   );
-};
-
-// Admin route protection component
-const ProtectedAdminRoute = ({ children }: { children: React.ReactNode }) => {
-  const adminSession = JSON.parse(localStorage.getItem('adminSession') || '{}');
-  
-  if (!adminSession.id) {
-    return <Navigate to="/admin/login" replace />;
-  }
-
-  return <>{children}</>;
 };
 
 export default App;
