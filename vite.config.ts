@@ -77,4 +77,14 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    rollupOptions: {
+      external: ['@resend/emails'],
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'], // Example: split out React
+        },
+      },
+    },
+  }
 }));
