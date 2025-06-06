@@ -4,6 +4,7 @@ import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
 
+// https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
@@ -37,27 +38,13 @@ export default defineConfig(({ mode }) => ({
             src: '/icons/apple-icon-180.png',
             sizes: '180x180',
             type: 'image/png',
-            purpose: 'any maskable'
+            purpose: 'any maskable' // ✅ ensures better support on Android
           }
         ]
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest}'],
-        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5MB
-        runtimeCaching: [
-          {
-            urlPattern: ({ url }) => !url.pathname.startsWith('/admin'),
-            handler: 'NetworkFirst',
-          },
-          {
-            urlPattern: ({ url }) => url.pathname.startsWith('/admin'),
-            handler: 'NetworkOnly',
-          },
-          {
-            urlPattern: ({ url }) => url.origin.includes('supabase.co'),
-            handler: 'NetworkFirst',
-          },
-        ],
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024 // 5MB
       },
       includeAssets: [
         'icons/icon-192x192.png',
@@ -77,14 +64,4 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  build: {
-    rollupOptions: {
-      external: ['@resend/emails'],
-      output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom'], // Example: split out React
-        },
-      },
-    },
-  }
 }));
