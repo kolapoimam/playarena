@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -7,11 +7,11 @@ import {
   CardDescription,
   CardTitle,
 } from "@/components/ui/card";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Bell, DollarSign, Calendar, Building2, AlertCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase";
+import { supabase } from "@/integrations/supabase/client";
 import { adminOperations } from "@/lib/admin";
 
 const NotificationDropdown = () => {
@@ -93,6 +93,8 @@ const NotificationDropdown = () => {
       default:
         return <AlertCircle className="h-4 w-4 text-muted-foreground" />;
     }
+  }; // <-- Add this closing brace for getIcon
+
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
