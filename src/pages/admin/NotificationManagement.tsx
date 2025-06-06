@@ -7,12 +7,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Send, Mail, Smartphone, Users, User, Calendar, Bell } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { adminOperations, AdminNotification } from '@/admin/admin';
+import { adminOperations, AdminNotification } from '@/lib/admin';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { format } from 'date-fns';
 
@@ -406,7 +406,7 @@ const NotificationManagement = () => {
                 className="h-auto p-4 text-left"
                 onClick={() => {
                   setMessage('Your event has been updated. Please check the details.');
-                  setTargetType='event';
+                  setTargetType('event'); // FIXED: use function call, not assignment
                   setShowSendDialog(true);
                 }}
               >
