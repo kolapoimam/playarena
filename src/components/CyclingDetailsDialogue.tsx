@@ -166,7 +166,7 @@ const CyclingDetailsDialogue: React.FC<CyclingDetailsDialogueProps> = ({
 
   const handleShare = () => {
     const url = `${window.location.origin}/cycling/${event?.slug || ''}`;
-    const shareText = `Join my cycling event: ${event?.title || 'Untitled Event'} at ${event?.start_landmark?.name || 'Unknown Location'}, ${event?.start_landmark?.state || 'Unknown State'} on ${formatDate(event?.event_date)} at ${event?.start_time || 'Unknown Time'}. ${attendees?.length || 0}/${event?.max_attendees || 0} spots taken. Powered by SportCliq. ${url}`;
+    const shareText = `Join my cycling event: ${event?.title || 'Untitled Event'} at ${event?.start_landmark?.name || 'Unknown Location'}, ${event?.start_landmark?.state || 'Unknown State'} on ${formatDate(event?.event_date)} at ${event?.start_time || 'Unknown Time'}. ${attendees?.length || 0}/${event?.max_attendees || 0} spots taken. Powered by @SportCliq. ${url}`;
     if (navigator.share) {
       navigator
         .share({
@@ -207,21 +207,21 @@ const CyclingDetailsDialogue: React.FC<CyclingDetailsDialogueProps> = ({
 
   const shareToWhatsApp = () => {
     const url = `${window.location.origin}/cycling/${event?.slug || ''}`;
-    const shareText = `Join my cycling event: ${event?.title || 'Untitled Event'} at ${event?.start_landmark?.name || 'Unknown Location'}, ${event?.start_landmark?.state || 'Unknown State'} on ${formatDate(event?.event_date)} at ${event?.start_time || 'Unknown Time'}. ${attendees?.length || 0}/${event?.max_attendees || 0} spots taken. Powered by SportCliq. ${url}`;
+    const shareText = `Join my cycling event: ${event?.title || 'Untitled Event'} at ${event?.start_landmark?.name || 'Unknown Location'}, ${event?.start_landmark?.state || 'Unknown State'} on ${formatDate(event?.event_date)} at ${event?.start_time || 'Unknown Time'}. ${attendees?.length || 0}/${event?.max_attendees || 0} spots taken. Powered by @SportCliq. ${url}`;
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
     window.open(whatsappUrl, "_blank");
   };
 
   const shareToTwitter = () => {
     const url = `${window.location.origin}/cycling/${event?.slug || ''}`;
-    const shareText = `Join my cycling event: ${event?.title || 'Untitled Event'} at ${event?.start_landmark?.name || 'Unknown Location'}, ${event?.start_landmark?.state || 'Unknown State'} on ${formatDate(event?.event_date)} at ${event?.start_time || 'Unknown Time'}. ${attendees?.length || 0}/${event?.max_attendees || 0} spots taken. Powered by SportCliq. ${url}`;
+    const shareText = `Join my cycling event: ${event?.title || 'Untitled Event'} at ${event?.start_landmark?.name || 'Unknown Location'}, ${event?.start_landmark?.state || 'Unknown State'} on ${formatDate(event?.event_date)} at ${event?.start_time || 'Unknown Time'}. ${attendees?.length || 0}/${event?.max_attendees || 0} spots taken. Powered by @SportCliq. ${url}`;
     const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
     window.open(twitterUrl, "_blank");
   };
 
   const shareToFacebook = () => {
     const url = `${window.location.origin}/cycling/${event?.slug || ''}`;
-    const shareText = `Join my cycling event: ${event?.title || 'Untitled Event'} at ${event?.start_landmark?.name || 'Unknown Location'}, ${event?.start_landmark?.state || 'Unknown State'} on ${formatDate(event?.event_date)} at ${event?.start_time || 'Unknown Time'}. ${attendees?.length || 0}/${event?.max_attendees || 0} spots taken. Powered by SportCliq.`;
+    const shareText = `Join my cycling event: ${event?.title || 'Untitled Event'} at ${event?.start_landmark?.name || 'Unknown Location'}, ${event?.start_landmark?.state || 'Unknown State'} on ${formatDate(event?.event_date)} at ${event?.start_time || 'Unknown Time'}. ${attendees?.length || 0}/${event?.max_attendees || 0} spots taken. Powered by @SportCliq.`;
     const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(shareText)}`;
     window.open(facebookUrl, "_blank");
   };
