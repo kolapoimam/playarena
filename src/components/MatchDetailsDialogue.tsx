@@ -126,7 +126,7 @@ const MatchDetailsDialog = ({
 
   const handleShare = () => {
     const url = `${window.location.origin}/match/${match?.slug || ''}`;
-    const shareText = `Join my match: ${match?.title || 'Untitled Match'} at ${match?.venue?.name || 'Unknown Venue'}, ${match?.venue?.city || 'Unknown City'} on ${formatDate(match?.match_date)} at ${match?.match_time || 'Unknown Time'}. ${totalPlayerSlots}/${match?.total_slots || 0} spots taken. Powered by SportCliq. ${url}`;
+    const shareText = `Join my match: ${match?.title || 'Untitled Match'} at ${match?.venue?.name || 'Unknown Venue'}, ${match?.venue?.city || 'Unknown City'} on ${formatDate(match?.match_date)} at ${match?.match_time || 'Unknown Time'}. ${totalPlayerSlots}/${match?.total_slots || 0} spots taken. Powered by @SportCliq. ${url}`;
     if (navigator.share) {
       navigator
         .share({
@@ -167,21 +167,21 @@ const MatchDetailsDialog = ({
 
   const shareToWhatsApp = () => {
     const url = `${window.location.origin}/match/${match?.slug || ''}`;
-    const shareText = `Join my match: ${match?.title || 'Untitled Match'} at ${match?.venue?.name || 'Unknown Venue'}, ${match?.venue?.city || 'Unknown City'} on ${formatDate(match?.match_date)} at ${match?.match_time || 'Unknown Time'}. ${totalPlayerSlots}/${match?.total_slots || 0} spots taken. Powered by SportCliq. ${url}`;
+    const shareText = `Join my match: ${match?.title || 'Untitled Match'} at ${match?.venue?.name || 'Unknown Venue'}, ${match?.venue?.city || 'Unknown City'} on ${formatDate(match?.match_date)} at ${match?.match_time || 'Unknown Time'}. ${totalPlayerSlots}/${match?.total_slots || 0} spots taken. Powered by @SportCliq. ${url}`;
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
     window.open(whatsappUrl, "_blank");
   };
 
   const shareToTwitter = () => {
     const url = `${window.location.origin}/match/${match?.slug || ''}`;
-    const shareText = `Join my match: ${match?.title || 'Untitled Match'} at ${match?.venue?.name || 'Unknown Venue'}, ${match?.venue?.city || 'Unknown City'} on ${formatDate(match?.match_date)} at ${match?.match_time || 'Unknown Time'}. ${totalPlayerSlots}/${match?.total_slots || 0} spots taken. Powered by SportCliq. ${url}`;
+    const shareText = `Join my match: ${match?.title || 'Untitled Match'} at ${match?.venue?.name || 'Unknown Venue'}, ${match?.venue?.city || 'Unknown City'} on ${formatDate(match?.match_date)} at ${match?.match_time || 'Unknown Time'}. ${totalPlayerSlots}/${match?.total_slots || 0} spots taken. Powered by @SportCliq. ${url}`;
     const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
     window.open(twitterUrl, "_blank");
   };
 
   const shareToFacebook = () => {
     const url = `${window.location.origin}/match/${match?.slug || ''}`;
-    const shareText = `Join my match: ${match?.title || 'Untitled Match'} at ${match?.venue?.name || 'Unknown Venue'}, ${match?.venue?.city || 'Unknown City'} on ${formatDate(match?.match_date)} at ${match?.match_time || 'Unknown Time'}. ${totalPlayerSlots}/${match?.total_slots || 0} spots taken. Powered by SportCliq.`;
+    const shareText = `Join my match: ${match?.title || 'Untitled Match'} at ${match?.venue?.name || 'Unknown Venue'}, ${match?.venue?.city || 'Unknown City'} on ${formatDate(match?.match_date)} at ${match?.match_time || 'Unknown Time'}. ${totalPlayerSlots}/${match?.total_slots || 0} spots taken. Powered by @SportCliq.`;
     const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(shareText)}`;
     window.open(facebookUrl, "_blank");
   };
