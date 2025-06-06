@@ -4,7 +4,6 @@ import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
 
-// https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
@@ -38,13 +37,27 @@ export default defineConfig(({ mode }) => ({
             src: '/icons/apple-icon-180.png',
             sizes: '180x180',
             type: 'image/png',
-            purpose: 'any maskable' // ✅ ensures better support on Android
+            purpose: 'any maskable'
           }
         ]
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest}'],
-        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024 // 5MB
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5MB
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }) => !url.pathname.startsWith('/admin'),
+            handler: 'NetworkFirst',
+          },
+          {
+            urlPattern: ({ url }) => url.pathname.startsWith('/admin'),
+            handler: 'NetworkOnly',
+          },
+          {
+            urlPattern: ({ url }) => url.origin.includes('supabase.co'),
+            handler: 'NetworkFirst',
+          },
+        ],
       },
       includeAssets: [
         'icons/icon-192x192.png',
