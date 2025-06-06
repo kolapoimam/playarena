@@ -502,17 +502,17 @@ export const adminOperations = {
         ? new Date(Math.max(...lastActivitySources.map((date: string) => new Date(date).getTime()))).toISOString()
         : user.created_at;
 
-      // Determine user category
+      // Determine user category without await
       let userCategory: 'Organizer' | 'Host' | 'Cycler' | 'Player' | 'Venue Owner' | 'User' = 'User';
-      if (user.id in (await supabase.from('matches').select('organizer_id'))) {
+      if (user.events_organized?.[0]?.count > 0) {
         userCategory = 'Organizer';
-      } else if (user.id in (await supabase.from('cycling_events').select('host_id'))) {
-        userCategory = 'Host';
+      } else if (user.events_participated?.[0]?.count > 0) {
+        userCategory = 'Cycler';
       } else if (user.user_joined_cycling && user.user_joined_cycling.length > 0) {
         userCategory = 'Cycler';
       } else if (user.user_joined_matches && user.user_joined_matches.length > 0) {
         userCategory = 'Player';
-      } else if (user.id in (await supabase.from('venues').select('user_id'))) {
+      } else if (user.venue_booking_cashout && user.venue_booking_cashout.length > 0) {
         userCategory = 'Venue Owner';
       }
 
