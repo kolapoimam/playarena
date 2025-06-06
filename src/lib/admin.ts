@@ -1,8 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import * as OneSignal from '@onesignal/node-onesignal';
-import { Resend } from '@resend/emails';
-
+import { Resend } from 'resend';
 // OneSignal Configuration
 const onesignalAppId = import.meta.env.VITE_ONESIGNAL_APP_ID;
 const onesignalApiKey = import.meta.env.VITE_ONESIGNAL_API_KEY;
