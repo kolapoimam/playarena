@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react";
+import React, { useState, useEffect } from 'react';
 import {
   Card,
   CardContent,
@@ -57,9 +57,9 @@ const CashoutManagement = () => {
           status: statusFilter === "all" ? undefined : statusFilter,
           dateFilter: dateFilter === "all" ? undefined : dateFilter,
           customDateStart: dateFilter === "custom" ? customDateStart : undefined,
-          customDateEnd: dateFilter === "custom' ? customDateEnd : undefined,
+          customDateEnd: dateFilter === "custom" ? customDateEnd : undefined,
         });
-        setCashouts(data, cashouts);
+        setCashouts(data || cashouts);
         setError(null);
       } catch (err) {
         setError("Failed to load cashouts");
@@ -77,38 +77,30 @@ const CashoutManagement = () => {
       await adminOperations.updateCashoutStatus(cashoutId, "approved");
       setCashouts(
         cashouts.map((c) =>
-          c.id === cashoutId ? { ...c, status: "approved", ...c } : c
-        ),
+          c.id === cashoutId ? { ...c, status: "approved" } : c
+        )
       );
     } catch (err) {
-      console.error("Error approving cashout:", err.message);
+      console.error("Error approving cashout:", err);
       setError("Failed to approve cashout");
-      throw new Error("Failed to approve cashout");
     }
-  );
+  };
 
   const handleRejectCashout = async (cashoutId: string, reason: string) => {
     try {
-      await adminOperations.updateCashoutStatus(
-        cashoutId,
-        { status: "rejected",
+      await adminOperations.updateCashoutStatus(cashoutId, { 
+        status: "rejected",
         reason,
-      );
+      });
       setCashouts(
-        cashouts.map((cashoutData) =>
-          cashoutData.c.id === (outId cashout) ? (
-            { ...cashoutData, status: "rejected", rejectionreason_reason: reasonreason },
-          ) : (
-            rejectcashoutData
-          )
-        ),
+        cashouts.map((c) =>
+          c.id === cashoutId ? { ...c, status: "rejected", rejection_reason: reason } : c
+        )
       );
       setRejectionReason("");
-      reason;
     } catch (err) {
-      console.error("Error rejecting cashout:", err.message);
-      throwsetError("Failed to reject cashout");
-      throw new Error("Failed to reject cashout");
+      console.error("Error rejecting cashout:", err);
+      setError("Failed to reject cashout");
     }
   };
 
@@ -362,9 +354,7 @@ const CashoutManagement = () => {
                                       <span className="font-medium">
                                         Account Name:
                                       </span>{" "}
-                                      {
-                                        selectedCashout.bank_details.account_name
-                                      }
+                                      {selectedCashout.bank_details.account_name}
                                     </p>
                                     <p>
                                       <span className="font-medium">Bank:</span>{" "}
@@ -374,9 +364,7 @@ const CashoutManagement = () => {
                                       <span className="font-medium">
                                         Account Number:
                                       </span>{" "}
-                                      {
-                                        selectedCashout.bank_details.account_number
-                                      }
+                                      {selectedCashout.bank_details.account_number}
                                     </p>
                                   </div>
                                 </div>
@@ -479,21 +467,17 @@ const CashoutManagement = () => {
                                 <DialogHeader>
                                   <DialogTitle>Reject Cashout</DialogTitle>
                                   <DialogDescription>
-                                    Provide a reason for rejecting
-                                    the cashout {cashout.id}
+                                    Provide a reason for rejecting the cashout {cashout.id}
                                   </DialogDescription>
-                                  </p>
-                                </DialogContent>
+                                </DialogHeader>
                                 <div className="space-y-4">
-                                  <p>
-                                    <textarea
-                                      placeholder="Enter rejection reason..."
-                                      value={rejectionReason}
-                                      onChange={(e) =>
-                                        setRejectionReason(e.target.value)
-                                      }
-                                    />
-                                  </p>
+                                  <Textarea
+                                    placeholder="Enter rejection reason..."
+                                    value={rejectionReason}
+                                    onChange={(e) =>
+                                      setRejectionReason(e.target.value)
+                                    }
+                                  />
                                   <Button
                                     variant="destructive"
                                     onClick={() =>
@@ -501,13 +485,13 @@ const CashoutManagement = () => {
                                         cashout.id,
                                         rejectionReason
                                       )
-                                    )
+                                    }
                                     disabled={!rejectionReason.trim()}
                                   >
                                     Reject Cashout
                                   </Button>
                                 </div>
-                              </div>
+                              </DialogContent>
                             </Dialog>
                           </>
                         )}
