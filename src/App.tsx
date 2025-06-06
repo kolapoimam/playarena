@@ -10,6 +10,7 @@ import InstallPrompt from "@/components/InstallPrompt";
 import { useGoogleAnalytics } from "@/hooks/useGoogleAnalytics";
 import * as gtag from "@/lib/gtag";
 import { supabase } from "@/integrations/supabase/client";
+import MobileOnlyGuard from "@/components/MobileOnlyGuard";
 
 // Import page components
 import Index from "@/pages/Index";
@@ -216,8 +217,10 @@ const App = () => {
           <Toaster />
           <Router>
             <ScrollToTop />
-            <AppRoutes />
-            <InstallPrompt />
+            <MobileOnlyGuard>
+              <AppRoutes />
+              <InstallPrompt />
+            </MobileOnlyGuard>
           </Router>
         </TooltipProvider>
       </MantineProvider>
