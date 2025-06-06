@@ -58,13 +58,37 @@
   <meta property="og:image:secure_url" content="https://www.sportcliq.com/Sportcliq_Stadium_Banner.png" />
   <meta property="article:author" content="Sport Cliq" />
   <meta name="robots" content="index, follow" />
+  
+  <!-- Error isolation script - load before other scripts -->
+  <script>
+    // Suppress jQuery/third-party errors without affecting React
+    window.addEventListener('error', function(e) {
+      if (e.filename && (
+        e.filename.includes('jquery') || 
+        e.filename.includes('function.js') ||
+        e.filename.includes('gptengineer')
+      )) {
+        console.warn('Suppressed third-party error:', e.message);
+        e.stopImmediatePropagation();
+        return true;
+      }
+    }, true);
+
+    // Suppress runtime errors from extensions
+    window.addEventListener('unhandledrejection', function(e) {
+      if (e.reason && e.reason.toString().includes('message port closed')) {
+        console.warn('Suppressed extension error:', e.reason);
+        e.preventDefault();
+      }
+    });
+  </script>
 </head>
 <body style="margin: 0;">
   <!-- Status bar background fix for iOS PWA -->
   <div class="status-bar-bg"></div>
   <div id="root"></div>
   <!-- Scripts -->
-  <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
   <script type="module" src="/src/main.tsx"></script>
+  <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
 </body>
 </html>
