@@ -28,6 +28,7 @@ type MatchDetailsDialogProps = {
     price: number | null;
     total_slots: number;
     venue: Venue | null;
+    slug?: string; // Added to support sharing URL
   } | null;
   totalPlayerSlots: number;
 };
@@ -39,6 +40,7 @@ const MatchDetailsDialog = ({
   totalPlayerSlots,
 }: MatchDetailsDialogProps) => {
   const { toast } = useToast();
+  const [downloadDialogOpen, setDownloadDialogOpen] = useState(false); // Internal state for download dialog
   const [isDownloading, setIsDownloading] = useState(false);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
   const [backgroundColor, setBackgroundColor] = useState('#4CAF50'); // Default green
@@ -225,7 +227,7 @@ const MatchDetailsDialog = ({
         <Button
           variant="outline"
           className="flex-1"
-          onClick={() => onOpenChange(true)}
+          onClick={() => setDownloadDialogOpen(true)} // Toggle internal state
           disabled={isDownloading}
           aria-label="Open download dialog"
         >
@@ -234,10 +236,11 @@ const MatchDetailsDialog = ({
         </Button>
       </div>
       <Dialog
-        open={open}
+        open={downloadDialogOpen} // Use internal state
         onOpenChange={(newOpen) => {
           if (!newOpen && !isDownloading) {
-            onOpenChange(newOpen);
+            setDownloadDialogOpen(false);
+            onOpenChange(false); // Sync with parent if needed
           }
         }}
       >
