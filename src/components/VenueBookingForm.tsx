@@ -25,12 +25,11 @@ type Venue = {
   name: string;
   booking_fee: number;
   verified_status: 'True' | 'False';
-  email?: string; // Added email field
+  email?: string;
 };
 
 type PaymentStatus = "pending" | "success" | "failed";
 
-// Utility function to convert 24-hour time (HH:MM:SS) to 12-hour format with AM/PM
 const convertTo12HourFormat = (time: string): string => {
   const [hours, minutes] = time.split(':').map(Number);
   const period = hours >= 12 ? 'PM' : 'AM';
@@ -49,6 +48,8 @@ const bookingSchema = z.object({
   end_time: z.string().regex(/^(1[0-2]|0?[1-9]):[0-5][0-9] (AM|PM)$/, {
     message: "Please enter a valid end time in HH:MM AM/PM format (12-hour clock)",
   }),
+  booker_name: z.string().min(1, { message: "Please enter your name" }),
+  booker_phone: z.string().regex(/^[0-9]{11}$/, { message: "Phone number must be exactly 11 digits" }),
 }).refine(
   (data) => {
     const now = new Date();
@@ -129,6 +130,8 @@ const VenueBookingForm = () => {
       match_date: undefined,
       start_time: "",
       end_time: "",
+      booker_name: "",
+      booker_phone: "",
     },
   });
 
@@ -162,7 +165,7 @@ const VenueBookingForm = () => {
       try {
         const { data: venueData, error: venueError } = await supabase
           .from("venues")
-          .select("id, slug, name, booking_fee, verified_status, email") // Added email
+          .select("id, slug, name, booking_fee, verified_status, email")
           .eq("slug", slug)
           .single();
 
@@ -255,19 +258,16 @@ const VenueBookingForm = () => {
         return null;
       }
 
-      // Check status
       if (data.status !== "pending") {
         setAccessCodeError("Access code is not valid or has already been used.");
         return null;
       }
 
-      // Defensive double-check
       if (data.booking_id) {
         setAccessCodeError("This booking code has already been linked to a match.");
         return null;
       }
 
-      // Client-side expiry check
       const expiryDate = new Date(data.expiry_date);
       const now = new Date();
       if (isNaN(expiryDate.getTime()) || expiryDate < now) {
@@ -275,7 +275,6 @@ const VenueBookingForm = () => {
         return null;
       }
 
-      // ✅ Only return data if all checks passed
       return data;
     } catch (err) {
       console.error("Error validating access code:", err);
@@ -300,7 +299,6 @@ const VenueBookingForm = () => {
         const endDateTime = new Date(value.match_date);
         endDateTime.setHours(endHours, endMinutes, 0, 0);
 
-        // Check availability
         const checkAvailability = async () => {
           const { data, error } = await supabase
             .from("venue_access_codes")
@@ -334,7 +332,6 @@ const VenueBookingForm = () => {
 
         checkAvailability();
 
-        // Calculate amount
         const durationHours = (endDateTime.getTime() - startDateTime.getTime()) / (1000 * 60 * 60);
         setAmount(venue.booking_fee * durationHours);
       } else if (!useAccessCode) {
@@ -366,6 +363,8 @@ const VenueBookingForm = () => {
           match_date: undefined,
           start_time: "",
           end_time: "",
+          booker_name: "",
+          booker_phone: "",
         });
         setPaymentStatus("pending");
         setAmount(0);
@@ -375,6 +374,8 @@ const VenueBookingForm = () => {
         match_date: undefined,
         start_time: "",
         end_time: "",
+        booker_name: "",
+        booker_phone: "",
       });
       setPaymentStatus("pending");
       setAmount(0);
@@ -499,6 +500,8 @@ const VenueBookingForm = () => {
             match_date: format(values.match_date, "yyyy-MM-dd"),
             start_time: `${startHours.toString().padStart(2, "0")}:${startTime.split(":")[1]}`,
             end_time: `${endHours.toString().padStart(2, "0")}:${endTime.split(":")[1]}`,
+            booker_name: values.booker_name,
+            booker_phone: values.booker_phone,
           }
         : {
             venue_id: venue.id,
@@ -508,6 +511,8 @@ const VenueBookingForm = () => {
             match_date: format(values.match_date, "yyyy-MM-dd"),
             start_time: `${startHours.toString().padStart(2, "0")}:${startTime.split(":")[1]}`,
             end_time: `${endHours.toString().padStart(2, "0")}:${endTime.split(":")[1]}`,
+            booker_name: values.booker_name,
+            booker_phone: values.booker_phone,
           };
 
       const { data: bookingData, error: bookingError } = await supabase
@@ -554,7 +559,6 @@ const VenueBookingForm = () => {
         if (accessCodeError) throw accessCodeError;
       }
 
-      // Send email notification to venue if email exists
       if (venue.email) {
         await supabase.functions.invoke("send-booking-notification", {
           body: {
@@ -646,6 +650,8 @@ const VenueBookingForm = () => {
                     match_date: undefined,
                     start_time: "",
                     end_time: "",
+                    booker_name: "",
+                    booker_phone: "",
                   });
                   setPaymentStatus("pending");
                   setAmount(0);
@@ -675,6 +681,45 @@ const VenueBookingForm = () => {
                 )}
               </div>
             )}
+
+            <FormField
+              control={form.control}
+              name="booker_name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Your Name</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="text"
+                      placeholder="Enter your full name"
+                      {...field}
+                      className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="booker_phone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Phone Number</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="text"
+                      placeholder="Enter 11-digit phone number"
+                      maxLength={11}
+                      {...field}
+                      className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}
