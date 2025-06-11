@@ -21,6 +21,8 @@ type Booking = {
   end_time: string; 
   organizer_name: string;
   organizer_id: string | null;
+  booker_name: string | null;
+  booker_phone: string | null;
 };
 
 type Organizer = {
@@ -246,6 +248,12 @@ const MyBookings = () => {
                               Organizer: {booking.organizer_name}
                               {isVerified && <img src="/green-verified.png" alt="Verified" className="w-4 h-4 ml-1" />}
                             </p>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                              Booker Name: {booking.booker_name || "N/A"}
+                            </p>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                              Phone Number: {booking.booker_phone || "N/A"}
+                            </p>
                             <div className="mt-4">
                               <Tooltip>
                                 <TooltipTrigger asChild>
@@ -303,6 +311,12 @@ const MyBookings = () => {
                             <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
                               Organizer: {booking.organizer_name}
                               {isVerified && <img src="/green-verified.png" alt="Verified" className="w-4 h-4 ml-1" />}
+                            </p>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                              Booker Name: {booking.booker_name || "N/A"}
+                            </p>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                              Phone Number: {booking.booker_phone || "N/A"}
                             </p>
                             <div className="mt-4">
                               <Tooltip>
