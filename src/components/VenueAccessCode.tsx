@@ -16,6 +16,8 @@ type AccessCode = {
   expiry_date: string;
   status: "pending" | "active" | "inactive";
   created_at: string;
+  booker_name: string | null;
+  booker_phone: string | null;
 };
 
 type VenueAccessCodeProps = {
@@ -39,7 +41,7 @@ const VenueAccessCode = ({ venueId }: VenueAccessCodeProps) => {
     try {
       const { data, error } = await supabase
         .from("booking_access_codes")
-        .select("id, booking_id, code, expiry_date, status, created_at")
+        .select("id, booking_id, code, expiry_date, status, created_at, booker_name, booker_phone")
         .eq("venue_id", venueId)
         .order("created_at", { ascending: false });
 
@@ -234,6 +236,12 @@ const VenueAccessCode = ({ venueId }: VenueAccessCodeProps) => {
                           dateStyle: "medium",
                           timeStyle: "short",
                         })}
+                      </p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        Booker Name: {code.booker_name || "N/A"}
+                      </p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        Phone Number: {code.booker_phone || "N/A"}
                       </p>
                     </div>
                     <span
