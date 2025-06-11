@@ -28,6 +28,8 @@ type Booking = {
   payment_reference: string | null;
   venue_name: string;
   match_title: string | null;
+  booker_name: string | null;
+  booker_phone: string | null;
 };
 
 const VenueBookings = () => {
@@ -57,6 +59,8 @@ const VenueBookings = () => {
             amount,
             payment_status,
             payment_reference,
+            booker_name,
+            booker_phone,
             venues!inner(name, user_id),
             matches!left(title)
           `)
@@ -77,6 +81,8 @@ const VenueBookings = () => {
           payment_reference: booking.payment_reference,
           venue_name: booking.venues.name,
           match_title: booking.matches?.title || null,
+          booker_name: booking.booker_name,
+          booker_phone: booking.booker_phone,
         }));
 
         setBookings(transformedBookings);
@@ -144,6 +150,8 @@ const VenueBookings = () => {
                     <TableHead className="text-left">Amount</TableHead>
                     <TableHead className="text-left">Status</TableHead>
                     <TableHead className="text-left">Payment Ref</TableHead>
+                    <TableHead className="text-left">Booker Name</TableHead>
+                    <TableHead className="text-left">Phone Number</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -183,6 +191,12 @@ const VenueBookings = () => {
                       </TableCell>
                       <TableCell>
                         {booking.payment_reference || "N/A"}
+                      </TableCell>
+                      <TableCell>
+                        {booking.booker_name || "N/A"}
+                      </TableCell>
+                      <TableCell>
+                        {booking.booker_phone || "N/A"}
                       </TableCell>
                     </TableRow>
                   ))}
