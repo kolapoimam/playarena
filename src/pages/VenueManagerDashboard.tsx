@@ -17,13 +17,16 @@ type Booking = {
   id: string; 
   venue_id: string;
   match_id: string | null;
-  title: string; add
+  title: string; 
   slug: string | null;
   match_date: string; 
   start_time: string; 
   end_time: string; 
   organizer_name: string;
   organizer_id: string | null;
+  is_recurring: boolean;
+  recurring_frequency: string | null;
+  recurring_occurrences: number | null;
 };
 
 const VenueManagerDashboard = () => {
@@ -40,6 +43,7 @@ const VenueManagerDashboard = () => {
   const [verifiedSince, setVerifiedSince] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isBookingsOpen, setIsBookingsOpen] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchVenueData = async () => {
@@ -56,6 +60,7 @@ const VenueManagerDashboard = () => {
         if (userError || !user.user) {
           throw new Error("User not authenticated");
         }
+        setUserId(user.user.id);
 
         // Fetch venue details
         const { data: venueData, error: venueError } = await supabase
@@ -87,35 +92,53 @@ const VenueManagerDashboard = () => {
         }
         setOrganizers(organizersData || []);
 
-        // Fetch upcoming bookings
+        // Fetch upcoming bookings with recurring details
         const { data: upcoming, error: upcomingError } = await supabase
           .rpc("get_bookings_by_venue_v4", {
             p_venue_id: venueId,
             p_is_upcoming: true,
             p_limit_count: 5,
-          });
+          })
+          .select(`
+            id, venue_id, match_id, title, slug, match_date, start_time, end_time, organizer_name, organizer_id,
+            matches:is_recurring, matches:recurring_frequency, matches:recurring_occurrences
+          `);
 
         if (upcomingError) {
           console.error("Upcoming bookings error:", upcomingError);
           throw new Error(upcomingError.message);
         }
         const sortedUpcoming = (upcoming || []).sort((a, b) => new Date(a.match_date).getTime() - new Date(b.match_date).getTime());
-        setUpcomingBookings(sortedUpcoming);
+        setUpcomingBookings(sortedUpcoming.map(booking => ({
+          ...booking,
+          is_recurring: booking.matches?.is_recurring || false,
+          recurring_frequency: booking.matches?.recurring_frequency || null,
+          recurring_occurrences: booking.matches?.recurring_occurrences || null,
+        })));
 
-        // Fetch past bookings
+        // Fetch past bookings with recurring details
         const { data: past, error: pastError } = await supabase
           .rpc("get_bookings_by_venue_v4", {
             p_venue_id: venueId,
             p_is_upcoming: false,
             p_limit_count: 5,
-          });
+          })
+          .select(`
+            id, venue_id, match_id, title, slug, match_date, start_time, end_time, organizer_name, organizer_id,
+            matches:is_recurring, matches:recurring_frequency, matches:recurring_occurrences
+          `);
 
         if (pastError) {
           console.error("Past bookings error:", pastError);
           throw new Error(pastError.message);
         }
         const sortedPast = (past || []).sort((a, b) => new Date(b.match_date).getTime() - new Date(a.match_date).getTime());
-        setPastBookings(sortedPast);
+        setPastBookings(sortedPast.map(booking => ({
+          ...booking,
+          is_recurring: booking.matches?.is_recurring || false,
+          recurring_frequency: booking.matches?.recurring_frequency || null,
+          recurring_occurrences: booking.matches?.recurring_occurrences || null,
+        })));
 
         // Fetch total events
         const { count: eventCount, error: countError } = await supabase
@@ -253,6 +276,7 @@ const VenueManagerDashboard = () => {
                     organizers={organizers}
                     isBookingsOpen={isBookingsOpen}
                     setIsBookingsOpen={setIsBookingsOpen}
+                    userId={userId}
                   />
                 </CardHeader>
               </Card>
