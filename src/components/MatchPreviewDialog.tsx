@@ -1,31 +1,11 @@
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { MapPin, CalendarIcon, Clock, User, Trophy, Download, Volleyball, Medal } from "lucide-react";
+import { MapPin, CalendarIcon, Clock, User, Trophy, Download, Volleyball, Medal, Repeat } from "lucide-react";
 import { format } from "date-fns";
 import html2canvas from "html2canvas";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useRef } from "react";
-
-type FormValues = {
-  title: string;
-  venue_id: string;
-  match_date: Date | undefined;
-  start_time: string;
-  end_time: string;
-  total_slots: number | undefined;
-  is_paid: boolean;
-  price: number | null | undefined;
-  notes: string | undefined;
-  organizer_name: string;
-  skill_level: string | null | undefined;
-  match_type: string | null | undefined;
-  gender: string | null | undefined;
-  is_private: boolean;
-  access_password: string | null | undefined;
-  sell_tickets: boolean;
-  ticket_price: number | null | undefined;
-  max_tickets: number | null | undefined;
-};
+import { FormValues } from "@/components/MatchFormTypes";
 
 type Venue = {
   id: string;
@@ -229,6 +209,14 @@ const MatchPreviewDialog = ({ open, onOpenChange, formValues, selectedVenue }: M
                   <div className="flex items-center justify-center">
                     <span className="font-semibold text-white">Access Password: </span>
                     <span className="ml-1 font-mono text-white">{formValues.access_password || "N/A"}</span>
+                  </div>
+                )}
+                {formValues.is_recurring && (
+                  <div className="flex items-center justify-center">
+                    <Repeat className="h-4 w-4 mr-1 text-white" />
+                    <span className="text-white">
+                      Repeats {formValues.recurring_frequency} for {formValues.recurring_occurrences} times
+                    </span>
                   </div>
                 )}
               </div>
