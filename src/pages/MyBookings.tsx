@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChevronLeft, Loader2 } from "lucide-react";
+import { ChevronLeft, Loader2, Repeat } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { format, differenceInHours } from "date-fns";
@@ -23,6 +23,9 @@ type Booking = {
   organizer_id: string | null;
   booker_name: string | null;
   booker_phone: string | null;
+  is_recurring: boolean;
+  recurring_frequency: string | null;
+  recurring_occurrences: number | null;
 };
 
 type Organizer = {
@@ -38,12 +41,13 @@ const MyBookings = () => {
   const [upcomingBookings, setUpcomingBookings] = useState<Booking[]>([]);
   const [pastBookings, setPastBookings] = useState<Booking[]>([]);
   const [organizers, setOrganizers] = useState<Organizer[]>([]);
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchBookings = async () => {
       setLoading(true);
       try {
-        const { data: userData } = await supabase.auth.getUser();
+        const { data: userData, error: userError } = await supabase.auth.getUser();
         if (!userData.user) {
           toast({
             title: "Error",
@@ -53,6 +57,7 @@ const MyBookings = () => {
           navigate("/auth");
           return;
         }
+        setUserId(userData.user.id);
 
         const { data: venueData, error: venueError } = await supabase
           .from("venues")
@@ -82,13 +87,18 @@ const MyBookings = () => {
         }
         setOrganizers(organizersData || []);
 
-        // Fetch upcoming bookings
+        // Fetch upcoming bookings with recurring details
         const { data: upcoming, error: upcomingError } = await supabase
           .rpc("get_bookings_by_venue_v4", {
             p_venue_id: venueData.id,
             p_is_upcoming: true,
             p_limit_count: 5,
-          });
+          })
+          .select(`
+            id, venue_id, match_id, title, slug, match_date, start_time, end_time, 
+            organizer_name, organizer_id, booker_name, booker_phone,
+            matches:is_recurring, matches:recurring_frequency, matches:recurring_occurrences
+          `);
 
         if (upcomingError) {
           console.error("Upcoming bookings error:", upcomingError);
@@ -108,9 +118,21 @@ const MyBookings = () => {
                 console.error("Match fetch error:", matchError);
                 return booking;
               }
-              return { ...booking, title: matchData?.title || booking.title, slug: matchData?.slug || booking.slug };
+              return { 
+                ...booking, 
+                title: matchData?.title || booking.title, 
+                slug: matchData?.slug || booking.slug,
+                is_recurring: booking.matches?.is_recurring || false,
+                recurring_frequency: booking.matches?.recurring_frequency || null,
+                recurring_occurrences: booking.matches?.recurring_occurrences || null
+              };
             }
-            return booking;
+            return {
+              ...booking,
+              is_recurring: booking.matches?.is_recurring || false,
+              recurring_frequency: booking.matches?.recurring_frequency || null,
+              recurring_occurrences: booking.matches?.recurring_occurrences || null
+            };
           })
         );
         const sortedUpcoming = upcomingWithMatchDetails.sort(
@@ -118,13 +140,18 @@ const MyBookings = () => {
         );
         setUpcomingBookings(sortedUpcoming);
 
-        // Fetch past bookings
+        // Fetch past bookings with recurring details
         const { data: past, error: pastError } = await supabase
           .rpc("get_bookings_by_venue_v4", {
             p_venue_id: venueData.id,
             p_is_upcoming: false,
             p_limit_count: 5,
-          });
+          })
+          .select(`
+            id, venue_id, match_id, title, slug, match_date, start_time, end_time, 
+            organizer_name, organizer_id, booker_name, booker_phone,
+            matches:is_recurring, matches:recurring_frequency, matches:recurring_occurrences
+          `);
 
         if (pastError) {
           console.error("Past bookings error:", pastError);
@@ -144,9 +171,21 @@ const MyBookings = () => {
                 console.error("Match fetch error:", matchError);
                 return booking;
               }
-              return { ...booking, title: matchData?.title || booking.title, slug: matchData?.slug || booking.slug };
+              return { 
+                ...booking, 
+                title: matchData?.title || booking.title, 
+                slug: matchData?.slug || booking.slug,
+                is_recurring: booking.matches?.is_recurring || false,
+                recurring_frequency: booking.matches?.recurring_frequency || null,
+                recurring_occurrences: booking.matches?.recurring_occurrences || null
+              };
             }
-            return booking;
+            return {
+              ...booking,
+              is_recurring: booking.matches?.is_recurring || false,
+              recurring_frequency: booking.matches?.recurring_frequency || null,
+              recurring_occurrences: booking.matches?.recurring_occurrences || null
+            };
           })
         );
         const sortedPast = pastWithMatchDetails.sort(
@@ -248,6 +287,12 @@ const MyBookings = () => {
                               Organizer: {booking.organizer_name}
                               {isVerified && <img src="/green-verified.png" alt="Verified" className="w-4 h-4 ml-1" />}
                             </p>
+                            {userId && booking.is_recurring && (
+                              <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
+                                <Repeat className="w-4 h-4 mr-1" />
+                                Repeats {booking.recurring_frequency} for {booking.recurring_occurrences} times
+                              </p>
+                            )}
                             <p className="text-sm text-gray-600 dark:text-gray-400">
                               Booker Name: {booking.booker_name || "N/A"}
                             </p>
@@ -312,6 +357,12 @@ const MyBookings = () => {
                               Organizer: {booking.organizer_name}
                               {isVerified && <img src="/green-verified.png" alt="Verified" className="w-4 h-4 ml-1" />}
                             </p>
+                            {userId && booking.is_recurring && (
+                              <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
+                                <Repeat className="w-4 h-4 mr-1" />
+                                Repeats {booking.recurring_frequency} for {booking.recurring_occurrences} times
+                              </p>
+                            )}
                             <p className="text-sm text-gray-600 dark:text-gray-400">
                               Booker Name: {booking.booker_name || "N/A"}
                             </p>
