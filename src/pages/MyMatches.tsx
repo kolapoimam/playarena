@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Calendar, Volleyball, Users, MapPin, Copy } from "lucide-react";
+import { Calendar, Volleyball, Users, MapPin, Copy, Repeat } from "lucide-react";
 import { format } from "date-fns";
 import { utcToZonedTime } from "date-fns-tz";
 import { DateTime } from "luxon";
@@ -33,6 +33,9 @@ type Match = {
   booked_slots?: number;
   total_slots?: number;
   organizer_name?: string;
+  is_recurring: boolean;
+  recurring_frequency: string | null;
+  recurring_occurrences: number | null;
 };
 
 type Profile = {
@@ -59,17 +62,20 @@ const MyMatches = () => {
   const [cancelIsJoined, setCancelIsJoined] = useState<boolean>(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
 
-      // Fetch profile
-      const { data: session } = await supabase.auth.getSession();
-      if (!session.session) {
+      // Fetch profile and check authentication
+      const { data: session, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session.session) {
         navigate("/auth");
+        setLoading(false);
         return;
       }
+      setUserId(session.session.user.id);
 
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
@@ -103,12 +109,16 @@ const MyMatches = () => {
         });
       }
 
-      // Fetch organized matches
+      // Fetch organized matches with recurring details
       const { data: orgData, error: orgError } = await supabase
         .from("user_organized_matches")
         .select(`
           match_id,
-          matches(id, title, slug, match_date, match_time, start_time, end_time, super_code, status, cancellation_status, is_paid, venue_id, total_slots, organizer_name, venues(name))
+          matches(
+            id, title, slug, match_date, match_time, start_time, end_time, super_code, status, 
+            cancellation_status, is_paid, venue_id, total_slots, organizer_name, 
+            is_recurring, recurring_frequency, recurring_occurrences, venues(name)
+          )
         `)
         .eq("user_id", session.session.user.id)
         .order("created_at", { ascending: false })
@@ -142,19 +152,26 @@ const MyMatches = () => {
             booked_slots: bookedSlots,
             total_slots: item.matches.total_slots,
             organizer_name: item.matches.organizer_name,
+            is_recurring: item.matches.is_recurring || false,
+            recurring_frequency: item.matches.recurring_frequency || null,
+            recurring_occurrences: item.matches.recurring_occurrences || null,
           };
         })
       );
 
       setOrganizedMatches(organizedMatchesWithSlots);
 
-      // Fetch joined matches
+      // Fetch joined matches with recurring details
       const { data: joinData, error: joinError } = await supabase
         .from("user_joined_matches")
         .select(`
           match_id,
           player_id,
-          matches(id, title, slug, match_date, match_time, start_time, end_time, status, cancellation_status, is_paid, venue_id, total_slots, organizer_name, venues(name)),
+          matches(
+            id, title, slug, match_date, match_time, start_time, end_time, status, 
+            cancellation_status, is_paid, venue_id, total_slots, organizer_name, 
+            is_recurring, recurring_frequency, recurring_occurrences, venues(name)
+          ),
           players(confirmation_code, number_of_slots, status, cancellation_status)
         `)
         .eq("user_id", session.session.user.id)
@@ -198,6 +215,9 @@ const MyMatches = () => {
             booked_slots: bookedSlots,
             total_slots: item.matches.total_slots,
             organizer_name: item.matches.organizer_name,
+            is_recurring: item.matches.is_recurring || false,
+            recurring_frequency: item.matches.recurring_frequency || null,
+            recurring_occurrences: item.matches.recurring_occurrences || null,
           };
         })
       );
@@ -414,6 +434,12 @@ const MyMatches = () => {
                                 <MapPin size={16} className="mr-2" />
                                 {match.venue_name || "Venue TBD"}
                               </p>
+                              {userId && match.is_recurring && (
+                                <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
+                                  <Repeat size={16} className="mr-2" />
+                                  Repeats {match.recurring_frequency} for {match.recurring_occurrences} times
+                                </p>
+                              )}
                               <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
                                 <span>Super Code:</span>
                                 <span className="flex items-center gap-1">
@@ -514,6 +540,12 @@ const MyMatches = () => {
                                 <MapPin size={16} className="mr-2" />
                                 {match.venue_name || "Venue TBD"}
                               </p>
+                              {userId && match.is_recurring && (
+                                <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
+                                  <Repeat size={16} className="mr-2" />
+                                  Repeats {match.recurring_frequency} for {match.recurring_occurrences} times
+                                </p>
+                              )}
                               <p className="text-sm text-gray-600 dark:text-gray-400">
                                 Confirmation Code: {match.confirmation_code || "N/A"}
                               </p>
