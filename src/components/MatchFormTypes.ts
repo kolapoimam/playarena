@@ -3,6 +3,7 @@ import { z } from "zod";
 const skillLevels = ["Beginner", "Amateur", "Intermediate", "Advanced", "Professional", "All", "None"] as const;
 const matchTypes = ["4-a-side", "5-a-side", "7-a-side", "11-a-side (Regular)", "Double", "Friendly", "All", "None"] as const;
 const genders = ["Male", "Female", "All", "None"] as const;
+const frequencies = ["Daily", "Weekly", "Bi-Weekly", "Monthly", "Bi-Monthly", "Quarterly", "Yearly"] as const;
 
 const timePattern = /^(0[1-9]|1[0-2]):[0-5][0-9] (AM|PM)$/i;
 
@@ -87,6 +88,14 @@ export const formSchema = z.object({
     .max(5000, { message: "Maximum 5000 tickets allowed" })
     .optional()
     .nullable(),
+  is_recurring: z.boolean().default(false),
+  recurring_frequency: z.enum(frequencies).optional().nullable(),
+  recurring_occurrences: z.number()
+    .int({ message: "Must be a whole number" })
+    .min(1, { message: "At least 1 occurrence is required" })
+    .max(52, { message: "Maximum 52 occurrences allowed" })
+    .optional()
+    .nullable(),
 }).refine(data => {
   const startDateTime = new Date(data.match_date);
   const [startHours, startMinutes] = data.start_time.replace(/ AM|PM/i, "").split(':').map(Number);
@@ -129,7 +138,7 @@ export const formSchema = z.object({
 
   return selectedUTC.getTime() >= tenMinutesLater.getTime();
 }, {
-  message: "Match must be scheduled at least clicks from now",
+  message: "Match must be scheduled at least 10 minutes from now",
   path: ["start_time"],
 }).refine(data => {
   if (data.sell_tickets && !data.ticket_price) {
@@ -139,6 +148,14 @@ export const formSchema = z.object({
 }, {
   message: "Ticket price is required when selling tickets",
   path: ["ticket_price"],
+}).refine(data => {
+  if (data.is_recurring && (!data.recurring_frequency || !data.recurring_occurrences)) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Frequency and number of occurrences are required when recurring is enabled",
+  path: ["recurring_frequency", "recurring_occurrences"],
 });
 
 export type FormValues = z.infer<typeof formSchema>;
