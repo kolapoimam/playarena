@@ -1,9 +1,10 @@
 import { useState, useRef } from "react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { MapPin, Calendar, Clock, DollarSign, Users, Trophy, Volleyball, Medal, Download } from "lucide-react";
+import { MapPin, Calendar, Clock, DollarSign, Users, Trophy, Volleyball, Medal, Download, Repeat } from "lucide-react";
 import html2canvas from "html2canvas";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 type Venue = {
   slug: string;
@@ -11,18 +12,23 @@ type Venue = {
   city: string;
 };
 
+type Match = {
+  title: string;
+  match_date: string;
+  match_time: string;
+  is_paid: boolean;
+  price: number | null;
+  total_slots: number;
+  is_recurring: boolean;
+  recurring_frequency: string | null;
+  recurring_occurrences: number | null;
+  venue: Venue | null;
+};
+
 type MatchJoinersDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  match: {
-    title: string;
-    match_date: string;
-    match_time: string;
-    is_paid: boolean;
-    price: number | null;
-    total_slots: number;
-    venue: Venue | null;
-  } | null;
+  match: Match | null;
   confirmationCode: string | null;
   selectedSlots: number;
   totalPlayerSlots: number;
@@ -40,7 +46,19 @@ const MatchJoinersDialog = ({
   const [isDownloading, setIsDownloading] = useState(false);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
   const [backgroundColor, setBackgroundColor] = useState('#4CAF50'); // Default green
+  const [userId, setUserId] = useState<string | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
+
+  // Check authentication status
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: session } = await supabase.auth.getSession();
+      if (session.session) {
+        setUserId(session.session.user.id);
+      }
+    };
+    checkAuth();
+  }, []);
 
   // Log props for debugging
   console.log('MatchJoinersDialog props:', {
@@ -219,6 +237,11 @@ const MatchJoinersDialog = ({
                 <p className="text-sm">
                   <Users className="inline h-4 w-4 mr-1" /> {totalPlayerSlots}/{match?.total_slots || 0} slots booked
                 </p>
+                {userId && match?.is_recurring && (
+                  <p className="text-sm">
+                    <Repeat className="inline h-4 w-4 mr-1" /> Repeats {match.recurring_frequency} for {match.recurring_occurrences} times
+                  </p>
+                )}
                 <p className="text-sm font-semibold">
                   Confirmation Code: <span className="font-mono">{confirmationCode || 'N/A'}</span>
                 </p>
