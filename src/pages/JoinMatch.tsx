@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Loader, Calendar, MapPin, Clock, Users, DollarSign, Phone, MessageSquare } from "lucide-react";
+import { ArrowLeft, Loader, Calendar, MapPin, Clock, Users, DollarSign, Phone, MessageSquare, Repeat } from "lucide-react";
 import {
   Form,
   FormControl,
@@ -35,6 +35,9 @@ type Match = {
   player_number_required: boolean;
   required_fields: string[] | null;
   allow_bulk_tickets: boolean;
+  is_recurring: boolean;
+  recurring_frequency: string | null;
+  recurring_occurrences: number | null;
   venue: {
     slug: string;
     name: string;
@@ -137,6 +140,7 @@ const JoinMatch = () => {
             `
             id, slug, title, match_date, match_time, total_slots, organizer_name, organizer_phone, disclose_phone, 
             is_paid, price, player_number_required, required_fields, allow_bulk_tickets,
+            is_recurring, recurring_frequency, recurring_occurrences,
             venue:venues(slug, name, city),
             players(player_name, number_of_slots)
           `
@@ -400,6 +404,7 @@ const JoinMatch = () => {
           `
           id, slug, title, match_date, match_time, total_slots, organizer_name, organizer_phone, disclose_phone, 
           is_paid, price, player_number_required, required_fields, allow_bulk_tickets,
+          is_recurring, recurring_frequency, recurring_occurrences,
           venue:venues(slug, name, city),
           players(player_name, number_of_slots)
         `
@@ -500,6 +505,12 @@ const JoinMatch = () => {
               <div className="flex items-center gap-2">
                 <MapPin size={16} />
                 <span>{match.venue.name}, {match.venue.city}</span>
+              </div>
+            )}
+            {userId && match.is_recurring && (
+              <div className="flex items-center gap-2">
+                <Repeat size={16} />
+                <span>Repeats {match.recurring_frequency} for {match.recurring_occurrences} times</span>
               </div>
             )}
           </div>
