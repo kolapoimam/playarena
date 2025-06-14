@@ -12,7 +12,8 @@ import {
   ArrowLeft, 
   ExternalLink,
   Bell,
-  Lock
+  Lock,
+  Repeat
 } from "lucide-react";
 import {
   Dialog,
@@ -45,6 +46,9 @@ type Match = {
   sell_tickets: boolean;
   ticket_price: number | null;
   max_tickets: number | null;
+  is_recurring: boolean;
+  recurring_frequency: string | null;
+  recurring_occurrences: number | null;
   venue: {
     id: string;
     slug: string;
@@ -67,6 +71,18 @@ const MatchDetail = () => {
   const [loading, setLoading] = useState(true);
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [password, setPassword] = useState("");
+  const [userId, setUserId] = useState<string | null>(null);
+
+  // Check authentication status
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: session } = await supabase.auth.getSession();
+      if (session.session) {
+        setUserId(session.session.user.id);
+      }
+    };
+    checkAuth();
+  }, []);
 
   useEffect(() => {
     if (!slug) return;
@@ -79,6 +95,7 @@ const MatchDetail = () => {
         .from("matches")
         .select(`
           *,
+          is_recurring, recurring_frequency, recurring_occurrences,
           venue:venues(id, slug, name, city, map_link),
           players(player_name, player_status, number_of_slots)
         `)
@@ -173,6 +190,7 @@ const MatchDetail = () => {
         .from("matches")
         .select(`
           *,
+          is_recurring, recurring_frequency, recurring_occurrences,
           venue:venues(id, slug, name, city, map_link),
           players(player_name, player_status, number_of_slots)
         `)
@@ -215,7 +233,7 @@ const MatchDetail = () => {
     
     const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
     const matchEndTime = addHours(matchDateTime, 2); // Match duration is 2 hours
-    const now = new Date("2025-05-18T19:45:00+01:00"); // 07:45 PM WAT, May 18, 2025
+    const now = new Date("2025-06-14T11:08:00+01:00"); // 11:08 AM WAT, June 14, 2025
     
     const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
     const isFull = totalPlayerSlots >= match.total_slots;
@@ -246,6 +264,7 @@ const MatchDetail = () => {
         `Venue: ${match.venue?.name || 'Unknown'}, ${match.venue?.city || ''}\n\n` +
         `Additional Info: ${match.notes || 'No additional information provided'}\n\n` +
         `${match.is_private ? `Access Password: ${match.access_password}\n\n` : ''}` +
+        `${userId && match.is_recurring ? `Repeats: ${match.recurring_frequency} for ${match.recurring_occurrences} times\n\n` : ''}` +
         `Powered by @SportCliq`
       )}` +
       `&sf=true&output=xml`;
@@ -352,16 +371,16 @@ const MatchDetail = () => {
             </TooltipProvider>
           )}
         </h1>
-<div className="flex justify-between items-center mb-4">
-  <div className="flex items-center gap-2">
-    <p className="text-muted-foreground">Organized by {match.organizer_name}</p>
-    <img
-      src="/green-verified.png"
-      alt="Verified"
-      className="inline-block w-5 h-5"
-    />
-  </div>
-</div>
+        <div className="flex justify-between items-center mb-4">
+          <div className="flex items-center gap-2">
+            <p className="text-muted-foreground">Organized by {match.organizer_name}</p>
+            <img
+              src="/green-verified.png"
+              alt="Verified"
+              className="inline-block w-5 h-5"
+            />
+          </div>
+        </div>
         
         {isEnded ? (
           <div className="bg-gray-100 border border-gray-200 text-gray-700 px-4 py-3 rounded mb-4">
@@ -379,16 +398,16 @@ const MatchDetail = () => {
         
         <div className="space-y-4">
           <div className="border rounded-lg p-4 bg-card shadow-md relative">
-<div className="absolute top-4 right-4 m-0 p-0">
-  <Button
-    variant="outline"
-    size="sm"
-    onClick={addToCalendar}
-    className="text-playarena-600 border-playarena-300 hover:bg-playarena-50 p-2 m-0"
-  >
-    <Bell size={16} className="mr-0" />
-  </Button>
-</div>
+            <div className="absolute top-4 right-4 m-0 p-0">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={addToCalendar}
+                className="text-playarena-600 border-playarena-300 hover:bg-playarena-50 p-2 m-0"
+              >
+                <Bell size={16} className="mr-0" />
+              </Button>
+            </div>
             
             <h2 className="font-semibold mb-3">Match Details</h2>
             
@@ -438,6 +457,13 @@ const MatchDetail = () => {
                   {isFull && " (FULL)"}
                 </span>
               </div>
+              
+              {userId && match.is_recurring && (
+                <div className="flex items-center gap-2">
+                  <Repeat size={18} />
+                  <span>Repeats {match.recurring_frequency} for {match.recurring_occurrences} times</span>
+                </div>
+              )}
               
               {match.is_paid && (
                 <div className="font-semibold mt-2">
