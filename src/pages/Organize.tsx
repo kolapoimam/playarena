@@ -415,8 +415,8 @@ const Organize = () => {
             <PreferencesForm />
             <PaymentPrivacyForm />
             <TicketSalesForm />
-            <OrganizerDetailsForm />
             <RecurringForm userId={userId} />
+            <OrganizerDetailsForm />
             <div className="flex gap-4">
               <Button
                 type="button"
