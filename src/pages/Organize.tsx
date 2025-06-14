@@ -15,7 +15,9 @@ import PreferencesForm from "@/components/PreferencesForm";
 import PaymentPrivacyForm from "@/components/PaymentPrivacyForm";
 import TicketSalesForm from "@/components/TicketSalesForm";
 import OrganizerDetailsForm from "@/components/OrganizerDetailsForm";
+import RecurringForm from "@/components/RecurringForm";
 import { FormValues, formSchema } from "@/components/MatchFormTypes";
+import { format } from "date-fns";
 
 type Venue = {
   id: string;
@@ -75,6 +77,9 @@ const Organize = () => {
       max_tickets: null,
       start_time: "",
       end_time: "",
+      is_recurring: false,
+      recurring_frequency: null,
+      recurring_occurrences: null,
     },
   });
 
@@ -295,6 +300,9 @@ const Organize = () => {
           ticket_price: data.sell_tickets ? data.ticket_price : null,
           max_tickets: data.sell_tickets ? data.max_tickets : null,
           total_tickets_available: data.sell_tickets && data.max_tickets ? data.max_tickets : 0,
+          is_recurring: data.is_recurring,
+          recurring_frequency: data.is_recurring ? data.recurring_frequency : null,
+          recurring_occurrences: data.is_recurring ? data.recurring_occurrences : null,
         })
         .select('id, slug, super_code')
         .single();
@@ -408,6 +416,7 @@ const Organize = () => {
             <PaymentPrivacyForm />
             <TicketSalesForm />
             <OrganizerDetailsForm />
+            <RecurringForm userId={userId} />
             <div className="flex gap-4">
               <Button
                 type="button"
