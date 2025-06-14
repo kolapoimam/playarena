@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@radix-ui/react-collapsible";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, Repeat } from "lucide-react";
 import { format, differenceInHours } from "date-fns";
 import { useNavigate } from "react-router-dom";
 
@@ -17,6 +17,9 @@ type Booking = {
   end_time: string; 
   organizer_name: string;
   organizer_id: string | null;
+  is_recurring: boolean;
+  recurring_frequency: string | null;
+  recurring_occurrences: number | null;
 };
 
 type Organizer = {
@@ -30,6 +33,7 @@ interface ManagerBookingViewProps {
   organizers: Organizer[];
   isBookingsOpen: boolean;
   setIsBookingsOpen: (open: boolean) => void;
+  userId: string | null; // Added to check authentication
 }
 
 const ManagerBookingView = ({
@@ -38,6 +42,7 @@ const ManagerBookingView = ({
   organizers,
   isBookingsOpen,
   setIsBookingsOpen,
+  userId,
 }: ManagerBookingViewProps) => {
   const navigate = useNavigate();
 
@@ -102,6 +107,12 @@ const ManagerBookingView = ({
                           Organizer: {booking.organizer_name}
                           {isVerified && <img src="/green-verified.png" alt="Verified" className="w-4 h-4 ml-1" />}
                         </p>
+                        {userId && booking.is_recurring && (
+                          <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
+                            <Repeat className="w-4 h-4 mr-1" />
+                            Repeats {booking.recurring_frequency} for {booking.recurring_occurrences} times
+                          </p>
+                        )}
                         <div className="mt-4">
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -161,6 +172,12 @@ const ManagerBookingView = ({
                           Organizer: {booking.organizer_name}
                           {isVerified && <img src="/green-verified.png" alt="Verified" className="w-4 h-4 ml-1" />}
                         </p>
+                        {userId && booking.is_recurring && (
+                          <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
+                            <Repeat className="w-4 h-4 mr-1" />
+                            Repeats {booking.recurring_frequency} for {booking.recurring_occurrences} times
+                          </p>
+                        )}
                         <div className="mt-4">
                           <Tooltip>
                             <TooltipTrigger asChild>
