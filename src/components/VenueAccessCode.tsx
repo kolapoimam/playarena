@@ -5,9 +5,10 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Loader2, Copy } from "lucide-react";
+import { Loader2, Copy, Repeat } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import TimeInput from "@/components/TimeInput";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type AccessCode = {
   id: string;
@@ -18,6 +19,12 @@ type AccessCode = {
   created_at: string;
   booker_name: string | null;
   booker_phone: string | null;
+  match_date: string;
+  start_time: string;
+  end_time: string;
+  is_recurring: boolean;
+  recurring_frequency: string | null;
+  recurring_occurrences: number | null;
 };
 
 type VenueAccessCodeProps = {
@@ -28,9 +35,28 @@ const VenueAccessCode = ({ venueId }: VenueAccessCodeProps) => {
   const { toast } = useToast();
   const [accessCodes, setAccessCodes] = useState<AccessCode[]>([]);
   const [showAccessCodeDialog, setShowAccessCodeDialog] = useState(false);
-  const [accessCodeForm, setAccessCodeForm] = useState({ match_date: "", start_time: "", end_time: "" });
+  const [accessCodeForm, setAccessCodeForm] = useState({
+    match_date: "",
+    start_time: "",
+    end_time: "",
+    is_recurring: false,
+    recurring_frequency: "",
+    recurring_occurrences: "",
+  });
   const [generatedCode, setGeneratedCode] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  // Check authentication status
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: session } = await supabase.auth.getSession();
+      if (session.session) {
+        setUserId(session.session.user.id);
+      }
+    };
+    checkAuth();
+  }, []);
 
   const fetchAccessCodes = useCallback(async () => {
     if (!venueId) {
@@ -41,7 +67,10 @@ const VenueAccessCode = ({ venueId }: VenueAccessCodeProps) => {
     try {
       const { data, error } = await supabase
         .from("booking_access_codes")
-        .select("id, booking_id, code, expiry_date, status, created_at, booker_name, booker_phone")
+        .select(`
+          id, booking_id, code, expiry_date, status, created_at, booker_name, booker_phone,
+          match_date, start_time, end_time, is_recurring, recurring_frequency, recurring_occurrences
+        `)
         .eq("venue_id", venueId)
         .order("created_at", { ascending: false });
 
@@ -103,11 +132,19 @@ const VenueAccessCode = ({ venueId }: VenueAccessCodeProps) => {
   }, [venueId, fetchAccessCodes]);
 
   const handleGenerateAccessCode = async () => {
-    const { match_date, start_time, end_time } = accessCodeForm;
+    const { match_date, start_time, end_time, is_recurring, recurring_frequency, recurring_occurrences } = accessCodeForm;
     if (!match_date || !start_time || !end_time) {
       toast({
         title: "Error",
-        description: "Please fill in all fields.",
+        description: "Please fill in date and time fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (is_recurring && (!recurring_frequency || !recurring_occurrences || parseInt(recurring_occurrences) < 1)) {
+      toast({
+        title: "Error",
+        description: "Please specify valid recurring frequency and occurrences.",
         variant: "destructive",
       });
       return;
@@ -135,6 +172,9 @@ const VenueAccessCode = ({ venueId }: VenueAccessCodeProps) => {
           match_date,
           start_time,
           end_time,
+          is_recurring: is_recurring || false,
+          recurring_frequency: is_recurring ? recurring_frequency : null,
+          recurring_occurrences: is_recurring ? parseInt(recurring_occurrences) : null,
         });
 
       if (error) {
@@ -226,6 +266,18 @@ const VenueAccessCode = ({ venueId }: VenueAccessCodeProps) => {
                         </Button>
                       </p>
                       <p className="text-sm text-gray-600 dark:text-gray-400">
+                        Date: {new Date(code.match_date).toLocaleDateString("en-NG", { dateStyle: "medium" })}
+                      </p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        Time: {code.start_time} - {code.end_time}
+                      </p>
+                      {userId && code.is_recurring && (
+                        <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
+                          <Repeat className="w-4 h-4 mr-1" />
+                          Repeats {code.recurring_frequency} for {code.recurring_occurrences} times
+                        </p>
+                      )}
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
                         Expires: {new Date(code.expiry_date).toLocaleString("en-NG", {
                           dateStyle: "medium",
                           timeStyle: "short",
@@ -262,7 +314,7 @@ const VenueAccessCode = ({ venueId }: VenueAccessCodeProps) => {
           <DialogHeader>
             <DialogTitle className="text-lg font-semibold text-gray-900 dark:text-gray-100">Generate Access Code</DialogTitle>
             <DialogDescription className="text-sm text-gray-600 dark:text-gray-400">
-              Enter the date and time range for the free booking.
+              Enter the date, time range, and recurring details for the free booking.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -282,6 +334,40 @@ const VenueAccessCode = ({ venueId }: VenueAccessCodeProps) => {
               onChange={(value) => setAccessCodeForm({ ...accessCodeForm, end_time: value })}
               placeholder="e.g., 03:00 PM"
             />
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={accessCodeForm.is_recurring}
+                onChange={(e) => setAccessCodeForm({ ...accessCodeForm, is_recurring: e.target.checked })}
+                className="h-4 w-4 text-green-500 border-gray-300 rounded"
+              />
+              <label className="text-sm text-gray-600 dark:text-gray-400">Recurring Booking</label>
+            </div>
+            {accessCodeForm.is_recurring && (
+              <>
+                <Select
+                  value={accessCodeForm.recurring_frequency}
+                  onValueChange={(value) => setAccessCodeForm({ ...accessCodeForm, recurring_frequency: value })}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select frequency" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="daily">Daily</SelectItem>
+                    <SelectItem value="weekly">Weekly</SelectItem>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Input
+                  type="number"
+                  min="1"
+                  value={accessCodeForm.recurring_occurrences}
+                  onChange={(e) => setAccessCodeForm({ ...accessCodeForm, recurring_occurrences: e.target.value })}
+                  placeholder="Number of occurrences"
+                  className="text-base bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg"
+                />
+              </>
+            )}
             {generatedCode && (
               <div className="text-center">
                 <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
@@ -299,7 +385,14 @@ const VenueAccessCode = ({ venueId }: VenueAccessCodeProps) => {
               onClick={() => {
                 setShowAccessCodeDialog(false);
                 setGeneratedCode(null);
-                setAccessCodeForm({ match_date: "", start_time: "", end_time: "" });
+                setAccessCodeForm({
+                  match_date: "",
+                  start_time: "",
+                  end_time: "",
+                  is_recurring: false,
+                  recurring_frequency: "",
+                  recurring_occurrences: "",
+                });
               }}
               className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
             >
