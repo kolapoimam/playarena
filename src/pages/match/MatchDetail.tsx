@@ -26,7 +26,7 @@ import {
 import { addHours } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import PlayersTable from "@/components/PlayersTable";
+import PlayersTable from "@/components/match/PlayersTable";
 import MatchDetailsDialogue from "@/components/match/MatchDetailsDialogue";
 
 type Match = {
