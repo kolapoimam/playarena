@@ -9,7 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import TimeInput from "@/components/TimeInput";
-import OrganiserVenue from "@/components/OrganiserVenue";
+import OrganiserVenue from "@/components/venueManagement/OrganiserVenue";
 import { FormValues } from "./MatchFormTypes";
 
 type MatchDetailsFormProps = {
@@ -111,7 +111,7 @@ const MatchDetailsForm = ({ isPreFilled, preSelectedVenueSlug, onPrefill, onVenu
                 />
               </FormControl>
               <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
-                Match start time (12-hour clock, e.g., 01:00 PM)
+                Match start time (12-hour clock
               </FormDescription>
               <FormMessage />
             </FormItem>
