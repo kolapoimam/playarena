@@ -16,14 +16,14 @@ import {
 } from "@/components/ui/dialog";
 import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
-import MatchCodeInput from "@/components/MatchCodeInput";
-import CyclingCodeInput from "@/components/CyclingCodeInput";
-import MatchDetails from "@/components/MatchDetails";
-import PlayerManagement from "@/components/PlayerManagement";
+import MatchCodeInput from "@/components/match/MatchCodeInput";
+import CyclingCodeInput from "@/components/cycling/CyclingCodeInput";
+import MatchDetails from "@/components/match/MatchDetails";
+import PlayerManagement from "@/components/matchManagement/PlayerManagement";
 import OrganizerCashout from "@/components/matchManagement/OrganizerCashout";
-import CyclingDetails from "@/components/CyclingDetails";
-import AttendeesManagement from "@/components/AttendeesManagement";
-import HostCashout from "@/components/HostCashout";
+import CyclingDetails from "@/components/cycling/CyclingDetails";
+import AttendeesManagement from "@/components/cyclingManagement/AttendeesManagement";
+import HostCashout from "@/components/cyclingManagement/HostCashout";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Toggle } from "@/components/ui/toggle";
 
