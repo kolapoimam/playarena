@@ -395,7 +395,7 @@ const VenueDetail = () => {
       </div>
 
       <Navbar />
-    </div>
+    </>
   );
 };
 
