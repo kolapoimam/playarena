@@ -10,8 +10,8 @@ import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { TouchBackend } from "react-dnd-touch-backend";
 import Navbar from "@/components/Navbar";
-import TeamMatchDetails from "@/components/TeamMatchDetails";
-import MatchReport from "@/components/MatchReport";
+import MatchReport from "@/components/match/MatchReport";
+import TeamMatchDetails from "@/components/match/TeamMatchDetails";
 
 type Player = { id: string; player_name: string };
 type Team = {

@@ -16,7 +16,7 @@ import {
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import CyclingDetailsDialogue from "@/components/cycling/CyclingDetailsDialogue";
 import Navbar from "@/components/Navbar";
-import AttendeesTable from "@/components/AttendeesTable";
+import AttendeesTable from "@/components/cycling/AttendeesTable";
 import { addHours, addMinutes } from "date-fns";
 import { DateTime } from "luxon";
 

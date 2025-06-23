@@ -10,7 +10,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import VenueWallet from "@/components/venueManagement/VenueWallet";
 import VenueAccessCode from "@/components/venueManagement/VenueAccessCode";
 import Navbar from "@/components/Navbar";
-import ManagerBookingView from "@/components/ManagerBookingView";
+import ManagerBookingView from "@/components/venueManagement/ManagerBookingView";
 
 type Venue = { id: string; name: string; city: string; price_per_hour: number; is_verified: string };
 type Booking = { 

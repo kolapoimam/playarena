@@ -17,9 +17,9 @@ import { CalendarIcon, ArrowLeft, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import Navbar from '@/components/Navbar';
-import CyclingSuccessDialog from '@/components/CyclingSuccessDialog';
+import CyclingSuccessDialog from "@/components/cycling/CyclingSuccessDialog";
 import TimeInput from '@/components/TimeInput';
-import CreateLandmarkDialog from '@/components/CreateLandmarkDialog';
+import CreateLandmarkDialog from "@/components/cycling/CreateLandmarkDialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { DateTime } from 'luxon';
 
