@@ -1,12 +1,11 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import UserDashboard from "../components/UserDashboard";
-import CyclerDashboard from "../components/CyclerDashboard";
+import UserDashboard from "@/components/profile/UserDashboard";
+import CyclerDashboard from "@/components/profile/CyclerDashboard";
 import Performance from "@/components/profile/Performance";
 import Navbar from "@/components/Navbar";
 import { ArrowLeft } from "lucide-react";
