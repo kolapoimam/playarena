@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { FormControl, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Plus } from "lucide-react";
-import VenueForm from "@/components/VenueForm";
+import VenueForm from "@/components/venueManagement/VenueForm";
 
 type Venue = {
   id: string;
