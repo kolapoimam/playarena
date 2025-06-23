@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Seo } from "@/components/Seo";
 
 // Define the Venue type
 type Venue = {
@@ -38,6 +39,8 @@ const nigerianStates = [
   "Nasarawa", "Niger", "Ogun", "Ondo", "Osun", "Oyo", "Plateau", "Rivers", 
   "Sokoto", "Taraba", "Yobe", "Zamfara", "FCT"
 ];
+
+const META_KEYWORDS = "Football in Nigeria, Sports in Nigeria, Play Sports Near You, Football Fields Near Me, Livescore, Osimhen, Asisat Oshola, Nigeria Startup, Sportstech, Football venues in Lagos, Football venues in Ilorin, Sports Betting in Nigeria, Organize sports in Nigeria, Football Matches, Bicycle Training in Nigeria, Cycling in Nigeria, Nigerian football, Nigerian cycling, Nigerian sports, Play football in Lagos, Play football in Ilorin, Play football in Abuja, Play football in Nigeria, Play cycling in Nigeria, Play sports in Nigeria, Nigerian sports tech, Nigerian sports startup, Nigerian sports community, Football events Nigeria, Cycling events Nigeria, Sport Cliq, SportCliq, sportcliq.com.ng, sportcliq.ng, sportcliq, sport cliq, sportcliq app, sportcliq platform, sportcliq football, sportcliq cycling, sportcliq venues, sportcliq matches, sportcliq events, sportcliq sports, sportcliq nigeria, sportcliq lagos, sportcliq ilorin, sportcliq abuja, sportcliq startup, sportcliq tech, sportcliq community, sportcliq platform, sportcliq app, sportcliq website, sportcliq online, sportcliq booking, sportcliq organize, sportcliq join, sportcliq play, sportcliq find, sportcliq search, sportcliq discover, sportcliq connect, sportcliq join match, sportcliq join cycling, sportcliq join event, sportcliq join venue, sportcliq join football, sportcliq join sports, sportcliq join nigeria, sportcliq join lagos, sportcliq join ilorin, sportcliq join abuja, sportcliq join startup, sportcliq join tech, sportcliq join community, sportcliq join platform, sportcliq join app, sportcliq join website, sportcliq join online, sportcliq join booking, sportcliq join organize, sportcliq join play, sportcliq join find, sportcliq join search, sportcliq join discover, sportcliq join connect";
 
 const VenueDirectory = () => {
   const navigate = useNavigate();
@@ -238,222 +241,231 @@ const VenueDirectory = () => {
   };
 
   return (
-    <div className="min-h-screen pb-24 bg-gray-100 dark:bg-gray-900">
-      <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg">
-        <div className="flex items-center justify-between max-w-7xl mx-auto">
-          <Button 
-            variant="ghost" 
-            onClick={() => navigate(-1)} 
-            className="text-white hover:bg-green-600"
+    <>
+      <Seo
+        title="Venues Directory | Sport Cliq"
+        description="Browse all sports venues and locations on Sport Cliq. Football venues in Lagos, Ilorin, Abuja. Football in Nigeria, Play Sports Near You, Football Fields Near Me, Livescore, Osimhen, Asisat Oshola, Nigeria Startup, Sportstech."
+        url={window.location.href}
+        image={undefined}
+        children={<meta name="keywords" content={META_KEYWORDS} />}
+      />
+      <div className="min-h-screen pb-24 bg-gray-100 dark:bg-gray-900">
+        <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg">
+          <div className="flex items-center justify-between max-w-7xl mx-auto">
+            <Button 
+              variant="ghost" 
+              onClick={() => navigate(-1)} 
+              className="text-white hover:bg-green-600"
+            >
+              <ArrowLeft size={18} className="mr-2" />
+              Back
+            </Button>
+            <div className="text-center">
+              <h1 className="text-2xl font-bold">Venue Directory</h1>
+            </div>
+            <div className="w-10"></div>
+          </div>
+        </header>
+
+        <div className="mt-6 px-4">
+          <Collapsible
+            open={isFilterOpen}
+            onOpenChange={setIsFilterOpen}
+            className="mb-4"
           >
-            <ArrowLeft size={18} className="mr-2" />
-            Back
-          </Button>
-          <div className="text-center">
-            <h1 className="text-2xl font-bold">Venue Directory</h1>
-          </div>
-          <div className="w-10"></div>
-        </div>
-      </header>
-
-      <div className="mt-6 px-4">
-        <Collapsible
-          open={isFilterOpen}
-          onOpenChange={setIsFilterOpen}
-          className="mb-4"
-        >
-          <CollapsibleTrigger asChild>
-            <Button variant="outline" className="w-full sm:w-auto">
-              <Filter size={16} className="mr-2" />
-              {isFilterOpen ? "Hide Filters" : "Show Filters"}
-            </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="mt-4 p-4 border rounded-lg bg-white dark:bg-gray-800 space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="state-filter" className="text-gray-700 dark:text-gray-300">Filter by State</Label>
-                <Select
-                  value={stateFilter}
-                  onValueChange={(value) => {
-                    setStateFilter(value);
-                    setCurrentPage(1);
-                  }}
-                >
-                  <SelectTrigger id="state-filter" className="border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
-                    <SelectValue placeholder="Select a state" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="All">All States</SelectItem>
-                    {nigerianStates.map((state) => (
-                      <SelectItem key={state} value={state}>
-                        {state}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="activity-filter" className="text-gray-700 dark:text-gray-300">Filter by Activity</Label>
-                <Select
-                  value={activityFilter}
-                  onValueChange={(value) => {
-                    setActivityFilter(value);
-                    setCurrentPage(1);
-                  }}
-                >
-                  <SelectTrigger id="activity-filter" className="border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
-                    <SelectValue placeholder="Select activity" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="All">All</SelectItem>
-                    <SelectItem value="Today">Today</SelectItem>
-                    <SelectItem value="This Week">This Week</SelectItem>
-                    <SelectItem value="This Month">This Month</SelectItem>
-                    <SelectItem value="Next Month">Next Month</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="sort-order" className="text-gray-700 dark:text-gray-300">Sort by Popularity</Label>
-                <Select
-                  value={sortOrder}
-                  onValueChange={(value) => {
-                    setSortOrder(value);
-                    setCurrentPage(1);
-                  }}
-                >
-                  <SelectTrigger id="sort-order" className="border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
-                    <SelectValue placeholder="Select sort order" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="None">None</SelectItem>
-                    <SelectItem value="Most Popular">Most Popular</SelectItem>
-                    <SelectItem value="Least Popular">Least Popular</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <Button variant="outline" onClick={resetFilters}>
-              Reset Filters
-            </Button>
-          </CollapsibleContent>
-        </Collapsible>
-      </div>
-
-      <div className="px-4 space-y-4">
-        {loading ? (
-          <div className="flex justify-center items-center h-[50vh]">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
-          </div>
-        ) : filteredVenues.length > 0 ? (
-          <>
-            <div className="space-y-4">
-              {currentVenues.map((venue) => {
-                const defaultImage = "https://dailytrust.com/wp-content/uploads/2023/12/football-488714_1280.jpg";
-                const venueImage = venue.image_urls && venue.image_urls.length > 0 ? venue.image_urls[0] : defaultImage;
-
-                return (
-                  <div
-                    key={venue.id}
-                    className="border rounded-lg overflow-hidden shadow-sm bg-white dark:bg-gray-800 cursor-pointer relative"
-                    onClick={() => navigate(`/venue/${venue.slug}`)}
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" className="w-full sm:w-auto">
+                <Filter size={16} className="mr-2" />
+                {isFilterOpen ? "Hide Filters" : "Show Filters"}
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-4 p-4 border rounded-lg bg-white dark:bg-gray-800 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="state-filter" className="text-gray-700 dark:text-gray-300">Filter by State</Label>
+                  <Select
+                    value={stateFilter}
+                    onValueChange={(value) => {
+                      setStateFilter(value);
+                      setCurrentPage(1);
+                    }}
                   >
-                    <img
-                      src={venueImage}
-                      alt={venue.name}
-                      className="w-full h-36 object-cover"
-                    />
-                    <Button
-                      variant="ghost"
-                      className="absolute bottom-2 right-2 text-red-500 hover:text-red-700"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleFavorite(venue.id);
-                      }}
+                    <SelectTrigger id="state-filter" className="border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                      <SelectValue placeholder="Select a state" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="All">All States</SelectItem>
+                      {nigerianStates.map((state) => (
+                        <SelectItem key={state} value={state}>
+                          {state}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="activity-filter" className="text-gray-700 dark:text-gray-300">Filter by Activity</Label>
+                  <Select
+                    value={activityFilter}
+                    onValueChange={(value) => {
+                      setActivityFilter(value);
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <SelectTrigger id="activity-filter" className="border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                      <SelectValue placeholder="Select activity" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="All">All</SelectItem>
+                      <SelectItem value="Today">Today</SelectItem>
+                      <SelectItem value="This Week">This Week</SelectItem>
+                      <SelectItem value="This Month">This Month</SelectItem>
+                      <SelectItem value="Next Month">Next Month</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="sort-order" className="text-gray-700 dark:text-gray-300">Sort by Popularity</Label>
+                  <Select
+                    value={sortOrder}
+                    onValueChange={(value) => {
+                      setSortOrder(value);
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <SelectTrigger id="sort-order" className="border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                      <SelectValue placeholder="Select sort order" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="None">None</SelectItem>
+                      <SelectItem value="Most Popular">Most Popular</SelectItem>
+                      <SelectItem value="Least Popular">Least Popular</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <Button variant="outline" onClick={resetFilters}>
+                Reset Filters
+              </Button>
+            </CollapsibleContent>
+          </Collapsible>
+        </div>
+
+        <div className="px-4 space-y-4">
+          {loading ? (
+            <div className="flex justify-center items-center h-[50vh]">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
+            </div>
+          ) : filteredVenues.length > 0 ? (
+            <>
+              <div className="space-y-4">
+                {currentVenues.map((venue) => {
+                  const defaultImage = "/Sportcliq_Stadium_Banner.png";
+                  const venueImage = venue.image_urls && venue.image_urls.length > 0 ? venue.image_urls[0] : defaultImage;
+
+                  return (
+                    <div
+                      key={venue.id}
+                      className="border rounded-lg overflow-hidden shadow-sm bg-white dark:bg-gray-800 cursor-pointer relative"
+                      onClick={() => navigate(`/venue/${venue.slug}`)}
                     >
-                      <Heart
-                        size={24}
-                        fill={favorites.has(venue.id) ? "red" : "none"}
+                      <img
+                        src={venueImage}
+                        alt={venue.name}
+                        className="w-full h-36 object-cover"
                       />
-                    </Button>
-                    <div className="p-4">
-                      <div className="flex items-center">
-                        <h3 className="font-bold text-lg text-gray-800 dark:text-gray-200 mb-1">{venue.name}</h3>
+                      <Button
+                        variant="ghost"
+                        className="absolute bottom-2 right-2 text-red-500 hover:text-red-700"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleFavorite(venue.id);
+                        }}
+                      >
+                        <Heart
+                          size={24}
+                          fill={favorites.has(venue.id) ? "red" : "none"}
+                        />
+                      </Button>
+                      <div className="p-4">
+                        <div className="flex items-center">
+                          <h3 className="font-bold text-lg text-gray-800 dark:text-gray-200 mb-1">{venue.name}</h3>
+                          {venue.is_verified && (
+                            <img 
+                              src="/green-verified.png" 
+                              alt="Verified" 
+                              className="ml-1 w-4 h-4 object-contain"
+                            />
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{`${venue.city}, ${venue.state}`}</p>
+                        <div className="flex items-center text-sm text-yellow-500 mb-1">
+                          <Star size={14} className="mr-1 fill-yellow-500" />
+                          <span>{venue.aggregated_rating !== null ? `${venue.aggregated_rating.toFixed(1)} / 5.0` : "No ratings"}</span>
+                        </div>
+                        <div className="flex items-center text-sm font-medium text-green-600 dark:text-green-400">
+                          <Store className="h-4 w-4 mr-1" />
+                          <span>{`${venue.match_count} Match${venue.match_count !== 1 ? "es" : ""}`}</span>
+                          {venue.booking_fee !== null && (
+                            <div className="ml-auto bg-green-100 dark:bg-green-900 rounded-full px-2 py-1 text-xs font-semibold text-green-700 dark:text-green-300">
+                              NGN {venue.booking_fee.toFixed(2)}
+                            </div>
+                          )}
+                        </div>
                         {venue.is_verified && (
-                          <img 
-                            src="/green-verified.png" 
-                            alt="Verified" 
-                            className="ml-1 w-4 h-4 object-contain"
-                          />
+                          <Button
+                            variant="outline"
+                            className="mt-2 w-full bg-green-500 text-white border-green-500 hover:bg-green-600 hover:text-white"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/venue/${venue.slug}/book`);
+                            }}
+                          >
+                            Book Venue
+                          </Button>
                         )}
                       </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{`${venue.city}, ${venue.state}`}</p>
-                      <div className="flex items-center text-sm text-yellow-500 mb-1">
-                        <Star size={14} className="mr-1 fill-yellow-500" />
-                        <span>{venue.aggregated_rating !== null ? `${venue.aggregated_rating.toFixed(1)} / 5.0` : "No ratings"}</span>
-                      </div>
-                      <div className="flex items-center text-sm font-medium text-green-600 dark:text-green-400">
-                        <Store className="h-4 w-4 mr-1" />
-                        <span>{`${venue.match_count} Match${venue.match_count !== 1 ? "es" : ""}`}</span>
-                        {venue.booking_fee !== null && (
-                          <div className="ml-auto bg-green-100 dark:bg-green-900 rounded-full px-2 py-1 text-xs font-semibold text-green-700 dark:text-green-300">
-                            NGN {venue.booking_fee.toFixed(2)}
-                          </div>
-                        )}
-                      </div>
-                      {venue.is_verified && (
-                        <Button
-                          variant="outline"
-                          className="mt-2 w-full bg-green-500 text-white border-green-500 hover:bg-green-600 hover:text-white"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/venue/${venue.slug}/book`);
-                          }}
-                        >
-                          Book Venue
-                        </Button>
-                      )}
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
 
-            <div className="flex justify-between items-center mt-4">
-              <Button
-                variant="outline"
-                disabled={currentPage === 1}
-                onClick={handlePreviousPage}
-                className="bg-white dark:bg-gray-800 text-green-600 border-green-500 hover:bg-green-600 hover:text-white transition-colors"
-              >
-                <ChevronLeft size={16} className="mr-2" />
-                Previous
-              </Button>
-              <span className="text-gray-700 dark:text-gray-300">
-                Page {currentPage} of {totalPages}
-              </span>
-              <Button
-                variant="outline"
-                disabled={currentPage === totalPages || totalPages === 0}
-                onClick={handleNextPage}
-                className="bg-white dark:bg-gray-800 text-green-600 border-green-500 hover:bg-green-600 hover:text-white transition-colors"
-              >
-                Next
-                <ChevronRight size={16} className="ml-2" />
-              </Button>
+              <div className="flex justify-between items-center mt-4">
+                <Button
+                  variant="outline"
+                  disabled={currentPage === 1}
+                  onClick={handlePreviousPage}
+                  className="bg-white dark:bg-gray-800 text-green-600 border-green-500 hover:bg-green-600 hover:text-white transition-colors"
+                >
+                  <ChevronLeft size={16} className="mr-2" />
+                  Previous
+                </Button>
+                <span className="text-gray-700 dark:text-gray-300">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  disabled={currentPage === totalPages || totalPages === 0}
+                  onClick={handleNextPage}
+                  className="bg-white dark:bg-gray-800 text-green-600 border-green-500 hover:bg-green-600 hover:text-white transition-colors"
+                >
+                  Next
+                  <ChevronRight size={16} className="ml-2" />
+                </Button>
+              </div>
+            </>
+          ) : (
+            <div className="flex items-center justify-center h-[50vh] flex-col gap-4">
+              <p className="text-gray-500 dark:text-gray-400 text-center p-4">No venues match your filters.</p>
             </div>
-          </>
-        ) : (
-          <div className="flex items-center justify-center h-[50vh] flex-col gap-4">
-            <p className="text-gray-500 dark:text-gray-400 text-center p-4">No venues match your filters.</p>
-          </div>
-        )}
+          )}
+        </div>
+
+        <Navbar />
       </div>
-
-      <Navbar />
-    </div>
+    </>
   );
 };
 

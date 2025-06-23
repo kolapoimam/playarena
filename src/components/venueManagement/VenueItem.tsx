@@ -10,7 +10,7 @@ interface VenueItemProps {
 }
 
 export default function VenueItem({ name, location, image_urls, venue_phone, aggregated_rating, is_verified }: VenueItemProps) {
-  const defaultImage = "https://dailytrust.com/wp-content/uploads/2023/12/football-488714_1280.jpg";
+  const defaultImage = "/Sportcliq_Stadium_Banner.png";
   const image = image_urls && image_urls.length > 0 ? image_urls[0] : defaultImage;
 
   const handleBookVenue = () => {
