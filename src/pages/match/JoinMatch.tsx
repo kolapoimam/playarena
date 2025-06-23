@@ -19,6 +19,9 @@ import {
 } from "@/components/ui/form";
 import { format, isToday, isPast } from "date-fns";
 import MatchJoinersDialog from "@/components/match/MatchJoinersDialog";
+import { Seo } from "@/components/Seo";
+
+const META_KEYWORDS = "Football in Nigeria, Sports in Nigeria, Play Sports Near You, Football Fields Near Me, Livescore, Osimhen, Asisat Oshola, Nigeria Startup, Sportstech, Football venues in Lagos, Football venues in Ilorin, Sports Betting in Nigeria, Organize sports in Nigeria, Football Matches, Bicycle Training in Nigeria, Cycling in Nigeria, Nigerian football, Nigerian cycling, Nigerian sports, Play football in Lagos, Play football in Ilorin, Play football in Abuja, Play football in Nigeria, Play cycling in Nigeria, Play sports in Nigeria, Nigerian sports tech, Nigerian sports startup, Nigerian sports community, Football events Nigeria, Cycling events Nigeria, Sport Cliq, SportCliq, sportcliq.com.ng, sportcliq.ng, sportcliq, sport cliq, sportcliq app, sportcliq platform, sportcliq football, sportcliq cycling, sportcliq venues, sportcliq matches, sportcliq events, sportcliq sports, sportcliq nigeria, sportcliq lagos, sportcliq ilorin, sportcliq abuja, sportcliq startup, sportcliq tech, sportcliq community, sportcliq platform, sportcliq app, sportcliq website, sportcliq online, sportcliq booking, sportcliq organize, sportcliq join, sportcliq play, sportcliq find, sportcliq search, sportcliq discover, sportcliq connect, sportcliq join match, sportcliq join cycling, sportcliq join event, sportcliq join venue, sportcliq join football, sportcliq join sports, sportcliq join nigeria, sportcliq join lagos, sportcliq join ilorin, sportcliq join abuja, sportcliq join startup, sportcliq join tech, sportcliq join community, sportcliq join platform, sportcliq join app, sportcliq join website, sportcliq join online, sportcliq join booking, sportcliq join organize, sportcliq join play, sportcliq join find, sportcliq join search, sportcliq join discover, sportcliq join connect";
 
 type Match = {
   id: string;
@@ -475,224 +478,233 @@ const JoinMatch = () => {
   const isPastMatch = isPast(matchDate) && !isToday(matchDate);
 
   return (
-    <div className="min-h-screen pb-24">
-      <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg">
-        <div className="flex items-center justify-between">
-          <Button variant="ghost" onClick={() => navigate(-1)} className="text-white hover:bg-green-600">
-            <ArrowLeft size={18} className="mr-2" />
-            Back
-          </Button>
-          <div className="text-center">
-            <h1 className="text-2xl font-bold">Join Match</h1>
-          </div>
-          <div className="w-10"></div>
-        </div>
-      </header>
-
-      <div className="p-6">
-        <div className="bg-card rounded-lg shadow-md p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-2">{match.title}</h2>
-          <div className="text-muted-foreground mb-2">
-            <div className="flex items-center gap-2">
-              <Calendar size={16} />
-              <span>{formatDate(match.match_date)}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Clock size={16} />
-              <span>{formatTime(match.match_time)}</span>
-            </div>
-            {match.venue && (
-              <div className="flex items-center gap-2">
-                <MapPin size={16} />
-                <span>{match.venue.name}, {match.venue.city}</span>
-              </div>
-            )}
-            {userId && match.is_recurring && (
-              <div className="flex items-center gap-2">
-                <Repeat size={16} />
-                <span>Repeats {match.recurring_frequency} for {match.recurring_occurrences} times</span>
-              </div>
-            )}
-          </div>
-          <div className="flex items-center gap-2 text-sm">
-            <Users size={16} />
-            <span>Spots available: {match.total_slots - totalPlayerSlots} / {match.total_slots}</span>
-          </div>
-          {match.is_paid && (
-            <div className="mt-2 font-medium text-green-600">Price: ₦{match.price?.toFixed(2)} per slot</div>
-          )}
-          {match.disclose_phone && match.organizer_phone && (
-            <div className="mt-2 flex items-center gap-2 text-sm">
-              <span>Organizer:</span>
-              <a href={`tel:${match.organizer_phone}`} className="flex items-center text-blue-600 hover:underline">
-                <Phone size={16} className="mr-1" />
-                Call Organizer
-              </a>
-              <a
-                href={`https://wa.me/${match.organizer_phone}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center text-green-600 hover:underline"
-              >
-                <MessageSquare size={16} className="mr-1" />
-                WhatsApp
-              </a>
-            </div>
-          )}
-        </div>
-
-        {isPastMatch ? (
-          <div className="text-center py-6 bg-muted rounded-lg shadow-sm">
-            <h2 className="text-lg font-semibold text-gray-700">This match has already passed</h2>
-            <p className="text-muted-foreground mt-2">You cannot join this match anymore.</p>
-            <Button className="mt-4 bg-green-500 hover:bg-green-600 text-white" onClick={() => navigate("/matches")}>
-              Browse Other Matches
+    <>
+      <Seo
+        title={match ? `Join ${match.title} | Match | Sport Cliq` : "Join Match | Sport Cliq"}
+        description={match ? `Register for ${match.title} match on Sport Cliq. Football in Nigeria, Play Sports Near You, Football Fields Near Me, Livescore, Osimhen, Asisat Oshola, Nigeria Startup, Sportstech.` : "Register for a match on Sport Cliq. Football in Nigeria, Play Sports Near You, Football Fields Near Me, Livescore, Osimhen, Asisat Oshola, Nigeria Startup, Sportstech."}
+        url={window.location.href}
+        image={undefined}
+        children={<meta name="keywords" content={META_KEYWORDS} />}
+      />
+      <div className="min-h-screen pb-24">
+        <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg">
+          <div className="flex items-center justify-between">
+            <Button variant="ghost" onClick={() => navigate(-1)} className="text-white hover:bg-green-600">
+              <ArrowLeft size={18} className="mr-2" />
+              Back
             </Button>
+            <div className="text-center">
+              <h1 className="text-2xl font-bold">Join Match</h1>
+            </div>
+            <div className="w-10"></div>
           </div>
-        ) : isFull ? (
-          <div className="text-center py-6 bg-muted rounded-lg shadow-sm">
-            <h2 className="text-lg font-semibold text-gray-700">This match is full</h2>
-            <p className="text-muted-foreground mt-2">All player slots have been filled.</p>
-            <Button className="mt-4 bg-green-500 hover:bg-green-600 text-white" onClick={() => navigate(`/match/${match.slug}`)}>
-              View Match Details
-            </Button>
-          </div>
-        ) : (
-          <>
-            {match.is_paid && paymentStatus === "pending" ? (
-              <div className="bg-card rounded-lg shadow-md p-6 space-y-4">
-                <h3 className="text-lg font-semibold text-gray-800">Payment Required</h3>
-                <p className="text-muted-foreground">
-                  This is a paid match. Please complete the payment to join.
-                </p>
-                {match.allow_bulk_tickets && (
-                  <div className="flex items-center gap-4">
-                    <span className="text-sm font-medium">Number of Slots:</span>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setSelectedSlots((prev) => Math.max(1, prev - 1))}
-                        disabled={selectedSlots <= 1}
-                      >
-                        -
-                      </Button>
-                      <span className="text-lg font-medium">{selectedSlots}</span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setSelectedSlots((prev) => Math.min(maxSlots, prev + 1))}
-                        disabled={selectedSlots >= maxSlots}
-                      >
-                        +
-                      </Button>
-                    </div>
-                    <span className="text-sm text-muted-foreground">
-                      Max {maxSlots} slots available
-                    </span>
-                  </div>
-                )}
-                <div className="text-sm font-medium">
-                  Total: ₦{(match.price! * selectedSlots).toFixed(2)}
+        </header>
+
+        <div className="p-6">
+          <div className="bg-card rounded-lg shadow-md p-6 mb-6">
+            <h2 className="text-xl font-semibold mb-2">{match.title}</h2>
+            <div className="text-muted-foreground mb-2">
+              <div className="flex items-center gap-2">
+                <Calendar size={16} />
+                <span>{formatDate(match.match_date)}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Clock size={16} />
+                <span>{formatTime(match.match_time)}</span>
+              </div>
+              {match.venue && (
+                <div className="flex items-center gap-2">
+                  <MapPin size={16} />
+                  <span>{match.venue.name}, {match.venue.city}</span>
                 </div>
-                <Button
-                  type="button"
-                  className="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg transition-colors"
-                  onClick={handlePaymentInitiation}
-                  disabled={joining || !paystackLoaded}
+              )}
+              {userId && match.is_recurring && (
+                <div className="flex items-center gap-2">
+                  <Repeat size={16} />
+                  <span>Repeats {match.recurring_frequency} for {match.recurring_occurrences} times</span>
+                </div>
+              )}
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <Users size={16} />
+              <span>Spots available: {match.total_slots - totalPlayerSlots} / {match.total_slots}</span>
+            </div>
+            {match.is_paid && (
+              <div className="mt-2 font-medium text-green-600">Price: ₦{match.price?.toFixed(2)} per slot</div>
+            )}
+            {match.disclose_phone && match.organizer_phone && (
+              <div className="mt-2 flex items-center gap-2 text-sm">
+                <span>Organizer:</span>
+                <a href={`tel:${match.organizer_phone}`} className="flex items-center text-blue-600 hover:underline">
+                  <Phone size={16} className="mr-1" />
+                  Call Organizer
+                </a>
+                <a
+                  href={`https://wa.me/${match.organizer_phone}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center text-green-600 hover:underline"
                 >
-                  {joining ? (
-                    <>
-                      <Loader size={16} className="mr-2 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    `Pay Now (₦${(match.price! * selectedSlots).toFixed(2)})`
-                  )}
-                </Button>
+                  <MessageSquare size={16} className="mr-1" />
+                  WhatsApp
+                </a>
               </div>
-            ) : (
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 bg-card rounded-lg shadow-md p-6">
-                  {match.is_paid && paymentStatus === "success" && (
-                    <div className="bg-green-50 p-4 rounded-md border border-green-200 text-green-700">
-                      <p className="font-medium">Payment Successful!</p>
-                      <p className="text-sm">Please complete your registration below for {selectedSlots} slot{selectedSlots > 1 ? "s" : ""}.</p>
-                      {paymentReference && (
-                        <p className="text-sm mt-1">Reference: {paymentReference}</p>
-                      )}
+            )}
+          </div>
+
+          {isPastMatch ? (
+            <div className="text-center py-6 bg-muted rounded-lg shadow-sm">
+              <h2 className="text-lg font-semibold text-gray-700">This match has already passed</h2>
+              <p className="text-muted-foreground mt-2">You cannot join this match anymore.</p>
+              <Button className="mt-4 bg-green-500 hover:bg-green-600 text-white" onClick={() => navigate("/matches")}>
+                Browse Other Matches
+              </Button>
+            </div>
+          ) : isFull ? (
+            <div className="text-center py-6 bg-muted rounded-lg shadow-sm">
+              <h2 className="text-lg font-semibold text-gray-700">This match is full</h2>
+              <p className="text-muted-foreground mt-2">All player slots have been filled.</p>
+              <Button className="mt-4 bg-green-500 hover:bg-green-600 text-white" onClick={() => navigate(`/match/${match.slug}`)}>
+                View Match Details
+              </Button>
+            </div>
+          ) : (
+            <>
+              {match.is_paid && paymentStatus === "pending" ? (
+                <div className="bg-card rounded-lg shadow-md p-6 space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-800">Payment Required</h3>
+                  <p className="text-muted-foreground">
+                    This is a paid match. Please complete the payment to join.
+                  </p>
+                  {match.allow_bulk_tickets && (
+                    <div className="flex items-center gap-4">
+                      <span className="text-sm font-medium">Number of Slots:</span>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSelectedSlots((prev) => Math.max(1, prev - 1))}
+                          disabled={selectedSlots <= 1}
+                        >
+                          -
+                        </Button>
+                        <span className="text-lg font-medium">{selectedSlots}</span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSelectedSlots((prev) => Math.min(maxSlots, prev + 1))}
+                          disabled={selectedSlots >= maxSlots}
+                        >
+                          +
+                        </Button>
+                      </div>
+                      <span className="text-sm text-muted-foreground">
+                        Max {maxSlots} slots available
+                      </span>
                     </div>
                   )}
-                  
-                  {match.required_fields?.map((field) => (
-                    <FormField
-                      key={field}
-                      control={form.control}
-                      name={field}
-                      render={({ field: formField }) => (
-                        <FormItem>
-                          <FormLabel className="text-gray-700">{field.charAt(0).toUpperCase() + field.slice(1)}</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder={`Enter your ${field}`}
-                              {...formField}
-                              type={field === "phone" ? "tel" : "text"}
-                              inputMode={field === "phone" ? "numeric" : "text"}
-                              className="border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
-                              disabled={userId && (field === "name" || field === "phone")}
-                              {...(field === "phone" && !userId && {
-                                pattern: "[0-9]*",
-                                maxLength: 11,
-                                onChange: (e) => {
-                                  const value = e.target.value.replace(/[^0-9]/g, '');
-                                  formField.onChange(value);
-                                },
-                              })}
-                            />
-                          </FormControl>
-                          <FormMessage className="text-red-500" />
-                        </FormItem>
-                      )}
-                    />
-                  ))}
-
+                  <div className="text-sm font-medium">
+                    Total: ₦{(match.price! * selectedSlots).toFixed(2)}
+                  </div>
                   <Button
-                    type="submit"
+                    type="button"
                     className="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg transition-colors"
-                    disabled={joining}
+                    onClick={handlePaymentInitiation}
+                    disabled={joining || !paystackLoaded}
                   >
                     {joining ? (
                       <>
                         <Loader size={16} className="mr-2 animate-spin" />
-                        Joining...
+                        Processing...
                       </>
                     ) : (
-                      `Join Match${selectedSlots > 1 ? ` (${selectedSlots} slots)` : ""}`
+                      `Pay Now (₦${(match.price! * selectedSlots).toFixed(2)})`
                     )}
                   </Button>
-                </form>
-              </Form>
-            )}
-          </>
-        )}
+                </div>
+              ) : (
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 bg-card rounded-lg shadow-md p-6">
+                    {match.is_paid && paymentStatus === "success" && (
+                      <div className="bg-green-50 p-4 rounded-md border border-green-200 text-green-700">
+                        <p className="font-medium">Payment Successful!</p>
+                        <p className="text-sm">Please complete your registration below for {selectedSlots} slot{selectedSlots > 1 ? "s" : ""}.</p>
+                        {paymentReference && (
+                          <p className="text-sm mt-1">Reference: {paymentReference}</p>
+                        )}
+                      </div>
+                    )}
+                    
+                    {match.required_fields?.map((field) => (
+                      <FormField
+                        key={field}
+                        control={form.control}
+                        name={field}
+                        render={({ field: formField }) => (
+                          <FormItem>
+                            <FormLabel className="text-gray-700">{field.charAt(0).toUpperCase() + field.slice(1)}</FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder={`Enter your ${field}`}
+                                {...formField}
+                                type={field === "phone" ? "tel" : "text"}
+                                inputMode={field === "phone" ? "numeric" : "text"}
+                                className="border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                                disabled={userId && (field === "name" || field === "phone")}
+                                {...(field === "phone" && !userId && {
+                                  pattern: "[0-9]*",
+                                  maxLength: 11,
+                                  onChange: (e) => {
+                                    const value = e.target.value.replace(/[^0-9]/g, '');
+                                    formField.onChange(value);
+                                  },
+                                })}
+                              />
+                            </FormControl>
+                            <FormMessage className="text-red-500" />
+                          </FormItem>
+                        )}
+                      />
+                    ))}
+
+                    <Button
+                      type="submit"
+                      className="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg transition-colors"
+                      disabled={joining}
+                    >
+                      {joining ? (
+                        <>
+                          <Loader size={16} className="mr-2 animate-spin" />
+                          Joining...
+                        </>
+                      ) : (
+                        `Join Match${selectedSlots > 1 ? ` (${selectedSlots} slots)` : ""}`
+                      )}
+                    </Button>
+                  </form>
+                </Form>
+              )}
+            </>
+          )}
+        </div>
+        <Navbar />
+        <MatchJoinersDialog
+          open={successDialogOpen}
+          onOpenChange={(open) => {
+            setSuccessDialogOpen(open);
+            if (!open) {
+              form.reset();
+              setPaymentStatus("pending");
+              setSelectedSlots(1);
+            }
+          }}
+          match={match}
+          confirmationCode={confirmationCode}
+          selectedSlots={selectedSlots}
+          totalPlayerSlots={totalPlayerSlots}
+        />
       </div>
-      <Navbar />
-      <MatchJoinersDialog
-        open={successDialogOpen}
-        onOpenChange={(open) => {
-          setSuccessDialogOpen(open);
-          if (!open) {
-            form.reset();
-            setPaymentStatus("pending");
-            setSelectedSlots(1);
-          }
-        }}
-        match={match}
-        confirmationCode={confirmationCode}
-        selectedSlots={selectedSlots}
-        totalPlayerSlots={totalPlayerSlots}
-      />
-    </div>
+    </>
   );
 };
 

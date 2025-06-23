@@ -141,6 +141,8 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
+const LOCAL_STORAGE_KEY = "hostCyclingFormState";
+
 const HostCycling = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -182,6 +184,28 @@ const HostCycling = () => {
       end_landmark_id: null,
     },
   });
+
+  // Restore from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        // Convert date strings back to Date objects
+        if (parsed.event_date) parsed.event_date = new Date(parsed.event_date);
+        if (parsed.registration_deadline) parsed.registration_deadline = new Date(parsed.registration_deadline);
+        form.reset(parsed);
+      } catch {}
+    }
+  }, [form]);
+
+  // Save to localStorage on every change
+  useEffect(() => {
+    const subscription = form.watch((value) => {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(value));
+    });
+    return () => subscription.unsubscribe();
+  }, [form]);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -399,6 +423,8 @@ const HostCycling = () => {
       setSupercode(supercodeData);
       setEventSlug(apiData.slug);
       setIssuccessDialogIsOpen(true);
+      // Clear localStorage after successful submit
+      localStorage.removeItem(LOCAL_STORAGE_KEY);
     } catch (err: any) {
       console.error('Error in onSubmit:', err);
       toast({

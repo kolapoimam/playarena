@@ -19,6 +19,9 @@ import Navbar from "@/components/Navbar";
 import AttendeesTable from "@/components/cycling/AttendeesTable";
 import { addHours, addMinutes } from "date-fns";
 import { DateTime } from "luxon";
+import { Seo } from "@/components/Seo";
+
+const META_KEYWORDS = "Football in Nigeria, Sports in Nigeria, Play Sports Near You, Football Fields Near Me, Livescore, Osimhen, Asisat Oshola, Nigeria Startup, Sportstech, Football venues in Lagos, Football venues in Ilorin, Sports Betting in Nigeria, Organize sports in Nigeria, Football Matches, Bicycle Training in Nigeria, Cycling in Nigeria, Nigerian football, Nigerian cycling, Nigerian sports, Play football in Lagos, Play football in Ilorin, Play football in Abuja, Play football in Nigeria, Play cycling in Nigeria, Play sports in Nigeria, Nigerian sports tech, Nigerian sports startup, Nigerian sports community, Football events Nigeria, Cycling events Nigeria, Sport Cliq, SportCliq, sportcliq.com.ng, sportcliq.ng, sportcliq, sport cliq, sportcliq app, sportcliq platform, sportcliq football, sportcliq cycling, sportcliq venues, sportcliq matches, sportcliq events, sportcliq sports, sportcliq nigeria, sportcliq lagos, sportcliq ilorin, sportcliq abuja, sportcliq startup, sportcliq tech, sportcliq community, sportcliq platform, sportcliq app, sportcliq website, sportcliq online, sportcliq booking, sportcliq organize, sportcliq join, sportcliq play, sportcliq find, sportcliq search, sportcliq discover, sportcliq connect, sportcliq join match, sportcliq join cycling, sportcliq join event, sportcliq join venue, sportcliq join football, sportcliq join sports, sportcliq join nigeria, sportcliq join lagos, sportcliq join ilorin, sportcliq join abuja, sportcliq join startup, sportcliq join tech, sportcliq join community, sportcliq join platform, sportcliq join app, sportcliq join website, sportcliq join online, sportcliq join booking, sportcliq join organize, sportcliq join play, sportcliq join find, sportcliq join search, sportcliq join discover, sportcliq join connect";
 
 type Landmark = {
   name: string;
@@ -297,148 +300,157 @@ const CyclingDetail = () => {
   const { status, isStarted, isEnded, isFull } = getEventStatus();
 
   return (
-    <div className="min-h-screen pb-24">
-      <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg">
-        <div className="flex items-center justify-between">
-          <Button
-            variant="ghost"
-            onClick={() => navigate(-1)}
-            className="text-white hover:bg-green-600"
-          >
-            <ArrowLeft size={18} className="mr-2" />
-            Back
-          </Button>
-          <div className="text-center">
-            <h1 className="text-2xl font-bold">Event Details</h1>
-          </div>
-          <div className="w-10"></div>
-        </div>
-      </header>
-
-      <div className="p-4">
-        <h1 className="text-2xl font-bold mb-2">{event.title}</h1>
-        <div className="flex justify-between items-center mb-4">
-          <div className="flex items-center gap-2">
-            <p className="text-muted-foreground">Hosted by {event.host_name}</p>
-            <img 
-              src="/green-verified.png"
-              alt="Verified"
-              className="inline-block w-5 h-5"
-            />
-          </div>
-        </div>
-
-        {isEnded ? (
-          <div className="bg-gray-100 border border-gray-200 text-gray-700 px-4 py-3 rounded mb-4">
-            This event has passed
-          </div>
-        ) : isStarted ? (
-          <div className="bg-blue-100 border border-blue-200 text-blue-700 px-4 py-3 rounded mb-4">
-            This event has started!
-          </div>
-        ) : isFull ? (
-          <div className="bg-red-100 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
-            This event is completely filled up!
-          </div>
-        ) : status === "today" ? (
-          <div className="bg-green-100 border border-green-200 text-green-700 px-4 py-3 rounded mb-4">
-            This event is happening today!
-          </div>
-        ) : null}
-
-        <div className="space-y-4">
-          <div className="border rounded-lg p-4 bg-card shadow-md relative">
-            <div className="absolute top-4 right-4 m-0 p-0">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={addToCalendar}
-                className="text-blue-600 p-2 border-blue-300 hover:bg-blue-50 m-0"
-              >
-                <Bell size={16} className="m-0" />
-              </Button>
+    <>
+      <Seo
+        title={event ? `${event.title} | Cycling Event | Sport Cliq` : "Cycling Event | Sport Cliq"}
+        description={event ? `Details for ${event.title} cycling event on Sport Cliq. Cycling in Nigeria, Bicycle Training in Nigeria, Play Sports Near You, Nigerian cycling, Nigerian sports, Sportstech, Osimhen, Asisat Oshola.` : "View cycling event details on Sport Cliq. Cycling in Nigeria, Bicycle Training in Nigeria, Play Sports Near You, Nigerian cycling, Nigerian sports, Sportstech, Osimhen, Asisat Oshola."}
+        url={window.location.href}
+        image={undefined}
+        children={<meta name="keywords" content={META_KEYWORDS} />}
+      />
+      <div className="min-h-screen pb-24">
+        <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg">
+          <div className="flex items-center justify-between">
+            <Button
+              variant="ghost"
+              onClick={() => navigate(-1)}
+              className="text-white hover:bg-green-600"
+            >
+              <ArrowLeft size={18} className="mr-2" />
+              Back
+            </Button>
+            <div className="text-center">
+              <h1 className="text-2xl font-bold">Event Details</h1>
             </div>
-            <h2 className="font-semibold mb-3">Event Details</h2>
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Calendar size={18} />
-                <span>{formatDate(event.event_date)}</span>
+            <div className="w-10"></div>
+          </div>
+        </header>
+
+        <div className="p-4">
+          <h1 className="text-2xl font-bold mb-2">{event.title}</h1>
+          <div className="flex justify-between items-center mb-4">
+            <div className="flex items-center gap-2">
+              <p className="text-muted-foreground">Hosted by {event.host_name}</p>
+              <img 
+                src="/green-verified.png"
+                alt="Verified"
+                className="inline-block w-5 h-5"
+              />
+            </div>
+          </div>
+
+          {isEnded ? (
+            <div className="bg-gray-100 border border-gray-200 text-gray-700 px-4 py-3 rounded mb-4">
+              This event has passed
+            </div>
+          ) : isStarted ? (
+            <div className="bg-blue-100 border border-blue-200 text-blue-700 px-4 py-3 rounded mb-4">
+              This event has started!
+            </div>
+          ) : isFull ? (
+            <div className="bg-red-100 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
+              This event is completely filled up!
+            </div>
+          ) : status === "today" ? (
+            <div className="bg-green-100 border border-green-200 text-green-700 px-4 py-3 rounded mb-4">
+              This event is happening today!
+            </div>
+          ) : null}
+
+          <div className="space-y-4">
+            <div className="border rounded-lg p-4 bg-card shadow-md relative">
+              <div className="absolute top-4 right-4 m-0 p-0">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={addToCalendar}
+                  className="text-blue-600 p-2 border-blue-300 hover:bg-blue-50 m-0"
+                >
+                  <Bell size={16} className="m-0" />
+                </Button>
               </div>
-              <div className="flex items-center gap-2">
-                <Clock size={18} />
-                <span>{formatTime(event.start_time)}</span>
-              </div>
-              <div className="flex items-start gap-2 cursor-pointer" 
-                onClick={() => navigate(`/landmark/${event.start_landmark.slug}`)}>
-                <MapPin size={18} className="mt-0.5" />
-                <div>
-                  <span className="text-green-600 hover:underline">
-                    {event.start_landmark.name}, {event.start_landmark.state}
+              <h2 className="font-semibold mb-3">Event Details</h2>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Calendar size={18} />
+                  <span>{formatDate(event.event_date)}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Clock size={18} />
+                  <span>{formatTime(event.start_time)}</span>
+                </div>
+                <div className="flex items-start gap-2 cursor-pointer" 
+                  onClick={() => navigate(`/landmark/${event.start_landmark.slug}`)}>
+                  <MapPin size={18} className="mt-0.5" />
+                  <div>
+                    <span className="text-green-600 hover:underline">
+                      {event.start_landmark.name}, {event.start_landmark.state}
+                    </span>
+                    {event.start_landmark.map_link && (
+                      <div className="mt-1">
+                        <a 
+                          href={event.start_landmark.map_link} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-xs flex items-center text-green-600 hover:underline"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <ExternalLink size={12} className="mr-1" />
+                          Link to Google Maps
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Clock size={18} />
+                  <span>
+                    Duration: {event.duration_value} {event.duration_type}
                   </span>
-                  {event.start_landmark.map_link && (
-                    <div className="mt-1">
-                      <a 
-                        href={event.start_landmark.map_link} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-xs flex items-center text-green-600 hover:underline"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <ExternalLink size={12} className="mr-1" />
-                        Link to Google Maps
-                      </a>
-                    </div>
-                  )}
                 </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Clock size={18} />
-                <span>
-                  Duration: {event.duration_value} {event.duration_type}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Users size={18} />
-                <span>
-                  {attendees.length}/{event.max_attendees} spots filled
-                  {isFull && " (FULL)"}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Bike size={18} />
-                <span>
-                  {event.is_own_bike && "Bring Your Own Bike"}
-                  {event.is_own_bike && event.is_rental_available && " | "}
-                  {event.is_rental_available && "Rentals Available"}
-                </span>
-              </div>
-              <div className="font-semibold mt-2">
-                Cost: {event.is_free ? "Free" : `₦${event.price?.toFixed(2)}`}
-              </div>
-              {event.notes && (
-                <div className="mt-3">
-                  <h3 className="text-sm font-medium mb-1">Notes:</h3>
-                  <p className="text-sm bg-muted p-2 rounded">{event.notes}</p>
+                <div className="flex items-center gap-2">
+                  <Users size={18} />
+                  <span>
+                    {attendees.length}/{event.max_attendees} spots filled
+                    {isFull && " (FULL)"}
+                  </span>
                 </div>
-              )}
+                <div className="flex items-center gap-2">
+                  <Bike size={18} />
+                  <span>
+                    {event.is_own_bike && "Bring Your Own Bike"}
+                    {event.is_own_bike && event.is_rental_available && " | "}
+                    {event.is_rental_available && "Rentals Available"}
+                  </span>
+                </div>
+                <div className="font-semibold mt-2">
+                  Cost: {event.is_free ? "Free" : `₦${event.price?.toFixed(2)}`}
+                </div>
+                {event.notes && (
+                  <div className="mt-3">
+                    <h3 className="text-sm font-medium mb-1">Notes:</h3>
+                    <p className="text-sm bg-muted p-2 rounded">{event.notes}</p>
+                  </div>
+                )}
+              </div>
             </div>
+
+            <AttendeesTable
+              event={event}
+              attendees={attendees}
+              navigate={navigate}
+              isEnded={isEnded}
+              isStarted={isStarted}
+              isFull={isFull}
+              totalAttendees={attendees.length}
+            />
+
+            <CyclingDetailsDialogue event={event} attendees={attendees} />
           </div>
-
-          <AttendeesTable
-            event={event}
-            attendees={attendees}
-            navigate={navigate}
-            isEnded={isEnded}
-            isStarted={isStarted}
-            isFull={isFull}
-            totalAttendees={attendees.length}
-          />
-
-          <CyclingDetailsDialogue event={event} attendees={attendees} />
         </div>
+        <Navbar />
       </div>
-      <Navbar />
-    </div>
+    </>
   );
 };
 

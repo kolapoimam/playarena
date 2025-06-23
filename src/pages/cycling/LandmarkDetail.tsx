@@ -7,6 +7,7 @@ import { MapPin, ArrowLeft, ExternalLink, Calendar, Clock, Bike } from "lucide-r
 import Navbar from "@/components/Navbar";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
+import { Seo } from "@/components/Seo";
 
 // Custom CSS to style ReactQuill for description
 const quillStyles = `
@@ -179,121 +180,130 @@ const LandmarkDetail = () => {
   const placeholderImage = "https://images.unsplash.com/photo-1569336415962-a4bd9f69cd83?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80";
 
   return (
-    <div className="min-h-screen pb-20 bg-gray-50 dark:bg-gray-900">
-      <style>{quillStyles}</style>
-      <header className="sticky top-0 z-50 bg-green-500 text-white shadow-md">
-        <div className="p-4 flex items-center justify-between">
-          <Button
-            variant="ghost"
-            onClick={() => navigate(-1)}
-            className="text-white hover:text-gray-200"
-          >
-            <ArrowLeft size={18} className="mr-2" />
-            Back
-          </Button>
-          <h1 className="text-2xl font-bold">Landmark Details</h1>
-          <div className="w-10"></div>
-        </div>
-      </header>
+    <>
+      <Seo
+        title={landmark ? `${landmark.name} | Landmark | Sport Cliq` : "Landmark Detail | Sport Cliq"}
+        description={landmark ? `Details for ${landmark.name} landmark on Sport Cliq.` : "View landmark details on Sport Cliq."}
+        url={window.location.href}
+        image={undefined}
+        children={null}
+      />
+      <div className="min-h-screen pb-20 bg-gray-50 dark:bg-gray-900">
+        <style>{quillStyles}</style>
+        <header className="sticky top-0 z-50 bg-green-500 text-white shadow-md">
+          <div className="p-4 flex items-center justify-between">
+            <Button
+              variant="ghost"
+              onClick={() => navigate(-1)}
+              className="text-white hover:text-gray-200"
+            >
+              <ArrowLeft size={18} className="mr-2" />
+              Back
+            </Button>
+            <h1 className="text-2xl font-bold">Landmark Details</h1>
+            <div className="w-10"></div>
+          </div>
+        </header>
 
-      <div className="p-6 max-w-3xl mx-auto">
-        <div className="rounded-xl overflow-hidden mb-6 h-64 shadow-md">
-          <img
-            src={placeholderImage}
-            alt={landmark.name}
-            className="w-full h-full object-cover"
-          />
-        </div>
+        <div className="p-6 max-w-3xl mx-auto">
+          <div className="rounded-xl overflow-hidden mb-6 h-64 shadow-md">
+            <img
+              src={placeholderImage}
+              alt={landmark.name}
+              className="w-full h-full object-cover"
+            />
+          </div>
 
-        <h1 className="text-3xl font-bold mb-2 text-gray-900 dark:text-gray-100">{landmark.name}</h1>
-        <div className="flex items-center text-gray-600 dark:text-gray-400 mb-4">
-          <MapPin size={18} className="mr-2" />
-          <span>{landmark.state}</span>
-        </div>
+          <h1 className="text-3xl font-bold mb-2 text-gray-900 dark:text-gray-100">{landmark.name}</h1>
+          <div className="flex items-center text-gray-600 dark:text-gray-400 mb-4">
+            <MapPin size={18} className="mr-2" />
+            <span>{landmark.state}</span>
+          </div>
 
-        <div className="space-y-6">
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-200 dark:border-gray-700">
-            <h2 className="font-semibold text-lg mb-4 text-gray-900 dark:text-gray-100">Landmark Details</h2>
+          <div className="space-y-6">
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-200 dark:border-gray-700">
+              <h2 className="font-semibold text-lg mb-4 text-gray-900 dark:text-gray-100">Landmark Details</h2>
 
-            <div className="space-y-4">
-              {landmark.description && (
-                <div className="flex items-start">
-                  <MapPin size={18} className="mr-2 text-gray-700 dark:text-gray-300 mt-1" />
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Description</h3>
-                    <ReactQuill
-                      value={landmark.description || "<p>No description available.</p>"}
-                      readOnly={true}
-                      modules={quillModules}
-                      className="w-full border-none bg-transparent p-0 text-gray-600 dark:text-gray-400"
-                    />
+              <div className="space-y-4">
+                {landmark.description && (
+                  <div className="flex items-start">
+                    <MapPin size={18} className="mr-2 text-gray-700 dark:text-gray-300 mt-1" />
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Description</h3>
+                      <ReactQuill
+                        value={landmark.description || "<p>No description available.</p>"}
+                        readOnly={true}
+                        modules={quillModules}
+                        className="w-full border-none bg-transparent p-0 text-gray-600 dark:text-gray-400"
+                      />
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {landmark.map_link && (
-                <div className="pt-2">
-                  <a
-                    href={landmark.map_link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center text-green-500 hover:text-green-600 text-sm font-medium"
-                  >
-                    <ExternalLink size={16} className="mr-2" />
-                    View on Google Maps
-                  </a>
+                {landmark.map_link && (
+                  <div className="pt-2">
+                    <a
+                      href={landmark.map_link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center text-green-500 hover:text-green-600 text-sm font-medium"
+                    >
+                      <ExternalLink size={16} className="mr-2" />
+                      View on Google Maps
+                    </a>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-200 dark:border-gray-700">
+              <h2 className="font-semibold text-lg mb-4 text-gray-900 dark:text-gray-100">Recent Events</h2>
+
+              {eventsLoading ? (
+                <div className="flex justify-center py-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-500"></div>
                 </div>
+              ) : events.length > 0 ? (
+                <div className="space-y-4">
+                  {events.map((event) => (
+                    <div
+                      key={event.id_uuid}
+                      className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer transition-colors"
+                      onClick={() => navigate(`/cycling/${event.slug}`)}
+                    >
+                      <h3 className="font-medium text-gray-900 dark:text-gray-100">{event.title}</h3>
+                      <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400 mt-1">
+                        <Calendar size={16} />
+                        <span>{formatDate(event.event_date)}</span>
+                        <Clock size={16} />
+                        <span>{formatTime(event.start_time)}</span>
+                      </div>
+                      <div className="mt-1 text-sm font-medium text-green-600 dark:text-green-400">
+                        {event.is_free ? "Free" : `₦${event.price?.toFixed(2)}`}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-600 dark:text-gray-400">No recent events found for this landmark.</p>
               )}
             </div>
-          </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-200 dark:border-gray-700">
-            <h2 className="font-semibold text-lg mb-4 text-gray-900 dark:text-gray-100">Recent Events</h2>
-
-            {eventsLoading ? (
-              <div className="flex justify-center py-4">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-500"></div>
-              </div>
-            ) : events.length > 0 ? (
-              <div className="space-y-4">
-                {events.map((event) => (
-                  <div
-                    key={event.id_uuid}
-                    className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer transition-colors"
-                    onClick={() => navigate(`/cycling/${event.slug}`)}
-                  >
-                    <h3 className="font-medium text-gray-900 dark:text-gray-100">{event.title}</h3>
-                    <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400 mt-1">
-                      <Calendar size={16} />
-                      <span>{formatDate(event.event_date)}</span>
-                      <Clock size={16} />
-                      <span>{formatTime(event.start_time)}</span>
-                    </div>
-                    <div className="mt-1 text-sm font-medium text-green-600 dark:text-green-400">
-                      {event.is_free ? "Free" : `₦${event.price?.toFixed(2)}`}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-gray-600 dark:text-gray-400">No recent events found for this landmark.</p>
-            )}
-          </div>
-
-          <div className="mt-6">
-            <Button
-              className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2"
-              onClick={() => navigate(`/host-cycling?landmark=${landmark.slug}`)}
-            >
-              <Bike size={16} className="mr-2" />
-              Host Event
-            </Button>
+            <div className="mt-6">
+              <Button
+                className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2"
+                onClick={() => navigate(`/host-cycling?landmark=${landmark.slug}`)}
+              >
+                <Bike size={16} className="mr-2" />
+                Host Event
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
 
-      <Navbar />
-    </div>
+        <Navbar />
+      </div>
+    </>
   );
 };
 

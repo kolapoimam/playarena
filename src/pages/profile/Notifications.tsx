@@ -5,7 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import Navbar from "@/components/Navbar";
-import UserNotifications from "@/components/UserNotifications";
+import UserNotifications from "@/components/profile/UserNotifications";
 import { ChevronLeft } from "lucide-react";
 
 const Notifications = () => {

@@ -18,6 +18,7 @@ import OrganizerDetailsForm from "@/components/matchManagement/OrganizerDetailsF
 import RecurringForm from "@/components/gameManagement/RecurringForm";
 import { FormValues, formSchema } from "@/components/MatchFormTypes";
 import { format } from "date-fns";
+import { Seo } from "@/components/Seo";
 
 type Venue = {
   id: string;
@@ -134,132 +135,72 @@ const Organize = () => {
     }
   }, [form]);
 
+  // --- Prefill logic: always run when formMethods is set and booking code is present ---
   useEffect(() => {
-    const handlePreFill = async () => {
-      if (!preSelectedVenueSlug || !accessCode) return;
+    if (formMethods && preSelectedVenueSlug && accessCode && !isPreFilled) {
+      (async () => {
+        try {
+          const { data: venue, error: venueError } = await supabase
+            .from("venues")
+            .select("id, slug, name, city, verified_status")
+            .eq("slug", preSelectedVenueSlug)
+            .single();
 
-      try {
-        const { data: venue, error: venueError } = await supabase
-          .from("venues")
-          .select("id, slug, name, city, verified_status")
-          .eq("slug", preSelectedVenueSlug)
-          .single();
+          if (venueError || !venue) throw new Error("Venue not found.");
 
-        if (venueError || !venue) {
-          throw new Error("Venue not found.");
-        }
-
-        let accessCodeData = null;
-
-        const { data: bacData, error: bacError } = await supabase
-          .from("booking_access_codes")
-          .select("match_date, start_time, end_time, status, expiry_date, booking_id")
-          .eq("code", accessCode)
-          .eq("venue_id", venue.id)
-          .single();
-
-        if (bacData && bacData.status === "pending") {
-          const expiryDate = bacData.expiry_date
-            ? new Date(bacData.expiry_date + 'Z')
-            : new Date(new Date(bacData.created_at).getTime() + 48 * 60 * 60 * 1000);
-          const now = new Date();
-          console.log("Booking Access Code:", {
-            code: accessCode,
-            status: bacData.status,
-            expiryDate,
-            now,
-            isExpired: expiryDate < now,
-            venue_id: venue.id,
-          });
-          if (expiryDate < now) {
-            await supabase
-              .from("booking_access_codes")
-              .update({ status: "inactive" })
-              .eq("code", accessCode)
-              .eq("venue_id", venue.id);
-            throw new Error("Booking access code has expired.");
-          }
-          accessCodeData = bacData;
-          setCodeTable("booking_access_codes");
-        } else if (bacError && bacError.code !== "PGRST116") {
-          console.error("Booking access code error:", bacError);
-        }
-
-        if (!accessCodeData) {
-          const { data: vacData, error: vacError } = await supabase
-            .from("venue_access_codes")
-            .select("match_date, start_time, end_time, status, expiry_date")
+          let accessCodeData = null;
+          const { data: bacData } = await supabase
+            .from("booking_access_codes")
+            .select("match_date, start_time, end_time, status, expiry_date, booking_id")
             .eq("code", accessCode)
             .eq("venue_id", venue.id)
             .single();
-
-          if (vacData && vacData.status === "pending") {
-            const expiryDate = vacData.expiry_date
-              ? new Date(vacData.expiry_date + 'Z')
-              : new Date(new Date(vacData.created_at).getTime() + 48 * 60 * 60 * 1000);
+          if (bacData && bacData.status === "pending") {
+            const expiryDate = bacData.expiry_date
+              ? new Date(bacData.expiry_date + 'Z')
+              : new Date(new Date(bacData.created_at).getTime() + 48 * 60 * 60 * 1000);
             const now = new Date();
-            console.log("Venue Access Code:", {
-              code: accessCode,
-              status: vacData.status,
-              expiryDate,
-              now,
-              isExpired: expiryDate < now,
-              venue_id: venue.id,
-            });
-            if (expiryDate < now) {
-              await supabase
-                .from("venue_access_codes")
-                .update({ status: "inactive" })
-                .eq("code", accessCode)
-                .eq("venue_id", venue.id);
-              throw new Error("Venue access code has expired.");
-            }
-            accessCodeData = vacData;
-            setCodeTable("venue_access_codes");
-          } else if (vacError && vacError.code !== "PGRST116") {
-            console.error("Venue access code error:", vacError);
+            if (expiryDate < now) throw new Error("Booking access code has expired.");
+            accessCodeData = bacData;
+            setCodeTable("booking_access_codes");
           }
-        }
-
-        if (!accessCodeData) {
-          throw new Error("Invalid, used, or expired access code.");
-        }
-
-        setVenues([venue]);
-        setIsPreFilled(true);
-        setSelectedVenueId(venue.id);
-        setHasValidBookingCode(true);
-
-        if (formMethods) {
+          if (!accessCodeData) {
+            const { data: vacData } = await supabase
+              .from("venue_access_codes")
+              .select("match_date, start_time, end_time, status, expiry_date")
+              .eq("code", accessCode)
+              .eq("venue_id", venue.id)
+              .single();
+            if (vacData && vacData.status === "pending") {
+              const expiryDate = vacData.expiry_date
+                ? new Date(vacData.expiry_date + 'Z')
+                : new Date(new Date(vacData.created_at).getTime() + 48 * 60 * 60 * 1000);
+              const now = new Date();
+              if (expiryDate < now) throw new Error("Venue access code has expired.");
+              accessCodeData = vacData;
+              setCodeTable("venue_access_codes");
+            }
+          }
+          if (!accessCodeData) throw new Error("Invalid, used, or expired access code.");
+          setVenues([venue]);
+          setIsPreFilled(true);
+          setSelectedVenueId(venue.id);
+          setHasValidBookingCode(true);
           formMethods.setValue("venue_id", venue.id);
           formMethods.setValue("match_date", new Date(accessCodeData.match_date));
-          const [startHours, startMinutes] = accessCodeData.start_time.split(':');
+          // Convert times to 12-hour format for the form
+          const [startHours, startMinutes] = accessCodeData.start_time.split(":");
           const startTime12 = new Date(0, 0, 0, startHours, startMinutes).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-          const [endHours, endMinutes] = accessCodeData.end_time.split(':');
+          const [endHours, endMinutes] = accessCodeData.end_time.split(":");
           const endTime12 = new Date(0, 0, 0, endHours, endMinutes).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
           formMethods.setValue("start_time", startTime12);
           formMethods.setValue("end_time", endTime12);
+        } catch (error) {
+          // fallback: do not break anything else
         }
-
-        toast({
-          title: "Booking Code Accepted",
-          description: `Form pre-filled with booking details for ${venue.name}.`,
-        });
-      } catch (error: any) {
-        console.error("Error pre-filling form:", error);
-        toast({
-          title: "Invalid Access Code",
-          description: error.message || "Could not load booking information.",
-          variant: "destructive",
-        });
-        navigate("/organize");
-      }
-    };
-
-    if (formMethods) {
-      handlePreFill();
+      })();
     }
-  }, [preSelectedVenueSlug, accessCode, toast, navigate, formMethods]);
+  }, [formMethods, preSelectedVenueSlug, accessCode, isPreFilled]);
 
   const handleFormReady = useCallback(({ watch, setValue }) => {
     setFormMethods({ watch, setValue });
@@ -360,101 +301,110 @@ const Organize = () => {
   };
 
   return (
-    <div className="min-h-screen pb-20 bg-gray-100 dark:bg-gray-900">
-      <header className="sticky top-0 z-50 bg-gradient-to-r from-green-500 to-green-700 text-white shadow-lg">
-        <div className="p-4 flex items-center justify-between max-w-7xl mx-auto">
-          <Button
-            variant="ghost"
-            className="text-white hover:bg-green-600 transition-colors"
-            onClick={() => navigate(-1)}
-          >
-            <ArrowLeft size={18} className="mr-2" />
-            Back
-          </Button>
-          <h1 className="text-2xl font-bold">Organize a Match</h1>
-          <div className="w-10"></div>
-        </div>
-      </header>
-      <div className="p-6 max-w-3xl mx-auto">
-        {isPreFilled && (
-          <div className="mb-4 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 p-4 rounded-lg">
-            <p className="font-medium">Venue Booking Pre-Filled</p>
-            <p className="text-sm">The venue, date, and time are set based on your booking. These fields are locked to match your reservation.</p>
+    <>
+      <Seo
+        title="Organize a Match | Sport Cliq"
+        description="Create and organize a new match or event on Sport Cliq."
+        url={window.location.href}
+        image={undefined}
+        children={null}
+      />
+      <div className="min-h-screen pb-20 bg-gray-100 dark:bg-gray-900">
+        <header className="sticky top-0 z-50 bg-gradient-to-r from-green-500 to-green-700 text-white shadow-lg">
+          <div className="p-4 flex items-center justify-between max-w-7xl mx-auto">
+            <Button
+              variant="ghost"
+              className="text-white hover:bg-green-600 transition-colors"
+              onClick={() => navigate(-1)}
+            >
+              <ArrowLeft size={18} className="mr-2" />
+              Back
+            </Button>
+            <h1 className="text-2xl font-bold">Organize a Match</h1>
+            <div className="w-10"></div>
           </div>
-        )}
-        {selectedVenue?.verified_status === "True" && !isPreFilled && !hasValidBookingCode && (
-          <div className="mb-4 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 p-4 rounded-lg">
-            <p className="flex items-center font-medium">
-              <AlertCircle size={16} className="mr-2" />
-              Verified Venue
-            </p>
-            <p className="text-sm">This is a verified venue. Please confirm your booking before proceeding to create a match.</p>
-          </div>
-        )}
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            <MatchDetailsForm
-              isPreFilled={isPreFilled}
-              preSelectedVenueSlug={preSelectedVenueSlug}
-              onPrefill={(values) => {
-                if (formMethods) {
-                  formMethods.setValue("match_date", values.match_date);
-                  formMethods.setValue("start_time", values.start_time);
-                  formMethods.setValue("end_time", values.end_time);
-                  setHasValidBookingCode(true);
-                }
-              }}
-              onVenueCreated={(venueId, venueSlug, venueName) => {
-                form.setValue("venue_id", venueId);
-                toast({
-                  title: "Venue created",
-                  description: `${venueName} has been added to venues.`,
-                });
-              }}
-            />
-            <PreferencesForm />
-            <PaymentPrivacyForm />
-            <TicketSalesForm />
-            <RecurringForm userId={userId} />
-            <OrganizerDetailsForm />
-            <div className="flex gap-4">
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium rounded-lg px-4 py-3 text-lg shadow-md transition-colors"
-                onClick={() => setPreviewDialogOpen(true)}
-                disabled={loading || !form.watch("title") || !form.watch("venue_id") || !form.watch("match_date") || !form.watch("start_time") || !form.watch("end_time") || !form.watch("total_slots") || !form.watch("organizer_name")}
-              >
-                Preview Match
-              </Button>
-              <Button 
-                type="submit" 
-                className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-3 text-lg shadow-md transition-colors" 
-                disabled={loading}
-              >
-                {loading ? "Creating..." : "Create Match"}
-              </Button>
+        </header>
+        <div className="p-6 max-w-3xl mx-auto">
+          {isPreFilled && (
+            <div className="mb-4 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 p-4 rounded-lg">
+              <p className="font-medium">Venue Booking Pre-Filled</p>
+              <p className="text-sm">The venue, date, and time are set based on your booking. These fields are locked to match your reservation.</p>
             </div>
-          </form>
-        </Form>
-        <MatchPreviewDialog
-          open={previewDialogOpen}
-          onOpenChange={setPreviewDialogOpen}
-          formValues={formMethods ? formMethods.watch() : {}}
-          selectedVenue={selectedVenue}
-        />
-        <MatchSuccessDialog
-          open={successDialogOpen}
-          onOpenChange={setSuccessDialogOpen}
-          formValues={formMethods ? formMethods.watch() : {}}
-          selectedVenue={selectedVenue}
-          supercode={supercode}
-          matchSlug={matchSlug}
-          onNavigate={(slug) => navigate(`/match/${slug}`)}
-        />
+          )}
+          {selectedVenue?.verified_status === "True" && !isPreFilled && !hasValidBookingCode && (
+            <div className="mb-4 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 p-4 rounded-lg">
+              <p className="flex items-center font-medium">
+                <AlertCircle size={16} className="mr-2" />
+                Verified Venue
+              </p>
+              <p className="text-sm">This is a verified venue. Please confirm your booking before proceeding to create a match.</p>
+            </div>
+          )}
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+              <MatchDetailsForm
+                isPreFilled={isPreFilled}
+                preSelectedVenueSlug={preSelectedVenueSlug}
+                onPrefill={(values) => {
+                  if (formMethods) {
+                    formMethods.setValue("match_date", values.match_date);
+                    formMethods.setValue("start_time", values.start_time);
+                    formMethods.setValue("end_time", values.end_time);
+                    setHasValidBookingCode(true);
+                  }
+                }}
+                onVenueCreated={(venueId, venueSlug, venueName) => {
+                  form.setValue("venue_id", venueId);
+                  toast({
+                    title: "Venue created",
+                    description: `${venueName} has been added to venues.`,
+                  });
+                }}
+              />
+              <PreferencesForm />
+              <PaymentPrivacyForm />
+              <TicketSalesForm />
+              <RecurringForm userId={userId} />
+              <OrganizerDetailsForm />
+              <div className="flex gap-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium rounded-lg px-4 py-3 text-lg shadow-md transition-colors"
+                  onClick={() => setPreviewDialogOpen(true)}
+                  disabled={loading || !form.watch("title") || !form.watch("venue_id") || !form.watch("match_date") || !form.watch("start_time") || !form.watch("end_time") || !form.watch("total_slots") || !form.watch("organizer_name")}
+                >
+                  Preview Match
+                </Button>
+                <Button 
+                  type="submit" 
+                  className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-3 text-lg shadow-md transition-colors" 
+                  disabled={loading}
+                >
+                  {loading ? "Creating..." : "Create Match"}
+                </Button>
+              </div>
+            </form>
+          </Form>
+          <MatchPreviewDialog
+            open={previewDialogOpen}
+            onOpenChange={setPreviewDialogOpen}
+            formValues={formMethods ? formMethods.watch() : {}}
+            selectedVenue={selectedVenue}
+          />
+          <MatchSuccessDialog
+            open={successDialogOpen}
+            onOpenChange={setSuccessDialogOpen}
+            formValues={formMethods ? formMethods.watch() : {}}
+            selectedVenue={selectedVenue}
+            supercode={supercode}
+            matchSlug={matchSlug}
+            onNavigate={(slug) => navigate(`/match/${slug}`)}
+          />
+        </div>
+        <Navbar />
       </div>
-      <Navbar />
-    </div>
+    </>
   );
 };
 

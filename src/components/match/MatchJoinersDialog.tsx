@@ -242,15 +242,17 @@ const MatchJoinersDialog = ({
                     <Repeat className="inline h-4 w-4 mr-1" /> Repeats {match.recurring_frequency} for {match.recurring_occurrences} times
                   </p>
                 )}
-                <p className="text-sm font-semibold">
-                  Confirmation Code: <span className="font-mono">{confirmationCode || 'N/A'}</span>
-                </p>
-                {selectedSlots > 1 && (
-                  <p className="text-sm">
-                    Slots Registered: {selectedSlots}
-                  </p>
-                )}
               </div>
+              {/* Confirmation Code Card (MatchSuccessDialog style) */}
+              <div className="bg-white text-green-600 rounded-md p-4 text-center shadow-inner my-4">
+                <p className="text-sm font-medium uppercase tracking-wide">Confirmation Code</p>
+                <p className="text-4xl font-bold tracking-wider mt-1 font-mono">{confirmationCode || 'N/A'}</p>
+              </div>
+              {selectedSlots > 1 && (
+                <p className="text-sm">
+                  Slots Registered: {selectedSlots}
+                </p>
+              )}
             </div>
           </div>
           <p className="text-sm text-gray-500 dark:text-gray-400 my-4 text-center max-w-xs">

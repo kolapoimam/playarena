@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useFormContext } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +22,18 @@ type MatchDetailsFormProps = {
 
 const MatchDetailsForm = ({ isPreFilled, preSelectedVenueSlug, onPrefill, onVenueCreated }: MatchDetailsFormProps) => {
   const form = useFormContext<FormValues>();
+
+  // Call onPrefill on mount if isPreFilled and values exist
+  useEffect(() => {
+    if (isPreFilled && form.watch("match_date") && form.watch("start_time") && form.watch("end_time")) {
+      onPrefill({
+        match_date: form.watch("match_date"),
+        start_time: form.watch("start_time"),
+        end_time: form.watch("end_time"),
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPreFilled]);
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">

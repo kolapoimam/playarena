@@ -28,6 +28,9 @@ import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import PlayersTable from "@/components/match/PlayersTable";
 import MatchDetailsDialogue from "@/components/match/MatchDetailsDialogue";
+import { Seo } from "@/components/Seo";
+
+const META_KEYWORDS = "Football in Nigeria, Sports in Nigeria, Play Sports Near You, Football Fields Near Me, Livescore, Osimhen, Asisat Oshola, Nigeria Startup, Sportstech, Football venues in Lagos, Football venues in Ilorin, Sports Betting in Nigeria, Organize sports in Nigeria, Football Matches, Bicycle Training in Nigeria, Cycling in Nigeria, Nigerian football, Nigerian cycling, Nigerian sports, Play football in Lagos, Play football in Ilorin, Play football in Abuja, Play football in Nigeria, Play cycling in Nigeria, Play sports in Nigeria, Nigerian sports tech, Nigerian sports startup, Nigerian sports community, Football events Nigeria, Cycling events Nigeria, Sport Cliq, SportCliq, sportcliq.com.ng, sportcliq.ng, sportcliq, sport cliq, sportcliq app, sportcliq platform, sportcliq football, sportcliq cycling, sportcliq venues, sportcliq matches, sportcliq events, sportcliq sports, sportcliq nigeria, sportcliq lagos, sportcliq ilorin, sportcliq abuja, sportcliq startup, sportcliq tech, sportcliq community, sportcliq platform, sportcliq app, sportcliq website, sportcliq online, sportcliq booking, sportcliq organize, sportcliq join, sportcliq play, sportcliq find, sportcliq search, sportcliq discover, sportcliq connect, sportcliq join match, sportcliq join cycling, sportcliq join event, sportcliq join venue, sportcliq join football, sportcliq join sports, sportcliq join nigeria, sportcliq join lagos, sportcliq join ilorin, sportcliq join abuja, sportcliq join startup, sportcliq join tech, sportcliq join community, sportcliq join platform, sportcliq join app, sportcliq join website, sportcliq join online, sportcliq join booking, sportcliq join organize, sportcliq join play, sportcliq join find, sportcliq join search, sportcliq join discover, sportcliq join connect";
 
 type Match = {
   id: string;
@@ -337,167 +340,176 @@ const MatchDetail = () => {
   const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
 
   return (
-    <div className="min-h-screen pb-24">
-      <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg">
-        <div className="flex items-center justify-between">
-          <Button 
-            variant="ghost" 
-            onClick={() => navigate(-1)} 
-            className="text-white hover:bg-green-600"
-          >
-            <ArrowLeft size={18} className="mr-2" />
-            Back
-          </Button>
-          <div className="text-center">
-            <h1 className="text-2xl font-bold">Match Details</h1>
+    <>
+      <Seo
+        title={match ? `${match.title} | Match Detail | Sport Cliq` : "Match Detail | Sport Cliq"}
+        description={match ? `Details for ${match.title} match on Sport Cliq. Football in Nigeria, Play Sports Near You, Football Fields Near Me, Livescore, Osimhen, Asisat Oshola, Nigeria Startup, Sportstech.` : "View match details on Sport Cliq. Football in Nigeria, Play Sports Near You, Football Fields Near Me, Livescore, Osimhen, Asisat Oshola, Nigeria Startup, Sportstech."}
+        url={window.location.href}
+        image={undefined}
+        children={<meta name="keywords" content={META_KEYWORDS} />}
+      />
+      <div className="min-h-screen pb-24">
+        <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg">
+          <div className="flex items-center justify-between">
+            <Button 
+              variant="ghost" 
+              onClick={() => navigate(-1)} 
+              className="text-white hover:bg-green-600"
+            >
+              <ArrowLeft size={18} className="mr-2" />
+              Back
+            </Button>
+            <div className="text-center">
+              <h1 className="text-2xl font-bold">Match Details</h1>
+            </div>
+            <div className="w-10"></div>
           </div>
-          <div className="w-10"></div>
-        </div>
-      </header>
+        </header>
 
-      <div className="p-4">
-        <h1 className="text-2xl font-bold mb-2">
-          {match.title}{" "}
-          {match.is_private && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Lock size={16} className="inline text-gray-500" />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>This is a private match</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-        </h1>
-        <div className="flex justify-between items-center mb-4">
-          <div className="flex items-center gap-2">
-            <p className="text-muted-foreground">Organized by {match.organizer_name}</p>
-            <img
-              src="/green-verified.png"
-              alt="Verified"
-              className="inline-block w-5 h-5"
+        <div className="p-4">
+          <h1 className="text-2xl font-bold mb-2">
+            {match.title}{" "}
+            {match.is_private && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Lock size={16} className="inline text-gray-500" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>This is a private match</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+          </h1>
+          <div className="flex justify-between items-center mb-4">
+            <div className="flex items-center gap-2">
+              <p className="text-muted-foreground">Organized by {match.organizer_name}</p>
+              <img
+                src="/green-verified.png"
+                alt="Verified"
+                className="inline-block w-5 h-5"
+              />
+            </div>
+          </div>
+          
+          {isEnded ? (
+            <div className="bg-gray-100 border border-gray-200 text-gray-700 px-4 py-3 rounded mb-4">
+              This match has passed
+            </div>
+          ) : isStarted ? (
+            <div className="bg-playarena-100 border border-playarena-200 text-playarena-700 px-4 py-3 rounded mb-4">
+              This match has started!
+            </div>
+          ) : isFull ? (
+            <div className="bg-red-100 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
+              This match is completely filled up!
+            </div>
+          ) : null}
+          
+          <div className="space-y-4">
+            <div className="border rounded-lg p-4 bg-card shadow-md relative">
+              <div className="absolute top-4 right-4 m-0 p-0">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={addToCalendar}
+                  className="text-playarena-600 border-playarena-300 hover:bg-playarena-50 p-2 m-0"
+                >
+                  <Bell size={16} className="mr-0" />
+                </Button>
+              </div>
+              
+              <h2 className="font-semibold mb-3">Match Details</h2>
+              
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Calendar size={18} />
+                  <span>{formatDate(match.match_date)}</span>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <Clock size={18} />
+                  <span>{formatTime(match.match_time)}</span>
+                </div>
+                
+                {match.venue && (
+                  <div 
+                    className="flex items-start gap-2 cursor-pointer" 
+                    onClick={() => navigate(`/venue/${match.venue?.slug}`)}
+                  >
+                    <MapPin size={18} className="mt-0.5" />
+                    <div>
+                      <span className="text-playarena-600 hover:underline">
+                        {match.venue.name}, {match.venue.city}
+                      </span>
+                      {match.venue.map_link && (
+                        <div className="mt-1">
+                          <a 
+                            href={match.venue.map_link} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-xs flex items-center text-playarena-600 hover:underline"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <ExternalLink size={12} className="mr-1" />
+                            View on Google Maps
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+                
+                <div className="flex items-center gap-2">
+                  <Users size={18} />
+                  <span>
+                    {totalPlayerSlots}/{match.total_slots} spots filled
+                    {isFull && " (FULL)"}
+                  </span>
+                </div>
+                
+                {userId && match.is_recurring && (
+                  <div className="flex items-center gap-2">
+                    <Repeat size={18} />
+                    <span>Repeats {match.recurring_frequency} for {match.recurring_occurrences} times</span>
+                  </div>
+                )}
+                
+                {match.is_paid && (
+                  <div className="font-semibold mt-2">
+                    Price: ₦{match.price?.toFixed(2)}
+                  </div>
+                )}
+                
+                {match.notes && (
+                  <div className="mt-3">
+                    <h3 className="text-sm font-medium mb-1">Notes:</h3>
+                    <p className="text-sm bg-muted p-2 rounded">{match.notes}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            <PlayersTable 
+              match={match}
+              navigate={navigate}
+              isEnded={isEnded}
+              isFull={isFull}
+              totalPlayerSlots={totalPlayerSlots}
+            />
+            
+            <MatchDetailsDialogue 
+              match={match}
+              formatDate={formatDate}
+              formatTime={formatTime}
+              totalPlayerSlots={totalPlayerSlots}
             />
           </div>
         </div>
-        
-        {isEnded ? (
-          <div className="bg-gray-100 border border-gray-200 text-gray-700 px-4 py-3 rounded mb-4">
-            This match has passed
-          </div>
-        ) : isStarted ? (
-          <div className="bg-playarena-100 border border-playarena-200 text-playarena-700 px-4 py-3 rounded mb-4">
-            This match has started!
-          </div>
-        ) : isFull ? (
-          <div className="bg-red-100 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
-            This match is completely filled up!
-          </div>
-        ) : null}
-        
-        <div className="space-y-4">
-          <div className="border rounded-lg p-4 bg-card shadow-md relative">
-            <div className="absolute top-4 right-4 m-0 p-0">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={addToCalendar}
-                className="text-playarena-600 border-playarena-300 hover:bg-playarena-50 p-2 m-0"
-              >
-                <Bell size={16} className="mr-0" />
-              </Button>
-            </div>
-            
-            <h2 className="font-semibold mb-3">Match Details</h2>
-            
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Calendar size={18} />
-                <span>{formatDate(match.match_date)}</span>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <Clock size={18} />
-                <span>{formatTime(match.match_time)}</span>
-              </div>
-              
-              {match.venue && (
-                <div 
-                  className="flex items-start gap-2 cursor-pointer" 
-                  onClick={() => navigate(`/venue/${match.venue?.slug}`)}
-                >
-                  <MapPin size={18} className="mt-0.5" />
-                  <div>
-                    <span className="text-playarena-600 hover:underline">
-                      {match.venue.name}, {match.venue.city}
-                    </span>
-                    {match.venue.map_link && (
-                      <div className="mt-1">
-                        <a 
-                          href={match.venue.map_link} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-xs flex items-center text-playarena-600 hover:underline"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <ExternalLink size={12} className="mr-1" />
-                          View on Google Maps
-                        </a>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-              
-              <div className="flex items-center gap-2">
-                <Users size={18} />
-                <span>
-                  {totalPlayerSlots}/{match.total_slots} spots filled
-                  {isFull && " (FULL)"}
-                </span>
-              </div>
-              
-              {userId && match.is_recurring && (
-                <div className="flex items-center gap-2">
-                  <Repeat size={18} />
-                  <span>Repeats {match.recurring_frequency} for {match.recurring_occurrences} times</span>
-                </div>
-              )}
-              
-              {match.is_paid && (
-                <div className="font-semibold mt-2">
-                  Price: ₦{match.price?.toFixed(2)}
-                </div>
-              )}
-              
-              {match.notes && (
-                <div className="mt-3">
-                  <h3 className="text-sm font-medium mb-1">Notes:</h3>
-                  <p className="text-sm bg-muted p-2 rounded">{match.notes}</p>
-                </div>
-              )}
-            </div>
-          </div>
-          
-          <PlayersTable 
-            match={match}
-            navigate={navigate}
-            isEnded={isEnded}
-            isFull={isFull}
-            totalPlayerSlots={totalPlayerSlots}
-          />
-          
-          <MatchDetailsDialogue 
-            match={match}
-            formatDate={formatDate}
-            formatTime={formatTime}
-            totalPlayerSlots={totalPlayerSlots}
-          />
-        </div>
+        <Navbar />
       </div>
-      <Navbar />
-    </div>
+    </>
   );
 };
 
