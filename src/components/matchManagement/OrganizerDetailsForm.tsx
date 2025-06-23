@@ -2,7 +2,7 @@ import { useFormContext } from "react-hook-form";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { FormValues } from "./MatchFormTypes";
+import { FormValues } from "../MatchFormTypes";
 
 const OrganizerDetailsForm = () => {
   const form = useFormContext<FormValues>();

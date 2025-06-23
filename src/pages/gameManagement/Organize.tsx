@@ -11,11 +11,11 @@ import Navbar from "@/components/Navbar";
 import MatchPreviewDialog from "@/components/MatchPreviewDialog";
 import MatchSuccessDialog from "@/components/MatchSuccessDialog";
 import MatchDetailsForm from "@/components/MatchDetailsForm";
-import PreferencesForm from "@/components/PreferencesForm";
-import PaymentPrivacyForm from "@/components/PaymentPrivacyForm";
-import TicketSalesForm from "@/components/TicketSalesForm";
-import OrganizerDetailsForm from "@/components/OrganizerDetailsForm";
-import RecurringForm from "@/components/RecurringForm";
+import PreferencesForm from "@/components/gameManagement/PreferencesForm";
+import PaymentPrivacyForm from "@/components/matchManagement/PaymentPrivacyForm";
+import TicketSalesForm from "@/components/gameManagement/TicketSalesForm";
+import OrganizerDetailsForm from "@/components/matchManagement/OrganizerDetailsForm";
+import RecurringForm from "@/components/gameManagement/RecurringForm";
 import { FormValues, formSchema } from "@/components/MatchFormTypes";
 import { format } from "date-fns";
 

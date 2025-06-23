@@ -20,7 +20,7 @@ import MatchCodeInput from "@/components/MatchCodeInput";
 import CyclingCodeInput from "@/components/CyclingCodeInput";
 import MatchDetails from "@/components/MatchDetails";
 import PlayerManagement from "@/components/PlayerManagement";
-import OrganizerCashout from "@/components/OrganizerCashout";
+import OrganizerCashout from "@/components/matchManagement/OrganizerCashout";
 import CyclingDetails from "@/components/CyclingDetails";
 import AttendeesManagement from "@/components/AttendeesManagement";
 import HostCashout from "@/components/HostCashout";

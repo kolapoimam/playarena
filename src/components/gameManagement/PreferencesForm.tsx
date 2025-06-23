@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useFormContext } from "react-hook-form";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FormValues } from "./MatchFormTypes";
+import { FormValues } from "../MatchFormTypes";
 
 const skillLevels = ["Beginner", "Amateur", "Intermediate", "Advanced", "Professional", "All", "None"] as const;
 const matchTypes = ["4-a-side", "5-a-side", "7-a-side", "11-a-side (Regular)", "Double", "Friendly", "All", "None"] as const;

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import UserDashboard from "../components/UserDashboard";
 import CyclerDashboard from "../components/CyclerDashboard";
-import Performance from "@/components/Performance";
+import Performance from "@/components/profile/Performance";
 import Navbar from "@/components/Navbar";
 import { ArrowLeft } from "lucide-react";
 

@@ -7,8 +7,8 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Loader2, ArrowLeft, Users, Trophy, CheckCircle } from "lucide-react";
 import { format } from "date-fns";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import VenueWallet from "@/components/VenueWallet";
-import VenueAccessCode from "@/components/VenueAccessCode";
+import VenueWallet from "@/components/venueManagement/VenueWallet";
+import VenueAccessCode from "@/components/venueManagement/VenueAccessCode";
 import Navbar from "@/components/Navbar";
 import ManagerBookingView from "@/components/ManagerBookingView";
 

@@ -5,13 +5,34 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Calendar, Volleyball, Users, MapPin, Copy, Repeat } from "lucide-react";
 import { format } from "date-fns";
 import { utcToZonedTime } from "date-fns-tz";
 import { DateTime } from "luxon";
 import Navbar from "@/components/Navbar";
 import { ArrowLeft } from "lucide-react";
+// Match management components
+import MatchCodeInput from "@/components/matchManagement/MatchCodeInput";
+import MatchDetails from "@/components/matchManagement/MatchDetails";
+import MatchDetailsDialogue from "@/components/matchManagement/MatchDetailsDialogue";
+import MatchDetailsForm from "@/components/matchManagement/MatchDetailsForm";
+import MatchForm from "@/components/matchManagement/MatchForm";
+import MatchHighlights from "@/components/matchManagement/MatchHighlights";
+import MatchJoinersDialog from "@/components/match/MatchJoinersDialog";
+import MatchPreviewDialog from "@/components/match/MatchPreviewDialog";
+import MatchReport from "@/components/matchManagement/MatchReport";
+import MatchSuccessDialog from "@/components/match/MatchSuccessDialog";
+import TeamMatchDetails from "@/components/matchManagement/TeamMatchDetails";
+// Profile components
+import UserMatches from "@/components/profile/UserMatches";
 
 type Match = {
   id: string;
@@ -248,8 +269,17 @@ const MyMatches = () => {
       .eq("id", cancelMatchId)
       .single();
 
-    if (matchError || !match || match.cancellation_status || new Date(`${match.match_date}T${match.match_time}Z`) <= new Date(now.getTime() + 60 * 60 * 1000)) {
-      toast({ title: "Error", description: "Cannot cancel match within 1 hour, in the past, or already cancelled.", variant: "destructive" });
+    if (
+      matchError ||
+      !match ||
+      match.cancellation_status ||
+      new Date(`${match.match_date}T${match.match_time}Z`) <= new Date(now.getTime() + 60 * 60 * 1000)
+    ) {
+      toast({
+        title: "Error",
+        description: "Cannot cancel match within 1 hour, in the past, or already cancelled.",
+        variant: "destructive",
+      });
       setShowCancelDialog(false);
       return;
     }
@@ -312,7 +342,10 @@ const MyMatches = () => {
         );
       }
 
-      toast({ title: "Success", description: cancelIsJoined ? "Participation cancelled successfully!" : "Match cancelled successfully!" });
+      toast({
+        title: "Success",
+        description: cancelIsJoined ? "Participation cancelled successfully!" : "Match cancelled successfully!",
+      });
     } catch (error) {
       console.error("Cancellation error:", error);
       toast({ title: "Error", description: "Failed to cancel. Please try again.", variant: "destructive" });

@@ -17,7 +17,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { ArrowLeft, Calendar, Clock, MapPin, Users, Loader } from "lucide-react";
-import CyclingSuccessDialog from "@/components/CyclingSuccessDialog";
+import CyclingSuccessDialog from "@/components/cycling/CyclingSuccessDialog";
 import Navbar from "@/components/Navbar";
 
 type Landmark = {

@@ -14,7 +14,7 @@ import {
   Bell 
 } from "lucide-react";
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import CyclingDetailsDialogue from "@/components/CyclingDetailsDialogue";
+import CyclingDetailsDialogue from "@/components/cycling/CyclingDetailsDialogue";
 import Navbar from "@/components/Navbar";
 import AttendeesTable from "@/components/AttendeesTable";
 import { addHours, addMinutes } from "date-fns";

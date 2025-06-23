@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Switch } from "@/components/ui/switch";
 import { Copy } from "lucide-react";
-import { FormValues } from "./MatchFormTypes";
+import { FormValues } from "../MatchFormTypes";
 
 const PaymentPrivacyForm = () => {
   const form = useFormContext<FormValues>();

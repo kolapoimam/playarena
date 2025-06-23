@@ -4,7 +4,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
-import { FormValues } from "./MatchFormTypes";
+import { FormValues } from "../MatchFormTypes";
 
 const frequencies = ["Daily", "Weekly", "Bi-Weekly", "Monthly", "Bi-Monthly", "Quarterly", "Yearly"] as const;
 

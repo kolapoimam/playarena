@@ -18,7 +18,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { format, isToday, isPast } from "date-fns";
-import MatchJoinersDialog from "@/components/MatchJoinersDialog";
+import MatchJoinersDialog from "@/components/match/MatchJoinersDialog";
 
 type Match = {
   id: string;

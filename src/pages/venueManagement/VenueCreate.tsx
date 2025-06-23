@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
-import VenueForm from "@/components/VenueForm";
+import VenueForm from "@/components/venueManagement/VenueForm";
 import Navbar from "@/components/Navbar";
 
 const VenueCreate = () => {

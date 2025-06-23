@@ -13,7 +13,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { ChevronLeft, MapPin, Loader2, Users, Trophy, CheckCircle } from "lucide-react";
 import { format } from "date-fns";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import VenueWallet from "@/components/VenueWallet";
+import VenueWallet from "@/components/venueManagement/VenueWallet";
 import Navbar from "@/components/Navbar";
 
 const pinSchema = z.object({

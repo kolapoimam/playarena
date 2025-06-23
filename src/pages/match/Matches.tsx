@@ -11,6 +11,19 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DateTime } from "luxon";
+import MatchCard from "@/components/match/MatchCard";
+import MatchCodeInput from "@/components/match/MatchCodeInput";
+import MatchDetails from "@/components/match/MatchDetails";
+import MatchDetailsDialogue from "@/components/match/MatchDetailsDialogue";
+import MatchDetailsForm from "@/components/match/MatchDetailsForm";
+import MatchForm from "@/components/match/MatchForm";
+import MatchHighlights from "@/components/match/MatchHighlights";
+import MatchJoinersDialog from "@/components/match/MatchJoinersDialog";
+import MatchPreviewDialog from "@/components/match/MatchPreviewDialog";
+import MatchReport from "@/components/match/MatchReport";
+import MatchSuccessDialog from "@/components/match/MatchSuccessDialog";
+import TeamMatchDetails from "@/components/match/TeamMatchDetails";
+import UserMatches from "@/components/match/UserMatches";
 
 // Match type definition based on the existing Supabase schema
 interface Match {

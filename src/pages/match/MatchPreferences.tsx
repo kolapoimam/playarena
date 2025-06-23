@@ -13,6 +13,19 @@ import { Card, CardContent } from "@/components/ui/card";
 import Navbar from "@/components/Navbar";
 import { ChevronLeft, CheckCircle, Loader2 } from "lucide-react";
 import { format } from "date-fns";
+import MatchCard from "@/components/match/MatchCard";
+import MatchCodeInput from "@/components/match/MatchCodeInput";
+import MatchDetails from "@/components/match/MatchDetails";
+import MatchDetailsDialogue from "@/components/match/MatchDetailsDialogue";
+import MatchDetailsForm from "@/components/match/MatchDetailsForm";
+import MatchForm from "@/components/match/MatchForm";
+import MatchHighlights from "@/components/match/MatchHighlights";
+import MatchJoinersDialog from "@/components/match/MatchJoinersDialog";
+import MatchPreviewDialog from "@/components/match/MatchPreviewDialog";
+import MatchReport from "@/components/match/MatchReport";
+import MatchSuccessDialog from "@/components/match/MatchSuccessDialog";
+import TeamMatchDetails from "@/components/match/TeamMatchDetails";
+import UserMatches from "@/components/match/UserMatches";
 
 const profileSchema = z.object({
   state: z.string().min(1, "State is required"),

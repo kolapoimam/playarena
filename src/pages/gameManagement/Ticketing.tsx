@@ -19,7 +19,7 @@ import {
 import { Calendar, MapPin, ArrowLeft, Ticket } from "lucide-react";
 import { format } from "date-fns";
 import Navbar from "@/components/Navbar";
-import TicketReceipt from "@/components/TicketReceipt";
+import TicketReceipt from "@/components/gameManagement/TicketReceipt";
 
 type Match = {
   id: string;
