@@ -1,4 +1,5 @@
 
+import { BalanceHero, CashoutList } from "@/components/sc/CashoutUI";
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -409,74 +410,11 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
   if (!match) return null;
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 dark:border-gray-700">
-      <h2 className="text-xl font-semibold mb-4 text-sc-ink dark:text-gray-100">Cashout Requests</h2>
-      <div className="mb-4 flex items-center gap-2">
-        <p className="text-sm font-medium text-sc-ink2 dark:text-gray-300">
-          Wallet Balance: ₦{walletBalance.toLocaleString()}
-        </p>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleRefresh}
-          className="p-1"
-          title="Refresh Wallet Balance"
-        >
-          <RefreshCw size={16} />
-        </Button>
-      </div>
-      <div className="mb-4">
-        <Button
-          onClick={handleCashoutMode}
-          className="bg-yellow-500 hover:bg-yellow-600 text-white"
-          disabled={!localTempIdentifier}
-        >
-          Request Cashout
-        </Button>
-      </div>
-      <div className="space-y-4">
-        {cashoutRequests.length === 0 ? (
-          <p className="text-sc-ink3 dark:text-gray-400">No cashout requests for this match.</p>
-        ) : (
-          cashoutRequests.map((request) => (
-            <div
-              key={request.id}
-              className="p-4 bg-sc-soft dark:bg-gray-700 rounded-lg border border-sc-line dark:border-gray-600"
-            >
-              <div className="flex justify-between items-center">
-                <div>
-                  <p className="text-lg font-medium text-sc-ink dark:text-gray-100">
-                    ₦{request.amount.toLocaleString()}
-                  </p>
-                  <p className="text-sm text-sc-ink3 dark:text-gray-400">
-                    {new Date(request.created_at).toLocaleString("en-NG", {
-                      dateStyle: "medium",
-                      timeStyle: "short",
-                    })}
-                  </p>
-                  <p className="text-sm text-sc-ink3 dark:text-gray-400">
-                    Account: {request.account_details?.account_name || "Not provided"}
-                  </p>
-                  <p className="text-sm text-sc-ink3 dark:text-gray-400">
-                    Bank: {request.account_details?.bank_name || "Not provided"} (
-                    {request.account_details?.bank_account_number || "Not provided"})
-                  </p>
-                </div>
-                <span
-                  className={`inline-block px-3 py-1 text-sm font-medium rounded border ${getStatusStyles(
-                    request.status
-                  )}`}
-                >
-                  {request.status}
-                </span>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-
+    <div className="flex flex-col gap-3.5">
+      <BalanceHero balance={walletBalance} onRefresh={handleRefresh} onRequest={handleCashoutMode} disabled={!localTempIdentifier} note="From paid slots in this match" />
+      <CashoutList rows={cashoutRequests.map((r: any) => ({ id: r.id, amount: r.amount, created_at: r.created_at, status: r.status, name: r.account_details?.account_name, bank: r.account_details?.bank_name, account: r.account_details?.bank_account_number }))} />
       <Dialog open={cashoutDialogOpen} onOpenChange={setCashoutDialogOpen}>
-        <DialogContent className="max-w-md rounded-lg">
+        <DialogContent className="w-full max-w-[calc(100%-1.5rem)] sm:max-w-[420px] rounded-[28px] bg-sc-bg p-5 max-h-[92vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Request Cashout</DialogTitle>
             <DialogDescription>

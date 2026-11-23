@@ -1,3 +1,4 @@
+import { BalanceHero, CashoutList } from "@/components/sc/CashoutUI";
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -416,64 +417,11 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
   if (!event) return null;
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 dark:border-gray-600">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-semibold text-sc-ink dark:text-white">Cashout</h2>
-        <Button
-          onClick={() => {
-            fetchWalletBalance();
-            fetchCashoutRequests();
-          }}
-          className="bg-gray-500 dark:bg-gray-600 hover:bg-gray-600 dark:hover:bg-gray-500 text-white dark:text-gray-100"
-        >
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Refresh
-        </Button>
-      </div>
-
-      <div className="mb-6">
-        <p className="text-sc-ink dark:text-gray-100">
-          Available Balance: ₦{walletBalance.toLocaleString()}
-        </p>
-      </div>
-
-      <Button
-        onClick={() => walletBalance > 0 ? setCashoutDialogOpen(true) : toast({
-          title: "Error",
-          description: "No funds available for cashout.",
-          variant: "destructive",
-        })}
-        className="bg-sc-green dark:bg-green-600 hover:brightness-95 dark:hover:bg-green-700 text-sc-green-ink dark:text-gray-100 mb-6 font-bold"
-        disabled={event.cancellation_status || loading || walletBalance <= 0}
-      >
-        Request Cashout
-      </Button>
-
-      <h3 className="text-md font-semibold mb-4 text-sc-ink dark:text-white">Cashout History</h3>
-      {cashoutRequests.length === 0 ? (
-        <p className="text-sc-ink3 dark:text-gray-400">No cashout requests found.</p>
-      ) : (
-        <div className="space-y-4 max-h-96 overflow-y-auto">
-          {cashoutRequests.map(request => (
-            <div key={request.id} className="p-4 bg-sc-soft dark:bg-gray-700 rounded-lg border border-sc-line dark:border-gray-600">
-              <div className="flex justify-between items-center">
-                <div>
-                  <p className="font-medium text-sc-ink dark:text-white">₦{request.total_amount_paid.toLocaleString()}</p>
-                  <p className="text-sm text-sc-ink3 dark:text-gray-400">{request.account_name}</p>
-                  <p className="text-sm text-sc-ink3 dark:text-gray-400">{request.bank_name} - {request.bank_account_number}</p>
-                  <p className="text-sm text-sc-ink3 dark:text-gray-400">{new Date(request.created_at).toLocaleString()}</p>
-                </div>
-                <span className={`px-3 py-1 text-sm font-medium rounded border ${getStatusStyles(request.status)}`}>
-                  {request.status}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
+    <div className="flex flex-col gap-3.5">
+      <BalanceHero accent="#F97316" balance={walletBalance} onRefresh={() => { fetchWalletBalance(); fetchCashoutRequests(); }} onRequest={() => setCashoutDialogOpen(true)} disabled={event.cancellation_status || loading || walletBalance <= 0} note="From paid spots on this ride" />
+      <CashoutList rows={cashoutRequests.map((r: any) => ({ id: r.id, amount: r.total_amount_paid, created_at: r.created_at, status: r.status, name: r.account_name, bank: r.bank_name, account: r.bank_account_number }))} />
       <Dialog open={cashoutDialogOpen} onOpenChange={setCashoutDialogOpen}>
-        <DialogContent className="sm:max-w-md rounded-lg">
+        <DialogContent className="w-full max-w-[calc(100%-1.5rem)] sm:max-w-[420px] rounded-[28px] bg-sc-bg p-5 max-h-[92vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Request Cashout</DialogTitle>
             <DialogDescription>Enter your bank details to request a cashout.</DialogDescription>

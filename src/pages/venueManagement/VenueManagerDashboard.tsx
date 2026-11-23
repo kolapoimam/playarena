@@ -1,3 +1,5 @@
+import { Bubble, Cover, FunEmpty } from "@/components/sc/ui";
+import { Store } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -67,7 +69,7 @@ const VenueManagerDashboard = () => {
         // Fetch venue details
         const { data: venueData, error: venueError } = await supabase
           .from("venues")
-          .select("id, name, city, price_per_hour, is_verified, user_id")
+          .select("id, name, city, price_per_hour, is_verified, user_id, image_urls")
           .eq("id", venueId)
           .single();
 
@@ -224,37 +226,36 @@ const VenueManagerDashboard = () => {
           </div>
         </header>
 
-        <main className="container mx-auto p-4 pb-24 space-y-8 flex-1">
+        <main className="px-5 pt-2 pb-28 flex flex-col gap-3.5 flex-1">
           {loading ? (
             <div className="w-full"><RowsSkeleton /></div>
           ) : !venue ? (
-            <p className="text-center text-sc-ink3 dark:text-gray-400">No venue data available.</p>
+            <FunEmpty icon={Store} sport="venue" title="No venue here yet" body="Link your venue with its access code or list a new one to manage bookings." primary={{ label: "List a venue", onClick: () => navigate("/venue-create") }} />
           ) : (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div className="p-4 bg-sc-green-bg dark:bg-green-900/50 rounded-lg flex items-center gap-3 shadow-card">
-                  <Users className="h-8 w-8 text-sc-green-dark" />
-                  <div>
-                    <p className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Total Events</p>
-                    <p className="text-lg font-semibold text-sc-ink dark:text-gray-100">{totalEvents}</p>
-                  </div>
+              <div className="relative h-[170px] rounded-[28px] overflow-hidden">
+                <Cover src={(venue as any).image_urls?.[0]} kind="venue" alt={(venue as any).name || "Venue"} />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+                <div className="absolute left-5 right-5 bottom-4 text-white flex items-end justify-between gap-3">
+                  <span className="flex flex-col min-w-0">
+                    <span className="text-xs font-bold tracking-[0.12em] opacity-80">YOUR VENUE</span>
+                    <span className="text-[24px] leading-7 font-extrabold tracking-[-0.02em] truncate">{(venue as any).name}</span>
+                  </span>
+                  {verifiedSince && <span className="h-8 px-3 rounded-full bg-white text-sc-ink text-xs font-extrabold inline-flex items-center gap-1 shrink-0"><CheckCircle size={14} className="text-sc-green" /> Verified</span>}
                 </div>
-                <div className="p-4 bg-sc-green-bg dark:bg-green-900/50 rounded-lg flex items-center gap-3 shadow-card">
-                  <Trophy className="h-8 w-8 text-sc-green-dark" />
-                  <div>
-                    <p className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Total Funds</p>
-                    <p className="text-lg font-semibold text-sc-ink dark:text-gray-100">₦{totalFunds.toFixed(2)}</p>
+              </div>
+              <div className="grid grid-cols-3 gap-2.5">
+                {[
+                  { icon: Users, sport: "venue" as const, label: "Events", value: String(totalEvents) },
+                  { icon: Trophy, sport: "money" as const, label: "Earned", value: `₦${Math.round(totalFunds).toLocaleString()}` },
+                  { icon: CheckCircle, sport: "football" as const, label: "Verified", value: verifiedSince ? format(new Date(verifiedSince), "MMM yyyy") : "Not yet" },
+                ].map((f) => (
+                  <div key={f.label} className="min-w-0 bg-white rounded-[20px] p-3.5 flex flex-col gap-1.5">
+                    <Bubble icon={f.icon} sport={f.sport} size={32} />
+                    <span className="text-xs text-sc-ink3 font-semibold">{f.label}</span>
+                    <span className="text-[15px] font-extrabold truncate">{f.value}</span>
                   </div>
-                </div>
-                <div className="p-4 bg-sc-green-bg dark:bg-green-900/50 rounded-lg flex items-center gap-3 shadow-card">
-                  <CheckCircle className="h-8 w-8 text-sc-green-dark" />
-                  <div>
-                    <p className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Verified Since</p>
-                    <p className="text-lg font-semibold text-sc-ink dark:text-gray-100">
-                      {verifiedSince ? format(new Date(verifiedSince), "MMM d, yyyy") : "Not Verified"}
-                    </p>
-                  </div>
-                </div>
+                ))}
               </div>
 
               <VenueWallet
@@ -263,8 +264,8 @@ const VenueManagerDashboard = () => {
                 setAvailableFunds={setAvailableFunds}
               />
 
-              <Card className="bg-white dark:bg-gray-800 border-none shadow-card rounded-3xl">
-                <CardHeader>
+              <div className="bg-white rounded-3xl p-[18px]">
+                <div>
                   <ManagerBookingView
                     upcomingBookings={upcomingBookings}
                     pastBookings={pastBookings}
@@ -273,8 +274,8 @@ const VenueManagerDashboard = () => {
                     setIsBookingsOpen={setIsBookingsOpen}
                     userId={userId}
                   />
-                </CardHeader>
-              </Card>
+                </div>
+              </div>
 
               <VenueAccessCode venueId={venueId!} />
             </>

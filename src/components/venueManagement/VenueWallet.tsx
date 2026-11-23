@@ -1,3 +1,4 @@
+import { BalanceHero, CashoutList } from "@/components/sc/CashoutUI";
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -205,78 +206,11 @@ const VenueWallet = ({ venueId, availableFunds, setAvailableFunds }: VenueWallet
   };
 
   return (
-    <Card className="bg-white dark:bg-gray-800 border-none shadow-card rounded-3xl">
-      <CardHeader>
-        <CardTitle className="text-lg font-semibold text-sc-ink dark:text-gray-100 flex justify-between items-center">
-          Wallet
-          <Button
-            onClick={() => setCashoutDialogOpen(true)}
-            disabled={availableFunds === 0 || loading}
-            className="bg-sc-green hover:brightness-95 text-sc-green-ink rounded-full font-bold"
-          >
-            Cashout
-          </Button>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="mb-4 flex items-center gap-2">
-          <p className="text-sm font-medium text-sc-ink3 dark:text-gray-400">
-            Available Funds: ₦{availableFunds.toFixed(2)}
-          </p>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={fetchCashoutRequests}
-            className="p-1"
-            title="Refresh Cashout Requests"
-          >
-            <RefreshCw size={16} />
-          </Button>
-        </div>
-        <Collapsible>
-          <CollapsibleTrigger className="text-sm font-medium text-sc-ink2 dark:text-gray-300 mb-2">
-            {cashoutRequests.length > 0 ? `View ${cashoutRequests.length} Cashout Requests` : "No Cashout Requests"}
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <div className="space-y-4">
-              {cashoutRequests.map((request) => (
-                <div
-                  key={request.id}
-                  className="p-4 bg-sc-soft dark:bg-gray-700 rounded-lg border border-sc-line dark:border-gray-600"
-                >
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="text-lg font-medium text-sc-ink dark:text-gray-100">
-                        ₦{request.amount.toLocaleString()}
-                      </p>
-                      <p className="text-sm text-sc-ink3 dark:text-gray-400">
-                        {new Date(request.created_at).toLocaleString("en-NG", {
-                          dateStyle: "medium",
-                          timeStyle: "short",
-                        })}
-                      </p>
-                      <p className="text-sm text-sc-ink3 dark:text-gray-400">
-                        Account: {request.account_holder_name}
-                      </p>
-                      <p className="text-sm text-sc-ink3 dark:text-gray-400">
-                        Bank: {request.bank_name} ({request.account_number})
-                      </p>
-                    </div>
-                    <span
-                      className={`inline-block px-3 py-1 text-sm font-medium rounded border ${getStatusStyles(request.status)}`}
-                    >
-                      {request.status}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CollapsibleContent>
-        </Collapsible>
-      </CardContent>
-
+    <div className="flex flex-col gap-3.5">
+      <BalanceHero accent="#7C3AED" label="Venue wallet" balance={availableFunds} onRefresh={fetchCashoutRequests} onRequest={() => setCashoutDialogOpen(true)} disabled={availableFunds === 0 || loading} note="From bookings at your venue" />
+      <CashoutList rows={cashoutRequests.map((r: any) => ({ id: r.id, amount: r.amount, created_at: r.created_at, status: r.status, name: r.account_holder_name, bank: r.bank_name, account: r.account_number }))} />
       <Dialog open={cashoutDialogOpen} onOpenChange={setCashoutDialogOpen}>
-        <DialogContent className="sm:max-w-md rounded-3xl bg-white dark:bg-gray-800 border-none shadow-card">
+        <DialogContent className="w-full max-w-[calc(100%-1.5rem)] sm:max-w-[420px] rounded-[28px] bg-sc-bg p-5 max-h-[92vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-lg font-semibold text-sc-ink dark:text-gray-100">Request Cashout</DialogTitle>
             <DialogDescription className="text-sm text-sc-ink3 dark:text-gray-400">
@@ -378,7 +312,7 @@ const VenueWallet = ({ venueId, availableFunds, setAvailableFunds }: VenueWallet
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Card>
+    </div>
   );
 };
 
