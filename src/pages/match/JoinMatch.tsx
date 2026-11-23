@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Loader, Calendar, MapPin, Clock, Users, DollarSign, Phone, MessageSquare, Repeat } from "lucide-react";
+import { ArrowLeft, Loader, Calendar, MapPin, Clock, Users, DollarSign, Phone, MessageSquare, Repeat, Wallet, CheckCircle2 } from "lucide-react";
 import {
   Form,
   FormControl,
@@ -21,7 +21,7 @@ import { format, isToday, isPast } from "date-fns";
 import MatchJoinersDialog from "@/components/match/MatchJoinersDialog";
 import { Seo } from "@/components/Seo";
 
-import { BackButton } from "@/components/sc/ui";
+import { Avatar, BackButton, Bubble, Cover, FunEmpty, ScButton, SPORT, formatNaira, initialsOf } from "@/components/sc/ui";
 import { RowsSkeleton, PageSkeleton } from "@/components/sc/skeletons";
 const META_KEYWORDS = "Football in Nigeria, Sports in Nigeria, Play Sports Near You, Football Fields Near Me, Livescore, Osimhen, Asisat Oshola, Nigeria Startup, Sportstech, Football venues in Lagos, Football venues in Ilorin, Sports Betting in Nigeria, Organize sports in Nigeria, Football Matches, Bicycle Training in Nigeria, Cycling in Nigeria, Nigerian football, Nigerian cycling, Nigerian sports, Play football in Lagos, Play football in Ilorin, Play football in Abuja, Play football in Nigeria, Play cycling in Nigeria, Play sports in Nigeria, Nigerian sports tech, Nigerian sports startup, Nigerian sports community, Football events Nigeria, Cycling events Nigeria, Sport Cliq, SportCliq, sportcliq.com.ng, sportcliq.ng, sportcliq, sport cliq, sportcliq app, sportcliq platform, sportcliq football, sportcliq cycling, sportcliq venues, sportcliq matches, sportcliq events, sportcliq sports, sportcliq nigeria, sportcliq lagos, sportcliq ilorin, sportcliq abuja, sportcliq startup, sportcliq tech, sportcliq community, sportcliq platform, sportcliq app, sportcliq website, sportcliq online, sportcliq booking, sportcliq organize, sportcliq join, sportcliq play, sportcliq find, sportcliq search, sportcliq discover, sportcliq connect, sportcliq join match, sportcliq join cycling, sportcliq join event, sportcliq join venue, sportcliq join football, sportcliq join sports, sportcliq join nigeria, sportcliq join lagos, sportcliq join ilorin, sportcliq join abuja, sportcliq join startup, sportcliq join tech, sportcliq join community, sportcliq join platform, sportcliq join app, sportcliq join website, sportcliq join online, sportcliq join booking, sportcliq join organize, sportcliq join play, sportcliq join find, sportcliq join search, sportcliq join discover, sportcliq join connect";
 
@@ -146,7 +146,7 @@ const JoinMatch = () => {
             id, slug, title, match_date, match_time, total_slots, organizer_name, organizer_phone, disclose_phone, 
             is_paid, price, player_number_required, required_fields, allow_bulk_tickets,
             is_recurring, recurring_frequency, recurring_occurrences,
-            venue:venues(slug, name, city),
+            venue:venues(slug, name, city, image_urls),
             players(player_name, number_of_slots)
           `
           )
@@ -410,7 +410,7 @@ const JoinMatch = () => {
           id, slug, title, match_date, match_time, total_slots, organizer_name, organizer_phone, disclose_phone, 
           is_paid, price, player_number_required, required_fields, allow_bulk_tickets,
           is_recurring, recurring_frequency, recurring_occurrences,
-          venue:venues(slug, name, city),
+          venue:venues(slug, name, city, image_urls),
           players(player_name, number_of_slots)
         `
         )
@@ -484,200 +484,131 @@ const JoinMatch = () => {
         image={undefined}
         children={<meta name="keywords" content={META_KEYWORDS} />}
       />
-      <div className="min-h-screen pb-32">
-        <header className="px-5 pt-[max(env(safe-area-inset-top),1rem)]">
-          <div className="pt-3 flex items-center justify-between gap-3">
-            <BackButton />
-            <h1 className="m-0 flex-1 text-center text-[17px] font-extrabold truncate">Join match</h1>
-            <div className="min-w-11 flex justify-end"></div>
+      <div className="min-h-screen pb-36 bg-sc-bg">
+        <div className="relative h-[220px] overflow-hidden rounded-b-[36px]">
+          <Cover src={(match as any).venue?.image_urls?.[0]} kind="football" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-black/25" />
+          <div className="absolute left-5 right-5 flex justify-between items-center" style={{ top: "max(env(safe-area-inset-top), 1rem)" }}>
+            <BackButton className="mt-3" />
+            <span className="mt-3 h-8 px-3 rounded-full bg-white/90 text-sc-ink text-xs font-extrabold inline-flex items-center">Join match</span>
           </div>
-        </header>
+          <div className="absolute left-5 right-5 bottom-5 text-white">
+            <h1 className="m-0 text-[28px] leading-8 font-extrabold tracking-[-0.03em]">{match.title}</h1>
+            {match.venue && <span className="text-sm opacity-90">{match.venue.name}, {match.venue.city}</span>}
+          </div>
+        </div>
 
-        <div className="p-6">
-          <div className="bg-card rounded-lg shadow-card p-6 mb-6">
-            <h2 className="text-xl font-semibold mb-2">{match.title}</h2>
-            <div className="text-muted-foreground mb-2">
-              <div className="flex items-center gap-2">
-                <Calendar size={16} />
-                <span>{formatDate(match.match_date)}</span>
+        <div className="px-5 pt-[18px] flex flex-col gap-3.5">
+          <div className="grid grid-cols-3 gap-2.5">
+            {[
+              { icon: Calendar, sport: "football" as const, label: "Date", value: new Date(match.match_date).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) },
+              { icon: Clock, sport: "guide" as const, label: "Kickoff", value: formatTime(match.match_time) },
+              { icon: Users, sport: "tennis" as const, label: "Spots left", value: `${Math.max(match.total_slots - totalPlayerSlots, 0)} of ${match.total_slots}` },
+            ].map((f) => (
+              <div key={f.label} className="min-w-0 bg-white rounded-[20px] p-3.5 flex flex-col gap-1.5">
+                <Bubble icon={f.icon} sport={f.sport} size={32} />
+                <span className="text-xs text-sc-ink3 font-semibold">{f.label}</span>
+                <span className="text-[14px] font-extrabold truncate">{f.value}</span>
               </div>
-              <div className="flex items-center gap-2">
-                <Clock size={16} />
-                <span>{formatTime(match.match_time)}</span>
-              </div>
-              {match.venue && (
-                <div className="flex items-center gap-2">
-                  <MapPin size={16} />
-                  <span>{match.venue.name}, {match.venue.city}</span>
-                </div>
-              )}
-              {userId && match.is_recurring && (
-                <div className="flex items-center gap-2">
-                  <Repeat size={16} />
-                  <span>Repeats {match.recurring_frequency} for {match.recurring_occurrences} times</span>
-                </div>
-              )}
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <Users size={16} />
-              <span>Spots available: {match.total_slots - totalPlayerSlots} / {match.total_slots}</span>
-            </div>
-            {match.is_paid && (
-              <div className="mt-2 font-medium text-sc-green-dark">Price: ₦{match.price?.toFixed(2)} per slot</div>
-            )}
-            {match.disclose_phone && match.organizer_phone && (
-              <div className="mt-2 flex items-center gap-2 text-sm">
-                <span>Organizer:</span>
-                <a href={`tel:${match.organizer_phone}`} className="flex items-center text-blue-600 hover:underline">
-                  <Phone size={16} className="mr-1" />
-                  Call Organizer
-                </a>
-                <a
-                  href={`https://wa.me/${match.organizer_phone}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center text-sc-green-dark hover:underline"
-                >
-                  <MessageSquare size={16} className="mr-1" />
-                  WhatsApp
-                </a>
-              </div>
-            )}
+            ))}
           </div>
+
+          {userId && match.is_recurring && (
+            <div className="rounded-2xl px-4 py-3 text-sm font-bold inline-flex items-center gap-2" style={{ background: SPORT.cycling.bg, color: SPORT.cycling.fg }}>
+              <Repeat size={16} /> Repeats {match.recurring_frequency} for {match.recurring_occurrences} times
+            </div>
+          )}
+
+          {match.disclose_phone && match.organizer_phone && (
+            <div className="bg-white rounded-3xl p-[18px] flex items-center gap-3">
+              <Avatar seed={match.organizer_name} initials={initialsOf(match.organizer_name || "O")} sport="pink" size={44} />
+              <span className="flex-1 min-w-0 flex flex-col">
+                <span className="text-xs text-sc-ink3 font-semibold">Organiser</span>
+                <span className="text-[15px] font-extrabold truncate">{match.organizer_name}</span>
+              </span>
+              <a href={`tel:${match.organizer_phone}`} aria-label="Call the organiser" className="w-11 h-11 rounded-full bg-sc-soft flex items-center justify-center"><Phone size={18} /></a>
+              <a href={`https://wa.me/${match.organizer_phone}`} target="_blank" rel="noopener noreferrer" aria-label="WhatsApp the organiser" className="w-11 h-11 rounded-full bg-[#25D366] text-white flex items-center justify-center"><MessageSquare size={18} /></a>
+            </div>
+          )}
 
           {isPastMatch ? (
-            <div className="text-center py-6 bg-muted rounded-lg shadow-card">
-              <h2 className="text-lg font-semibold text-sc-ink2">This match has already passed</h2>
-              <p className="text-muted-foreground mt-2">You cannot join this match anymore.</p>
-              <Button className="mt-4 bg-sc-green hover:brightness-95 text-sc-green-ink font-bold" onClick={() => navigate("/matches")}>
-                Browse Other Matches
-              </Button>
-            </div>
+            <FunEmpty icon={Calendar} sport="football" title="This one has been played" body="The final whistle has gone on this match. Plenty more are kicking off soon." primary={{ label: "Find another match", onClick: () => navigate("/matches") }} />
           ) : isFull ? (
-            <div className="text-center py-6 bg-muted rounded-lg shadow-card">
-              <h2 className="text-lg font-semibold text-sc-ink2">This match is full</h2>
-              <p className="text-muted-foreground mt-2">All player slots have been filled.</p>
-              <Button className="mt-4 bg-sc-green hover:brightness-95 text-sc-green-ink font-bold" onClick={() => navigate(`/match/${match.slug}`)}>
-                View Match Details
-              </Button>
+            <FunEmpty icon={Users} sport="red" title="Every slot is taken" body="This squad is complete. Check the match page in case a spot opens up." primary={{ label: "View match", onClick: () => navigate(`/match/${match.slug}`) }} secondary={{ label: "Find another match", onClick: () => navigate("/matches") }} />
+          ) : match.is_paid && paymentStatus === "pending" ? (
+            <div className="bg-white rounded-3xl p-[18px] flex flex-col gap-4">
+              <div className="flex items-center gap-3">
+                <Bubble icon={Wallet} sport="money" size={44} radius={14} />
+                <span className="flex flex-col">
+                  <span className="text-base font-extrabold">Pay to lock your slot</span>
+                  <span className="text-[13px] text-sc-ink3">{formatNaira(match.price)} per slot, paid securely with Paystack</span>
+                </span>
+              </div>
+              {match.allow_bulk_tickets && maxSlots > 1 && (
+                <div className="flex items-center justify-between rounded-2xl bg-sc-bg px-4 py-3">
+                  <span className="flex flex-col">
+                    <span className="text-sm font-bold">Slots</span>
+                    <span className="text-xs text-sc-ink3">Bring your friends, up to {maxSlots}</span>
+                  </span>
+                  <div className="flex items-center gap-3">
+                    <button type="button" aria-label="Fewer slots" onClick={() => setSelectedSlots((prev) => Math.max(1, prev - 1))} disabled={selectedSlots <= 1} className="w-10 h-10 rounded-full bg-white text-xl font-bold disabled:opacity-40">−</button>
+                    <span className="w-6 text-center text-xl font-extrabold">{selectedSlots}</span>
+                    <button type="button" aria-label="More slots" onClick={() => setSelectedSlots((prev) => Math.min(maxSlots, prev + 1))} disabled={selectedSlots >= maxSlots} className="w-10 h-10 rounded-full bg-white text-xl font-bold disabled:opacity-40">+</button>
+                  </div>
+                </div>
+              )}
+              <div className="flex justify-between items-baseline">
+                <span className="text-sm text-sc-ink3 font-semibold">Total</span>
+                <span className="text-[26px] font-extrabold tracking-[-0.02em]">{formatNaira((match.price || 0) * selectedSlots)}</span>
+              </div>
+              <ScButton icon={joining ? undefined : Wallet} onClick={handlePaymentInitiation} disabled={joining || !paystackLoaded}>
+                {joining ? "Processing..." : !paystackLoaded ? "Getting payment ready..." : `Pay ${formatNaira((match.price || 0) * selectedSlots)}`}
+              </ScButton>
             </div>
           ) : (
-            <>
-              {match.is_paid && paymentStatus === "pending" ? (
-                <div className="bg-card rounded-lg shadow-card p-6 space-y-4">
-                  <h3 className="text-lg font-semibold text-sc-ink">Payment Required</h3>
-                  <p className="text-muted-foreground">
-                    This is a paid match. Please complete the payment to join.
-                  </p>
-                  {match.allow_bulk_tickets && (
-                    <div className="flex items-center gap-4">
-                      <span className="text-sm font-medium">Number of Slots:</span>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setSelectedSlots((prev) => Math.max(1, prev - 1))}
-                          disabled={selectedSlots <= 1}
-                        >
-                          -
-                        </Button>
-                        <span className="text-lg font-medium">{selectedSlots}</span>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setSelectedSlots((prev) => Math.min(maxSlots, prev + 1))}
-                          disabled={selectedSlots >= maxSlots}
-                        >
-                          +
-                        </Button>
-                      </div>
-                      <span className="text-sm text-muted-foreground">
-                        Max {maxSlots} slots available
-                      </span>
-                    </div>
-                  )}
-                  <div className="text-sm font-medium">
-                    Total: ₦{(match.price! * selectedSlots).toFixed(2)}
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="bg-white rounded-3xl p-[18px] flex flex-col gap-4">
+                {match.is_paid && paymentStatus === "success" && (
+                  <div className="rounded-2xl p-4 flex gap-3" style={{ background: SPORT.football.bg, color: SPORT.football.fg }}>
+                    <CheckCircle2 size={22} className="shrink-0" />
+                    <span className="flex flex-col text-sm">
+                      <b>Payment received</b>
+                      <span>Finish your details for {selectedSlots} slot{selectedSlots > 1 ? "s" : ""}.{paymentReference ? ` Ref ${paymentReference}` : ""}</span>
+                    </span>
                   </div>
-                  <Button
-                    type="button"
-                    className="w-full bg-sc-green hover:brightness-95 text-sc-green-ink py-2 rounded-full transition-colors font-bold"
-                    onClick={handlePaymentInitiation}
-                    disabled={joining || !paystackLoaded}
-                  >
-                    {joining ? (
-                      <>
-                        <Loader size={16} className="mr-2 animate-spin" />
-                        Processing...
-                      </>
-                    ) : (
-                      `Pay Now (₦${(match.price! * selectedSlots).toFixed(2)})`
+                )}
+                <span className="text-base font-extrabold">Your details</span>
+                {match.required_fields?.map((field) => (
+                  <FormField
+                    key={field}
+                    control={form.control}
+                    name={field}
+                    render={({ field: formField }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-bold text-sc-ink">{field === "phone" ? "Phone number" : field.charAt(0).toUpperCase() + field.slice(1)}</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder={field === "phone" ? "11-digit phone number" : `Your ${field}`}
+                            {...formField}
+                            type={field === "phone" ? "tel" : "text"}
+                            inputMode={field === "phone" ? "tel" : /age|number|jersey/i.test(field) ? "numeric" : "text"}
+                            disabled={!!userId && (field === "name" || field === "phone")}
+                            {...(field === "phone" && !userId && {
+                              maxLength: 11,
+                              onChange: (e: React.ChangeEvent<HTMLInputElement>) => formField.onChange(e.target.value.replace(/[^0-9]/g, "")),
+                            })}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
                     )}
-                  </Button>
-                </div>
-              ) : (
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 bg-card rounded-lg shadow-card p-6">
-                    {match.is_paid && paymentStatus === "success" && (
-                      <div className="bg-sc-green-bg p-4 rounded-md border border-green-200 text-sc-green-dark">
-                        <p className="font-medium">Payment Successful!</p>
-                        <p className="text-sm">Please complete your registration below for {selectedSlots} slot{selectedSlots > 1 ? "s" : ""}.</p>
-                        {paymentReference && (
-                          <p className="text-sm mt-1">Reference: {paymentReference}</p>
-                        )}
-                      </div>
-                    )}
-                    
-                    {match.required_fields?.map((field) => (
-                      <FormField
-                        key={field}
-                        control={form.control}
-                        name={field}
-                        render={({ field: formField }) => (
-                          <FormItem>
-                            <FormLabel className="text-sc-ink2">{field.charAt(0).toUpperCase() + field.slice(1)}</FormLabel>
-                            <FormControl>
-                              <Input
-                                placeholder={`Enter your ${field}`}
-                                {...formField}
-                                type={field === "phone" ? "tel" : "text"}
-                                inputMode={field === "phone" ? "numeric" : "text"}
-                                className="border-sc-line rounded-md focus:ring-green-500 focus:border-green-500"
-                                disabled={userId && (field === "name" || field === "phone")}
-                                {...(field === "phone" && !userId && {
-                                  pattern: "[0-9]*",
-                                  maxLength: 11,
-                                  onChange: (e) => {
-                                    const value = e.target.value.replace(/[^0-9]/g, '');
-                                    formField.onChange(value);
-                                  },
-                                })}
-                              />
-                            </FormControl>
-                            <FormMessage className="text-red-500" />
-                          </FormItem>
-                        )}
-                      />
-                    ))}
-
-                    <Button
-                      type="submit"
-                      className="w-full bg-sc-green hover:brightness-95 text-sc-green-ink py-2 rounded-full transition-colors font-bold"
-                      disabled={joining}
-                    >
-                      {joining ? (
-                        <>
-                          <Loader size={16} className="mr-2 animate-spin" />
-                          Joining...
-                        </>
-                      ) : (
-                        `Join Match${selectedSlots > 1 ? ` (${selectedSlots} slots)` : ""}`
-                      )}
-                    </Button>
-                  </form>
-                </Form>
-              )}
-            </>
+                  />
+                ))}
+                <ScButton type="submit" disabled={joining}>
+                  {joining ? "Joining..." : `Join match${selectedSlots > 1 ? ` · ${selectedSlots} slots` : ""}`}
+                </ScButton>
+              </form>
+            </Form>
           )}
         </div>
         <Navbar />

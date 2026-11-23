@@ -73,7 +73,7 @@ const OrganiserVenue = ({ venueId, onVenueChange, isPreFilled, preSelectedVenueS
                 <Plus size={16} className="mr-1" /> Add New Venue
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
+            <DialogContent className="w-full max-w-[calc(100%-1.5rem)] sm:max-w-[480px] max-h-[92vh] overflow-y-auto rounded-[28px] bg-sc-bg p-4">
               <VenueForm 
                 onSuccess={onVenueCreated} 
                 onCancel={() => setVenueDialogOpen(false)} 

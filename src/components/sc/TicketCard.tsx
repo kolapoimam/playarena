@@ -2,7 +2,7 @@
 // the code in large type for manual entry, and the key match day details. It can be saved as a PNG.
 import { forwardRef, useEffect, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
-import { Download, QrCode } from "lucide-react";
+import { Bike, CalendarDays, Clock, Download, Flag, Info, MapPin, QrCode, Ticket, Trophy, User, Users, Wallet } from "lucide-react";
 import QRCode from "qrcode";
 import html2canvas from "html2canvas";
 import { SPORT, Sport } from "@/components/sc/ui";
@@ -36,6 +36,18 @@ export const useQr = (text?: string | null, size = 640) => {
   return url;
 };
 
+const rowIcon = (label: string) => {
+  const l = label.toLowerCase();
+  if (/date|day/.test(l)) return CalendarDays;
+  if (/time|start(s)?$|kick/.test(l)) return Clock;
+  if (/finish|end/.test(l)) return Flag;
+  if (/venue|meet|location|where|start/.test(l)) return MapPin;
+  if (/slot|ticket|qty|quantity|seats/.test(l)) return Users;
+  if (/price|paid|amount|fee/.test(l)) return Wallet;
+  if (/player|rider|name|host|holder|spectator/.test(l)) return User;
+  return Info;
+};
+
 const TicketCard = forwardRef<HTMLDivElement, Props>(function TicketCard(
   { sport = "football", kind, title, rows, code, codeLabel = "Confirmation code", qr = true, footnote, onReady },
   ref
@@ -51,25 +63,53 @@ const TicketCard = forwardRef<HTMLDivElement, Props>(function TicketCard(
   return (
     <div ref={ref} className="w-full max-w-[360px] mx-auto bg-white rounded-[28px] overflow-hidden font-sans text-sc-ink shadow-float" style={{ fontFamily: "Satoshi, 'Plus Jakarta Sans', system-ui, sans-serif" }}>
       <div className="relative px-5 pt-5 pb-6 overflow-hidden" style={{ background: c.solid, color: c.onSolid }}>
-        <span aria-hidden="true" className="absolute -right-10 -top-10 w-40 h-40 rounded-full border-[18px] border-white/15" />
-        <span aria-hidden="true" className="absolute right-10 -bottom-12 w-24 h-24 rounded-full bg-white/10" />
+        {sport === "cycling" ? (
+          <svg aria-hidden="true" className="absolute inset-0 w-full h-full" viewBox="0 0 360 150" preserveAspectRatio="xMidYMid slice" fill="none">
+            <path d="M-10 140 C 80 120 120 60 200 70 S 320 30 380 10" stroke="rgba(255,255,255,0.22)" strokeWidth="14" strokeLinecap="round" />
+            <path d="M-10 140 C 80 120 120 60 200 70 S 320 30 380 10" stroke="rgba(255,255,255,0.55)" strokeWidth="2" strokeDasharray="8 10" />
+            <circle cx="300" cy="34" r="22" fill="rgba(255,255,255,0.16)" />
+          </svg>
+        ) : sport === "football" ? (
+          <svg aria-hidden="true" className="absolute inset-0 w-full h-full" viewBox="0 0 360 150" preserveAspectRatio="xMidYMid slice" fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="3">
+            <circle cx="300" cy="75" r="46" />
+            <path d="M300 -10V160" />
+            <rect x="230" y="-6" width="180" height="162" rx="8" />
+            <circle cx="300" cy="75" r="4" fill="rgba(255,255,255,0.3)" />
+          </svg>
+        ) : (
+          <>
+            <span aria-hidden="true" className="absolute -right-10 -top-10 w-40 h-40 rounded-full border-[18px] border-white/15" />
+            <span aria-hidden="true" className="absolute right-10 -bottom-12 w-24 h-24 rounded-full bg-white/10" />
+          </>
+        )}
         <div className="relative flex items-center justify-between">
           <div className="flex items-center gap-2">
             <img src="/brand/sportcliq-mark.png" alt="" width={30} height={30} className="w-[30px] h-[30px] rounded-[9px]" onLoad={() => setLogoReady(true)} onError={() => setLogoReady(true)} />
             <span className="text-[15px] font-extrabold tracking-[-0.02em]">SportCliq</span>
           </div>
-          <span className="h-6 px-2.5 rounded-full bg-white/25 text-[11px] font-extrabold tracking-[0.08em] uppercase flex items-center">{kind}</span>
+          <span className="h-7 px-3 rounded-full bg-white/25 text-[11px] font-extrabold tracking-[0.08em] uppercase flex items-center gap-1.5">
+            {sport === "cycling" ? <Bike size={13} /> : sport === "football" ? <Trophy size={13} /> : <Ticket size={13} />}
+            {kind}
+          </span>
         </div>
-        <h3 className="relative m-0 mt-4 text-[22px] leading-[26px] font-extrabold tracking-[-0.02em]">{title}</h3>
+        <h3 className="relative m-0 mt-4 text-[24px] leading-[28px] font-extrabold tracking-[-0.02em] max-w-[260px]">{title}</h3>
       </div>
 
-      <div className="px-5 pt-4 pb-4 grid grid-cols-2 gap-x-4 gap-y-3">
-        {rows.map((r) => (
-          <div key={r.label} className="flex flex-col gap-0.5 min-w-0">
-            <span className="text-[11px] font-bold uppercase tracking-[0.06em] text-sc-ink3">{r.label}</span>
-            <span className="text-[14px] font-extrabold leading-[18px] break-words">{r.value}</span>
-          </div>
-        ))}
+      <div className="px-4 pt-4 pb-3 grid grid-cols-2 gap-2">
+        {rows.map((r) => {
+          const Icon = rowIcon(r.label);
+          return (
+            <div key={r.label} className="flex items-start gap-2.5 min-w-0 rounded-2xl bg-sc-bg px-3 py-2.5">
+              <span className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ background: c.bg, color: c.fg }}>
+                <Icon size={16} />
+              </span>
+              <span className="flex flex-col gap-0.5 min-w-0">
+                <span className="text-[10.5px] font-bold uppercase tracking-[0.06em] text-sc-ink3">{r.label}</span>
+                <span className="text-[13.5px] font-extrabold leading-[17px] break-words">{r.value}</span>
+              </span>
+            </div>
+          );
+        })}
       </div>
 
       {code && (

@@ -10,7 +10,7 @@ import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import { Seo } from "@/components/Seo";
 
-import { BackButton, SPORT } from "@/components/sc/ui";
+import { BackButton, SPORT, Cover } from "@/components/sc/ui";
 import { Map as MapIcon } from "lucide-react";
 import { RowsSkeleton, DetailSkeleton } from "@/components/sc/skeletons";
 // Custom CSS to style ReactQuill for description
@@ -199,8 +199,8 @@ const LandmarkDetail = () => {
         </header>
 
         <div className="px-5 pt-2 max-w-3xl mx-auto">
-          <div className="rounded-[28px] overflow-hidden mb-6 h-56 flex items-center justify-center" style={{ background: SPORT.guide.bg, color: SPORT.guide.fg }}>
-            <MapIcon size={110} strokeWidth={1} />
+          <div className="relative rounded-[28px] overflow-hidden mb-6 h-56">
+            <Cover src={(landmark as any).image_url || (landmark as any).image_urls?.[0]} kind="cycling" alt={landmark.name} />
           </div>
 
           <h1 className="text-3xl font-bold mb-2 text-sc-ink dark:text-gray-100">{landmark.name}</h1>

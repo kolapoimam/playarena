@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { CalendarIcon, ArrowLeft, Plus } from 'lucide-react';
+import { CalendarIcon, ArrowLeft, Plus, ChevronLeft, ArrowRight, Bike } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import Navbar from '@/components/Navbar';
@@ -24,6 +24,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { DateTime } from 'luxon';
 
 import { BackButton } from "@/components/sc/ui";
+import { RowsSkeleton } from "@/components/sc/skeletons";
+
+const RIDE_STEPS = [
+  { label: "Route", title: "Where does the ride go?", fields: ["start_landmark_id", "end_landmark_id"] },
+  { label: "Basics", title: "Name it and set the time", fields: ["title", "notes", "event_date", "start_time", "isEndTimeEnabled", "end_time", "duration_type", "duration_value"] },
+  { label: "Riders and price", title: "Who can ride and what it costs", fields: ["max_attendees", "is_free", "price", "is_own_bike", "is_rental_available", "registration_deadline"] },
+  { label: "Host and review", title: "Almost ready to roll", fields: ["host_name", "host_phone"] },
+];
 class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
   state = { hasError: false };
 
@@ -157,9 +165,9 @@ const HostCycling = () => {
   const [eventSlug, setEventSlug] = useState<string | null>(null);
   const [isEventDetailsOpen, setIsEventDetailsOpen] = useState(true);
   const [isRouteDetailsOpen, setIsRouteDetailsOpen] = useState(true);
-  const [isPreferencesOpen, setIsPreferencesOpen] = useState(false);
-  const [isRegistrationOpen, setIsRegistrationOpen] = useState(false);
-  const [isHostDetailsOpen, setIsHostDetailsOpen] = useState(false);
+  const [isPreferencesOpen, setIsPreferencesOpen] = useState(true);
+  const [isRegistrationOpen, setIsRegistrationOpen] = useState(true);
+  const [isHostDetailsOpen, setIsHostDetailsOpen] = useState(true);
   const [isCreateLandmarkOpen, setIsCreateLandmarkOpen] = useState(false);
   const [isEndTimeEnabled, setIsEndTimeEnabled] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
@@ -451,6 +459,24 @@ const HostCycling = () => {
     }
   };
 
+  const [step, setStep] = useState(0);
+  const onInvalid = (errors: Record<string, unknown>) => {
+    const keys = Object.keys(errors);
+    const idx = RIDE_STEPS.findIndex((st) => st.fields.some((f) => keys.includes(f)));
+    setStep(idx >= 0 ? idx : 0);
+    toast({ title: "Check your details", description: "Some fields need fixing before you can publish.", variant: "destructive" });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  const goNext = async () => {
+    const ok = await form.trigger(RIDE_STEPS[step].fields as any);
+    if (!ok) {
+      toast({ title: "Check this step", description: "Some details need fixing before you continue.", variant: "destructive" });
+      return;
+    }
+    setStep(step + 1);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   const handleSectionToggle = (setter: (value: boolean) => void, currentValue: boolean) => {
     setter(!currentValue);
   };
@@ -465,17 +491,26 @@ const HostCycling = () => {
           </div>
         </header>
       {loadingLandmarks ? (
-        <p className="text-center mt-4">Loading landmarks...</p>
+        <div className="px-5 pt-2"><RowsSkeleton /></div>
       ) : (
-        <div className="p-6 max-w-md space-y-6 mx-auto">
+        <div className="px-5 pt-2 max-w-md flex flex-col gap-5 mx-auto">
           {landmarksError && (
             <p className="text-red-400 text-center mt-4">{landmarksError}</p>
           )}
+          <div className="flex flex-col gap-2.5">
+            <div className="flex gap-1.5">
+              {RIDE_STEPS.map((_, i) => (
+                <span key={i} className="flex-1 h-1.5 rounded-full transition-colors" style={{ background: i <= step ? "#F97316" : "#E6E9E3" }} />
+              ))}
+            </div>
+            <span className="text-[13px] font-bold text-sc-ink3">Step {step + 1} of {RIDE_STEPS.length} · {RIDE_STEPS[step].label}</span>
+            <h2 className="m-0 text-[26px] leading-8 font-extrabold tracking-[-0.03em]">{RIDE_STEPS[step].title}</h2>
+          </div>
           <Form {...form}>
             <form
               ref={formRef}
-              onSubmit={form.handleSubmit(onSubmit)}
-              className="space-y-6 max-w-auto p-0"
+              onSubmit={form.handleSubmit(onSubmit, onInvalid)}
+              className="flex flex-col gap-4 pb-28"
             >
               <style>
                 {`
@@ -488,14 +523,8 @@ const HostCycling = () => {
                   }
                 `}
               </style>
-              <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 space-y-6">
-                <div
-                  className="flex justify-between items-center cursor-pointer"
-                  onClick={() => handleSectionToggle(setIsRouteDetailsOpen, isRouteDetailsOpen)}
-                >
-                  <h2 className="text-lg font-semibold mb-4">Route Details</h2>
-                  <span>{isRouteDetailsOpen ? '-' : '+'}</span>
-                </div>
+              <div className={step === 0 ? "contents" : "hidden"}><div className="bg-white rounded-3xl p-[18px] flex flex-col gap-4">
+                <h3 className="m-0 text-base font-extrabold">Route Details</h3>
                 {isRouteDetailsOpen && (
                   <>
                     <Button
@@ -570,15 +599,9 @@ const HostCycling = () => {
                     />
                   </>
                 )}
-              </div>
-              <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 space-y-6">
-                <div
-                  className="flex justify-between items-center"
-                  onClick={() => handleSectionToggle(setIsEventDetailsOpen, isEventDetailsOpen)}
-                >
-                  <h2 className="text-lg font-semibold mb-2">Event Details</h2>
-                  <span>{isEventDetailsOpen ? '-' : '+'}</span>
-                </div>
+              </div></div>
+              <div className={step === 1 ? "contents" : "hidden"}><div className="bg-white rounded-3xl p-[18px] flex flex-col gap-4">
+                <h3 className="m-0 text-base font-extrabold">Event Details</h3>
                 {isEventDetailsOpen && (
                   <>
                     <FormField
@@ -747,15 +770,9 @@ const HostCycling = () => {
                     </div>
                   </>
                 )}
-              </div>
-              <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 space-y-6">
-                <div
-                  className="flex justify-between items-center"
-                  onClick={() => handleSectionToggle(setIsPreferencesOpen, isPreferencesOpen)}
-                >
-                  <h2 className="text-lg font-semibold">Event Preferences</h2>
-                  <span>{isPreferencesOpen ? '-' : '+'}</span>
-                </div>
+              </div></div>
+              <div className={step === 2 ? "contents" : "hidden"}><div className="bg-white rounded-3xl p-[18px] flex flex-col gap-4">
+                <h3 className="m-0 text-base font-extrabold">Event Preferences</h3>
                 {isPreferencesOpen && (
                   <>
                     <FormField
@@ -849,15 +866,9 @@ const HostCycling = () => {
                     </div>
                   </>
                 )}
-              </div>
-              <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 space-y-6">
-                <div
-                  className="flex justify-between items-center"
-                  onClick={() => handleSectionToggle(setIsRegistrationOpen, isRegistrationOpen)}
-                >
-                  <h2 className="text-lg font-semibold">Registration Details</h2>
-                  <span>{isRegistrationOpen ? '-' : '+'}</span>
-                </div>
+              </div></div>
+              <div className={step === 2 ? "contents" : "hidden"}><div className="bg-white rounded-3xl p-[18px] flex flex-col gap-4">
+                <h3 className="m-0 text-base font-extrabold">Registration Details</h3>
                 {isRegistrationOpen && (
                   <>
                     <FormField
@@ -900,15 +911,9 @@ const HostCycling = () => {
                     />
                   </>
                 )}
-              </div>
-              <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 space-y-6">
-                <div
-                  className="flex justify-between items-center"
-                  onClick={() => handleSectionToggle(setIsHostDetailsOpen, isHostDetailsOpen)}
-                >
-                  <h2 className="text-lg font-semibold">Host Details</h2>
-                  <span>{isHostDetailsOpen ? '-' : '+'}</span>
-                </div>
+              </div></div>
+              <div className={step === 3 ? "contents" : "hidden"}><div className="bg-white rounded-3xl p-[18px] flex flex-col gap-4">
+                <h3 className="m-0 text-base font-extrabold">Host Details</h3>
                 {isHostDetailsOpen && (
                   <>
                     <FormField
@@ -948,15 +953,43 @@ const HostCycling = () => {
                     />
                   </>
                 )}
+              </div></div>
+              <div className={step === 3 ? "contents" : "hidden"}>
+                <div className="bg-white rounded-3xl p-[18px] flex flex-col gap-2.5">
+                  <span className="text-base font-extrabold">Review</span>
+                  {[
+                    ["Ride", form.watch("title") || "Not set"],
+                    ["Start", landmarks.find((l) => l.id_uuid === form.watch("start_landmark_id"))?.name || "Not set"],
+                    ["Finish", landmarks.find((l) => l.id_uuid === form.watch("end_landmark_id"))?.name || "Same as start"],
+                    ["Date", form.watch("event_date") ? format(form.watch("event_date") as Date, "EEE, d MMM yyyy") : "Not set"],
+                    ["Starts", form.watch("start_time") || "Not set"],
+                    ["Riders", `${form.watch("max_attendees") || 0} spots`],
+                    ["Entry", form.watch("is_free") ? "Free" : `₦${Number(form.watch("price") || 0).toLocaleString()}`],
+                  ].map(([k, v]) => (
+                    <div key={k as string} className="flex justify-between gap-4 text-sm">
+                      <span className="text-sc-ink3 shrink-0">{k}</span>
+                      <span className="font-bold text-right truncate">{v as string}</span>
+                    </div>
+                  ))}
+                  <button type="button" onClick={() => { setStep(0); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="self-start text-sm font-bold text-sc-green-dark">Edit details</button>
+                </div>
               </div>
-              <Button
-                type="submit"
-                className="w-full bg-sc-green hover:brightness-95 text-sc-green-ink font-bold rounded-full px-4 py-3 text-lg shadow-card transition-colors"
-                disabled={isLoading || loadingLandmarks || !!landmarksError}
-                ref={createButtonRef}
-              >
-                {isLoading ? 'Creating...' : 'Create Event'}
-              </Button>
+              <div className="fixed left-0 right-0 bottom-0 z-30 px-5 pt-3.5 pb-[max(env(safe-area-inset-bottom),1.5rem)] bg-white/95 backdrop-blur-xl border-t border-sc-line flex gap-2.5">
+                {step > 0 && (
+                  <button type="button" aria-label="Previous step" onClick={() => { setStep(step - 1); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="w-[54px] h-[54px] rounded-full bg-sc-soft text-sc-ink flex items-center justify-center shrink-0">
+                    <ChevronLeft size={22} />
+                  </button>
+                )}
+                {step < RIDE_STEPS.length - 1 ? (
+                  <button type="button" onClick={goNext} className="flex-1 h-[54px] rounded-full text-white text-base font-bold flex items-center justify-center gap-2" style={{ background: "#F97316" }}>
+                    Next <ArrowRight size={18} />
+                  </button>
+                ) : (
+                  <button type="submit" ref={createButtonRef} disabled={isLoading || loadingLandmarks || !!landmarksError} className="flex-1 h-[54px] rounded-full text-white text-base font-bold flex items-center justify-center gap-2 disabled:opacity-60" style={{ background: "#F97316" }}>
+                    <Bike size={18} /> {isLoading ? "Creating..." : "Publish ride"}
+                  </button>
+                )}
+              </div>
             </form>
           </Form>
         </div>
@@ -1002,7 +1035,6 @@ const HostCycling = () => {
           </DialogHeader>
         </DialogContent>
       </Dialog>
-      <Navbar />
     </div>
   );
 };

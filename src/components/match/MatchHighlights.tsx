@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 
 import { BackButton } from "@/components/sc/ui";
+import { NavHeader, FunEmpty } from "@/components/sc/ui";
+import { Sparkles } from "lucide-react";
 import { DetailSkeleton } from "@/components/sc/skeletons";
 type MatchHighlight = {
   match_id: string;
@@ -103,9 +105,16 @@ const MatchHighlights = () => {
 
   if (!highlight) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-sc-bg text-sc-ink font-sans">
-        <div className="text-xl font-semibold text-sc-ink">
-          No highlights available.
+      <div className="min-h-screen bg-sc-bg">
+        <NavHeader title="Highlights" />
+        <div className="px-5 pt-4">
+          <FunEmpty
+            icon={Sparkles}
+            sport="tennis"
+            title="No highlights yet"
+            body="The organiser has not shared highlights for this match. Goals, assists and the man of the match land here once they do."
+            primary={{ label: "Back to the match", onClick: () => window.history.length > 1 ? window.history.back() : (window.location.href = `/match/${slug}`) }}
+          />
         </div>
       </div>
     );

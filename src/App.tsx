@@ -22,6 +22,7 @@ import Notifications from "@/pages/profile/Notifications";
 import ViewProfile from "@/pages/profile/ViewProfile";
 import NotFound from "@/pages/NotFound";
 import ResetPassword from "@/pages/ResetPassword";
+import AppErrorBoundary from "@/components/sc/AppErrorBoundary";
 import Organize from "@/pages/gameManagement/Organize";
 import MatchDetail from "@/pages/match/MatchDetail";
 import JoinMatch from "@/pages/match/JoinMatch";
@@ -123,6 +124,7 @@ const AppRoutes = () => {
   }, []);
 
   return (
+    <AppErrorBoundary key={location.pathname}>
     <Routes>
       <Route path="/" element={<Index />} />
       <Route path="/search" element={<Search />} />
@@ -178,6 +180,7 @@ const AppRoutes = () => {
       <Route path="/not-found" element={<NotFound />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
+    </AppErrorBoundary>
   );
 };
 

@@ -9,7 +9,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent } from "@/components/ui/card";
-import { CheckCircle, Loader2, ChevronDown } from "lucide-react";
+import { CheckCircle, Loader2, ChevronDown, Clock, UserPlus, Users, CalendarCheck, Store, Heart, LucideIcon } from "lucide-react";
+import { Bubble, ScButton, Sport } from "@/components/sc/ui";
 
 const notificationSchema = z.object({
   match_playing_time: z.object({
@@ -124,119 +125,71 @@ const UserNotifications = ({ profile, setShowNotifications }) => {
     }
   };
 
+  const EVENTS: { event: string; label: string; sub: string; icon: LucideIcon; sport: Sport }[] = [
+    { event: "match_playing_time", label: "Match reminders", sub: "Before a match you joined kicks off", icon: Clock, sport: "football" },
+    { event: "match_organizing_registration", label: "New players", sub: "When someone joins your match", icon: UserPlus, sport: "guide" },
+    { event: "match_organizing_slot_filled", label: "Match full", sub: "When every slot in your match is taken", icon: Users, sport: "tennis" },
+    { event: "booking_confirmation", label: "Venue bookings", sub: "For venue owners, when a slot is booked", icon: CalendarCheck, sport: "venue" },
+    { event: "venue_match_created", label: "Matches at my venue", sub: "For venue owners, new matches at your venue", icon: Store, sport: "pink" },
+    { event: "venue_favourite_match", label: "Favourite venues", sub: "New matches at venues you love", icon: Heart, sport: "red" },
+  ];
+  const chip = (on: boolean) => `h-9 px-3.5 rounded-full text-[13px] font-bold capitalize ${on ? "bg-sc-ink text-white" : "bg-sc-soft text-sc-ink"}`;
+
   return (
-    <div className="space-y-8">
-      <Card className="bg-white dark:bg-gray-800 border-none shadow-card rounded-3xl overflow-hidden">
-        <details className="group">
-          <summary className="flex items-center justify-between p-4 text-xl font-semibold text-sc-green-dark dark:text-green-400 cursor-pointer bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900 dark:to-green-800 hover:bg-green-200 dark:hover:bg-green-700 transition-colors">
-            Notification Settings
-            <ChevronDown className="w-6 h-6 transition-transform group-open:rotate-180 text-sc-green-dark dark:text-green-400" />
-          </summary>
-          <CardContent className="p-4 pt-6">
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                {[
-                  { event: "match_playing_time", label: "Match Playing Time" },
-                  { event: "match_organizing_registration", label: "Match Organizing - Player Registration" },
-                  { event: "match_organizing_slot_filled", label: "Match Organizing - Slot Filled" },
-                  { event: "booking_confirmation", label: "Booking Confirmation (Venue Owner)" },
-                  { event: "venue_match_created", label: "New Match at Venue (Venue Owner)" },
-                  { event: "venue_favourite_match", label: "Match at Favorited Venue" },
-                ].map(({ event, label }) => (
-                  <div key={event} className="border border-sc-line dark:border-gray-700 p-4 rounded-lg">
-                    <FormField
-                      control={form.control}
-                      name={`${event}.enabled`}
-                      render={({ field }) => (
-                        <FormItem className="flex items-center justify-between">
-                          <FormLabel className="text-sc-ink2 dark:text-gray-300">{label}</FormLabel>
-                          <FormControl>
-                            <Switch
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                              className="bg-gray-200 dark:bg-gray-700 data-[state=checked]:bg-green-500"
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    {form.getValues(`${event}.enabled`) && (
-                      <div className="mt-4 space-y-4">
-                        <FormField
-                          control={form.control}
-                          name={`${event}.type`}
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-sc-ink2 dark:text-gray-300">Notification Type</FormLabel>
-                              <Select onValueChange={field.onChange} value={field.value}>
-                                <FormControl>
-                                  <SelectTrigger className="bg-white dark:bg-gray-700 border-sc-line dark:border-gray-600 text-sc-ink dark:text-gray-100 rounded-lg">
-                                    <SelectValue placeholder="Select type" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {["push", "email", "both"].map((type) => (
-                                    <SelectItem key={type} value={type}>
-                                      {type}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name={`${event}.frequency`}
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-sc-ink2 dark:text-gray-300">Frequency</FormLabel>
-                              <Select onValueChange={field.onChange} value={field.value}>
-                                <FormControl>
-                                  <SelectTrigger className="bg-white dark:bg-gray-700 border-sc-line dark:border-gray-600 text-sc-ink dark:text-gray-100 rounded-lg">
-                                    <SelectValue placeholder="Select frequency" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {["immediate", "daily", "weekly"].map((freq) => (
-                                    <SelectItem key={freq} value={freq}>
-                                      {freq}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-3">
+        {EVENTS.map(({ event, label, sub, icon, sport }) => {
+          const enabled = form.watch(`${event}.enabled` as any);
+          return (
+            <div key={event} className="bg-white rounded-3xl p-4 flex flex-col gap-3">
+              <FormField
+                control={form.control}
+                name={`${event}.enabled` as any}
+                render={({ field }) => (
+                  <FormItem className="flex items-center gap-3 space-y-0">
+                    <Bubble icon={icon} sport={sport} size={42} radius={14} />
+                    <span className="flex-1 min-w-0 flex flex-col">
+                      <FormLabel className="text-[15px] font-extrabold text-sc-ink">{label}</FormLabel>
+                      <span className="text-xs text-sc-ink3">{sub}</span>
+                    </span>
+                    <FormControl>
+                      <Switch checked={field.value} onCheckedChange={field.onChange} className="data-[state=checked]:bg-sc-green" aria-label={label} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              {enabled && (
+                <div className="flex flex-col gap-2.5 pl-[54px]">
+                  <FormField
+                    control={form.control}
+                    name={`${event}.type` as any}
+                    render={({ field }) => (
+                      <div className="flex gap-1.5 flex-wrap" role="radiogroup" aria-label={`${label} channel`}>
+                        {["push", "email", "both"].map((t) => (
+                          <button key={t} type="button" role="radio" aria-checked={field.value === t} onClick={() => field.onChange(t)} className={chip(field.value === t)}>{t}</button>
+                        ))}
                       </div>
                     )}
-                  </div>
-                ))}
-                <Button
-                  type="submit"
-                  className="w-full bg-sc-green hover:brightness-95 text-sc-green-ink font-bold rounded-full px-4 py-2 text-sm flex items-center justify-center"
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 size={16} className="mr-2 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle size={16} className="mr-2" />
-                      Save Notification Settings
-                    </>
-                  )}
-                </Button>
-              </form>
-            </Form>
-          </CardContent>
-        </details>
-      </Card>
-    </div>
+                  />
+                  <FormField
+                    control={form.control}
+                    name={`${event}.frequency` as any}
+                    render={({ field }) => (
+                      <div className="flex gap-1.5 flex-wrap" role="radiogroup" aria-label={`${label} frequency`}>
+                        {["immediate", "daily", "weekly"].map((t) => (
+                          <button key={t} type="button" role="radio" aria-checked={field.value === t} onClick={() => field.onChange(t)} className={chip(field.value === t)}>{t}</button>
+                        ))}
+                      </div>
+                    )}
+                  />
+                </div>
+              )}
+            </div>
+          );
+        })}
+        <ScButton type="submit" icon={CheckCircle} disabled={loading}>{loading ? "Saving..." : "Save settings"}</ScButton>
+      </form>
+    </Form>
   );
 };
 
