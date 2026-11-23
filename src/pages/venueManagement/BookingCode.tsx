@@ -8,6 +8,7 @@ import { Loader2, ArrowLeft } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import VenueAccessCode from "@/components/venueManagement/VenueAccessCode";
 
+import { BackButton } from "@/components/sc/ui";
 const BookingCode = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -51,35 +52,28 @@ const BookingCode = () => {
   }, [navigate, toast]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-100 dark:bg-gray-900">
-      <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg sticky top-0 z-20">
-        <div className="flex items-center justify-between max-w-7xl mx-auto">
-          <Button
-            variant="ghost"
-            onClick={() => navigate("/profile")}
-            className="text-white hover:bg-green-600 flex items-center"
-          >
-            <ArrowLeft className="w-5 h-5 mr-2" />
-            Back
-          </Button>
-          <h1 className="text-2xl font-bold">Booking Code</h1>
-          <div className="w-10"></div>
-        </div>
-      </header>
+    <div className="min-h-screen flex flex-col bg-sc-bg dark:bg-gray-900">
+      <header className="px-5 pt-[max(env(safe-area-inset-top),1rem)] sticky top-0 z-20 bg-sc-bg/95 backdrop-blur-xl pb-3">
+          <div className="pt-3 flex items-center justify-between gap-3">
+            <BackButton to="/profile" />
+            <h1 className="m-0 flex-1 text-center text-[17px] font-extrabold truncate">Booking code</h1>
+            <div className="min-w-11 flex justify-end"></div>
+          </div>
+        </header>
 
 <main className="flex-grow max-w-7xl mx-auto px-4 py-6 w-full">
   {loading ? (
     <div className="flex justify-center items-center h-64">
-      <Loader2 className="w-8 h-8 animate-spin text-green-500" />
+      <Loader2 className="w-8 h-8 animate-spin text-sc-green-dark" />
     </div>
   ) : venueId ? (
     <VenueAccessCode venueId={venueId} />
   ) : (
-    <div className="w-full bg-gradient-to-b from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 shadow-lg rounded-xl border border-gray-200 dark:border-gray-700 p-6 text-center">
-      <p className="text-gray-600 dark:text-gray-400 mb-4">No linked venue found.</p>
+    <div className="w-full bg-gradient-to-b from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 shadow-lg rounded-xl border border-sc-line dark:border-gray-700 p-6 text-center">
+      <p className="text-sc-ink3 dark:text-gray-400 mb-4">No linked venue found.</p>
       <Button
         onClick={() => navigate("/profile/my-venue")}
-        className="bg-green-500 hover:bg-green-600 text-white rounded-lg"
+        className="bg-sc-green hover:brightness-95 text-sc-green-ink rounded-full font-bold"
       >
         Link a Venue
       </Button>

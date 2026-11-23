@@ -581,7 +581,7 @@ const ConfirmCheckin = () => {
   }, [match?.id, cyclingEvent?.id_uuid, isCyclingEvent]);
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
+    <div className="min-h-screen bg-sc-bg dark:bg-gray-900">
       <header className="sticky top-0 z-50 dark:bg-gray-50 bg-green-500 text-white">
         <div className="p-4 flex items-center justify-between">
           <Button
@@ -599,8 +599,8 @@ const ConfirmCheckin = () => {
 
       <div className="max-w-4xl mx-auto p-4 mt-4 pb-24">
         {superCode.length < 6 && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6 border border-gray-200 dark:border-gray-700">
-            <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">
+          <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 mb-6 dark:border-gray-700">
+            <h2 className="text-xl font-semibold mb-4 text-sc-ink dark:text-gray-100">
               Select Event Type
             </h2>
             <div className="flex gap-4">
@@ -663,13 +663,13 @@ const ConfirmCheckin = () => {
 
         {loading && (
           <div className="flex items-center py-4">
-            <Loader2 className="animate-spin text-green-600" size={24} />
-            <span className="ml-3 text-gray-700">Loading...</span>
+            <Loader2 className="animate-spin text-sc-green-dark" size={24} />
+            <span className="ml-3 text-sc-ink2">Loading...</span>
           </div>
         )}
 
         {error && !loading && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 text-center">
+          <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-4 text-center">
             <AlertCircle
               size={36}
               className="text-red-600 dark:text-red-400 mx-auto"
@@ -677,12 +677,12 @@ const ConfirmCheckin = () => {
             <h2 className="text-lg font-semibold text-red-600 dark:text-red-400">
               Error
             </h2>
-            <p className="mt-2 text-gray-500 dark:text-gray-400">{error}</p>
+            <p className="mt-2 text-sc-ink3 dark:text-gray-400">{error}</p>
           </div>
         )}
 
         {eventNotFound && !loading && !error && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-4">
+          <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 mb-4">
             <AlertCircle
               size={36}
               className="text-red-400 dark:text-red-400 mx-auto"
@@ -690,7 +690,7 @@ const ConfirmCheckin = () => {
             <h2 className="text-lg font-semibold text-center text-red-600 dark:text-red-400">
               Event Not Found
             </h2>
-            <p className="mt-2 text-center text-gray-600 dark:text-gray-400">
+            <p className="mt-2 text-center text-sc-ink3 dark:text-gray-400">
               No {isCyclingEvent ? "cycling event" : "match"} found with super code "
               <strong>{superCode}</strong>".
             </p>
@@ -699,8 +699,8 @@ const ConfirmCheckin = () => {
 
         {(match || cyclingEvent) && !error && (
           <Tabs defaultValue="details" className="w-full">
-            <div className="sticky top-16 z-10 bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
-              <TabsList className="w-full grid grid-cols-3 bg-gray-100 dark:bg-gray-700 rounded-lg h-12">
+            <div className="sticky top-16 z-10 bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 mb-6">
+              <TabsList className="w-full grid grid-cols-3 bg-sc-soft dark:bg-gray-700 rounded-lg h-12">
                 <TabsTrigger
                   value="details"
                   className="data-[state=active]:bg-green-500 data-[state=active]:text-white py-2 text-sm font-semibold rounded-lg"
@@ -808,7 +808,7 @@ const ConfirmCheckin = () => {
                 Confirm {isCyclingEvent ? "Event" : "Match"} Cancellation
               </DialogTitle>
               <DialogDescription
-                className="text-sm text-center mt-2 text-gray-600"
+                className="text-sm text-center mt-2 text-sc-ink3"
               >
                 Are you sure you want to cancel this {isCyclingEvent ? "event" : "match"}?
                 This action cannot be undone, and {isCyclingEvent ? "attendees" : "players"} will be notified.

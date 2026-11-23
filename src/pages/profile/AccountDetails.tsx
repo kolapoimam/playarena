@@ -15,6 +15,7 @@ import { Loader2, CheckCircle, ChevronDown, Mail, Lock } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { ArrowLeft } from "lucide-react";
 
+import { BackButton } from "@/components/sc/ui";
 const profileSchema = z.object({
   first_name: z
     .string()
@@ -213,34 +214,25 @@ const AccountDetails = ({ profile: initialProfile, setProfile: setInitialProfile
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
+      <div className="min-h-screen flex items-center justify-center bg-sc-bg dark:bg-gray-900">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sc-green"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-100 dark:bg-gray-900">
-      <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg">
-        <div className="flex items-center justify-between max-w-7xl mx-auto">
-          <Button
-            variant="ghost"
-            onClick={() => navigate("/profile")}
-            className="text-white hover:bg-green-600"
-          >
-            <ArrowLeft className="w-5 h-5 mr-2" />
-            Back
-          </Button>
-          <div className="text-center">
-            <h1 className="text-2xl font-bold">Account Details</h1>
+    <div className="min-h-screen flex flex-col bg-sc-bg dark:bg-gray-900">
+      <header className="px-5 pt-[max(env(safe-area-inset-top),1rem)]">
+          <div className="pt-3 flex items-center justify-between gap-3">
+            <BackButton to="/profile" />
+            <h1 className="m-0 flex-1 text-center text-[17px] font-extrabold truncate">Account details</h1>
+            <div className="min-w-11 flex justify-end"></div>
           </div>
-          <div className="w-10"></div>
-        </div>
-      </header>
+        </header>
 
       <div className="flex-grow overflow-y-auto">
         <div className="container mx-auto px-4 py-6 max-w-md">
-          <Card className="bg-white dark:bg-gray-800 border-none shadow-lg rounded-xl">
+          <Card className="bg-white dark:bg-gray-800 border-none shadow-card rounded-3xl">
             <CardContent className="p-6">
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -250,12 +242,12 @@ const AccountDetails = ({ profile: initialProfile, setProfile: setInitialProfile
                       name="first_name"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-gray-700 dark:text-gray-300">First Name</FormLabel>
+                          <FormLabel className="text-sc-ink2 dark:text-gray-300">First Name</FormLabel>
                           <FormControl>
                             <Input
                               {...field}
                               disabled
-                              className="text-base bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg"
+                              className="text-base bg-white dark:bg-gray-700 border-sc-line dark:border-gray-600 text-sc-ink dark:text-gray-100 rounded-lg"
                             />
                           </FormControl>
                           <FormMessage />
@@ -267,12 +259,12 @@ const AccountDetails = ({ profile: initialProfile, setProfile: setInitialProfile
                       name="last_name"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-gray-700 dark:text-gray-300">Last Name</FormLabel>
+                          <FormLabel className="text-sc-ink2 dark:text-gray-300">Last Name</FormLabel>
                           <FormControl>
                             <Input
                               {...field}
                               disabled
-                              className="text-base bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg"
+                              className="text-base bg-white dark:bg-gray-700 border-sc-line dark:border-gray-600 text-sc-ink dark:text-gray-100 rounded-lg"
                             />
                           </FormControl>
                           <FormMessage />
@@ -285,11 +277,11 @@ const AccountDetails = ({ profile: initialProfile, setProfile: setInitialProfile
                     name="nickname"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-gray-700 dark:text-gray-300">Nickname</FormLabel>
+                        <FormLabel className="text-sc-ink2 dark:text-gray-300">Nickname</FormLabel>
                         <FormControl>
                           <Input
                             {...field}
-                            className="text-base bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg"
+                            className="text-base bg-white dark:bg-gray-700 border-sc-line dark:border-gray-600 text-sc-ink dark:text-gray-100 rounded-lg"
                           />
                         </FormControl>
                         <FormMessage />
@@ -301,14 +293,14 @@ const AccountDetails = ({ profile: initialProfile, setProfile: setInitialProfile
                     name="phone_number"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-gray-700 dark:text-gray-300">Phone Number</FormLabel>
+                        <FormLabel className="text-sc-ink2 dark:text-gray-300">Phone Number</FormLabel>
                         <FormControl>
                           <Input
                             {...field}
                             disabled
                             inputMode="numeric"
                             maxLength={11}
-                            className="text-base bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg"
+                            className="text-base bg-white dark:bg-gray-700 border-sc-line dark:border-gray-600 text-sc-ink dark:text-gray-100 rounded-lg"
                           />
                         </FormControl>
                         <FormMessage />
@@ -316,17 +308,17 @@ const AccountDetails = ({ profile: initialProfile, setProfile: setInitialProfile
                     )}
                   />
                   <div>
-                    <FormLabel className="text-gray-700 dark:text-gray-300">Email Address</FormLabel>
+                    <FormLabel className="text-sc-ink2 dark:text-gray-300">Email Address</FormLabel>
                     <div className="flex items-center gap-2">
                       <Input
                         value={profile?.email || "user@example.com"}
                         disabled
-                        className="text-base bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg flex-1"
+                        className="text-base bg-white dark:bg-gray-700 border-sc-line dark:border-gray-600 text-sc-ink dark:text-gray-100 rounded-lg flex-1"
                       />
                       <Button
                         type="button"
                         variant="outline"
-                        className="text-green-500 border-green-500 hover:bg-green-500 hover:text-white rounded-lg"
+                        className="text-sc-green-dark border-sc-green hover:bg-green-500 hover:text-white rounded-lg"
                         onClick={() => setShowChangeEmailDialog(true)}
                         disabled={!canChangeEmail()}
                       >
@@ -335,7 +327,7 @@ const AccountDetails = ({ profile: initialProfile, setProfile: setInitialProfile
                       </Button>
                     </div>
                     {!canChangeEmail() && (
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                      <p className="text-sm text-sc-ink3 dark:text-gray-400 mt-1">
                         Email change is available again in 30 days from last change.
                       </p>
                     )}
@@ -344,7 +336,7 @@ const AccountDetails = ({ profile: initialProfile, setProfile: setInitialProfile
                     <Button
                       type="button"
                       variant="outline"
-                      className="w-full text-green-500 border-green-500 hover:bg-green-500 hover:text-white rounded-lg"
+                      className="w-full text-sc-green-dark border-sc-green hover:bg-green-500 hover:text-white rounded-lg"
                       onClick={() => setShowResetPasswordDialog(true)}
                     >
                       <Lock size={16} className="mr-2" />
@@ -353,7 +345,7 @@ const AccountDetails = ({ profile: initialProfile, setProfile: setInitialProfile
                   </div>
                   <Button
                     type="submit"
-                    className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 text-sm flex items-center justify-center"
+                    className="w-full bg-sc-green hover:brightness-95 text-sc-green-ink font-bold rounded-full px-4 py-2 text-sm flex items-center justify-center"
                     disabled={loading}
                   >
                     {loading ? (
@@ -384,13 +376,13 @@ const AccountDetails = ({ profile: initialProfile, setProfile: setInitialProfile
           }
         }}
       >
-        <DialogContent className="sm:max-w-md rounded-2xl bg-white dark:bg-gray-800 shadow-2xl border-none">
+        <DialogContent className="sm:max-w-md rounded-3xl bg-white dark:bg-gray-800 shadow-2xl border-none">
           <DialogHeader>
-            <DialogTitle className="text-xl font-semibold text-green-700 dark:text-green-400 flex items-center">
+            <DialogTitle className="text-xl font-semibold text-sc-green-dark dark:text-green-400 flex items-center">
               <Lock size={20} className="mr-2" />
               Reset Password
             </DialogTitle>
-            <DialogDescription className="text-gray-600 dark:text-gray-300">
+            <DialogDescription className="text-sc-ink3 dark:text-gray-300">
               Enter your email address to receive a password reset link. Check your inbox and spam folder.
             </DialogDescription>
           </DialogHeader>
@@ -401,12 +393,12 @@ const AccountDetails = ({ profile: initialProfile, setProfile: setInitialProfile
                 name="new_email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-gray-700 dark:text-gray-300">Email</FormLabel>
+                    <FormLabel className="text-sc-ink2 dark:text-gray-300">Email</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
                         type="email"
-                        className="text-base bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg"
+                        className="text-base bg-white dark:bg-gray-700 border-sc-line dark:border-gray-600 text-sc-ink dark:text-gray-100 rounded-lg"
                         placeholder="Enter your email address"
                       />
                     </FormControl>
@@ -423,14 +415,14 @@ const AccountDetails = ({ profile: initialProfile, setProfile: setInitialProfile
                     setShowResetPasswordDialog(false);
                     resetPasswordForm.reset();
                   }}
-                  className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                  className="border-sc-line dark:border-gray-600 text-sc-ink2 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
                   disabled={operationLoading}
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
-                  className="bg-green-500 hover:bg-green-600 text-white rounded-lg"
+                  className="bg-sc-green hover:brightness-95 text-sc-green-ink rounded-full font-bold"
                   disabled={operationLoading}
                 >
                   {operationLoading ? (
@@ -457,13 +449,13 @@ const AccountDetails = ({ profile: initialProfile, setProfile: setInitialProfile
           }
         }}
       >
-        <DialogContent className="sm:max-w-md rounded-2xl bg-white dark:bg-gray-800 shadow-2xl border-none">
+        <DialogContent className="sm:max-w-md rounded-3xl bg-white dark:bg-gray-800 shadow-2xl border-none">
           <DialogHeader>
-            <DialogTitle className="text-xl font-semibold text-green-700 dark:text-green-400 flex items-center">
+            <DialogTitle className="text-xl font-semibold text-sc-green-dark dark:text-green-400 flex items-center">
               <Mail size={20} className="mr-2" />
               Change Email
             </DialogTitle>
-            <DialogDescription className="text-gray-600 dark:text-gray-300">
+            <DialogDescription className="text-sc-ink3 dark:text-gray-300">
               Enter your new email address. You'll receive confirmation emails in both inboxes. Limited to once every 30 days.
             </DialogDescription>
           </DialogHeader>
@@ -474,12 +466,12 @@ const AccountDetails = ({ profile: initialProfile, setProfile: setInitialProfile
                 name="new_email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-gray-700 dark:text-gray-300">New Email</FormLabel>
+                    <FormLabel className="text-sc-ink2 dark:text-gray-300">New Email</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
                         type="email"
-                        className="text-base bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg"
+                        className="text-base bg-white dark:bg-gray-700 border-sc-line dark:border-gray-600 text-sc-ink dark:text-gray-100 rounded-lg"
                         placeholder="Enter new email address"
                       />
                     </FormControl>
@@ -496,14 +488,14 @@ const AccountDetails = ({ profile: initialProfile, setProfile: setInitialProfile
                     setShowChangeEmailDialog(false);
                     emailForm.reset();
                   }}
-                  className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                  className="border-sc-line dark:border-gray-600 text-sc-ink2 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
                   disabled={operationLoading}
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
-                  className="bg-green-500 hover:bg-green-600 text-white rounded-lg"
+                  className="bg-sc-green hover:brightness-95 text-sc-green-ink rounded-full font-bold"
                   disabled={operationLoading}
                 >
                   {operationLoading ? (

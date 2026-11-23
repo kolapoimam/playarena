@@ -71,7 +71,7 @@ const getStatusStyles = (status: string) => {
     case "registered":
       return "bg-yellow-500 text-white border-yellow-600";
     case "checked_in":
-      return "bg-green-500 text-white border-green-600";
+      return "bg-green-500 text-white border-sc-green";
     case "absent":
     case "no_show":
       return "bg-red-500 text-white border-red-600";
@@ -84,7 +84,7 @@ const AttendeesTable: React.FC<AttendeesTableProps> = ({ event, attendees, navig
   const eventDateTime = new Date(`${event.event_date}T${event.start_time}`);
   
   return (
-    <div className="border rounded-lg p-4 bg-card shadow-md">
+    <div className="border rounded-lg p-4 bg-card shadow-card">
       <h2 className="font-semibold mb-3">Attendees ({totalAttendees}/{event.max_attendees})</h2>
       
       {attendees && attendees.length > 0 ? (
@@ -116,14 +116,14 @@ const AttendeesTable: React.FC<AttendeesTableProps> = ({ event, attendees, navig
       <div className="mt-6">
         {isEnded ? (
           <Button 
-            className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
+            className="w-full bg-sc-green hover:brightness-95 text-sc-green-ink font-bold"
             onClick={() => navigate(`/feedback/cycling/${event.slug}`)}
           >
             Give Feedback
           </Button>
         ) : (
           <Button 
-            className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
+            className="w-full bg-sc-green hover:brightness-95 text-sc-green-ink font-bold"
             onClick={() => navigate(`/join-cycling/${event.slug}`)}
             disabled={isFull || isStarted}
           >

@@ -78,7 +78,7 @@ export default function AuthCallback() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-[#e6f3f5] to-[#d1e8eb] dark:from-gray-900 dark:to-gray-800">
       <div className="text-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
-        <p className="text-lg text-gray-600 dark:text-gray-300">
+        <p className="text-lg text-sc-ink3 dark:text-gray-300">
           Completing your sign in...
         </p>
       </div>

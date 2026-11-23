@@ -354,18 +354,18 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
-          <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Match Details</h2>
+        <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 space-y-6">
+          <h2 className="text-xl font-semibold text-sc-ink dark:text-gray-200">Match Details</h2>
           <FormField
             control={form.control}
             name="title"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Match Title</FormLabel>
+                <FormLabel className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Match Title</FormLabel>
                 <FormControl>
                   <Input 
                     placeholder="E.g., Saturday Friendly" 
-                    className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white" 
+                    className="text-base border-sc-line dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white" 
                     {...field} 
                   />
                 </FormControl>
@@ -393,14 +393,14 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
               name="match_date"
               render={({ field }) => (
                 <FormItem className="flex flex-col">
-                  <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Date</FormLabel>
+                  <FormLabel className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Date</FormLabel>
                   <Popover>
                     <PopoverTrigger asChild disabled={isPreFilled}>
                       <FormControl>
                         <Button
                           variant="outline"
                           className={cn(
-                            "pl-3 text-left text-base font-normal border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white",
+                            "pl-3 text-left text-base font-normal border-sc-line dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white",
                             !field.value && "text-muted-foreground"
                           )}
                         >
@@ -438,7 +438,7 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
               name="start_time"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Start Time</FormLabel>
+                  <FormLabel className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Start Time</FormLabel>
                   <FormControl>
                     <TimeInput
                       value={field.value || ""}
@@ -447,7 +447,7 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
                       placeholder="e.g., 01:00 PM"
                     />
                   </FormControl>
-                  <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                  <FormDescription className="text-sm text-sc-ink3 dark:text-gray-400">
                     Match start time (12-hour clock, e.g., 01:00 PM)
                   </FormDescription>
                   <FormMessage />
@@ -459,7 +459,7 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
               name="end_time"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">End Time</FormLabel>
+                  <FormLabel className="text-sm font-medium text-sc-ink2 dark:text-gray-300">End Time</FormLabel>
                   <FormControl>
                     <TimeInput
                       value={field.value || ""}
@@ -468,7 +468,7 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
                       placeholder="e.g., 03:00 PM"
                     />
                   </FormControl>
-                  <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                  <FormDescription className="text-sm text-sc-ink3 dark:text-gray-400">
                     Match end time (12-hour clock, e.g., 03:00 PM)
                   </FormDescription>
                   <FormMessage />
@@ -481,13 +481,13 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
             name="total_slots"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Number of Players</FormLabel>
+                <FormLabel className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Number of Players</FormLabel>
                 <FormControl>
                   <Input
                     type="number"
                     min={2}
                     max={100}
-                    className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                    className="text-base border-sc-line dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                     {...field}
                     value={field.value ?? ""}
                     onChange={(e) => {
@@ -496,7 +496,7 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
                     }}
                   />
                 </FormControl>
-                <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                <FormDescription className="text-sm text-sc-ink3 dark:text-gray-400">
                   Total number of players needed for this match (2-100)
                 </FormDescription>
                 <FormMessage />
@@ -508,11 +508,11 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
             name="notes"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Notes (Optional)</FormLabel>
+                <FormLabel className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Notes (Optional)</FormLabel>
                 <FormControl>
                   <Textarea
                     placeholder="E.g., Bring boots, parking available, etc."
-                    className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                    className="text-base border-sc-line dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                     {...field}
                   />
                 </FormControl>
@@ -521,9 +521,9 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
             )}
           />
         </div>
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
+        <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 space-y-6">
           <div className="flex justify-between items-center cursor-pointer" onClick={() => setIsPreferencesOpen(!isPreferencesOpen)}>
-            <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Preferences (Optional)</h2>
+            <h2 className="text-xl font-semibold text-sc-ink dark:text-gray-200">Preferences (Optional)</h2>
             <span>{isPreferencesOpen ? '-' : '+'}</span>
           </div>
           {isPreferencesOpen && (
@@ -533,10 +533,10 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
                 name="skill_level"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Skill Level</FormLabel>
+                    <FormLabel className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Skill Level</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value || undefined}>
                       <FormControl>
-                        <SelectTrigger className="w-full text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white">
+                        <SelectTrigger className="w-full text-base border-sc-line dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white">
                           <SelectValue placeholder="Select Skill Level" />
                         </SelectTrigger>
                       </FormControl>
@@ -548,7 +548,7 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
                         ))}
                       </SelectContent>
                     </Select>
-                    <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                    <FormDescription className="text-sm text-sc-ink3 dark:text-gray-400">
                       Select the preferred skill level for this match (optional)
                     </FormDescription>
                     <FormMessage />
@@ -560,10 +560,10 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
                 name="match_type"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Match Type</FormLabel>
+                    <FormLabel className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Match Type</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value || undefined}>
                       <FormControl>
-                        <SelectTrigger className="w-full text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white">
+                        <SelectTrigger className="w-full text-base border-sc-line dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white">
                           <SelectValue placeholder="Select Match Type" />
                         </SelectTrigger>
                       </FormControl>
@@ -575,7 +575,7 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
                         ))}
                       </SelectContent>
                     </Select>
-                    <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                    <FormDescription className="text-sm text-sc-ink3 dark:text-gray-400">
                       Select the type of match (optional)
                     </FormDescription>
                     <FormMessage />
@@ -587,10 +587,10 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
                 name="gender"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Gender Preference</FormLabel>
+                    <FormLabel className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Gender Preference</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value || undefined}>
                       <FormControl>
-                        <SelectTrigger className="w-full text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white">
+                        <SelectTrigger className="w-full text-base border-sc-line dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white">
                           <SelectValue placeholder="Select Gender" />
                         </SelectTrigger>
                       </FormControl>
@@ -602,7 +602,7 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
                         ))}
                       </SelectContent>
                     </Select>
-                    <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                    <FormDescription className="text-sm text-sc-ink3 dark:text-gray-400">
                       Select the preferred gender for this match (optional)
                     </FormDescription>
                     <FormMessage />
@@ -612,9 +612,9 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
             </>
           )}
         </div>
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
+        <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 space-y-6">
           <div className="flex justify-between items-center cursor-pointer" onClick={() => setIsPaymentOpen(!isPaymentOpen)}>
-            <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Payment & Privacy</h2>
+            <h2 className="text-xl font-semibold text-sc-ink dark:text-gray-200">Payment & Privacy</h2>
             <span>{isPaymentOpen ? '-' : '+'}</span>
           </div>
           {isPaymentOpen && (
@@ -625,10 +625,10 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
                 render={({ field }) => (
                   <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 dark:border-gray-600">
                     <div className="space-y-0.5">
-                      <FormLabel className="text-base font-medium text-gray-700 dark:text-gray-300">
+                      <FormLabel className="text-base font-medium text-sc-ink2 dark:text-gray-300">
                         Paid Match
                       </FormLabel>
-                      <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                      <FormDescription className="text-sm text-sc-ink3 dark:text-gray-400">
                         Toggle if players need to pay to join this match
                       </FormDescription>
                     </div>
@@ -648,14 +648,14 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
                   name="price"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Price per Player (₦)</FormLabel>
+                      <FormLabel className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Price per Player (₦)</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
                           placeholder="0.00"
                           min={0}
                           step="0.01"
-                          className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                          className="text-base border-sc-line dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                           {...field}
                           value={field.value ?? ""}
                           onChange={(e) => {
@@ -676,10 +676,10 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
                   render={({ field }) => (
                     <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 dark:border-gray-600">
                       <div className="space-y-0.5">
-                        <FormLabel className="text-base font-medium text-gray-700 dark:text-gray-300">
+                        <FormLabel className="text-base font-medium text-sc-ink2 dark:text-gray-300">
                           Allow Bulk Ticket Purchase
                         </FormLabel>
-                        <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                        <FormDescription className="text-sm text-sc-ink3 dark:text-gray-400">
                           Toggle to allow players to purchase multiple slots (up to 5 or available slots)
                         </FormDescription>
                       </div>
@@ -700,10 +700,10 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
                 render={({ field }) => (
                   <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 dark:border-gray-600">
                     <div className="space-y-0.5">
-                      <FormLabel className="text-base font-medium text-gray-700 dark:text-gray-300">
+                      <FormLabel className="text-base font-medium text-sc-ink2 dark:text-gray-300">
                         Private Match
                       </FormLabel>
-                      <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                      <FormDescription className="text-sm text-sc-ink3 dark:text-gray-400">
                         Toggle to restrict access to invited players only
                       </FormDescription>
                     </div>
@@ -723,13 +723,13 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
                   name="access_password"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Access Password</FormLabel>
+                      <FormLabel className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Access Password</FormLabel>
                       <div className="flex items-center gap-2">
                         <FormControl>
                           <Input
                             value={field.value || ''}
                             readOnly
-                            className="font-mono text-base border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                            className="font-mono text-base border-sc-line dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                           />
                         </FormControl>
                         <Button
@@ -748,7 +748,7 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
                           Copy
                         </Button>
                       </div>
-                      <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                      <FormDescription className="text-sm text-sc-ink3 dark:text-gray-400">
                         Share this password with players you want to invite
                       </FormDescription>
                       <FormMessage />
@@ -759,9 +759,9 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
             </>
           )}
         </div>
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
+        <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 space-y-6">
           <div className="flex justify-between items-center cursor-pointer" onClick={() => setIsTicketSalesOpen(!isTicketSalesOpen)}>
-            <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Ticket Sales</h2>
+            <h2 className="text-xl font-semibold text-sc-ink dark:text-gray-200">Ticket Sales</h2>
             <span>{isTicketSalesOpen ? '-' : '+'}</span>
           </div>
           {isTicketSalesOpen && (
@@ -772,10 +772,10 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
                 render={({ field }) => (
                   <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 dark:border-gray-600">
                     <div className="space-y-0.5">
-                      <FormLabel className="text-base font-medium text-gray-700 dark:text-gray-300">
+                      <FormLabel className="text-base font-medium text-sc-ink2 dark:text-gray-300">
                         Sell Tickets to Fans
                       </FormLabel>
-                      <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                      <FormDescription className="text-sm text-sc-ink3 dark:text-gray-400">
                         Toggle to allow fans to purchase tickets to watch the match
                       </FormDescription>
                     </div>
@@ -796,14 +796,14 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
                     name="ticket_price"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Ticket Price (₦)</FormLabel>
+                        <FormLabel className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Ticket Price (₦)</FormLabel>
                         <FormControl>
                           <Input
                             type="number"
                             placeholder="200.00"
                             min={200}
                             step="0.01"
-                            className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                            className="text-base border-sc-line dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                             {...field}
                             value={field.value ?? ""}
                             onChange={(e) => {
@@ -812,7 +812,7 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
                             }}
                           />
                         </FormControl>
-                        <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                        <FormDescription className="text-sm text-sc-ink3 dark:text-gray-400">
                           Set the price for each ticket (minimum ₦200)
                         </FormDescription>
                         <FormMessage />
@@ -824,14 +824,14 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
                     name="max_tickets"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Maximum Tickets (Optional)</FormLabel>
+                        <FormLabel className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Maximum Tickets (Optional)</FormLabel>
                         <FormControl>
                           <Input
                             type="number"
                             placeholder="Enter maximum number of tickets"
                             min={1}
                             max={1000}
-                            className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                            className="text-base border-sc-line dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                             {...field}
                             value={field.value ?? ""}
                             onChange={(e) => {
@@ -840,7 +840,7 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
                             }}
                           />
                         </FormControl>
-                        <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                        <FormDescription className="text-sm text-sc-ink3 dark:text-gray-400">
                           Limit the total number of tickets available for purchase (1-1000)
                         </FormDescription>
                         <FormMessage />
@@ -852,22 +852,22 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
             </>
           )}
         </div>
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
-          <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Organizer Details</h2>
+        <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 space-y-6">
+          <h2 className="text-xl font-semibold text-sc-ink dark:text-gray-200">Organizer Details</h2>
           <FormField
             control={form.control}
             name="organizer_name"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Your Name</FormLabel>
+                <FormLabel className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Your Name</FormLabel>
                 <FormControl>
                   <Input 
                     placeholder="Your name" 
-                    className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white" 
+                    className="text-base border-sc-line dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white" 
                     {...field} 
                   />
                 </FormControl>
-                <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                <FormDescription className="text-sm text-sc-ink3 dark:text-gray-400">
                   This will be displayed as the organizer of the match
                 </FormDescription>
                 <FormMessage />
@@ -879,14 +879,14 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
             name="organizer_phone"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Your Phone Number (Optional)</FormLabel>
+                <FormLabel className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Your Phone Number (Optional)</FormLabel>
                 <FormControl>
                   <Input
                     type="tel"
                     inputMode="numeric"
                     pattern="[0-9]*"
                     placeholder="Enter 11-digit phone number"
-                    className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                    className="text-base border-sc-line dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                     {...field}
                     value={field.value ?? ""}
                     onChange={(e) => {
@@ -896,7 +896,7 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
                     }}
                   />
                 </FormControl>
-                <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                <FormDescription className="text-sm text-sc-ink3 dark:text-gray-400">
                   Provide your phone number for contact purposes (numbers only)
                 </FormDescription>
                 <FormMessage />
@@ -909,10 +909,10 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
             render={({ field }) => (
               <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 dark:border-gray-600">
                 <div className="space-y-0.5">
-                  <FormLabel className="text-base font-medium text-gray-700 dark:text-gray-300">
+                  <FormLabel className="text-base font-medium text-sc-ink2 dark:text-gray-300">
                     Disclose Phone Number
                   </FormLabel>
-                  <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                  <FormDescription className="text-sm text-sc-ink3 dark:text-gray-400">
                     Toggle to share your phone number with players
                   </FormDescription>
                 </div>
@@ -932,7 +932,7 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
           <Button
             type="button"
             variant="outline"
-            className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium rounded-lg px-4 py-3 text-lg shadow-md transition-colors"
+            className="w-full bg-sc-soft2 hover:bg-gray-300 text-sc-ink font-medium rounded-lg px-4 py-3 text-lg shadow-card transition-colors"
             onClick={onPreview}
             disabled={loading || !form.watch("title") || !form.watch("venue_id") || !form.watch("match_date") || !form.watch("start_time") || !form.watch("end_time") || !form.watch("total_slots") || !form.watch("organizer_name")}
           >
@@ -940,7 +940,7 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
           </Button>
           <Button 
             type="submit" 
-            className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-3 text-lg shadow-md transition-colors" 
+            className="w-full bg-sc-green hover:brightness-95 text-sc-green-ink font-bold rounded-full px-4 py-3 text-lg shadow-card transition-colors" 
             disabled={loading}
           >
             {loading ? "Creating..." : "Create Match"}

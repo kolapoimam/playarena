@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { User, LogOut, Trophy, Wallet, Volleyball, Settings, Calendar, Bike, BookOpen, Mail, Key, MapPin, ChevronRight, FileText, ArrowLeft, CircleUserRound, Bell } from "lucide-react";
 import Navbar from "@/components/Navbar";
 
+import { BackButton } from "@/components/sc/ui";
 const Profile = () => {
   const { toast } = useToast();
   const [profile, setProfile] = useState(null);
@@ -94,47 +95,38 @@ const Profile = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
+      <div className="min-h-screen flex items-center justify-center bg-sc-bg dark:bg-gray-900">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sc-green"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-100 dark:bg-gray-900">
-      <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg">
-        <div className="flex items-center justify-between max-w-7xl mx-auto">
-          <Button
-            variant="ghost"
-            onClick={() => navigate(-1)}
-            className="text-white hover:bg-green-600 transition-colors duration-300"
-          >
-            <ArrowLeft className="w-5 h-5 mr-2" />
-            Back
-          </Button>
-          <div className="text-center">
-            <h1 className="text-2xl font-bold">Profile</h1>
+    <div className="min-h-screen flex flex-col bg-sc-bg dark:bg-gray-900">
+      <header className="px-5 pt-[max(env(safe-area-inset-top),1rem)] flex flex-col gap-3.5">
+          <div className="pt-3 flex items-center justify-between min-h-11">
+            <BackButton />
+            <div className="flex gap-2"></div>
           </div>
-          <div className="w-10"></div>
-        </div>
-      </header>
+          <h1 className="m-0 text-[32px] leading-[38px] font-extrabold tracking-[-0.03em]">Profile</h1>
+        </header>
 
       <div className="flex-grow overflow-y-auto">
         <div className="container mx-auto px-4 py-6">
           <div className="flex flex-col items-center mb-8">
             <Avatar className="w-24 h-24 mb-4 ring-2 ring-green-500">
               <AvatarImage src={avatarUrl} alt="User Avatar" />
-              <AvatarFallback className="bg-green-100 text-green-700 font-semibold">
+              <AvatarFallback className="bg-sc-green-bg text-sc-green-dark font-semibold">
                 {profile?.email?.charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            <h1 className="text-2xl font-bold text-sc-ink dark:text-white">
               {profile?.nickname || "User"}
             </h1>
             <Link to="/profile/view-profile">
               <Button
                 variant="outline"
-                className="mt-3 border-green-500 text-green-500 hover:bg-green-500 hover:text-white transition-colors duration-300"
+                className="mt-3 border-sc-green text-sc-green-dark hover:bg-green-500 hover:text-white transition-colors duration-300"
               >
                 View Profile
               </Button>
@@ -144,10 +136,10 @@ const Profile = () => {
           <div className="max-w-md mx-auto space-y-6">
             {/* Personal Section */}
             <div>
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+              <h2 className="text-lg font-semibold text-sc-ink dark:text-white mb-3">
                 Personal
               </h2>
-              <Card className="border-none shadow-lg rounded-xl bg-white dark:bg-gray-800">
+              <Card className="border-none shadow-card rounded-3xl bg-white dark:bg-gray-800">
                 <CardContent className="p-4">
                   <nav className="space-y-2">
                     <Link
@@ -155,8 +147,8 @@ const Profile = () => {
                       className="flex items-center p-3 rounded-lg hover:bg-green-50 dark:hover:bg-gray-700 transition-all duration-300"
                       onClick={() => console.log("Navigating to /profile/account-details")}
                     >
-                      <CircleUserRound className="w-5 h-5 mr-3 text-green-500" />
-                      <span className="text-gray-900 dark:text-gray-100">Account Details</span>
+                      <CircleUserRound className="w-5 h-5 mr-3 text-sc-green-dark" />
+                      <span className="text-sc-ink dark:text-gray-100">Account Details</span>
                       <ChevronRight className="w-5 h-5 ml-auto text-gray-400" />
                     </Link>
                     <Link
@@ -164,8 +156,8 @@ const Profile = () => {
                       className="flex items-center p-3 rounded-lg hover:bg-green-50 dark:hover:bg-gray-700 transition-all duration-300"
                       onClick={() => console.log("Navigating to /profile/my-matches")}
                     >
-                      <Volleyball className="w-5 h-5 mr-3 text-green-500" />
-                      <span className="text-gray-900 dark:text-gray-100">My Matches</span>
+                      <Volleyball className="w-5 h-5 mr-3 text-sc-green-dark" />
+                      <span className="text-sc-ink dark:text-gray-100">My Matches</span>
                       <ChevronRight className="w-5 h-5 ml-auto text-gray-400" />
                     </Link>
                     <Link
@@ -173,8 +165,8 @@ const Profile = () => {
                       className="flex items-center p-3 rounded-lg hover:bg-green-50 dark:hover:bg-gray-700 transition-all duration-300"
                       onClick={() => console.log("Navigating to /profile/my-cycling")}
                     >
-                      <Bike className="w-5 h-5 mr-3 text-green-500" />
-                      <span className="text-gray-900 dark:text-gray-100">My Cycling</span>
+                      <Bike className="w-5 h-5 mr-3 text-sc-green-dark" />
+                      <span className="text-sc-ink dark:text-gray-100">My Cycling</span>
                       <ChevronRight className="w-5 h-5 ml-auto text-gray-400" />
                     </Link>
                     <Link
@@ -182,8 +174,8 @@ const Profile = () => {
                       className="flex items-center p-3 rounded-lg hover:bg-green-50 dark:hover:bg-gray-700 transition-all duration-300"
                       onClick={() => console.log("Navigating to /profile/match-preferences")}
                     >
-                      <Settings className="w-5 h-5 mr-3 text-green-500" />
-                      <span className="text-gray-900 dark:text-gray-100">Preferences</span>
+                      <Settings className="w-5 h-5 mr-3 text-sc-green-dark" />
+                      <span className="text-sc-ink dark:text-gray-100">Preferences</span>
                       <ChevronRight className="w-5 h-5 ml-auto text-gray-400" />
                     </Link>
                     <Link
@@ -191,8 +183,8 @@ const Profile = () => {
                       className="flex items-center p-3 rounded-lg hover:bg-green-50 dark:hover:bg-gray-700 transition-all duration-300"
                       onClick={() => console.log("Navigating to /profile/notifications")}
                     >
-                      <Bell className="w-5 h-5 mr-3 text-green-500" />
-                      <span className="text-gray-900 dark:text-gray-100">Notifications</span>
+                      <Bell className="w-5 h-5 mr-3 text-sc-green-dark" />
+                      <span className="text-sc-ink dark:text-gray-100">Notifications</span>
                       <ChevronRight className="w-5 h-5 ml-auto text-gray-400" />
                     </Link>
                     <Link
@@ -200,8 +192,8 @@ const Profile = () => {
                       className="flex items-center p-3 rounded-lg hover:bg-green-50 dark:hover:bg-gray-700 transition-all duration-300"
                       onClick={() => console.log("Navigating to /profile/wallet")}
                     >
-                      <Wallet className="w-5 h-5 mr-3 text-green-500" />
-                      <span className="text-gray-900 dark:text-gray-100">Wallet</span>
+                      <Wallet className="w-5 h-5 mr-3 text-sc-green-dark" />
+                      <span className="text-sc-ink dark:text-gray-100">Wallet</span>
                       <ChevronRight className="w-5 h-5 ml-auto text-gray-400" />
                     </Link>
                   </nav>
@@ -211,10 +203,10 @@ const Profile = () => {
 
             {/* Venue Manager Section */}
             <div>
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+              <h2 className="text-lg font-semibold text-sc-ink dark:text-white mb-3">
                 Venue Manager
               </h2>
-              <Card className="border-none shadow-lg rounded-xl bg-white dark:bg-gray-800">
+              <Card className="border-none shadow-card rounded-3xl bg-white dark:bg-gray-800">
                 <CardContent className="p-4">
                   <nav className="space-y-2">
                     <Link
@@ -222,8 +214,8 @@ const Profile = () => {
                       className="flex items-center p-3 rounded-lg hover:bg-green-50 dark:hover:bg-gray-700 transition-all duration-300"
                       onClick={() => console.log("Navigating to /profile/my-venue")}
                     >
-                      <MapPin className="w-5 h-5 mr-3 text-green-500" />
-                      <span className="text-gray-900 dark:text-gray-100">My Venue</span>
+                      <MapPin className="w-5 h-5 mr-3 text-sc-green-dark" />
+                      <span className="text-sc-ink dark:text-gray-100">My Venue</span>
                       <ChevronRight className="w-5 h-5 ml-auto text-gray-400" />
                     </Link>
                     {isVenueLinked && (
@@ -233,8 +225,8 @@ const Profile = () => {
                           className="flex items-center p-3 rounded-lg hover:bg-green-50 dark:hover:bg-gray-700 transition-all duration-300"
                           onClick={() => console.log("Navigating to /profile/my-bookings")}
                         >
-                          <Calendar className="w-5 h-5 mr-3 text-green-500" />
-                          <span className="text-gray-900 dark:text-gray-100">Bookings</span>
+                          <Calendar className="w-5 h-5 mr-3 text-sc-green-dark" />
+                          <span className="text-sc-ink dark:text-gray-100">Bookings</span>
                           <ChevronRight className="w-5 h-5 ml-auto text-gray-400" />
                         </Link>
                         <Link
@@ -242,8 +234,8 @@ const Profile = () => {
                           className="flex items-center p-3 rounded-lg hover:bg-green-50 dark:hover:bg-gray-700 transition-all duration-300"
                           onClick={() => console.log("Navigating to /profile/booking-code")}
                         >
-                          <Key className="w-5 h-5 mr-3 text-green-500" />
-                          <span className="text-gray-900 dark:text-gray-100">Booking Code</span>
+                          <Key className="w-5 h-5 mr-3 text-sc-green-dark" />
+                          <span className="text-sc-ink dark:text-gray-100">Booking Code</span>
                           <ChevronRight className="w-5 h-5 ml-auto text-gray-400" />
                         </Link>
                       </>
@@ -255,10 +247,10 @@ const Profile = () => {
 
             {/* More Section */}
             <div>
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+              <h2 className="text-lg font-semibold text-sc-ink dark:text-white mb-3">
                 More
               </h2>
-              <Card className="border-none shadow-lg rounded-xl bg-white dark:bg-gray-800">
+              <Card className="border-none shadow-card rounded-3xl bg-white dark:bg-gray-800">
                 <CardContent className="p-4">
                   <nav className="space-y-2">
                     <Link
@@ -266,16 +258,16 @@ const Profile = () => {
                       className="flex items-center p-3 rounded-lg hover:bg-green-50 dark:hover:bg-gray-700 transition-all duration-300"
                       onClick={() => console.log("Navigating to /guides")}
                     >
-                      <BookOpen className="w-5 h-5 mr-3 text-green-500" />
-                      <span className="text-gray-900 dark:text-gray-100">Guides</span>
+                      <BookOpen className="w-5 h-5 mr-3 text-sc-green-dark" />
+                      <span className="text-sc-ink dark:text-gray-100">Guides</span>
                       <ChevronRight className="w-5 h-5 ml-auto text-gray-400" />
                     </Link>
                     <a
                       href="mailto:support@sportcliq.com"
                       className="flex items-center p-3 rounded-lg hover:bg-green-50 dark:hover:bg-gray-700 transition-all duration-300"
                     >
-                      <Mail className="w-5 h-5 mr-3 text-green-500" />
-                      <span className="text-gray-900 dark:text-gray-100">Support</span>
+                      <Mail className="w-5 h-5 mr-3 text-sc-green-dark" />
+                      <span className="text-sc-ink dark:text-gray-100">Support</span>
                       <ChevronRight className="w-5 h-5 ml-auto text-gray-400" />
                     </a>
                     <Link
@@ -283,16 +275,16 @@ const Profile = () => {
                       className="flex items-center p-3 rounded-lg hover:bg-green-50 dark:hover:bg-gray-700 transition-all duration-300"
                       onClick={() => console.log("Navigating to /terms-privacy")}
                     >
-                      <FileText className="w-5 h-5 mr-3 text-green-500" />
-                      <span className="text-gray-900 dark:text-gray-100">Terms & Conditions</span>
+                      <FileText className="w-5 h-5 mr-3 text-sc-green-dark" />
+                      <span className="text-sc-ink dark:text-gray-100">Terms & Conditions</span>
                       <ChevronRight className="w-5 h-5 ml-auto text-gray-400" />
                     </Link>
                     <button
                       onClick={handleLogout}
                       className="w-full flex items-center p-3 rounded-lg hover:bg-green-50 dark:hover:bg-gray-700 transition-all duration-300"
                     >
-                      <LogOut className="w-5 h-5 mr-3 text-green-500" />
-                      <span className="text-gray-900 dark:text-gray-100">Logout</span>
+                      <LogOut className="w-5 h-5 mr-3 text-sc-green-dark" />
+                      <span className="text-sc-ink dark:text-gray-100">Logout</span>
                       <ChevronRight className="w-5 h-5 ml-auto text-gray-400" />
                     </button>
                   </nav>

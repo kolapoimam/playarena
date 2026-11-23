@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import Navbar from "@/components/Navbar";
 import { DateTime } from "luxon";
 
+import { BackButton } from "@/components/sc/ui";
 interface CyclingEvent {
   id_uuid: string;
   slug: string;
@@ -219,10 +220,10 @@ const CyclingActivity = () => {
   };
 
   const getEventStatus = (event: CyclingEvent) => {
-    if (event.status === "today") return { statusLabel: "Today", statusClass: "bg-green-100 text-green-700" };
+    if (event.status === "today") return { statusLabel: "Today", statusClass: "bg-sc-green-bg text-sc-green-dark" };
     if (event.status === "tomorrow") return { statusLabel: "Tomorrow", statusClass: "bg-yellow-100 text-yellow-700" };
     if (event.status === "upcoming") return { statusLabel: "Upcoming", statusClass: "bg-blue-100 text-blue-800" };
-    return { statusLabel: "Passed", statusClass: "bg-gray-200 text-gray-600" };
+    return { statusLabel: "Passed", statusClass: "bg-sc-soft2 text-sc-ink3" };
   };
 
   const formatDate = (dateString: string) => {
@@ -258,28 +259,19 @@ const CyclingActivity = () => {
   };
 
   return (
-    <div className="min-h-screen pb-24 bg-gray-100 dark:bg-gray-900">
-      <header className="bg-gradient-to-r from-green-500 to-green-700 text-white p-4 shadow-sm">
-        <div className="flex items-center justify-between max-w-7xl mx-auto">
-          <Button
-            variant="ghost"
-            onClick={() => navigate(-1)}
-            className="text-white hover:bg-green-600"
-          >
-            <ArrowLeft size={18} className="mr-2" />
-            Back
-          </Button>
-          <div className="text-center">
-            <h1 className="text-2xl font-bold">Cycling</h1>
-          </div>
-          <Button
-            className="bg-green-500 hover:bg-green-600 text-white"
+    <div className="min-h-screen pb-24 bg-sc-bg dark:bg-gray-900">
+      <header className="px-5 pt-[max(env(safe-area-inset-top),1rem)] flex flex-col gap-3.5">
+          <div className="pt-3 flex items-center justify-between min-h-11">
+            <BackButton />
+            <div className="flex gap-2"><Button
+            className="h-11 px-4 rounded-full bg-sc-ink text-white font-bold text-sm"
             onClick={() => navigate("/host-cycling")}
           >
             Host Event
-          </Button>
-        </div>
-      </header>
+          </Button></div>
+          </div>
+          <h1 className="m-0 text-[32px] leading-[38px] font-extrabold tracking-[-0.03em]">Cycling</h1>
+        </header>
 
       <div className="mt-6 max-w-7xl mx-auto px-4">
         <Collapsible
@@ -293,7 +285,7 @@ const CyclingActivity = () => {
               {isFilterOpen ? "Hide Filters" : "Show Filters"}
             </Button>
           </CollapsibleTrigger>
-          <CollapsibleContent className="mt-4 p-4 border rounded-lg bg-white dark:bg-gray-800 space-y-4">
+          <CollapsibleContent className="mt-4 p-4 rounded-3xl bg-white dark:bg-gray-800 space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="is-paid-filter">Payment Type</Label>
@@ -304,7 +296,7 @@ const CyclingActivity = () => {
                     setCurrentPage(1);
                   }}
                 >
-                  <SelectTrigger id="is-paid-filter" className="border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                  <SelectTrigger id="is-paid-filter" className="border-sc-line dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                     <SelectValue placeholder="Select payment type" />
                   </SelectTrigger>
                   <SelectContent>
@@ -324,7 +316,7 @@ const CyclingActivity = () => {
                     setCurrentPage(1);
                   }}
                 >
-                  <SelectTrigger id="landmark-filter" className="border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                  <SelectTrigger id="landmark-filter" className="border-sc-line dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                     <SelectValue placeholder="Select a landmark" />
                   </SelectTrigger>
                   <SelectContent>
@@ -347,7 +339,7 @@ const CyclingActivity = () => {
                     setCurrentPage(1);
                   }}
                 >
-                  <SelectTrigger id="duration-filter" className="border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                  <SelectTrigger id="duration-filter" className="border-sc-line dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                     <SelectValue placeholder="Select duration type" />
                   </SelectTrigger>
                   <SelectContent>
@@ -367,7 +359,7 @@ const CyclingActivity = () => {
                     setCurrentPage(1);
                   }}
                 >
-                  <SelectTrigger id="status-filter" className="border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                  <SelectTrigger id="status-filter" className="border-sc-line dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -388,7 +380,7 @@ const CyclingActivity = () => {
 
         {loading ? (
           <div className="flex justify-center items-center h-[50vh]">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sc-green"></div>
           </div>
         ) : filteredEvents.length > 0 ? (
           <div className="space-y-4">
@@ -397,10 +389,10 @@ const CyclingActivity = () => {
               const isPast = event.status === "passed";
               const totalAttendeeSlots = event.cycling_attendees?.reduce((sum, attendee) => sum + (attendee.number_of_slots || 1), 0) || 0;
               return (
-                <div key={event.id_uuid} className="w-full border rounded-lg overflow-hidden shadow-sm bg-white dark:bg-gray-800">
+                <div key={event.id_uuid} className="w-full rounded-3xl overflow-hidden shadow-card bg-white dark:bg-gray-800">
                   <div className="p-4">
                     <div className="flex justify-between items-center">
-                      <h3 className="font-bold text-lg text-gray-800 dark:text-gray-200">
+                      <h3 className="font-bold text-lg text-sc-ink dark:text-gray-200">
                         {event.title}
                       </h3>
                       <div className="flex flex-col gap-1">
@@ -410,20 +402,20 @@ const CyclingActivity = () => {
                         </Badge>
                       </div>
                     </div>
-                    <div className="mt-3 space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                    <div className="mt-3 space-y-2 text-sm text-sc-ink3 dark:text-gray-400">
                       <div className="flex items-center gap-2">
-                        <Calendar size={16} className="text-gray-600 dark:text-gray-400" />
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                        <Calendar size={16} className="text-sc-ink3 dark:text-gray-400" />
+                        <span className="text-sm font-medium text-sc-ink2 dark:text-gray-200">
                           {event.status === "today" ? "Today" : event.status === "tomorrow" ? "Tomorrow" : formatDate(event.event_date)}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Clock size={16} className="text-gray-600 dark:text-gray-400" />
+                        <Clock size={16} className="text-sc-ink3 dark:text-gray-400" />
                         <span>{formatTime(event.start_time)}</span>
                       </div>
                       {event.start_landmark && (
                         <div className="flex items-center gap-2">
-                          <MapPin size={16} className="text-gray-600 dark:text-gray-400" />
+                          <MapPin size={16} className="text-sc-ink3 dark:text-gray-400" />
                           <a
                             href={`/landmark/${event.start_landmark.slug}`}
                             className="text-primary hover:underline"
@@ -437,7 +429,7 @@ const CyclingActivity = () => {
                         </div>
                       )}
                       <div className="flex items-center gap-2">
-                        <Users size={16} className="text-gray-600 dark:text-gray-400" />
+                        <Users size={16} className="text-sc-ink3 dark:text-gray-400" />
                         <span>
                           {totalAttendeeSlots}/{event.max_attendees} spots filled
                         </span>
@@ -446,7 +438,7 @@ const CyclingActivity = () => {
                     <div className="mt-4 flex justify-between items-center">
                       <div>
                         <span className="text-xs text-muted-foreground">Organized by:</span>
-                        <p className="font-medium text-gray-800 dark:text-gray-200">{event.host_name}</p>
+                        <p className="font-medium text-sc-ink dark:text-gray-200">{event.host_name}</p>
                       </div>
                       <Button
                         variant="outline"
@@ -469,7 +461,7 @@ const CyclingActivity = () => {
                 <ChevronLeft size={16} className="mr-2" />
                 Previous
               </Button>
-              <span className="text-gray-700 dark:text-gray-200">
+              <span className="text-sc-ink2 dark:text-gray-200">
                 Page {currentPage} of {totalPages}
               </span>
               <Button

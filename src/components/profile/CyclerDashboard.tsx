@@ -174,9 +174,9 @@ const attendeesData = joinedData
   };
 
   return (
-    <Card className="bg-white dark:bg-gray-800 border-none shadow-xl rounded-xl">
+    <Card className="bg-white dark:bg-gray-800 border-none shadow-card rounded-3xl">
       <CardHeader>
-        <CardTitle className="text-xl font-semibold text-green-700 dark:text-green-400">
+        <CardTitle className="text-xl font-semibold text-sc-green-dark dark:text-green-400">
           Cycling Stats
         </CardTitle>
         <Select
@@ -184,23 +184,23 @@ const attendeesData = joinedData
           onValueChange={(value) => setAnalyticsFilter(value as "all" | "this_month" | "last_month" | "this_week" | "last_week")}
           className="w-[180px]"
         >
-          <SelectTrigger className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100">
+          <SelectTrigger className="bg-white dark:bg-gray-700 border-sc-line dark:border-gray-600 text-sc-ink dark:text-gray-100">
             <SelectValue placeholder="Select filter" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all" className="text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+            <SelectItem value="all" className="text-base bg-white dark:bg-gray-700 text-sc-ink dark:text-gray-100">
               All Time
             </SelectItem>
-            <SelectItem value="this_month" className="text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+            <SelectItem value="this_month" className="text-base bg-white dark:bg-gray-700 text-sc-ink dark:text-gray-100">
               This Month
             </SelectItem>
-            <SelectItem value="last_month" className="text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+            <SelectItem value="last_month" className="text-base bg-white dark:bg-gray-700 text-sc-ink dark:text-gray-100">
               Last Month
             </SelectItem>
-            <SelectItem value="this_week" className="text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+            <SelectItem value="this_week" className="text-base bg-white dark:bg-gray-700 text-sc-ink dark:text-gray-100">
               This Week
             </SelectItem>
-            <SelectItem value="last_week" className="text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+            <SelectItem value="last_week" className="text-base bg-white dark:bg-gray-700 text-sc-ink dark:text-gray-100">
               Last Week
             </SelectItem>
           </SelectContent>
@@ -208,39 +208,39 @@ const attendeesData = joinedData
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div className="p-4 bg-green-50 dark:bg-green-900/50 rounded-lg flex items-center gap-3 shadow-md">
-            <LandPlot className="h-8 w-8 text-green-600" />
+          <div className="p-4 bg-sc-green-bg dark:bg-green-900/50 rounded-lg flex items-center gap-3 shadow-card">
+            <LandPlot className="h-8 w-8 text-sc-green-dark" />
             <div>
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Events Organized</p>
-              <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{analytics.total_organized}</p>
+              <p className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Events Organized</p>
+              <p className="text-lg font-semibold text-sc-ink dark:text-gray-100">{analytics.total_organized}</p>
             </div>
           </div>
-          <div className="p-4 bg-green-50 dark:bg-green-900/50 rounded-lg flex items-center gap-3 shadow-md">
-            <Bike className="h-8 w-8 text-green-600" />
+          <div className="p-4 bg-sc-green-bg dark:bg-green-900/50 rounded-lg flex items-center gap-3 shadow-card">
+            <Bike className="h-8 w-8 text-sc-green-dark" />
             <div>
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Events Joined</p>
-              <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{analytics.total_joined}</p>
+              <p className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Events Joined</p>
+              <p className="text-lg font-semibold text-sc-ink dark:text-gray-100">{analytics.total_joined}</p>
             </div>
           </div>
-          <div className="p-4 bg-green-50 dark:bg-green-900/50 rounded-lg flex items-center gap-3 shadow-md">
-            <Coins className="h-8 w-8 text-green-600" />
+          <div className="p-4 bg-sc-green-bg dark:bg-green-900/50 rounded-lg flex items-center gap-3 shadow-card">
+            <Coins className="h-8 w-8 text-sc-green-dark" />
             <div>
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Spent</p>
-              <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">₦{analytics.total_spent.toFixed(2)}</p>
+              <p className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Total Spent</p>
+              <p className="text-lg font-semibold text-sc-ink dark:text-gray-100">₦{analytics.total_spent.toFixed(2)}</p>
             </div>
           </div>
-          <div className="p-4 bg-green-50 dark:bg-green-900/50 rounded-lg flex items-center gap-3 shadow-md">
-            <Wallet className="h-8 w-8 text-green-600" />
+          <div className="p-4 bg-sc-green-bg dark:bg-green-900/50 rounded-lg flex items-center gap-3 shadow-card">
+            <Wallet className="h-8 w-8 text-sc-green-dark" />
             <div>
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Cashout</p>
-              <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">₦{analytics.total_cashout.toFixed(2)}</p>
+              <p className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Total Cashout</p>
+              <p className="text-lg font-semibold text-sc-ink dark:text-gray-100">₦{analytics.total_cashout.toFixed(2)}</p>
             </div>
           </div>
-          <div className="p-4 bg-green-50 dark:bg-green-900/50 rounded-lg flex items-center gap-3 shadow-md">
-            <MapPin className="h-8 w-8 text-green-600" />
+          <div className="p-4 bg-sc-green-bg dark:bg-green-900/50 rounded-lg flex items-center gap-3 shadow-card">
+            <MapPin className="h-8 w-8 text-sc-green-dark" />
             <div>
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Landmarks Used</p>
-              <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{analytics.total_landmarks}</p>
+              <p className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Landmarks Used</p>
+              <p className="text-lg font-semibold text-sc-ink dark:text-gray-100">{analytics.total_landmarks}</p>
             </div>
           </div>
         </div>

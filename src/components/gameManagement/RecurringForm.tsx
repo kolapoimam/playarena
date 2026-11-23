@@ -21,9 +21,9 @@ const RecurringForm = ({ userId }: RecurringFormProps) => {
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
+    <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 space-y-6">
       <div className="flex justify-between items-center cursor-pointer" onClick={() => setIsRecurringOpen(!isRecurringOpen)}>
-        <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Recurring Match (Optional)</h2>
+        <h2 className="text-xl font-semibold text-sc-ink dark:text-gray-200">Recurring Match (Optional)</h2>
         <span>{isRecurringOpen ? '-' : '+'}</span>
       </div>
       {isRecurringOpen && (
@@ -34,10 +34,10 @@ const RecurringForm = ({ userId }: RecurringFormProps) => {
             render={({ field }) => (
               <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 dark:border-gray-600">
                 <div className="space-y-0.5">
-                  <FormLabel className="text-base font-medium text-gray-700 dark:text-gray-300">
+                  <FormLabel className="text-base font-medium text-sc-ink2 dark:text-gray-300">
                     Recurring Match
                   </FormLabel>
-                  <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                  <FormDescription className="text-sm text-sc-ink3 dark:text-gray-400">
                     Toggle to make this match repeat on a schedule
                   </FormDescription>
                 </div>
@@ -58,10 +58,10 @@ const RecurringForm = ({ userId }: RecurringFormProps) => {
                 name="recurring_frequency"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Frequency</FormLabel>
+                    <FormLabel className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Frequency</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value || undefined}>
                       <FormControl>
-                        <SelectTrigger className="w-full text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white">
+                        <SelectTrigger className="w-full text-base border-sc-line dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white">
                           <SelectValue placeholder="Select Frequency" />
                         </SelectTrigger>
                       </FormControl>
@@ -73,7 +73,7 @@ const RecurringForm = ({ userId }: RecurringFormProps) => {
                         ))}
                       </SelectContent>
                     </Select>
-                    <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                    <FormDescription className="text-sm text-sc-ink3 dark:text-gray-400">
                       Select how often the match should repeat
                     </FormDescription>
                     <FormMessage />
@@ -85,14 +85,14 @@ const RecurringForm = ({ userId }: RecurringFormProps) => {
                 name="recurring_occurrences"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Number of Occurrences</FormLabel>
+                    <FormLabel className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Number of Occurrences</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
                         placeholder="Enter number of occurrences"
                         min={1}
                         max={52}
-                        className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                        className="text-base border-sc-line dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                         {...field}
                         value={field.value ?? ""}
                         onChange={(e) => {
@@ -101,7 +101,7 @@ const RecurringForm = ({ userId }: RecurringFormProps) => {
                         }}
                       />
                     </FormControl>
-                    <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                    <FormDescription className="text-sm text-sc-ink3 dark:text-gray-400">
                       Number of times the match should repeat (1–52)
                     </FormDescription>
                     <FormMessage />

@@ -233,16 +233,16 @@ const TeamManagement = () => {
 
   if (!match) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <p className="text-gray-600 dark:text-gray-400">Loading match details...</p>
+      <div className="min-h-screen bg-sc-bg dark:bg-gray-900 flex items-center justify-center">
+        <p className="text-sc-ink3 dark:text-gray-400">Loading match details...</p>
       </div>
     );
   }
 
   return (
     <DndProvider backend={typeof window !== "undefined" && "ontouchstart" in window ? TouchBackend : HTML5Backend}>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-24">
-        <header className="sticky top-0 z-50 bg-green-500 text-white shadow-md">
+      <div className="min-h-screen bg-sc-bg dark:bg-gray-900 pb-24">
+        <header className="sticky top-0 z-50 bg-green-500 text-white shadow-card">
           <div className="p-4 flex items-center justify-between">
             <Button variant="ghost" onClick={() => navigate(-1)} className="text-white hover:text-gray-200">
               <ArrowLeft size={18} className="mr-2" />
@@ -265,7 +265,7 @@ const TeamManagement = () => {
                   placeholder="Enter supercode"
                   className="mb-4"
                 />
-                <Button onClick={handleVerifySupercode} className="w-full bg-green-500 hover:bg-green-600 text-white">
+                <Button onClick={handleVerifySupercode} className="w-full bg-sc-green hover:brightness-95 text-sc-green-ink font-bold">
                   Verify
                 </Button>
               </DialogDescription>

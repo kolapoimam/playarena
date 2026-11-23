@@ -65,7 +65,7 @@ const OrganiserVenue = ({ venueId, onVenueChange, isPreFilled, preSelectedVenueS
   return (
     <FormItem>
       <div className="flex justify-between items-center">
-        <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Venue</FormLabel>
+        <FormLabel className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Venue</FormLabel>
         {!isPreFilled && (
           <Dialog open={venueDialogOpen} onOpenChange={setVenueDialogOpen}>
             <DialogTrigger asChild>
@@ -84,7 +84,7 @@ const OrganiserVenue = ({ venueId, onVenueChange, isPreFilled, preSelectedVenueS
       </div>
       <Select onValueChange={onVenueChange} value={venueId} disabled={isPreFilled}>
         <FormControl>
-          <SelectTrigger className="w-full text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white">
+          <SelectTrigger className="w-full text-base border-sc-line dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white">
             <SelectValue placeholder="Select a venue" />
           </SelectTrigger>
         </FormControl>

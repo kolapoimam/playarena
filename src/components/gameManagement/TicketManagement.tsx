@@ -240,8 +240,8 @@ const TicketManagement = ({
   if (!match) return null;
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700">
-      <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Manage Tickets</h2>
+    <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 dark:border-gray-700">
+      <h2 className="text-xl font-semibold mb-4 text-sc-ink dark:text-gray-100">Manage Tickets</h2>
       
       <div className="flex gap-3 mb-4">
         <Button
@@ -256,7 +256,7 @@ const TicketManagement = ({
       <div className="max-h-[400px] overflow-y-auto">
         <button
           onClick={() => setIsTicketsOpen(!isTicketsOpen)}
-          className="flex items-center gap-2 w-full text-left text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4"
+          className="flex items-center gap-2 w-full text-left text-lg font-semibold text-sc-ink dark:text-gray-100 mb-4"
         >
           Tickets
           {isTicketsOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
@@ -292,21 +292,21 @@ const TicketManagement = ({
               <p className="text-sm text-red-600 mt-1">{ticketError}</p>
             )}
             {confirmedTickets.length === 0 ? (
-              <p className="text-gray-600 dark:text-gray-400">No tickets confirmed for this match.</p>
+              <p className="text-sc-ink3 dark:text-gray-400">No tickets confirmed for this match.</p>
             ) : (
               confirmedTickets.map((ticket) => (
                 <div
                   key={ticket.id}
-                  className="relative flex flex-col sm:flex-row gap-4 items-start sm:items-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg"
+                  className="relative flex flex-col sm:flex-row gap-4 items-start sm:items-center p-4 bg-sc-soft dark:bg-gray-700 rounded-lg"
                 >
                   <div className="flex-1">
-                    <p className="font-medium text-gray-900 dark:text-gray-100">{ticket.buyer_name}</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                    <p className="font-medium text-sc-ink dark:text-gray-100">{ticket.buyer_name}</p>
+                    <p className="text-sm text-sc-ink3 dark:text-gray-400">
                       Tickets: {ticket.number_of_tickets}
                     </p>
                   </div>
                   <span
-                    className="absolute top-2 right-2 px-2 py-1 text-xs font-medium rounded border bg-green-500 text-white border-green-600"
+                    className="absolute top-2 right-2 px-2 py-1 text-xs font-medium rounded border bg-green-500 text-white border-sc-green"
                   >
                     Checked In
                   </span>

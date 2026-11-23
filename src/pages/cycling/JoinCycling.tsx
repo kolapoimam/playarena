@@ -21,6 +21,7 @@ import CyclingSuccessDialog from "@/components/cycling/CyclingSuccessDialog";
 import Navbar from "@/components/Navbar";
 import { Seo } from "@/components/Seo";
 
+import { BackButton } from "@/components/sc/ui";
 const META_KEYWORDS = "Football in Nigeria, Sports in Nigeria, Play Sports Near You, Football Fields Near Me, Livescore, Osimhen, Asisat Oshola, Nigeria Startup, Sportstech, Football venues in Lagos, Football venues in Ilorin, Sports Betting in Nigeria, Organize sports in Nigeria, Football Matches, Bicycle Training in Nigeria, Cycling in Nigeria, Nigerian football, Nigerian cycling, Nigerian sports, Play football in Lagos, Play football in Ilorin, Play football in Abuja, Play football in Nigeria, Play cycling in Nigeria, Play sports in Nigeria, Nigerian sports tech, Nigerian sports startup, Nigerian sports community, Football events Nigeria, Cycling events Nigeria, Sport Cliq, SportCliq, sportcliq.com.ng, sportcliq.ng, sportcliq, sport cliq, sportcliq app, sportcliq platform, sportcliq football, sportcliq cycling, sportcliq venues, sportcliq matches, sportcliq events, sportcliq sports, sportcliq nigeria, sportcliq lagos, sportcliq ilorin, sportcliq abuja, sportcliq startup, sportcliq tech, sportcliq community, sportcliq platform, sportcliq app, sportcliq website, sportcliq online, sportcliq booking, sportcliq organize, sportcliq join, sportcliq play, sportcliq find, sportcliq search, sportcliq discover, sportcliq connect, sportcliq join match, sportcliq join cycling, sportcliq join event, sportcliq join venue, sportcliq join football, sportcliq join sports, sportcliq join nigeria, sportcliq join lagos, sportcliq join ilorin, sportcliq join abuja, sportcliq join startup, sportcliq join tech, sportcliq join community, sportcliq join platform, sportcliq join app, sportcliq join website, sportcliq join online, sportcliq join booking, sportcliq join organize, sportcliq join play, sportcliq join find, sportcliq join search, sportcliq join discover, sportcliq join connect";
 
 type Landmark = {
@@ -445,7 +446,7 @@ const JoinCycling = () => {
   if (loading || verifyingPayment) {
     return (
       <div className="flex justify-center items-center h-[50vh]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sc-green"></div>
       </div>
     );
   }
@@ -478,21 +479,16 @@ const JoinCycling = () => {
         children={<meta name="keywords" content={META_KEYWORDS} />}
       />
       <div className="min-h-screen pb-24">
-        <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-md shadow-lg">
-          <div className="flex items-center justify-between">
-            <Button variant="ghost" onClick={() => navigate(-1)} className="text-white hover:bg-green-600">
-              <ArrowLeft size={16} className="mr-2" />
-              Back
-            </Button>
-            <div className="text-center">
-              <h1 className="text-2xl font-bold">Join Cycling Event</h1>
-            </div>
-            <div className="w-10"></div>
+        <header className="px-5 pt-[max(env(safe-area-inset-top),1rem)]">
+          <div className="pt-3 flex items-center justify-between gap-3">
+            <BackButton />
+            <h1 className="m-0 flex-1 text-center text-[17px] font-extrabold truncate">Join ride</h1>
+            <div className="min-w-11 flex justify-end"></div>
           </div>
         </header>
 
         <div className="p-6">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
+          <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 mb-6">
             <h2 className="text-xl font-semibold mb-2">{event.title}</h2>
             <div className="text-muted-foreground mb-4 space-y-1">
               <div className="flex items-center gap-2">
@@ -512,28 +508,28 @@ const JoinCycling = () => {
                 <span>Spots available: {event.max_attendees - attendees.length} / {event.max_attendees}</span>
               </div>
               {!event.is_free && (
-                <div className="flex items-center gap-2 mt-2 font-medium text-green-600">
+                <div className="flex items-center gap-2 mt-2 font-medium text-sc-green-dark">
                   <span>Price: {formatter.format(event.price || 0)}</span>
                 </div>
               )}
             </div>
             {isPastEvent ? (
-              <div className="text-center py-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
-                <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300">This event has already passed</h2>
+              <div className="text-center py-4 bg-sc-soft dark:bg-gray-700 rounded-lg">
+                <h2 className="text-lg font-semibold text-sc-ink2 dark:text-gray-300">This event has already passed</h2>
                 <p className="text-muted-foreground mt-2">You cannot join this event anymore.</p>
                 <Button
-                  className="mt-4 bg-green-500 hover:bg-green-600 text-white"
+                  className="mt-4 bg-sc-green hover:brightness-95 text-sc-green-ink font-bold"
                   onClick={() => navigate("/cycling-activities")}
                 >
                   Browse Other Events
                 </Button>
               </div>
             ) : isFull ? (
-              <div className="text-center py-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
-                <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300">This event is full</h2>
+              <div className="text-center py-4 bg-sc-soft dark:bg-gray-700 rounded-lg">
+                <h2 className="text-lg font-semibold text-sc-ink2 dark:text-gray-300">This event is full</h2>
                 <p className="text-muted-foreground mt-2">All spots are taken.</p>
                 <Button
-                  className="mt-4 bg-green-500 hover:bg-green-600 text-white"
+                  className="mt-4 bg-sc-green hover:brightness-95 text-sc-green-ink font-bold"
                   onClick={() => navigate(`/cycling/${event.slug}`)}
                 >
                   View Event Details
@@ -549,12 +545,12 @@ const JoinCycling = () => {
                         name="name"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-gray-700">Your Name</FormLabel>
+                            <FormLabel className="text-sc-ink2">Your Name</FormLabel>
                             <FormControl>
                               <Input
                                 placeholder="Enter your name"
                                 {...field}
-                                className="border-gray-300 dark:border-gray-600 rounded-md focus:ring-green-500 focus:border-green-500"
+                                className="border-sc-line dark:border-gray-600 rounded-md focus:ring-green-500 focus:border-green-500"
                               />
                             </FormControl>
                             <FormMessage className="text-red-500" />
@@ -566,14 +562,14 @@ const JoinCycling = () => {
                         name="phone"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-gray-700">Phone Number</FormLabel>
+                            <FormLabel className="text-sc-ink2">Phone Number</FormLabel>
                             <FormControl>
                               <Input
                                 type="tel"
                                 inputMode="numeric"
                                 placeholder="Enter 11-digit phone number"
                                 {...field}
-                                className="border-gray-300 dark:border-gray-600 rounded-md focus:ring-green-500 focus:border-green-500"
+                                className="border-sc-line dark:border-gray-600 rounded-md focus:ring-green-500 focus:border-green-500"
                                 onChange={(e) => {
                                   const numericValue = e.target.value.replace(/\D/g, "").slice(0, 11);
                                   field.onChange(numericValue);
@@ -636,7 +632,7 @@ const JoinCycling = () => {
                       {event.is_free && (
                         <Button
                           type="submit"
-                          className="w-full bg-green-500 hover:bg-green-600 text-white rounded-md"
+                          className="w-full bg-sc-green hover:brightness-95 text-sc-green-ink rounded-full font-bold"
                           disabled={joining}
                         >
                           {joining ? (
@@ -651,7 +647,7 @@ const JoinCycling = () => {
                       )}
                       {paymentStatus === "success" && (
                         <>
-                          <div className="bg-green-50 p-4 rounded-md border border-green-200 text-green-700">
+                          <div className="bg-sc-green-bg p-4 rounded-md border border-green-200 text-sc-green-dark">
                             <p className="font-medium">Payment Successful!</p>
                             <p className="text-sm">Please complete your registration below.</p>
                             {paymentReference && (
@@ -660,7 +656,7 @@ const JoinCycling = () => {
                           </div>
                           <Button
                             type="submit"
-                            className="w-full bg-green-500 hover:bg-green-600 text-white rounded-md"
+                            className="w-full bg-sc-green hover:brightness-95 text-sc-green-ink rounded-full font-bold"
                             disabled={joining}
                           >
                             {joining ? (
@@ -679,7 +675,7 @@ const JoinCycling = () => {
                 )}
                 {!event.is_free && paymentStatus === "pending" && (
                   <>
-                    <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mt-6">Payment Required</h3>
+                    <h3 className="text-lg font-semibold text-sc-ink dark:text-gray-200 mt-6">Payment Required</h3>
                     <p className="text-muted-foreground">
                       This is a paid event. Please complete the payment to join.
                     </p>
@@ -688,7 +684,7 @@ const JoinCycling = () => {
                     </div>
                     <Button
                       type="button"
-                      className="w-full bg-green-500 hover:bg-green-600 text-white py-2 transition-colors mt-4 rounded-lg"
+                      className="w-full bg-sc-green hover:brightness-95 text-sc-green-ink py-2 transition-colors mt-4 rounded-full font-bold"
                       onClick={handlePaymentInitiation}
                       disabled={joining || !paystackLoaded}
                     >

@@ -169,28 +169,28 @@ const VenueDetail = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-[50vh] bg-gray-50 dark:bg-gray-900">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
+      <div className="flex justify-center items-center min-h-[50vh] bg-sc-soft dark:bg-gray-900">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sc-green"></div>
       </div>
     );
   }
 
   if (error || !venue) {
     return (
-      <div className="p-6 bg-gray-50 dark:bg-gray-900 min-h-screen">
+      <div className="p-6 bg-sc-bg dark:bg-gray-900 min-h-screen">
         <Button
           variant="ghost"
           onClick={() => navigate(-1)}
-          className="mb-4 text-gray-700 dark:text-gray-300"
+          className="mb-4 text-sc-ink2 dark:text-gray-300"
         >
           <ArrowLeft size={18} className="mr-2" />
           Back
         </Button>
         <div className="text-center py-8">
-          <h2 className="text-xl font-semibold mb-2 text-gray-900 dark:text-gray-100">
+          <h2 className="text-xl font-semibold mb-2 text-sc-ink dark:text-gray-100">
             {error ? "Error Loading Venue" : "Venue Not Found"}
           </h2>
-          <p className="text-gray-500 dark:text-gray-400">
+          <p className="text-sc-ink3 dark:text-gray-400">
             {error || "The venue you're looking for doesn't exist or has been removed."}
           </p>
         </div>
@@ -210,9 +210,9 @@ const VenueDetail = () => {
         image={venue && venue.image_urls && venue.image_urls[0] ? venue.image_urls[0] : undefined}
         children={<meta name="keywords" content={META_KEYWORDS} />}
       />
-      <div className="min-h-screen pb-20 bg-gray-50 dark:bg-gray-900">
+      <div className="min-h-screen pb-20 bg-sc-bg dark:bg-gray-900">
         <style>{quillStyles}</style>
-        <header className="sticky top-0 z-50 bg-green-500 text-white shadow-md">
+        <header className="sticky top-0 z-50 bg-green-500 text-white shadow-card">
           <div className="p-4 flex items-center justify-between">
             <Button
               variant="ghost"
@@ -228,7 +228,7 @@ const VenueDetail = () => {
         </header>
 
         <div className="p-6 max-w-3xl mx-auto">
-          <div className="rounded-xl overflow-hidden mb-6 h-64 shadow-md">
+          <div className="rounded-xl overflow-hidden mb-6 h-64 shadow-card">
             <img
               src={venueImage}
               alt={venue.name}
@@ -237,7 +237,7 @@ const VenueDetail = () => {
           </div>
 
           <div className="flex items-center">
-            <h1 className="text-3xl font-bold mb-2 text-gray-900 dark:text-gray-100">{venue.name}</h1>
+            <h1 className="text-3xl font-bold mb-2 text-sc-ink dark:text-gray-100">{venue.name}</h1>
             {venue.verified_status === 'True' && (
               <img 
                 src="/green-verified.png" 
@@ -246,35 +246,35 @@ const VenueDetail = () => {
               />
             )}
           </div>
-          <div className="flex items-center text-gray-600 dark:text-gray-400 mb-4">
+          <div className="flex items-center text-sc-ink3 dark:text-gray-400 mb-4">
             <MapPin size={18} className="mr-2" />
             <span>{venue.city}, {venue.state}</span>
           </div>
           <div className="flex items-center text-yellow-500 mb-6">
             <Star size={18} className="mr-2 fill-yellow-500" />
-            <span className="text-gray-900 dark:text-gray-100 font-semibold">{venue.aggregated_rating?.toFixed(1) || "N/A"}</span>
+            <span className="text-sc-ink dark:text-gray-100 font-semibold">{venue.aggregated_rating?.toFixed(1) || "N/A"}</span>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-card dark:border-gray-700">
             <div className="space-y-4">
               <div className="flex items-center">
-                <MapPin size={18} className="mr-2 text-gray-700 dark:text-gray-300" />
+                <MapPin size={18} className="mr-2 text-sc-ink2 dark:text-gray-300" />
                 <div>
-                  <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Address</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{venue.address}</p>
+                  <h3 className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Address</h3>
+                  <p className="text-sm text-sc-ink3 dark:text-gray-400">{venue.address}</p>
                 </div>
               </div>
 
               {venue.description && (
                 <div className="flex items-start">
-                  <Info size={18} className="mr-2 text-gray-700 dark:text-gray-300 mt-1" />
+                  <Info size={18} className="mr-2 text-sc-ink2 dark:text-gray-300 mt-1" />
                   <div>
-                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Description</h3>
+                    <h3 className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Description</h3>
                     <ReactQuill
                       value={venue.description || "<p>No description available.</p>"}
                       readOnly={true}
                       modules={quillModules}
-                      className="w-full border-none bg-transparent p-0 text-gray-600 dark:text-gray-400"
+                      className="w-full border-none bg-transparent p-0 text-sc-ink3 dark:text-gray-400"
                     />
                   </div>
                 </div>
@@ -282,14 +282,14 @@ const VenueDetail = () => {
 
               {venue.facilities && (
                 <div className="flex items-start">
-                  <Building size={18} className="mr-2 text-gray-700 dark:text-gray-300 mt-1" />
+                  <Building size={18} className="mr-2 text-sc-ink2 dark:text-gray-300 mt-1" />
                   <div>
-                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Facilities</h3>
+                    <h3 className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Facilities</h3>
                     <ReactQuill
                       value={venue.facilities || "<p>No facilities information available.</p>"}
                       readOnly={true}
                       modules={quillModules}
-                      className="w-full border-none bg-transparent p-0 text-gray-600 dark:text-gray-400"
+                      className="w-full border-none bg-transparent p-0 text-sc-ink3 dark:text-gray-400"
                     />
                   </div>
                 </div>
@@ -297,20 +297,20 @@ const VenueDetail = () => {
 
               {venue.opening_hours && (
                 <div className="flex items-center">
-                  <Clock size={18} className="mr-2 text-gray-700 dark:text-gray-300" />
+                  <Clock size={18} className="mr-2 text-sc-ink2 dark:text-gray-300" />
                   <div>
-                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Opening Hours</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">{venue.opening_hours}</p>
+                    <h3 className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Opening Hours</h3>
+                    <p className="text-sm text-sc-ink3 dark:text-gray-400">{venue.opening_hours}</p>
                   </div>
                 </div>
               )}
 
               {venue.booking_fee !== null && (
                 <div className="flex items-center">
-                  <Wallet size={18} className="mr-2 text-gray-700 dark:text-gray-300" />
+                  <Wallet size={18} className="mr-2 text-sc-ink2 dark:text-gray-300" />
                   <div>
-                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Booking Fee (per hour)</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">NGN {venue.booking_fee?.toFixed(2)}</p>
+                    <h3 className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Booking Fee (per hour)</h3>
+                    <p className="text-sm text-sc-ink3 dark:text-gray-400">NGN {venue.booking_fee?.toFixed(2)}</p>
                   </div>
                 </div>
               )}
@@ -321,7 +321,7 @@ const VenueDetail = () => {
                     href={venue.map_link}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center text-green-500 hover:text-green-600 text-sm font-medium"
+                    className="inline-flex items-center text-sc-green-dark hover:text-green-600 text-sm font-medium"
                   >
                     <ExternalLink size={16} className="mr-2" />
                     View on Google Maps
@@ -331,7 +331,7 @@ const VenueDetail = () => {
 
               <div className="pt-2">
                 <Button
-                  className="bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 w-full sm:w-auto"
+                  className="bg-sc-green hover:brightness-95 text-sc-green-ink font-bold rounded-full px-4 py-2 w-full sm:w-auto"
                   onClick={handleBookVenue}
                   disabled={!venue.venue_phone}
                 >
@@ -342,49 +342,49 @@ const VenueDetail = () => {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-200 dark:border-gray-700">
-            <h2 className="font-semibold text-lg mb-4 text-gray-900 dark:text-gray-100">Recent Matches</h2>
+          <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-card dark:border-gray-700">
+            <h2 className="font-semibold text-lg mb-4 text-sc-ink dark:text-gray-100">Recent Matches</h2>
 
             {matchesLoading ? (
               <div className="flex justify-center py-4">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-500"></div>
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-sc-green"></div>
               </div>
             ) : matches.length > 0 ? (
               <div className="space-y-4">
                 {matches.map((match) => (
                   <div
                     key={match.id}
-                    className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer transition-colors"
+                    className="bg-sc-soft dark:bg-gray-700 rounded-lg p-4 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer transition-colors"
                     onClick={() => navigate(`/match/${match.slug}`)}
                   >
-                    <h3 className="font-medium text-gray-900 dark:text-gray-100">{match.title}</h3>
-                    <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    <h3 className="font-medium text-sc-ink dark:text-gray-100">{match.title}</h3>
+                    <div className="flex items-center gap-3 text-sm text-sc-ink3 dark:text-gray-400 mt-1">
                       <Calendar size={16} />
                       <span>{formatDate(match.match_date)}</span>
                       <Clock size={16} />
                       <span>{formatTime(match.match_time)}</span>
                     </div>
-                    <div className="mt-1 text-sm font-medium text-green-600 dark:text-green-400">
+                    <div className="mt-1 text-sm font-medium text-sc-green-dark dark:text-green-400">
                       {match.is_paid ? `₦${match.price?.toFixed(2)}` : "Free"}
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-gray-600 dark:text-gray-400">No recent matches found for this venue.</p>
+              <p className="text-sm text-sc-ink3 dark:text-gray-400">No recent matches found for this venue.</p>
             )}
           </div>
 
           <div className="mt-6 flex flex-row gap-4 w-full">
             <Button
-              className="flex-1 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 w-full sm:w-auto"
+              className="flex-1 bg-sc-green hover:brightness-95 text-sc-green-ink font-bold rounded-full px-4 py-2 w-full sm:w-auto"
               onClick={() => navigate(`/venue/${venue.slug}/book`)}
             >
               <CalendarCheck size={16} className="mr-2" />
               Book Venue
             </Button>
             <Button
-              className="flex-1 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 w-full sm:w-auto"
+              className="flex-1 bg-sc-green hover:brightness-95 text-sc-green-ink font-bold rounded-full px-4 py-2 w-full sm:w-auto"
               onClick={() => navigate(`/organize?venue=${venue.slug}`)}
             >
               <CalendarPlus size={16} className="mr-2" />

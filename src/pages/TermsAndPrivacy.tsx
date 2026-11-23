@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
 import { Seo } from "@/components/Seo";
 
+import { BackButton } from "@/components/sc/ui";
 const TermsAndPrivacy = () => {
   const [activeTab, setActiveTab] = useState("terms");
   const navigate = useNavigate();
@@ -20,34 +21,25 @@ const TermsAndPrivacy = () => {
         image={undefined}
         children={null}
       />
-      <div className="min-h-screen pb-20 bg-gray-50 dark:bg-gray-900">
-        <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg">
-          <div className="flex items-center justify-between">
-            <Button 
-              variant="ghost" 
-              onClick={() => navigate(-1)} 
-              className="text-white hover:bg-green-600"
-            >
-              <ArrowLeft size={18} className="mr-2" />
-              Back
-            </Button>
-            <div className="text-center">
-              <h1 className="text-2xl font-bold">Terms & Privacy</h1>
-            </div>
-            <div className="w-10"></div>
+      <div className="min-h-screen pb-20 bg-sc-bg dark:bg-gray-900">
+        <header className="px-5 pt-[max(env(safe-area-inset-top),1rem)]">
+          <div className="pt-3 flex items-center justify-between gap-3">
+            <BackButton />
+            <h1 className="m-0 flex-1 text-center text-[17px] font-extrabold truncate">Terms and privacy</h1>
+            <div className="min-w-11 flex justify-end"></div>
           </div>
         </header>
 
         <div className="max-w-4xl mx-auto px-4 py-6">
-          <Card className="bg-gradient-to-b from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 shadow-lg rounded-xl border border-gray-200 dark:border-gray-700">
+          <Card className="bg-gradient-to-b from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 shadow-lg rounded-xl border border-sc-line dark:border-gray-700">
             <CardHeader>
-              <CardTitle className="text-2xl text-center text-gray-900 dark:text-gray-100">
+              <CardTitle className="text-2xl text-center text-sc-ink dark:text-gray-100">
                 Terms of Service & Privacy Policy
               </CardTitle>
             </CardHeader>
             <CardContent>
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-2 bg-gray-200 dark:bg-gray-700 rounded-lg p-1 mb-6">
+                <TabsList className="grid w-full grid-cols-2 bg-sc-soft2 dark:bg-gray-700 rounded-lg p-1 mb-6">
                   <TabsTrigger
                     value="terms"
                     className="rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-gray-600 data-[state=active]:shadow-sm data-[state=active]:border-b-2 data-[state=active]:border-green-500 hover:bg-green-50 dark:hover:bg-gray-700 transition-all"
@@ -63,7 +55,7 @@ const TermsAndPrivacy = () => {
                 </TabsList>
 
                 <TabsContent value="terms">
-                  <div className="space-y-6 text-gray-700 dark:text-gray-300">
+                  <div className="space-y-6 text-sc-ink2 dark:text-gray-300">
                     <section>
                       <h2 className="text-xl font-semibold mb-2">1. Acceptance of Terms</h2>
                       <p>
@@ -153,14 +145,14 @@ const TermsAndPrivacy = () => {
                     <section>
                       <h2 className="text-xl font-semibold mb-2">10. Contact Information</h2>
                       <p>
-                        For questions or concerns about these Terms, contact us via Twitter at <a href="https://twitter.com/PiousGeek" className="text-green-500 hover:underline" target="_blank" rel="noopener noreferrer">@PiousGeek</a> or email us at support@sportcliq.com.
+                        For questions or concerns about these Terms, contact us via Twitter at <a href="https://twitter.com/PiousGeek" className="text-sc-green-dark hover:underline" target="_blank" rel="noopener noreferrer">@PiousGeek</a> or email us at support@sportcliq.com.
                       </p>
                     </section>
                   </div>
                 </TabsContent>
 
                 <TabsContent value="privacy">
-                  <div className="space-y-6 text-gray-700 dark:text-gray-300">
+                  <div className="space-y-6 text-sc-ink2 dark:text-gray-300">
                     <section>
                       <h2 className="text-xl font-semibold mb-2">1. Introduction</h2>
                       <p>
@@ -266,7 +258,7 @@ const TermsAndPrivacy = () => {
                     <section>
                       <h2 className="text-xl font-semibold mb-2">11. Contact Information</h2>
                       <p>
-                        For questions or concerns about this Privacy Policy, contact our Data Protection Officer at support@sportcliq.com or via Twitter at <a href="https://twitter.com/PiousGeek" className="text-green-500 hover:underline" target="_blank" rel="noopener noreferrer">@PiousGeek</a>.
+                        For questions or concerns about this Privacy Policy, contact our Data Protection Officer at support@sportcliq.com or via Twitter at <a href="https://twitter.com/PiousGeek" className="text-sc-green-dark hover:underline" target="_blank" rel="noopener noreferrer">@PiousGeek</a>.
                       </p>
                     </section>
                   </div>
@@ -275,14 +267,14 @@ const TermsAndPrivacy = () => {
             </CardContent>
           </Card>
 
-          <Card className="mt-6 bg-gradient-to-b from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 shadow-lg rounded-xl border border-gray-200 dark:border-gray-700">
+          <Card className="mt-6 bg-gradient-to-b from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 shadow-lg rounded-xl border border-sc-line dark:border-gray-700">
             <CardContent className="p-4 text-center">
-              <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">
+              <p className="text-sm text-sc-ink2 dark:text-gray-300 mb-3">
                 Need help? Reach out to us on Twitter!
               </p>
               <Button
                 asChild
-                className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-full transition-colors"
+                className="bg-sc-green hover:brightness-95 text-sc-green-ink px-6 py-2 rounded-full transition-colors font-bold"
               >
                 <a href="https://twitter.com/PiousGeek" target="_blank" rel="noopener noreferrer">
                   Contact Us

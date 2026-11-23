@@ -30,6 +30,7 @@ import PlayersTable from "@/components/match/PlayersTable";
 import MatchDetailsDialogue from "@/components/match/MatchDetailsDialogue";
 import { Seo } from "@/components/Seo";
 
+import { BackButton } from "@/components/sc/ui";
 const META_KEYWORDS = "Football in Nigeria, Sports in Nigeria, Play Sports Near You, Football Fields Near Me, Livescore, Osimhen, Asisat Oshola, Nigeria Startup, Sportstech, Football venues in Lagos, Football venues in Ilorin, Sports Betting in Nigeria, Organize sports in Nigeria, Football Matches, Bicycle Training in Nigeria, Cycling in Nigeria, Nigerian football, Nigerian cycling, Nigerian sports, Play football in Lagos, Play football in Ilorin, Play football in Abuja, Play football in Nigeria, Play cycling in Nigeria, Play sports in Nigeria, Nigerian sports tech, Nigerian sports startup, Nigerian sports community, Football events Nigeria, Cycling events Nigeria, Sport Cliq, SportCliq, sportcliq.com.ng, sportcliq.ng, sportcliq, sport cliq, sportcliq app, sportcliq platform, sportcliq football, sportcliq cycling, sportcliq venues, sportcliq matches, sportcliq events, sportcliq sports, sportcliq nigeria, sportcliq lagos, sportcliq ilorin, sportcliq abuja, sportcliq startup, sportcliq tech, sportcliq community, sportcliq platform, sportcliq app, sportcliq website, sportcliq online, sportcliq booking, sportcliq organize, sportcliq join, sportcliq play, sportcliq find, sportcliq search, sportcliq discover, sportcliq connect, sportcliq join match, sportcliq join cycling, sportcliq join event, sportcliq join venue, sportcliq join football, sportcliq join sports, sportcliq join nigeria, sportcliq join lagos, sportcliq join ilorin, sportcliq join abuja, sportcliq join startup, sportcliq join tech, sportcliq join community, sportcliq join platform, sportcliq join app, sportcliq join website, sportcliq join online, sportcliq join booking, sportcliq join organize, sportcliq join play, sportcliq join find, sportcliq join search, sportcliq join discover, sportcliq join connect";
 
 type Match = {
@@ -279,7 +280,7 @@ const MatchDetail = () => {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-[50vh]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-playarena-500"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sc-green"></div>
       </div>
     );
   }
@@ -306,10 +307,10 @@ const MatchDetail = () => {
   if (passwordDialogOpen) {
     return (
       <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
-        <DialogContent className="max-w-md rounded-2xl bg-white dark:bg-gray-800 p-6 shadow-xl border border-gray-200 dark:border-gray-700">
+        <DialogContent className="max-w-md rounded-3xl bg-white dark:bg-gray-800 p-6 shadow-card dark:border-gray-700">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-gray-900 dark:text-white text-center">Access Required</DialogTitle>
-            <DialogDescription className="text-gray-600 dark:text-gray-300 text-center mt-2">
+            <DialogTitle className="text-xl font-bold text-sc-ink dark:text-white text-center">Access Required</DialogTitle>
+            <DialogDescription className="text-sc-ink3 dark:text-gray-300 text-center mt-2">
               This is a private match. Please enter the 6-character access password to view details.
             </DialogDescription>
           </DialogHeader>
@@ -319,13 +320,13 @@ const MatchDetail = () => {
               placeholder="Enter password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-2 rounded-lg border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-700"
+              className="w-full px-4 py-2 rounded-lg border-sc-line dark:border-gray-600 focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sc-ink dark:text-white bg-sc-soft dark:bg-gray-700"
               maxLength={6}
             />
           </div>
           <DialogFooter className="flex justify-center">
             <Button 
-              className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg transition-colors"
+              className="bg-sc-green hover:brightness-95 text-sc-green-ink px-6 py-2 rounded-full transition-colors font-bold"
               onClick={verifyPassword}
             >
               Verify
@@ -349,20 +350,11 @@ const MatchDetail = () => {
         children={<meta name="keywords" content={META_KEYWORDS} />}
       />
       <div className="min-h-screen pb-24">
-        <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg">
-          <div className="flex items-center justify-between">
-            <Button 
-              variant="ghost" 
-              onClick={() => navigate(-1)} 
-              className="text-white hover:bg-green-600"
-            >
-              <ArrowLeft size={18} className="mr-2" />
-              Back
-            </Button>
-            <div className="text-center">
-              <h1 className="text-2xl font-bold">Match Details</h1>
-            </div>
-            <div className="w-10"></div>
+        <header className="px-5 pt-[max(env(safe-area-inset-top),1rem)]">
+          <div className="pt-3 flex items-center justify-between gap-3">
+            <BackButton />
+            <h1 className="m-0 flex-1 text-center text-[17px] font-extrabold truncate">Match details</h1>
+            <div className="min-w-11 flex justify-end"></div>
           </div>
         </header>
 
@@ -373,7 +365,7 @@ const MatchDetail = () => {
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Lock size={16} className="inline text-gray-500" />
+                    <Lock size={16} className="inline text-sc-ink3" />
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>This is a private match</p>
@@ -394,7 +386,7 @@ const MatchDetail = () => {
           </div>
           
           {isEnded ? (
-            <div className="bg-gray-100 border border-gray-200 text-gray-700 px-4 py-3 rounded mb-4">
+            <div className="bg-sc-soft border border-sc-line text-sc-ink2 px-4 py-3 rounded mb-4">
               This match has passed
             </div>
           ) : isStarted ? (
@@ -408,13 +400,13 @@ const MatchDetail = () => {
           ) : null}
           
           <div className="space-y-4">
-            <div className="border rounded-lg p-4 bg-card shadow-md relative">
+            <div className="border rounded-lg p-4 bg-card shadow-card relative">
               <div className="absolute top-4 right-4 m-0 p-0">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={addToCalendar}
-                  className="text-playarena-600 border-playarena-300 hover:bg-playarena-50 p-2 m-0"
+                  className="text-sc-green-dark border-playarena-300 hover:bg-playarena-50 p-2 m-0"
                 >
                   <Bell size={16} className="mr-0" />
                 </Button>
@@ -440,7 +432,7 @@ const MatchDetail = () => {
                   >
                     <MapPin size={18} className="mt-0.5" />
                     <div>
-                      <span className="text-playarena-600 hover:underline">
+                      <span className="text-sc-green-dark hover:underline">
                         {match.venue.name}, {match.venue.city}
                       </span>
                       {match.venue.map_link && (
@@ -449,7 +441,7 @@ const MatchDetail = () => {
                             href={match.venue.map_link} 
                             target="_blank" 
                             rel="noopener noreferrer"
-                            className="text-xs flex items-center text-playarena-600 hover:underline"
+                            className="text-xs flex items-center text-sc-green-dark hover:underline"
                             onClick={(e) => e.stopPropagation()}
                           >
                             <ExternalLink size={12} className="mr-1" />

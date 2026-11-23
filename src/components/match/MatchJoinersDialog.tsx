@@ -159,11 +159,11 @@ const MatchJoinersDialog = ({
       }}
     >
       <DialogContent className="w-full max-w-[90vw] sm:max-w-[500px] rounded-2xl p-4 sm:p-6">
-        <DialogTitle className="text-xl font-bold text-gray-800 dark:text-white text-center">
+        <DialogTitle className="text-xl font-bold text-sc-ink dark:text-white text-center">
           Registration Successful
         </DialogTitle>
         <DialogDescription className="flex flex-col items-center">
-          <p className="text-gray-600 dark:text-gray-300 mb-4 text-sm text-center max-w-xs">
+          <p className="text-sc-ink3 dark:text-gray-300 mb-4 text-sm text-center max-w-xs">
             You have successfully registered for the match for {selectedSlots} slot{selectedSlots > 1 ? "s" : ""}.
             {!isValid && " Some match details may be missing."}
           </p>
@@ -244,7 +244,7 @@ const MatchJoinersDialog = ({
                 )}
               </div>
               {/* Confirmation Code Card (MatchSuccessDialog style) */}
-              <div className="bg-white text-green-600 rounded-md p-4 text-center shadow-inner my-4">
+              <div className="bg-white text-sc-green-dark rounded-md p-4 text-center shadow-inner my-4">
                 <p className="text-sm font-medium uppercase tracking-wide">Confirmation Code</p>
                 <p className="text-4xl font-bold tracking-wider mt-1 font-mono">{confirmationCode || 'N/A'}</p>
               </div>
@@ -255,12 +255,12 @@ const MatchJoinersDialog = ({
               )}
             </div>
           </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400 my-4 text-center max-w-xs">
+          <p className="text-sm text-sc-ink3 dark:text-gray-400 my-4 text-center max-w-xs">
             <strong>Note:</strong> Save this code. You'll need it on match day.
           </p>
           <div className="flex justify-center w-full">
             <Button 
-              className="bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg px-6 py-3 shadow-sm transition-colors duration-200 border-0 max-w-xs w-full sm:w-auto"
+              className="bg-sc-green hover:brightness-95 text-sc-green-ink font-bold rounded-full px-6 py-3 shadow-card transition-colors duration-200 border-0 max-w-xs w-full sm:w-auto"
               onClick={handleDownload}
               disabled={!isImageLoaded || isDownloading}
               aria-label="Download confirmation card as image"

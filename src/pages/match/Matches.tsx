@@ -26,6 +26,7 @@ import TeamMatchDetails from "@/components/match/TeamMatchDetails";
 import UserMatches from "@/components/match/UserMatches";
 import { Seo } from "@/components/Seo";
 
+import { BackButton } from "@/components/sc/ui";
 // Match type definition based on the existing Supabase schema
 interface Match {
   id: string;
@@ -294,10 +295,10 @@ const Matches = () => {
     const endDateTime = DateTime.fromISO(`${match.match_date}T${match.end_time}`).setZone(LAGOS_TIMEZONE);
 
     if (match.status === "live") return { statusLabel: "Live", statusClass: "bg-red-100 text-red-700 animate-pulse" };
-    if (match.status === "today") return { statusLabel: "Today", statusClass: "bg-green-100 text-green-700" };
+    if (match.status === "today") return { statusLabel: "Today", statusClass: "bg-sc-green-bg text-sc-green-dark" };
     if (match.status === "next_day") return { statusLabel: "Tomorrow", statusClass: "bg-yellow-100 text-yellow-700" };
     if (match.status === "upcoming") return { statusLabel: "Upcoming", statusClass: "bg-blue-100 text-blue-800" };
-    return { statusLabel: "Passed", statusClass: "bg-gray-200 text-gray-600" };
+    return { statusLabel: "Passed", statusClass: "bg-sc-soft2 text-sc-ink3" };
   };
 
   const formatDate = (dateString: string) => {
@@ -355,27 +356,18 @@ const Matches = () => {
         image={undefined}
         children={<meta name="keywords" content={META_KEYWORDS} />}
       />
-      <div className="min-h-screen pb-24 bg-gray-100 dark:bg-gray-900">
-        <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg">
-          <div className="flex items-center justify-between max-w-7xl mx-auto">
-            <Button 
-              variant="ghost" 
-              onClick={() => navigate(-1)} 
-              className="text-white hover:bg-green-600"
-            >
-              <ArrowLeft size={18} className="mr-2" />
-              Back
-            </Button>
-            <div className="text-center">
-              <h1 className="text-2xl font-bold">Matches</h1>
-            </div>
-            <Button
-              className="bg-playarena-500 hover:bg-playarena-600 text-white"
+      <div className="min-h-screen pb-24 bg-sc-bg dark:bg-gray-900">
+        <header className="px-5 pt-[max(env(safe-area-inset-top),1rem)] flex flex-col gap-3.5">
+          <div className="pt-3 flex items-center justify-between min-h-11">
+            <BackButton />
+            <div className="flex gap-2"><Button
+              className="h-11 px-4 rounded-full bg-sc-ink text-white font-bold text-sm"
               onClick={() => navigate("/organize")}
             >
               Organize Match
-            </Button>
+            </Button></div>
           </div>
+          <h1 className="m-0 text-[32px] leading-[38px] font-extrabold tracking-[-0.03em]">Football matches</h1>
         </header>
 
         <div className="mt-6 px-4">
@@ -390,10 +382,10 @@ const Matches = () => {
                 {isFilterOpen ? "Hide Filters" : "Show Filters"}
               </Button>
             </CollapsibleTrigger>
-            <CollapsibleContent className="mt-4 p-4 border rounded-lg bg-white dark:bg-gray-800 space-y-4">
+            <CollapsibleContent className="mt-4 p-4 rounded-3xl bg-white dark:bg-gray-800 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="is-paid-filter" className="text-gray-700 dark:text-gray-300">Payment Type</Label>
+                  <Label htmlFor="is-paid-filter" className="text-sc-ink2 dark:text-gray-300">Payment Type</Label>
                   <Select
                     value={isPaidFilter === null ? "all" : isPaidFilter ? "paid" : "free"}
                     onValueChange={(value) => {
@@ -401,7 +393,7 @@ const Matches = () => {
                       setCurrentPage(1);
                     }}
                   >
-                    <SelectTrigger id="is-paid-filter" className="border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                    <SelectTrigger id="is-paid-filter" className="border-sc-line dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                       <SelectValue placeholder="Select payment type" />
                     </SelectTrigger>
                     <SelectContent>
@@ -413,7 +405,7 @@ const Matches = () => {
                 </div>
 
                 <div>
-                  <Label htmlFor="status-filter" className="text-gray-700 dark:text-gray-300">Status</Label>
+                  <Label htmlFor="status-filter" className="text-sc-ink2 dark:text-gray-300">Status</Label>
                   <Select
                     value={statusFilter || "all"}
                     onValueChange={(value) => {
@@ -421,7 +413,7 @@ const Matches = () => {
                       setCurrentPage(1);
                     }}
                   >
-                    <SelectTrigger id="status-filter" className="border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                    <SelectTrigger id="status-filter" className="border-sc-line dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                       <SelectValue placeholder="Select status" />
                     </SelectTrigger>
                     <SelectContent>
@@ -436,7 +428,7 @@ const Matches = () => {
                 </div>
 
                 <div>
-                  <Label htmlFor="venue-filter" className="text-gray-700 dark:text-gray-300">Venue</Label>
+                  <Label htmlFor="venue-filter" className="text-sc-ink2 dark:text-gray-300">Venue</Label>
                   <Select
                     value={venueFilter || "all"}
                     onValueChange={(value) => {
@@ -444,7 +436,7 @@ const Matches = () => {
                       setCurrentPage(1);
                     }}
                   >
-                    <SelectTrigger id="venue-filter" className="border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                    <SelectTrigger id="venue-filter" className="border-sc-line dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                       <SelectValue placeholder="Select venue" />
                     </SelectTrigger>
                     <SelectContent>
@@ -459,7 +451,7 @@ const Matches = () => {
                 </div>
 
                 <div>
-                  <Label htmlFor="duration-filter" className="text-gray-700 dark:text-gray-300">Duration</Label>
+                  <Label htmlFor="duration-filter" className="text-sc-ink2 dark:text-gray-300">Duration</Label>
                   <Select
                     value={durationFilter}
                     onValueChange={(value) => {
@@ -467,7 +459,7 @@ const Matches = () => {
                       setCurrentPage(1);
                     }}
                   >
-                    <SelectTrigger id="duration-filter" className="border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                    <SelectTrigger id="duration-filter" className="border-sc-line dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                       <SelectValue placeholder="Select duration" />
                     </SelectTrigger>
                     <SelectContent>
@@ -481,7 +473,7 @@ const Matches = () => {
                 </div>
 
                 <div>
-                  <Label htmlFor="time-start" className="text-gray-700 dark:text-gray-300">Start Time</Label>
+                  <Label htmlFor="time-start" className="text-sc-ink2 dark:text-gray-300">Start Time</Label>
                   <Select
                     value={timeStart || "all"}
                     onValueChange={(value) => {
@@ -489,7 +481,7 @@ const Matches = () => {
                       setCurrentPage(1);
                     }}
                   >
-                    <SelectTrigger id="time-start" className="border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                    <SelectTrigger id="time-start" className="border-sc-line dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                       <SelectValue placeholder="Select start time" />
                     </SelectTrigger>
                     <SelectContent>
@@ -502,7 +494,7 @@ const Matches = () => {
                 </div>
 
                 <div>
-                  <Label htmlFor="state-filter" className="text-gray-700 dark:text-gray-300">State</Label>
+                  <Label htmlFor="state-filter" className="text-sc-ink2 dark:text-gray-300">State</Label>
                   <Select
                     value={stateFilter || "all"}
                     onValueChange={(value) => {
@@ -510,7 +502,7 @@ const Matches = () => {
                       setCurrentPage(1);
                     }}
                   >
-                    <SelectTrigger id="state-filter" className="border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                    <SelectTrigger id="state-filter" className="border-sc-line dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                       <SelectValue placeholder="Select state" />
                     </SelectTrigger>
                     <SelectContent>
@@ -533,7 +525,7 @@ const Matches = () => {
 
         {loading ? (
           <div className="flex justify-center items-center h-[50vh]">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-playarena-500"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sc-green"></div>
           </div>
         ) : matches.length > 0 ? (
           <div className="px-4 space-y-4">
@@ -546,17 +538,17 @@ const Matches = () => {
               return (
                 <div 
                   key={match.id} 
-                  className="border rounded-lg overflow-hidden shadow-sm bg-white dark:bg-gray-800"
+                  className="rounded-3xl overflow-hidden shadow-card bg-white dark:bg-gray-800"
                 >
                   <div className="p-4">
                     <div className="flex justify-between items-start">
-                      <h3 className="font-bold text-lg text-gray-800 dark:text-gray-200">
+                      <h3 className="font-bold text-lg text-sc-ink dark:text-gray-200">
                         {match.title}{" "}
                         {match.is_private && (
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <Lock size={16} className="inline text-gray-500 dark:text-gray-400" />
+                                <Lock size={16} className="inline text-sc-ink3 dark:text-gray-400" />
                               </TooltipTrigger>
                               <TooltipContent>
                                 <p>This is a private match</p>
@@ -571,7 +563,7 @@ const Matches = () => {
                           className={
                             match.is_paid
                               ? "bg-red-100 text-red-700"
-                              : "bg-green-100 text-green-700"
+                              : "bg-sc-green-bg text-sc-green-dark"
                           }
                         >
                           {match.is_paid ? `₦${match.price?.toFixed(2)}` : "FREE"}
@@ -579,22 +571,22 @@ const Matches = () => {
                       </div>
                     </div>
                     
-                    <div className="mt-2 space-y-2 text-sm text-gray-600 dark:text-gray-300">
+                    <div className="mt-2 space-y-2 text-sm text-sc-ink3 dark:text-gray-300">
                       <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-gray-600 dark:text-gray-300" />
-                        <span className="text-sm font-medium text-gray-900 dark:text-gray-200">
+                        <Calendar className="h-4 w-4 text-sc-ink3 dark:text-gray-300" />
+                        <span className="text-sm font-medium text-sc-ink dark:text-gray-200">
                           {match.status === "today" ? "Today" : match.status === "next_day" ? "Tomorrow" : formatDate(match.match_date)}
                         </span>
                       </div>
                       
                       <div className="flex items-center gap-2">
-                        <Clock size={16} className="text-gray-600 dark:text-gray-300" />
+                        <Clock size={16} className="text-sc-ink3 dark:text-gray-300" />
                         <span>{formatTime(match.match_time)}</span>
                       </div>
                       
                       {match.venue && (
                         <div className="flex items-center gap-2">
-                          <MapPin size={16} className="text-gray-600 dark:text-gray-300" />
+                          <MapPin size={16} className="text-sc-ink3 dark:text-gray-300" />
                           <a
                             href={`/venue/${match.venue.slug}`}
                             className="text-primary hover:underline"
@@ -609,7 +601,7 @@ const Matches = () => {
                       )}
                       
                       <div className="flex items-center gap-2">
-                        <Users size={16} className="text-gray-600 dark:text-gray-300" />
+                        <Users size={16} className="text-sc-ink3 dark:text-gray-300" />
                         <span>
                           {match.players?.length || 0}/{match.total_slots} spots filled
                         </span>
@@ -619,7 +611,7 @@ const Matches = () => {
                     <div className="mt-4 flex justify-between items-center">
                       <div>
                         <span className="text-xs text-muted-foreground">Organized by:</span>
-                        <p className="font-medium text-gray-800 dark:text-gray-200 flex items-center">
+                        <p className="font-medium text-sc-ink dark:text-gray-200 flex items-center">
                           {match.organizer_name}
                           {isVerified && <img src="/green-verified.png" alt="Verified" className="w-4 h-4 ml-1" />}
                         </p>
@@ -647,7 +639,7 @@ const Matches = () => {
                 <ChevronLeft size={16} className="mr-2" />
                 Previous
               </Button>
-              <span className="text-gray-700 dark:text-gray-300">
+              <span className="text-sc-ink2 dark:text-gray-300">
                 Page {currentPage} of {totalPages}
               </span>
               <Button

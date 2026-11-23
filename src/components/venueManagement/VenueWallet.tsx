@@ -192,7 +192,7 @@ const VenueWallet = ({ venueId, availableFunds, setAvailableFunds }: VenueWallet
   const getStatusStyles = (status: string) => {
     switch (status) {
       case "Successful":
-        return "bg-green-100 text-green-700 border-green-300";
+        return "bg-sc-green-bg text-sc-green-dark border-green-300";
       case "Failed":
         return "bg-red-100 text-red-700 border-red-300";
       case "Processed":
@@ -205,14 +205,14 @@ const VenueWallet = ({ venueId, availableFunds, setAvailableFunds }: VenueWallet
   };
 
   return (
-    <Card className="bg-white dark:bg-gray-800 border-none shadow-lg rounded-xl">
+    <Card className="bg-white dark:bg-gray-800 border-none shadow-card rounded-3xl">
       <CardHeader>
-        <CardTitle className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex justify-between items-center">
+        <CardTitle className="text-lg font-semibold text-sc-ink dark:text-gray-100 flex justify-between items-center">
           Wallet
           <Button
             onClick={() => setCashoutDialogOpen(true)}
             disabled={availableFunds === 0 || loading}
-            className="bg-green-500 hover:bg-green-600 text-white rounded-lg"
+            className="bg-sc-green hover:brightness-95 text-sc-green-ink rounded-full font-bold"
           >
             Cashout
           </Button>
@@ -220,7 +220,7 @@ const VenueWallet = ({ venueId, availableFunds, setAvailableFunds }: VenueWallet
       </CardHeader>
       <CardContent>
         <div className="mb-4 flex items-center gap-2">
-          <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+          <p className="text-sm font-medium text-sc-ink3 dark:text-gray-400">
             Available Funds: ₦{availableFunds.toFixed(2)}
           </p>
           <Button
@@ -234,7 +234,7 @@ const VenueWallet = ({ venueId, availableFunds, setAvailableFunds }: VenueWallet
           </Button>
         </div>
         <Collapsible>
-          <CollapsibleTrigger className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <CollapsibleTrigger className="text-sm font-medium text-sc-ink2 dark:text-gray-300 mb-2">
             {cashoutRequests.length > 0 ? `View ${cashoutRequests.length} Cashout Requests` : "No Cashout Requests"}
           </CollapsibleTrigger>
           <CollapsibleContent>
@@ -242,23 +242,23 @@ const VenueWallet = ({ venueId, availableFunds, setAvailableFunds }: VenueWallet
               {cashoutRequests.map((request) => (
                 <div
                   key={request.id}
-                  className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600"
+                  className="p-4 bg-sc-soft dark:bg-gray-700 rounded-lg border border-sc-line dark:border-gray-600"
                 >
                   <div className="flex justify-between items-center">
                     <div>
-                      <p className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                      <p className="text-lg font-medium text-sc-ink dark:text-gray-100">
                         ₦{request.amount.toLocaleString()}
                       </p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                      <p className="text-sm text-sc-ink3 dark:text-gray-400">
                         {new Date(request.created_at).toLocaleString("en-NG", {
                           dateStyle: "medium",
                           timeStyle: "short",
                         })}
                       </p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                      <p className="text-sm text-sc-ink3 dark:text-gray-400">
                         Account: {request.account_holder_name}
                       </p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                      <p className="text-sm text-sc-ink3 dark:text-gray-400">
                         Bank: {request.bank_name} ({request.account_number})
                       </p>
                     </div>
@@ -276,16 +276,16 @@ const VenueWallet = ({ venueId, availableFunds, setAvailableFunds }: VenueWallet
       </CardContent>
 
       <Dialog open={cashoutDialogOpen} onOpenChange={setCashoutDialogOpen}>
-        <DialogContent className="sm:max-w-md rounded-2xl bg-white dark:bg-gray-800 border-none shadow-lg">
+        <DialogContent className="sm:max-w-md rounded-3xl bg-white dark:bg-gray-800 border-none shadow-card">
           <DialogHeader>
-            <DialogTitle className="text-lg font-semibold text-gray-900 dark:text-gray-100">Request Cashout</DialogTitle>
-            <DialogDescription className="text-sm text-gray-600 dark:text-gray-400">
+            <DialogTitle className="text-lg font-semibold text-sc-ink dark:text-gray-100">Request Cashout</DialogTitle>
+            <DialogDescription className="text-sm text-sc-ink3 dark:text-gray-400">
               Enter your bank details and amount to request a cashout. Amount must not exceed available funds (₦{availableFunds.toFixed(2)}).
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 p-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label className="block text-sm font-medium text-sc-ink2 dark:text-gray-300">
                 Amount (₦)
               </label>
               <Input
@@ -295,7 +295,7 @@ const VenueWallet = ({ venueId, availableFunds, setAvailableFunds }: VenueWallet
                   setCashoutAmount(e.target.value);
                   setAmountError(null);
                 }}
-                className="text-base bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg"
+                className="text-base bg-white dark:bg-gray-700 border-sc-line dark:border-gray-600 text-sc-ink dark:text-gray-100 rounded-lg"
                 min="1"
               />
               {amountError && (
@@ -303,7 +303,7 @@ const VenueWallet = ({ venueId, availableFunds, setAvailableFunds }: VenueWallet
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label className="block text-sm font-medium text-sc-ink2 dark:text-gray-300">
                 Bank Account Number
               </label>
               <Input
@@ -315,20 +315,20 @@ const VenueWallet = ({ venueId, availableFunds, setAvailableFunds }: VenueWallet
                 inputMode="numeric"
                 pattern="[0-9]*"
                 maxLength={10}
-                className="text-base bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg"
+                className="text-base bg-white dark:bg-gray-700 border-sc-line dark:border-gray-600 text-sc-ink dark:text-gray-100 rounded-lg"
               />
               {bankAccountError && (
                 <p className="text-sm text-red-600 mt-1">{bankAccountError}</p>
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label className="block text-sm font-medium text-sc-ink2 dark:text-gray-300">
                 Bank Name
               </label>
               <select
                 value={bankName}
                 onChange={(e) => setBankName(e.target.value)}
-                className="text-base bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg w-full"
+                className="text-base bg-white dark:bg-gray-700 border-sc-line dark:border-gray-600 text-sc-ink dark:text-gray-100 rounded-lg w-full"
               >
                 <option value="">Select a bank</option>
                 {nigerianBanks.map((bank) => (
@@ -337,7 +337,7 @@ const VenueWallet = ({ venueId, availableFunds, setAvailableFunds }: VenueWallet
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label className="block text-sm font-medium text-sc-ink2 dark:text-gray-300">
                 Account Name
               </label>
               <Input
@@ -346,7 +346,7 @@ const VenueWallet = ({ venueId, availableFunds, setAvailableFunds }: VenueWallet
                   setAccountName(e.target.value);
                   setAccountNameError(null);
                 }}
-                className="text-base bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg"
+                className="text-base bg-white dark:bg-gray-700 border-sc-line dark:border-gray-600 text-sc-ink dark:text-gray-100 rounded-lg"
               />
               {accountNameError && (
                 <p className="text-sm text-red-600 mt-1">{accountNameError}</p>
@@ -357,13 +357,13 @@ const VenueWallet = ({ venueId, availableFunds, setAvailableFunds }: VenueWallet
             <Button
               variant="outline"
               onClick={() => setCashoutDialogOpen(false)}
-              className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+              className="border-sc-line dark:border-gray-600 text-sc-ink2 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
             >
               Cancel
             </Button>
             <Button
               onClick={handleCashoutSubmit}
-              className="bg-green-500 hover:bg-green-600 text-white rounded-lg"
+              className="bg-sc-green hover:brightness-95 text-sc-green-ink rounded-full font-bold"
               disabled={loading}
             >
               {loading ? (

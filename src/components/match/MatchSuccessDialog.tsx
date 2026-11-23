@@ -172,9 +172,9 @@ const MatchSuccessDialog = ({ open, onOpenChange, formValues, selectedVenue, sup
       onOpenChange(open);
     }}>
       <DialogContent className="w-full max-w-[90vw] sm:max-w-[500px] rounded-2xl p-4 sm:p-6">
-        <DialogTitle className="text-xl font-bold text-gray-800 dark:text-white text-center">Match Created Successfully!</DialogTitle>
+        <DialogTitle className="text-xl font-bold text-sc-ink dark:text-white text-center">Match Created Successfully!</DialogTitle>
         <DialogDescription className="flex flex-col items-center">
-          <p className="text-gray-600 dark:text-gray-300 mb-4 text-sm text-center max-w-xs">
+          <p className="text-sc-ink3 dark:text-gray-300 mb-4 text-sm text-center max-w-xs">
             Your match has been created. Below is your unique 6-digit Supercode for check-ins on match day.
             {formValues.is_private && " Also, share the access password with invited players."}
           </p>
@@ -237,7 +237,7 @@ const MatchSuccessDialog = ({ open, onOpenChange, formValues, selectedVenue, sup
                   </p>
                 )}
               </div>
-              <div className="bg-white text-green-600 rounded-md p-4 text-center shadow-inner">
+              <div className="bg-white text-sc-green-dark rounded-md p-4 text-center shadow-inner">
                 <p className="text-sm font-medium uppercase tracking-wide">Supercode</p>
                 <p className="text-4xl font-bold tracking-wider mt-1 font-mono">{supercode || "N/A"}</p>
               </div>
@@ -254,13 +254,13 @@ const MatchSuccessDialog = ({ open, onOpenChange, formValues, selectedVenue, sup
               <option value="#000000">Black</option>
             </select>
           </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400 my-4 text-center max-w-xs">
+          <p className="text-sm text-sc-ink3 dark:text-gray-400 my-4 text-center max-w-xs">
             <strong>Note:</strong> Save or share this code. You'll need it on match day.
             {formValues.is_private && " Share the access password with invited players to allow them to join."}
           </p>
           <div className="flex justify-center w-full">
             <Button 
-              className="bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg px-6 py-3 shadow-sm transition-colors duration-200 border-0 max-w-xs w-full sm:w-auto"
+              className="bg-sc-green hover:brightness-95 text-sc-green-ink font-bold rounded-full px-6 py-3 shadow-card transition-colors duration-200 border-0 max-w-xs w-full sm:w-auto"
               onClick={handleDownload}
               disabled={!isImageLoaded || isDownloading}
               aria-label="Download supercode card as image"

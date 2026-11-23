@@ -486,8 +486,8 @@ ${summary.action_items.map((item, i) => `${i + 1}. ${item}`).join("\n")}
 
   if (!matchSlug) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-20">
-        <header className="sticky top-0 z-50 bg-green-500 text-white shadow-md">
+      <div className="min-h-screen bg-sc-bg dark:bg-gray-900 pb-20">
+        <header className="sticky top-0 z-50 bg-green-500 text-white shadow-card">
           <div className="p-4 flex items-center justify-between">
             <Button
               variant="ghost"
@@ -502,10 +502,10 @@ ${summary.action_items.map((item, i) => `${i + 1}. ${item}`).join("\n")}
           </div>
         </header>
         <div className="max-w-4xl mx-auto p-6">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 text-center border border-gray-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 text-center dark:border-gray-700">
             <AlertCircle size={40} className="text-red-600 dark:text-red-500 mx-auto mb-3" />
             <h2 className="text-lg font-semibold text-red-600 dark:text-red-500">Invalid Match</h2>
-            <p className="text-gray-600 dark:text-gray-400 mt-2">
+            <p className="text-sc-ink3 dark:text-gray-400 mt-2">
               No match slug provided. Please access feedback from the match details page.
             </p>
           </div>
@@ -516,8 +516,8 @@ ${summary.action_items.map((item, i) => `${i + 1}. ${item}`).join("\n")}
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-20">
-      <header className="sticky top-0 z-50 bg-green-500 text-white shadow-md">
+    <div className="min-h-screen bg-sc-bg dark:bg-gray-900 pb-20">
+      <header className="sticky top-0 z-50 bg-green-500 text-white shadow-card">
         <div className="p-4 flex items-center justify-between">
           <Button
             variant="ghost"
@@ -536,15 +536,15 @@ ${summary.action_items.map((item, i) => `${i + 1}. ${item}`).join("\n")}
         <Button
           variant="ghost"
           onClick={() => navigate("/matches")}
-          className="text-green-500 mb-4 hover:text-green-600"
+          className="text-sc-green-dark mb-4 hover:text-green-600"
         >
           <ArrowLeft size={18} className="mr-2" />
           Back to Matches
         </Button>
 
         {match && !isOrganizer && !hasSubmitted && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700">
-            <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">
+          <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 dark:border-gray-700">
+            <h2 className="text-xl font-semibold mb-4 text-sc-ink dark:text-gray-100">
               Feedback for {match.title}
             </h2>
             <Form {...form}>
@@ -649,7 +649,7 @@ ${summary.action_items.map((item, i) => `${i + 1}. ${item}`).join("\n")}
                 />
                 <Button
                   type="submit"
-                  className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2"
+                  className="w-full bg-sc-green hover:brightness-95 text-sc-green-ink font-bold rounded-full px-4 py-2"
                   disabled={loading || isFeedbackExpired()}
                 >
                   {loading ? (
@@ -670,14 +670,14 @@ ${summary.action_items.map((item, i) => `${i + 1}. ${item}`).join("\n")}
         )}
 
         {match && isOrganizer && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 dark:border-gray-700">
             <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+              <h2 className="text-xl font-semibold text-sc-ink dark:text-gray-100">
                 Feedback for {match.title}
               </h2>
               <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
                 <Button
-                  className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg px-4 py-2 transition-colors shadow-sm"
+                  className="w-full sm:w-auto bg-sc-green hover:brightness-95 text-sc-green-ink font-bold rounded-full px-4 py-2 transition-colors shadow-card"
                   onClick={downloadPDF}
                   disabled={!feedback.length}
                 >
@@ -685,7 +685,7 @@ ${summary.action_items.map((item, i) => `${i + 1}. ${item}`).join("\n")}
                   Download PDF
                 </Button>
                 <Button
-                  className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg px-4 py-2 transition-colors shadow-sm"
+                  className="w-full sm:w-auto bg-sc-green hover:brightness-95 text-sc-green-ink font-bold rounded-full px-4 py-2 transition-colors shadow-card"
                   onClick={generateSummary}
                   disabled={loading || !feedback.length}
                 >
@@ -705,8 +705,8 @@ ${summary.action_items.map((item, i) => `${i + 1}. ${item}`).join("\n")}
             </div>
             {feedback.length > 0 ? (
               <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left text-gray-900 dark:text-gray-100">
-                  <thead className="text-xs uppercase bg-gray-100 dark:bg-gray-700">
+                <table className="w-full text-sm text-left text-sc-ink dark:text-gray-100">
+                  <thead className="text-xs uppercase bg-sc-soft dark:bg-gray-700">
                     <tr>
                       <th className="px-4 py-3">Player</th>
                       <th className="px-4 py-3">Venue Quality</th>
@@ -734,7 +734,7 @@ ${summary.action_items.map((item, i) => `${i + 1}. ${item}`).join("\n")}
                 </table>
               </div>
             ) : (
-              <p className="text-gray-600 dark:text-gray-400 text-sm">
+              <p className="text-sc-ink3 dark:text-gray-400 text-sm">
                 No feedback has been submitted for this match yet.
               </p>
             )}
@@ -742,12 +742,12 @@ ${summary.action_items.map((item, i) => `${i + 1}. ${item}`).join("\n")}
         )}
 
         {hasSubmitted && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 text-center border border-gray-200 dark:border-gray-700">
-            <CheckCircle size={40} className="text-green-500 mx-auto mb-3" />
-            <h2 className="text-lg font-semibold text-green-600 dark:text-green-500">
+          <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 text-center dark:border-gray-700">
+            <CheckCircle size={40} className="text-sc-green-dark mx-auto mb-3" />
+            <h2 className="text-lg font-semibold text-sc-green-dark dark:text-green-500">
               Feedback Already Submitted
             </h2>
-            <p className="text-gray-600 dark:text-gray-400 mt-2">
+            <p className="text-sc-ink3 dark:text-gray-400 mt-2">
               Thank you for your feedback. You have already submitted feedback for this match.
             </p>
           </div>
@@ -761,12 +761,12 @@ ${summary.action_items.map((item, i) => `${i + 1}. ${item}`).join("\n")}
           if (!open) navigate(`/match/${match?.slug || matchSlug || ""}`);
         }}
       >
-        <DialogContent className="max-w-md rounded-xl bg-white dark:bg-gray-800 p-6 shadow-md border border-gray-200 dark:border-gray-700">
+        <DialogContent className="max-w-md rounded-3xl bg-white dark:bg-gray-800 p-6 shadow-card dark:border-gray-700">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-gray-900 dark:text-gray-100 text-center">
+            <DialogTitle className="text-xl font-bold text-sc-ink dark:text-gray-100 text-center">
               Enter Match Code
             </DialogTitle>
-            <DialogDescription className="text-gray-600 dark:text-gray-400 text-center mt-2 text-sm">
+            <DialogDescription className="text-sc-ink3 dark:text-gray-400 text-center mt-2 text-sm">
               {isOrganizer
                 ? "Enter your organizer super code to review feedback."
                 : "Enter your 6-digit player confirmation code to proceed."}
@@ -790,7 +790,7 @@ ${summary.action_items.map((item, i) => `${i + 1}. ${item}`).join("\n")}
           </div>
           <DialogFooter className="flex justify-center">
             <Button
-              className="bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2"
+              className="bg-sc-green hover:brightness-95 text-sc-green-ink font-bold rounded-full px-4 py-2"
               onClick={validateCode}
               disabled={loading}
             >
@@ -808,39 +808,39 @@ ${summary.action_items.map((item, i) => `${i + 1}. ${item}`).join("\n")}
       </Dialog>
 
       <Dialog open={summaryDialogOpen} onOpenChange={setSummaryDialogOpen}>
-        <DialogContent className="max-w-md rounded-xl bg-white dark:bg-gray-800 p-6 shadow-md border border-gray-200 dark:border-gray-700 mx-auto">
+        <DialogContent className="max-w-md rounded-3xl bg-white dark:bg-gray-800 p-6 shadow-card dark:border-gray-700 mx-auto">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-gray-900 dark:text-gray-100 text-center">
+            <DialogTitle className="text-xl font-bold text-sc-ink dark:text-gray-100 text-center">
               Feedback Summary
             </DialogTitle>
           </DialogHeader>
           {summary && (
             <div className="space-y-4 text-center">
               <div>
-                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                <h3 className="text-sm font-medium text-sc-ink2 dark:text-gray-300">
                   What Went Well
                 </h3>
-                <ul className="list-disc list-inside text-sm text-gray-600 dark:text-gray-400">
+                <ul className="list-disc list-inside text-sm text-sc-ink3 dark:text-gray-400">
                   {summary.what_went_well.map((item, i) => (
                     <li key={i}>{item}</li>
                   ))}
                 </ul>
               </div>
               <div>
-                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                <h3 className="text-sm font-medium text-sc-ink2 dark:text-gray-300">
                   Major Concerns
                 </h3>
-                <ul className="list-disc list-inside text-sm text-gray-600 dark:text-gray-400">
+                <ul className="list-disc list-inside text-sm text-sc-ink3 dark:text-gray-400">
                   {summary.major_concerns.map((item, i) => (
                     <li key={i}>{item}</li>
                   ))}
                 </ul>
               </div>
               <div>
-                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                <h3 className="text-sm font-medium text-sc-ink2 dark:text-gray-300">
                   Action Items
                 </h3>
-                <ul className="list-disc list-inside text-sm text-gray-600 dark:text-gray-400">
+                <ul className="list-disc list-inside text-sm text-sc-ink3 dark:text-gray-400">
                   {summary.action_items.map((item, i) => (
                     <li key={i}>{item}</li>
                   ))}
@@ -848,14 +848,14 @@ ${summary.action_items.map((item, i) => `${i + 1}. ${item}`).join("\n")}
               </div>
               <div className="flex gap-4 justify-center">
                 <Button
-                  className="w-full sm:w-auto bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2"
+                  className="w-full sm:w-auto bg-sc-green hover:brightness-95 text-sc-green-ink font-bold rounded-full px-4 py-2"
                   onClick={copySummary}
                 >
                   <Copy size={18} className="mr-2" />
                   Copy Summary
                 </Button>
                 <Button
-                  className="w-full sm:w-auto bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2"
+                  className="w-full sm:w-auto bg-sc-green hover:brightness-95 text-sc-green-ink font-bold rounded-full px-4 py-2"
                   onClick={() => {
                     const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
                     const img = new Image();

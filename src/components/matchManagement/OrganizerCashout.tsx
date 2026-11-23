@@ -394,7 +394,7 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
   const getStatusStyles = (status: string) => {
     switch (status) {
       case "Successful":
-        return "bg-green-100 text-green-700 border-green-300";
+        return "bg-sc-green-bg text-sc-green-dark border-green-300";
       case "Failed":
         return "bg-red-100 text-red-700 border-red-300";
       case "Processed":
@@ -409,10 +409,10 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
   if (!match) return null;
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700">
-      <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Cashout Requests</h2>
+    <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 dark:border-gray-700">
+      <h2 className="text-xl font-semibold mb-4 text-sc-ink dark:text-gray-100">Cashout Requests</h2>
       <div className="mb-4 flex items-center gap-2">
-        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+        <p className="text-sm font-medium text-sc-ink2 dark:text-gray-300">
           Wallet Balance: ₦{walletBalance.toLocaleString()}
         </p>
         <Button
@@ -436,28 +436,28 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
       </div>
       <div className="space-y-4">
         {cashoutRequests.length === 0 ? (
-          <p className="text-gray-600 dark:text-gray-400">No cashout requests for this match.</p>
+          <p className="text-sc-ink3 dark:text-gray-400">No cashout requests for this match.</p>
         ) : (
           cashoutRequests.map((request) => (
             <div
               key={request.id}
-              className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600"
+              className="p-4 bg-sc-soft dark:bg-gray-700 rounded-lg border border-sc-line dark:border-gray-600"
             >
               <div className="flex justify-between items-center">
                 <div>
-                  <p className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                  <p className="text-lg font-medium text-sc-ink dark:text-gray-100">
                     ₦{request.amount.toLocaleString()}
                   </p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                  <p className="text-sm text-sc-ink3 dark:text-gray-400">
                     {new Date(request.created_at).toLocaleString("en-NG", {
                       dateStyle: "medium",
                       timeStyle: "short",
                     })}
                   </p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                  <p className="text-sm text-sc-ink3 dark:text-gray-400">
                     Account: {request.account_details?.account_name || "Not provided"}
                   </p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                  <p className="text-sm text-sc-ink3 dark:text-gray-400">
                     Bank: {request.account_details?.bank_name || "Not provided"} (
                     {request.account_details?.bank_account_number || "Not provided"})
                   </p>
@@ -485,7 +485,7 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label className="block text-sm font-medium text-sc-ink2 dark:text-gray-300">
                 Amount (₦)
               </label>
               <Input
@@ -503,7 +503,7 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label className="block text-sm font-medium text-sc-ink2 dark:text-gray-300">
                 Bank Account Number
               </label>
               <Input
@@ -522,13 +522,13 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label className="block text-sm font-medium text-sc-ink2 dark:text-gray-300">
                 Bank Name
               </label>
               <select
                 value={bankName}
                 onChange={(e) => setBankName(e.target.value)}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+                className="mt-1 block w-full rounded-md border-sc-line shadow-card focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
               >
                 <option value="">Select a bank</option>
                 {nigerianBanks.map((bank) => (
@@ -537,7 +537,7 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label className="block text-sm font-medium text-sc-ink2 dark:text-gray-300">
                 Account Name
               </label>
               <Input
@@ -562,7 +562,7 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
             </Button>
             <Button
               onClick={handleCashoutSubmit}
-              className="bg-green-500 hover:bg-green-600 text-white"
+              className="bg-sc-green hover:brightness-95 text-sc-green-ink font-bold"
               disabled={loading || !localTempIdentifier}
             >
               {loading ? (

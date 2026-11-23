@@ -20,6 +20,7 @@ import { FormValues, formSchema } from "@/components/MatchFormTypes";
 import { format } from "date-fns";
 import { Seo } from "@/components/Seo";
 
+import { BackButton } from "@/components/sc/ui";
 type Venue = {
   id: string;
   slug: string;
@@ -309,24 +310,17 @@ const Organize = () => {
         image={undefined}
         children={null}
       />
-      <div className="min-h-screen pb-20 bg-gray-100 dark:bg-gray-900">
-        <header className="sticky top-0 z-50 bg-gradient-to-r from-green-500 to-green-700 text-white shadow-lg">
-          <div className="p-4 flex items-center justify-between max-w-7xl mx-auto">
-            <Button
-              variant="ghost"
-              className="text-white hover:bg-green-600 transition-colors"
-              onClick={() => navigate(-1)}
-            >
-              <ArrowLeft size={18} className="mr-2" />
-              Back
-            </Button>
-            <h1 className="text-2xl font-bold">Organize a Match</h1>
-            <div className="w-10"></div>
+      <div className="min-h-screen pb-20 bg-sc-bg dark:bg-gray-900">
+        <header className="px-5 pt-[max(env(safe-area-inset-top),1rem)] sticky top-0 z-20 bg-sc-bg/95 backdrop-blur-xl pb-3">
+          <div className="pt-3 flex items-center justify-between gap-3">
+            <BackButton />
+            <h1 className="m-0 flex-1 text-center text-[17px] font-extrabold truncate">Organise a match</h1>
+            <div className="min-w-11 flex justify-end"></div>
           </div>
         </header>
         <div className="p-6 max-w-3xl mx-auto">
           {isPreFilled && (
-            <div className="mb-4 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 p-4 rounded-lg">
+            <div className="mb-4 bg-sc-green-bg dark:bg-green-900 text-sc-green-dark dark:text-green-300 p-4 rounded-lg">
               <p className="font-medium">Venue Booking Pre-Filled</p>
               <p className="text-sm">The venue, date, and time are set based on your booking. These fields are locked to match your reservation.</p>
             </div>
@@ -370,7 +364,7 @@ const Organize = () => {
                 <Button
                   type="button"
                   variant="outline"
-                  className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium rounded-lg px-4 py-3 text-lg shadow-md transition-colors"
+                  className="w-full bg-sc-soft2 hover:bg-gray-300 text-sc-ink font-medium rounded-lg px-4 py-3 text-lg shadow-card transition-colors"
                   onClick={() => setPreviewDialogOpen(true)}
                   disabled={loading || !form.watch("title") || !form.watch("venue_id") || !form.watch("match_date") || !form.watch("start_time") || !form.watch("end_time") || !form.watch("total_slots") || !form.watch("organizer_name")}
                 >
@@ -378,7 +372,7 @@ const Organize = () => {
                 </Button>
                 <Button 
                   type="submit" 
-                  className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-3 text-lg shadow-md transition-colors" 
+                  className="w-full bg-sc-green hover:brightness-95 text-sc-green-ink font-bold rounded-full px-4 py-3 text-lg shadow-card transition-colors" 
                   disabled={loading}
                 >
                   {loading ? "Creating..." : "Create Match"}

@@ -10,6 +10,7 @@ import Navbar from "@/components/Navbar";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 
+import { BackButton } from "@/components/sc/ui";
 type Ticket = {
   ticket_code: string;
   buyer_name: string;
@@ -137,7 +138,7 @@ const TicketReceipt = () => {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-[50vh]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sc-green"></div>
       </div>
     );
   }
@@ -161,26 +162,19 @@ const TicketReceipt = () => {
   const logoSrc = isDarkBackground ? '/playarenadark.png' : '/playarenalight.png';
 
   return (
-    <div className="min-h-screen pb-20 bg-gray-100 dark:bg-gray-900">
-      <header className="sticky top-0 z-50 bg-gradient-to-r from-green-500 to-green-700 text-white shadow-lg">
-        <div className="p-4 flex items-center justify-between max-w-7xl mx-auto">
-          <Button
-            variant="ghost"
-            className="text-white hover:bg-green-600 transition-colors"
-            onClick={() => navigate(`/match/${ticket.match.slug}`)}
-          >
-            <ArrowLeft size={18} className="mr-2" />
-            Back
-          </Button>
-          <h1 className="text-2xl font-bold">Your Ticket</h1>
-          <div className="w-10"></div>
-        </div>
-      </header>
+    <div className="min-h-screen pb-20 bg-sc-bg dark:bg-gray-900">
+      <header className="px-5 pt-[max(env(safe-area-inset-top),1rem)] sticky top-0 z-20 bg-sc-bg/95 backdrop-blur-xl pb-3">
+          <div className="pt-3 flex items-center justify-between gap-3">
+            <BackButton to={`/match/${ticket.match.slug}`} />
+            <h1 className="m-0 flex-1 text-center text-[17px] font-extrabold truncate">Your ticket</h1>
+            <div className="min-w-11 flex justify-end"></div>
+          </div>
+        </header>
 
       <div className="p-6 max-w-3xl mx-auto">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Tickets Purchased!</h2>
-          <p className="text-gray-600 dark:text-gray-300 mb-4 text-sm">
+        <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6">
+          <h2 className="text-xl font-semibold text-sc-ink dark:text-gray-200 mb-4">Tickets Purchased!</h2>
+          <p className="text-sc-ink3 dark:text-gray-300 mb-4 text-sm">
             Your tickets have been successfully purchased. Below is your unique 6-digit ticket code for entry.
           </p>
           <div className="relative">
@@ -220,7 +214,7 @@ const TicketReceipt = () => {
                 <p className="text-sm font-semibold">Holder: {ticket.buyer_name}</p>
                 <p className="text-sm">Slots: {ticket.number_of_tickets}</p>
               </div>
-              <div className="bg-white text-green-600 rounded-md p-4 text-center shadow-inner">
+              <div className="bg-white text-sc-green-dark rounded-md p-4 text-center shadow-inner">
                 <p className="text-sm font-medium uppercase tracking-wide">Ticket Code</p>
                 <p className="text-4xl font-bold tracking-wider mt-1 font-mono">{ticket.ticket_code}</p>
               </div>
@@ -237,12 +231,12 @@ const TicketReceipt = () => {
               <option value="#000000">Black</option>
             </select>
           </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400 my-4 text-center">
+          <p className="text-sm text-sc-ink3 dark:text-gray-400 my-4 text-center">
             <strong>Note:</strong> Save or download this ticket code. You'll need it for entry on match day.
           </p>
 <div className="flex justify-center gap-4 px-6 py-4">
   <Button
-    className="flex-1 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg px-6 py-3 shadow-sm transition-colors duration-200 border-0 max-w-xs"
+    className="flex-1 bg-sc-green hover:brightness-95 text-sc-green-ink font-bold rounded-full px-6 py-3 shadow-card transition-colors duration-200 border-0 max-w-xs"
     onClick={handleDownload}
     disabled={isDownloading}
     aria-label="Download ticket as PDF"
@@ -251,7 +245,7 @@ const TicketReceipt = () => {
     {isDownloading ? "Downloading..." : "Download"}
   </Button>
   <Button
-    className="flex-1 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg px-6 py-3 shadow-sm transition-colors duration-200 border-0 max-w-xs"
+    className="flex-1 bg-sc-green hover:brightness-95 text-sc-green-ink font-bold rounded-full px-6 py-3 shadow-card transition-colors duration-200 border-0 max-w-xs"
     onClick={handleShare}
     disabled={isDownloading}
     aria-label="Share ticket receipt"

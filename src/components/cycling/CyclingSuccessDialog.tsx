@@ -213,11 +213,11 @@ const CyclingSuccessDialog = ({
       }}
     >
       <DialogContent className="w-full max-w-[90vw] sm:max-w-[500px] rounded-2xl p-4 sm:p-6">
-        <DialogTitle className="text-xl font-bold text-gray-800 dark:text-white text-center">
+        <DialogTitle className="text-xl font-bold text-sc-ink dark:text-white text-center">
           {supercode ? "Event Created Successfully!" : "Joined Event Successfully!"}
         </DialogTitle>
         <DialogDescription className="flex flex-col items-center">
-          <p className="text-gray-600 dark:text-gray-300 mb-4 text-sm text-center max-w-xs">
+          <p className="text-sc-ink3 dark:text-gray-300 mb-4 text-sm text-center max-w-xs">
             {supercode
               ? "Your cycling event has been created. Below is your unique 6-digit supercode for check-ins."
               : "You have joined the cycling event. Below is your 6-digit confirmation code for check-in."}
@@ -272,7 +272,7 @@ const CyclingSuccessDialog = ({
                 <p className="text-sm"><Clock className="inline h-4 w-4 mr-1" /> {formValues.start_time || 'Unknown Time'}</p>
                 <p className="text-sm"><User className="inline h-4 w-4 mr-1" /> Hosted by {formValues.host_name || 'Unknown Host'}</p>
               </div>
-              <div className="bg-white text-green-600 rounded-md p-4 text-center shadow-inner">
+              <div className="bg-white text-sc-green-dark rounded-md p-4 text-center shadow-inner">
                 <p className="text-sm font-medium uppercase tracking-wide">{supercode ? "Supercode" : "Confirmation Code"}</p>
                 <p className="text-4xl font-bold tracking-wider mt-1 font-mono">{code}</p>
               </div>
@@ -289,12 +289,12 @@ const CyclingSuccessDialog = ({
               <option value="#000000">Black</option>
             </select>
           </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400 my-4 text-center max-w-xs">
+          <p className="text-sm text-sc-ink3 dark:text-gray-400 my-4 text-center max-w-xs">
             <strong>Note:</strong> Save or share this code. You'll need it on event day.
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4 w-full">
             <Button 
-              className="bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg px-6 py-3 shadow-sm transition-colors duration-200 border-0 max-w-xs w-full sm:w-auto"
+              className="bg-sc-green hover:brightness-95 text-sc-green-ink font-bold rounded-full px-6 py-3 shadow-card transition-colors duration-200 border-0 max-w-xs w-full sm:w-auto"
               onClick={handleDownload}
               disabled={!isImageLoaded || isDownloading}
               aria-label="Download event card as image"

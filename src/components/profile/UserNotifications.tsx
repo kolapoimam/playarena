@@ -126,11 +126,11 @@ const UserNotifications = ({ profile, setShowNotifications }) => {
 
   return (
     <div className="space-y-8">
-      <Card className="bg-white dark:bg-gray-800 border-none shadow-lg rounded-xl overflow-hidden">
+      <Card className="bg-white dark:bg-gray-800 border-none shadow-card rounded-3xl overflow-hidden">
         <details className="group">
-          <summary className="flex items-center justify-between p-4 text-xl font-semibold text-green-700 dark:text-green-400 cursor-pointer bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900 dark:to-green-800 hover:bg-green-200 dark:hover:bg-green-700 transition-colors">
+          <summary className="flex items-center justify-between p-4 text-xl font-semibold text-sc-green-dark dark:text-green-400 cursor-pointer bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900 dark:to-green-800 hover:bg-green-200 dark:hover:bg-green-700 transition-colors">
             Notification Settings
-            <ChevronDown className="w-6 h-6 transition-transform group-open:rotate-180 text-green-600 dark:text-green-400" />
+            <ChevronDown className="w-6 h-6 transition-transform group-open:rotate-180 text-sc-green-dark dark:text-green-400" />
           </summary>
           <CardContent className="p-4 pt-6">
             <Form {...form}>
@@ -143,13 +143,13 @@ const UserNotifications = ({ profile, setShowNotifications }) => {
                   { event: "venue_match_created", label: "New Match at Venue (Venue Owner)" },
                   { event: "venue_favourite_match", label: "Match at Favorited Venue" },
                 ].map(({ event, label }) => (
-                  <div key={event} className="border border-gray-200 dark:border-gray-700 p-4 rounded-lg">
+                  <div key={event} className="border border-sc-line dark:border-gray-700 p-4 rounded-lg">
                     <FormField
                       control={form.control}
                       name={`${event}.enabled`}
                       render={({ field }) => (
                         <FormItem className="flex items-center justify-between">
-                          <FormLabel className="text-gray-700 dark:text-gray-300">{label}</FormLabel>
+                          <FormLabel className="text-sc-ink2 dark:text-gray-300">{label}</FormLabel>
                           <FormControl>
                             <Switch
                               checked={field.value}
@@ -167,10 +167,10 @@ const UserNotifications = ({ profile, setShowNotifications }) => {
                           name={`${event}.type`}
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-gray-700 dark:text-gray-300">Notification Type</FormLabel>
+                              <FormLabel className="text-sc-ink2 dark:text-gray-300">Notification Type</FormLabel>
                               <Select onValueChange={field.onChange} value={field.value}>
                                 <FormControl>
-                                  <SelectTrigger className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg">
+                                  <SelectTrigger className="bg-white dark:bg-gray-700 border-sc-line dark:border-gray-600 text-sc-ink dark:text-gray-100 rounded-lg">
                                     <SelectValue placeholder="Select type" />
                                   </SelectTrigger>
                                 </FormControl>
@@ -191,10 +191,10 @@ const UserNotifications = ({ profile, setShowNotifications }) => {
                           name={`${event}.frequency`}
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-gray-700 dark:text-gray-300">Frequency</FormLabel>
+                              <FormLabel className="text-sc-ink2 dark:text-gray-300">Frequency</FormLabel>
                               <Select onValueChange={field.onChange} value={field.value}>
                                 <FormControl>
-                                  <SelectTrigger className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg">
+                                  <SelectTrigger className="bg-white dark:bg-gray-700 border-sc-line dark:border-gray-600 text-sc-ink dark:text-gray-100 rounded-lg">
                                     <SelectValue placeholder="Select frequency" />
                                   </SelectTrigger>
                                 </FormControl>
@@ -216,7 +216,7 @@ const UserNotifications = ({ profile, setShowNotifications }) => {
                 ))}
                 <Button
                   type="submit"
-                  className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 text-sm flex items-center justify-center"
+                  className="w-full bg-sc-green hover:brightness-95 text-sc-green-ink font-bold rounded-full px-4 py-2 text-sm flex items-center justify-center"
                   disabled={loading}
                 >
                   {loading ? (

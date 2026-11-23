@@ -36,18 +36,18 @@ const MatchDetailsForm = ({ isPreFilled, preSelectedVenueSlug, onPrefill, onVenu
   }, [isPreFilled]);
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
-      <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Match Details</h2>
+    <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 space-y-6">
+      <h2 className="text-xl font-semibold text-sc-ink dark:text-gray-200">Match Details</h2>
       <FormField
         control={form.control}
         name="title"
         render={({ field }) => (
           <FormItem>
-            <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Match Title</FormLabel>
+            <FormLabel className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Match Title</FormLabel>
             <FormControl>
               <Input 
                 placeholder="E.g., Saturday Friendly" 
-                className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white" 
+                className="text-base border-sc-line dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white" 
                 {...field} 
               />
             </FormControl>
@@ -69,14 +69,14 @@ const MatchDetailsForm = ({ isPreFilled, preSelectedVenueSlug, onPrefill, onVenu
           name="match_date"
           render={({ field }) => (
             <FormItem className="flex flex-col">
-              <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Date</FormLabel>
+              <FormLabel className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Date</FormLabel>
               <Popover>
                 <PopoverTrigger asChild disabled={isPreFilled}>
                   <FormControl>
                     <Button
                       variant="outline"
                       className={cn(
-                        "pl-3 text-left text-base font-normal border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white",
+                        "pl-3 text-left text-base font-normal border-sc-line dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white",
                         !field.value && "text-muted-foreground"
                       )}
                     >
@@ -114,7 +114,7 @@ const MatchDetailsForm = ({ isPreFilled, preSelectedVenueSlug, onPrefill, onVenu
           name="start_time"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Start Time</FormLabel>
+              <FormLabel className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Start Time</FormLabel>
               <FormControl>
                 <TimeInput
                   value={field.value || ""}
@@ -123,7 +123,7 @@ const MatchDetailsForm = ({ isPreFilled, preSelectedVenueSlug, onPrefill, onVenu
                   placeholder="e.g., 01:00 PM"
                 />
               </FormControl>
-              <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+              <FormDescription className="text-sm text-sc-ink3 dark:text-gray-400">
                 Match start time (12-hour clock
               </FormDescription>
               <FormMessage />
@@ -135,7 +135,7 @@ const MatchDetailsForm = ({ isPreFilled, preSelectedVenueSlug, onPrefill, onVenu
           name="end_time"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">End Time</FormLabel>
+              <FormLabel className="text-sm font-medium text-sc-ink2 dark:text-gray-300">End Time</FormLabel>
               <FormControl>
                 <TimeInput
                   value={field.value || ""}
@@ -144,7 +144,7 @@ const MatchDetailsForm = ({ isPreFilled, preSelectedVenueSlug, onPrefill, onVenu
                   placeholder="e.g., 03:00 PM"
                 />
               </FormControl>
-              <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+              <FormDescription className="text-sm text-sc-ink3 dark:text-gray-400">
                 Match end time (12-hour clock, e.g., 03:00 PM)
               </FormDescription>
               <FormMessage />
@@ -157,13 +157,13 @@ const MatchDetailsForm = ({ isPreFilled, preSelectedVenueSlug, onPrefill, onVenu
         name="total_slots"
         render={({ field }) => (
           <FormItem>
-            <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Number of Players</FormLabel>
+            <FormLabel className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Number of Players</FormLabel>
             <FormControl>
               <Input
                 type="number"
                 min={2}
                 max={100}
-                className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                className="text-base border-sc-line dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                 {...field}
                 value={field.value ?? ""}
                 onChange={(e) => {
@@ -172,7 +172,7 @@ const MatchDetailsForm = ({ isPreFilled, preSelectedVenueSlug, onPrefill, onVenu
                 }}
               />
             </FormControl>
-            <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+            <FormDescription className="text-sm text-sc-ink3 dark:text-gray-400">
               Total number of players needed for this match (2-100)
             </FormDescription>
             <FormMessage />
@@ -184,11 +184,11 @@ const MatchDetailsForm = ({ isPreFilled, preSelectedVenueSlug, onPrefill, onVenu
         name="notes"
         render={({ field }) => (
           <FormItem>
-            <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Notes (Optional)</FormLabel>
+            <FormLabel className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Notes (Optional)</FormLabel>
             <FormControl>
               <Textarea
                 placeholder="E.g., Bring boots, parking available, etc."
-                className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                className="text-base border-sc-line dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                 {...field}
               />
             </FormControl>

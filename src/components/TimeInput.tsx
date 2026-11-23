@@ -63,7 +63,7 @@ const TimeInput = ({
           value={hour}
           onChange={handleHourChange}
           disabled={disabled}
-          className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white p-2 rounded-md w-20 max-h-40 overflow-y-auto"
+          className="text-base border-sc-line dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white p-2 rounded-md w-20 max-h-40 overflow-y-auto"
         >
           {hours.map((h) => (
             <option key={h} value={h}>
@@ -76,7 +76,7 @@ const TimeInput = ({
           value={minute}
           onChange={handleMinuteChange}
           disabled={disabled}
-          className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white p-2 rounded-md w-20 max-h-40 overflow-y-auto"
+          className="text-base border-sc-line dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white p-2 rounded-md w-20 max-h-40 overflow-y-auto"
         >
           {minutes.map((m) => (
             <option key={m} value={m}>

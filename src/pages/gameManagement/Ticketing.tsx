@@ -22,6 +22,7 @@ import Navbar from "@/components/Navbar";
 import TicketReceipt from "@/components/gameManagement/TicketReceipt";
 import { Seo } from "@/components/Seo";
 
+import { BackButton } from "@/components/sc/ui";
 type Match = {
   id: string;
   slug: string;
@@ -370,7 +371,7 @@ const Ticketing = () => {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-[50vh]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sc-green"></div>
       </div>
     );
   }
@@ -407,39 +408,32 @@ const Ticketing = () => {
         <Route
           path="/"
           element={
-            <div className="min-h-screen pb-20 bg-gray-100 dark:bg-gray-900">
-              <header className="sticky top-0 z-50 bg-gradient-to-r from-green-500 to-green-700 text-white shadow-lg">
-                <div className="p-4 flex items-center justify-between max-w-7xl mx-auto">
-                  <Button
-                    variant="ghost"
-                    className="text-white hover:bg-green-600 transition-colors"
-                    onClick={() => navigate(-1)}
-                  >
-                    <ArrowLeft size={18} className="mr-2" />
-                    Back
-                  </Button>
-                  <h1 className="text-2xl font-bold">Buy Tickets</h1>
-                  <div className="w-10"></div>
-                </div>
-              </header>
+            <div className="min-h-screen pb-20 bg-sc-bg dark:bg-gray-900">
+              <header className="px-5 pt-[max(env(safe-area-inset-top),1rem)] sticky top-0 z-20 bg-sc-bg/95 backdrop-blur-xl pb-3">
+          <div className="pt-3 flex items-center justify-between gap-3">
+            <BackButton />
+            <h1 className="m-0 flex-1 text-center text-[17px] font-extrabold truncate">Buy tickets</h1>
+            <div className="min-w-11 flex justify-end"></div>
+          </div>
+        </header>
 
               <div className="p-6 max-w-3xl mx-auto">
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
-                  <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">{match.title}</h2>
+                <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 mb-6">
+                  <h2 className="text-xl font-semibold text-sc-ink dark:text-gray-200 mb-4">{match.title}</h2>
                   <div className="space-y-2 text-sm">
                     <div className="flex items-center">
-                      <MapPin className="h-4 w-4 mr-2 text-gray-500" />
+                      <MapPin className="h-4 w-4 mr-2 text-sc-ink3" />
                       <span>{match.venue?.name || "Unknown Venue"}, {match.venue?.city || ""}</span>
                     </div>
                     <div className="flex items-center">
-                      <Calendar className="h-4 w-4 mr-2 text-gray-500" />
+                      <Calendar className="h-4 w-4 mr-2 text-sc-ink3" />
                       <span>
                         {format(new Date(match.match_date), "PPP")} at{" "}
                         {format(new Date(`1970-01-01T${match.match_time}`), "p")}
                       </span>
                     </div>
                     <div className="flex items-center">
-                      <Ticket className="h-4 w-4 mr-2 text-gray-500" />
+                      <Ticket className="h-4 w-4 mr-2 text-sc-ink3" />
                       <span>₦{match.ticket_price?.toFixed(2)} per ticket</span>
                     </div>
                     {match.max_tickets && (
@@ -454,19 +448,19 @@ const Ticketing = () => {
                 </div>
 
                 <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-                    <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Ticket Purchase</h2>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6">
+                    <h2 className="text-xl font-semibold text-sc-ink dark:text-gray-200">Ticket Purchase</h2>
 
                     <FormField
                       control={form.control}
                       name="buyer_name"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Your Name</FormLabel>
+                          <FormLabel className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Your Name</FormLabel>
                           <FormControl>
                             <Input
                               placeholder="Enter your name"
-                              className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                              className="text-base border-sc-line dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                               {...field}
                             />
                           </FormControl>
@@ -480,13 +474,13 @@ const Ticketing = () => {
                       name="buyer_phone"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Phone Number</FormLabel>
+                          <FormLabel className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Phone Number</FormLabel>
                           <FormControl>
                             <Input
                               type="tel"
                               inputMode="numeric"
                               placeholder="Enter 11-digit phone number"
-                              className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                              className="text-base border-sc-line dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                               {...field}
                               onChange={(e) => {
                                 const numericValue = e.target.value.replace(/\D/g, "").slice(0, 11);
@@ -504,13 +498,13 @@ const Ticketing = () => {
                       name="number_of_tickets"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Number of Tickets</FormLabel>
+                          <FormLabel className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Number of Tickets</FormLabel>
                           <FormControl>
                             <Input
                               type="number"
                               min={1}
                               max={availableTickets !== null ? Math.min(availableTickets, 10) : 10}
-                              className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                              className="text-base border-sc-line dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                               {...field}
                               value={field.value ?? ""}
                               onChange={(e) => {
@@ -519,7 +513,7 @@ const Ticketing = () => {
                               }}
                             />
                           </FormControl>
-                          <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                          <FormDescription className="text-sm text-sc-ink3 dark:text-gray-400">
                             Select up to {availableTickets !== null ? Math.min(availableTickets, 10) : 10} tickets
                           </FormDescription>
                           <FormMessage />
@@ -529,7 +523,7 @@ const Ticketing = () => {
 
                     <Button
                       type="submit"
-                      className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-3 text-lg shadow-md transition-colors"
+                      className="w-full bg-sc-green hover:brightness-95 text-sc-green-ink font-bold rounded-full px-4 py-3 text-lg shadow-card transition-colors"
                       disabled={submitting || !paystackLoaded}
                     >
                       {submitting ? "Processing..." : match.ticket_price ? `Pay Now (₦${(form.watch("number_of_tickets") * (match.ticket_price || 0)).toFixed(2)})` : "Get Tickets"}

@@ -572,9 +572,9 @@ const PlayerManagement = ({
   const getStatusStyles = (status: string) => {
     switch (status) {
       case 'Registered': return "bg-yellow-500 text-white border-yellow-600";
-      case 'Checked In': return "bg-green-500 text-white border-green-600";
+      case 'Checked In': return "bg-green-500 text-white border-sc-green";
       case 'Absent': return "bg-red-500 text-white border-red-600";
-      case "Successful": return "bg-green-100 text-green-700 border-green-300";
+      case "Successful": return "bg-sc-green-bg text-sc-green-dark border-green-300";
       case "Failed": return "bg-red-100 text-red-700 border-red-300";
       case "Processed": return "bg-blue-100 text-blue-700 border-blue-300";
       case "Review": return "bg-yellow-100 text-yellow-700 border-yellow-300";
@@ -590,8 +590,8 @@ const PlayerManagement = ({
   if (!match) return null;
   
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700">
-      <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Manage Players</h2>
+    <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 dark:border-gray-700">
+      <h2 className="text-xl font-semibold mb-4 text-sc-ink dark:text-gray-100">Manage Players</h2>
       
       <div className="flex gap-3 mb-4">
         <Button
@@ -603,7 +603,7 @@ const PlayerManagement = ({
         </Button>
         <Button
           onClick={() => navigate(`/match/${match.slug}/team-management`, { state: { isVerified: true } })}
-          className="bg-green-500 hover:bg-green-600 text-white flex-1"
+          className="bg-sc-green hover:brightness-95 text-sc-green-ink flex-1 font-bold"
           disabled={match.cancellation_status}
         >
           Manage Teams
@@ -622,7 +622,7 @@ const PlayerManagement = ({
       <div className="max-h-[400px] overflow-y-auto">
         <button
           onClick={() => setIsPlayersOpen(!isPlayersOpen)}
-          className="flex items-center gap-2 w-full text-left text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4"
+          className="flex items-center gap-2 w-full text-left text-lg font-semibold text-sc-ink dark:text-gray-100 mb-4"
         >
           Players
           {isPlayersOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
@@ -630,7 +630,7 @@ const PlayerManagement = ({
         {isPlayersOpen && (
           <div className="space-y-4">
             {(match.players || []).length === 0 ? (
-              <p className="text-gray-600 dark:text-gray-400">No players registered for this match.</p>
+              <p className="text-sc-ink3 dark:text-gray-400">No players registered for this match.</p>
             ) : (
               match.players?.map((player) => {
                 const playerStatusEntry = playerStatuses.find(p => p.id === player.id);
@@ -639,15 +639,15 @@ const PlayerManagement = ({
                 return (
                   <div
                     key={player.id}
-                    className="relative flex flex-col sm:flex-row gap-4 items-start sm:items-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg"
+                    className="relative flex flex-col sm:flex-row gap-4 items-start sm:items-center p-4 bg-sc-soft dark:bg-gray-700 rounded-lg"
                   >
                     <div className="flex-1">
-                      <p className="font-medium text-gray-900 dark:text-gray-100">{player.player_name}</p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                      <p className="font-medium text-sc-ink dark:text-gray-100">{player.player_name}</p>
+                      <p className="text-sm text-sc-ink3 dark:text-gray-400">
                         Phone: {player.details?.phone || "Not provided"}
                       </p>
                       {displayStatus === 'Checked In' && (
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                        <p className="text-sm text-sc-ink3 dark:text-gray-400">
                           Slots: {player.number_of_slots || 1}
                         </p>
                       )}
@@ -701,7 +701,7 @@ const PlayerManagement = ({
         <div className="max-h-[400px] overflow-y-auto mt-6">
           <button
             onClick={() => setIsTicketsOpen(!isTicketsOpen)}
-            className="flex items-center gap-2 w-full text-left text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4"
+            className="flex items-center gap-2 w-full text-left text-lg font-semibold text-sc-ink dark:text-gray-100 mb-4"
           >
             Tickets - Total: ₦{calculateTotalAmount().toLocaleString()}
             {isTicketsOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
@@ -737,21 +737,21 @@ const PlayerManagement = ({
                 <p className="text-sm text-red-600 mt-1">{ticketError}</p>
               )}
               {confirmedTickets.length === 0 ? (
-                <p className="text-gray-600 dark:text-gray-400">No tickets confirmed for this match.</p>
+                <p className="text-sc-ink3 dark:text-gray-400">No tickets confirmed for this match.</p>
               ) : (
                 confirmedTickets.map((ticket) => (
                   <div
                     key={ticket.id}
-                    className="relative flex flex-col sm:flex-row gap-4 items-start sm:items-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg"
+                    className="relative flex flex-col sm:flex-row gap-4 items-start sm:items-center p-4 bg-sc-soft dark:bg-gray-700 rounded-lg"
                   >
                     <div className="flex-1">
-                      <p className="font-medium text-gray-900 dark:text-gray-100">{ticket.buyer_name}</p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                      <p className="font-medium text-sc-ink dark:text-gray-100">{ticket.buyer_name}</p>
+                      <p className="text-sm text-sc-ink3 dark:text-gray-400">
                         Tickets: {ticket.number_of_tickets}
                       </p>
                     </div>
                     <span
-                      className={`absolute top-2 right-2 px-2 py-1 text-xs font-medium rounded border bg-green-500 text-white border-green-600`}
+                      className={`absolute top-2 right-2 px-2 py-1 text-xs font-medium rounded border bg-green-500 text-white border-sc-green`}
                     >
                       Checked In
                     </span>
@@ -766,7 +766,7 @@ const PlayerManagement = ({
       {mode === "checkin" && (
         <Button
           onClick={() => setMode(null)}
-          className="mt-4 bg-green-500 hover:bg-green-600 text-white"
+          className="mt-4 bg-sc-green hover:brightness-95 text-sc-green-ink font-bold"
           disabled={loading}
         >
           {loading ? (
@@ -812,7 +812,7 @@ const PlayerManagement = ({
           <DialogFooter>
             <Button
               onClick={() => setCheckinDialogOpen(false)}
-              className="bg-green-500 hover:bg-green-600 text-white"
+              className="bg-sc-green hover:brightness-95 text-sc-green-ink font-bold"
             >
               Close
             </Button>

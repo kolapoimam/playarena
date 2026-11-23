@@ -593,34 +593,34 @@ const VenueBookingForm = () => {
 
   if (loading || verifyingPayment) {
     return (
-      <div className="flex justify-center items-center min-h-[50vh] bg-gray-50 dark:bg-gray-900">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
+      <div className="flex justify-center items-center min-h-[50vh] bg-sc-soft dark:bg-gray-900">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sc-green"></div>
       </div>
     );
   }
 
   if (!venue || !userEmail) {
     return (
-      <div className="p-6 bg-gray-50 dark:bg-gray-900 min-h-screen">
+      <div className="p-6 bg-sc-bg dark:bg-gray-900 min-h-screen">
         <Button
           variant="ghost"
           onClick={() => navigate(-1)}
-          className="mb-4 text-gray-700 dark:text-gray-300"
+          className="mb-4 text-sc-ink2 dark:text-gray-300"
         >
           <ArrowLeft size={18} className="mr-2" />
           Back
         </Button>
         <div className="text-center py-8">
-          <h2 className="text-xl font-semibold mb-2 text-gray-900 dark:text-gray-100">Error</h2>
-          <p className="text-gray-500 dark:text-gray-400">Unable to load booking form.</p>
+          <h2 className="text-xl font-semibold mb-2 text-sc-ink dark:text-gray-100">Error</h2>
+          <p className="text-sc-ink3 dark:text-gray-400">Unable to load booking form.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen pb-20 bg-gray-50 dark:bg-gray-900">
-      <header className="sticky top-0 z-50 bg-green-500 text-white shadow-md">
+    <div className="min-h-screen pb-20 bg-sc-bg dark:bg-gray-900">
+      <header className="sticky top-0 z-50 bg-green-500 text-white shadow-card">
         <div className="p-4 flex items-center justify-between">
           <Button
             variant="ghost"
@@ -637,7 +637,7 @@ const VenueBookingForm = () => {
 
       <div className="p-6 max-w-3xl mx-auto">
         <Form {...form}>
-          <form className="space-y-6 bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md" onSubmit={form.handleSubmit(onSubmit)}>
+          <form className="space-y-6 bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-card" onSubmit={form.handleSubmit(onSubmit)}>
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="useAccessCode"
@@ -659,7 +659,7 @@ const VenueBookingForm = () => {
               />
               <label
                 htmlFor="useAccessCode"
-                className="text-sm font-medium text-gray-700 dark:text-gray-300"
+                className="text-sm font-medium text-sc-ink2 dark:text-gray-300"
               >
                 Use Access Code
               </label>
@@ -667,14 +667,14 @@ const VenueBookingForm = () => {
 
             {useAccessCode && (
               <div>
-                <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Access Code</FormLabel>
+                <FormLabel className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Access Code</FormLabel>
                 <Input
                   type="text"
                   value={accessCode}
                   onChange={(e) => handleAccessCodeChange(e.target.value.toUpperCase())}
                   placeholder="Enter 6-character access code"
                   maxLength={6}
-                  className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                  className="text-base border-sc-line dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                 />
                 {accessCodeError && (
                   <p className="text-sm text-red-600 mt-1">{accessCodeError}</p>
@@ -687,13 +687,13 @@ const VenueBookingForm = () => {
               name="booker_name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Your Name</FormLabel>
+                  <FormLabel className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Your Name</FormLabel>
                   <FormControl>
                     <Input
                       type="text"
                       placeholder="Enter your full name"
                       {...field}
-                      className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                      className="text-base border-sc-line dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                     />
                   </FormControl>
                   <FormMessage />
@@ -706,14 +706,14 @@ const VenueBookingForm = () => {
               name="booker_phone"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Phone Number</FormLabel>
+                  <FormLabel className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Phone Number</FormLabel>
                   <FormControl>
                     <Input
                       type="text"
                       placeholder="Enter 11-digit phone number"
                       maxLength={11}
                       {...field}
-                      className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                      className="text-base border-sc-line dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                     />
                   </FormControl>
                   <FormMessage />
@@ -726,13 +726,13 @@ const VenueBookingForm = () => {
               name="match_date"
               render={({ field }) => (
                 <FormItem className="flex flex-col">
-                  <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Booking Date</FormLabel>
+                  <FormLabel className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Booking Date</FormLabel>
                   <Popover>
                     <PopoverTrigger asChild>
                       <FormControl>
                         <Button
                           variant="outline"
-                          className="w-full pl-3 text-left text-base font-normal border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                          className="w-full pl-3 text-left text-base font-normal border-sc-line dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                           disabled={paymentStatus === "success" || useAccessCode}
                         >
                           {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
@@ -760,7 +760,7 @@ const VenueBookingForm = () => {
               name="start_time"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Start Time</FormLabel>
+                  <FormLabel className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Start Time</FormLabel>
                   <FormControl>
                     <TimeInput
                       value={field.value}
@@ -779,7 +779,7 @@ const VenueBookingForm = () => {
               name="end_time"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">End Time</FormLabel>
+                  <FormLabel className="text-sm font-medium text-sc-ink2 dark:text-gray-300">End Time</FormLabel>
                   <FormControl>
                     <TimeInput
                       value={field.value}
@@ -793,13 +793,13 @@ const VenueBookingForm = () => {
               )}
             />
 
-            <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Booking Summary</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Venue: {venue.name}</p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+            <div className="bg-sc-soft dark:bg-gray-700 p-4 rounded-lg">
+              <h3 className="text-lg font-semibold text-sc-ink dark:text-gray-100">Booking Summary</h3>
+              <p className="text-sm text-sc-ink3 dark:text-gray-400">Venue: {venue.name}</p>
+              <p className="text-sm text-sc-ink3 dark:text-gray-400">
                 Price per hour: ₦{venue.booking_fee.toFixed(2)}
               </p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-sm text-sc-ink3 dark:text-gray-400">
                 Total Amount: ₦{amount.toFixed(2)}
               </p>
             </div>
@@ -812,14 +812,14 @@ const VenueBookingForm = () => {
             )}
 
             {amount > 0 && paymentStatus === "pending" && !useAccessCode && (
-              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md space-y-4">
-                <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Payment Required</h3>
-                <p className="text-gray-600 dark:text-gray-400">
+              <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-card space-y-4">
+                <h3 className="text-lg font-semibold text-sc-ink dark:text-gray-100">Payment Required</h3>
+                <p className="text-sc-ink3 dark:text-gray-400">
                   Please complete the payment to book this venue.
                 </p>
                 <Button
                   type="button"
-                  className="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg"
+                  className="w-full bg-sc-green hover:brightness-95 text-sc-green-ink py-2 rounded-full font-bold"
                   onClick={handlePaymentInitiation}
                   disabled={paying || !paystackLoaded || !amount || !isSlotAvailable}
                 >
@@ -836,7 +836,7 @@ const VenueBookingForm = () => {
             )}
 
             {paymentStatus === "success" && (
-              <div className="bg-green-50 p-4 rounded-md border border-green-200 text-green-700">
+              <div className="bg-sc-green-bg p-4 rounded-md border border-green-200 text-sc-green-dark">
                 <p className="font-medium">Payment Successful!</p>
                 <p className="text-sm">Please complete your booking below.</p>
                 {paymentReference && !useAccessCode && (
@@ -847,7 +847,7 @@ const VenueBookingForm = () => {
                 )}
                 <Button
                   type="submit"
-                  className="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg mt-4"
+                  className="w-full bg-sc-green hover:brightness-95 text-sc-green-ink py-2 rounded-full mt-4 font-bold"
                   disabled={paying}
                 >
                   {paying ? (

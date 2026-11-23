@@ -34,6 +34,7 @@ import TeamMatchDetails from "@/components/matchManagement/TeamMatchDetails";
 // Profile components
 import UserMatches from "@/components/profile/UserMatches";
 
+import { BackButton } from "@/components/sc/ui";
 type Match = {
   id: string;
   title: string;
@@ -376,9 +377,9 @@ const MyMatches = () => {
     const endDateTime = DateTime.fromISO(`${matchDate}T${endTime}`, { zone: "utc" }).setZone("Africa/Lagos");
 
     if (now < matchDateTime) return { text: "Upcoming", className: "bg-blue-100 text-blue-800" };
-    if (now.hasSame(matchDateTime, "day") && now < matchDateTime) return { text: "Today", className: "bg-green-100 text-green-700" };
-    if (now >= matchDateTime && now <= endDateTime) return { text: "Live", className: "bg-green-100 text-green-800" };
-    return { text: "Passed", className: "bg-gray-100 text-gray-800" };
+    if (now.hasSame(matchDateTime, "day") && now < matchDateTime) return { text: "Today", className: "bg-sc-green-bg text-sc-green-dark" };
+    if (now >= matchDateTime && now <= endDateTime) return { text: "Live", className: "bg-sc-green-bg text-sc-green-dark" };
+    return { text: "Passed", className: "bg-sc-soft text-sc-ink" };
   };
 
   const getStatusLabel = (status: string, isCancelled: boolean, matchDate: string, startTime: string, endTime: string) => {
@@ -389,43 +390,34 @@ const MyMatches = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
+      <div className="min-h-screen flex items-center justify-center bg-sc-bg dark:bg-gray-900">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sc-green"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-100 dark:bg-gray-900">
-      <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg">
-        <div className="flex items-center justify-between max-w-7xl mx-auto">
-          <Button
-            variant="ghost"
-            onClick={() => navigate("/profile")}
-            className="text-white hover:bg-green-600"
-          >
-            <ArrowLeft className="w-5 h-5 mr-2" />
-            Back
-          </Button>
-          <div className="text-center">
-            <h1 className="text-2xl font-bold">My Matches</h1>
+    <div className="min-h-screen flex flex-col bg-sc-bg dark:bg-gray-900">
+      <header className="px-5 pt-[max(env(safe-area-inset-top),1rem)] flex flex-col gap-3.5">
+          <div className="pt-3 flex items-center justify-between min-h-11">
+            <BackButton to="/profile" />
+            <div className="flex gap-2"></div>
           </div>
-          <div className="w-10"></div>
-        </div>
-      </header>
+          <h1 className="m-0 text-[32px] leading-[38px] font-extrabold tracking-[-0.03em]">My matches</h1>
+        </header>
 
       <div className="flex-grow overflow-y-auto">
         <div className="container mx-auto px-4 py-6">
-          <Card className="w-full bg-white dark:bg-gray-800 border-none shadow-xl rounded-xl">
+          <Card className="w-full bg-white dark:bg-gray-800 border-none shadow-card rounded-3xl">
             <CardHeader>
-              <CardTitle className="text-xl font-semibold text-green-700 dark:text-green-400 flex items-center">
+              <CardTitle className="text-xl font-semibold text-sc-green-dark dark:text-green-400 flex items-center">
                 <Volleyball className="mr-2 h-6 w-6" />
                 My Matches
               </CardTitle>
             </CardHeader>
             <CardContent>
               <Tabs defaultValue="organizing" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 bg-gray-100 dark:bg-gray-700 rounded-t-lg">
+                <TabsList className="grid w-full grid-cols-2 bg-sc-soft dark:bg-gray-700 rounded-t-lg">
                   <TabsTrigger
                     value="organizing"
                     className="data-[state=active]:bg-green-500 data-[state=active]:text-white"
@@ -449,31 +441,31 @@ const MyMatches = () => {
                       return (
                         <div
                           key={match.id}
-                          className="w-full p-4 mb-4 bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700"
+                          className="w-full p-4 mb-4 bg-white dark:bg-gray-800 rounded-3xl shadow-card dark:border-gray-700"
                         >
                           <div className="flex justify-between items-start">
                             <div className="space-y-2">
-                              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{match.title}</h3>
+                              <h3 className="text-lg font-semibold text-sc-ink dark:text-gray-100">{match.title}</h3>
                               <div className="flex items-center gap-2">
                                 <span className={`text-xs font-medium px-2 py-1 rounded-full ${statusLabel.className}`}>
                                   {statusLabel.text}
                                 </span>
                               </div>
-                              <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
+                              <p className="text-sm text-sc-ink3 dark:text-gray-400 flex items-center">
                                 <Calendar size={16} className="mr-2" />
                                 {dateStr} at {timeStr}
                               </p>
-                              <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
+                              <p className="text-sm text-sc-ink3 dark:text-gray-400 flex items-center">
                                 <MapPin size={16} className="mr-2" />
                                 {match.venue_name || "Venue TBD"}
                               </p>
                               {userId && match.is_recurring && (
-                                <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
+                                <p className="text-sm text-sc-ink3 dark:text-gray-400 flex items-center">
                                   <Repeat size={16} className="mr-2" />
                                   Repeats {match.recurring_frequency} for {match.recurring_occurrences} times
                                 </p>
                               )}
-                              <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                              <div className="text-sm text-sc-ink3 dark:text-gray-400 flex items-center gap-2">
                                 <span>Super Code:</span>
                                 <span className="flex items-center gap-1">
                                   <span>{match.super_code || "N/A"}</span>
@@ -493,10 +485,10 @@ const MyMatches = () => {
                                   </Button>
                                 </span>
                               </div>
-                              <p className="text-base font-medium text-gray-900 dark:text-gray-100">
-                                Slots: <span className="text-green-600 dark:text-green-400">{match.booked_slots}</span>/{match.total_slots}
+                              <p className="text-base font-medium text-sc-ink dark:text-gray-100">
+                                Slots: <span className="text-sc-green-dark dark:text-green-400">{match.booked_slots}</span>/{match.total_slots}
                               </p>
-                              <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
+                              <p className="text-sm text-sc-ink3 dark:text-gray-400 flex items-center">
                                 Organized by: {match.organizer_name || "Unknown"}
                                 {isVerified && <img src="/green-verified.png" alt="Verified" className="w-4 h-4 ml-1" />}
                               </p>
@@ -506,7 +498,7 @@ const MyMatches = () => {
                             {(match.status === "upcoming" || match.status === "live") && !match.cancellation_status ? (
                               <Button
                                 variant="outline"
-                                className="px-4 py-2 border-green-500 text-green-500 hover:bg-green-500 hover:text-white rounded-lg"
+                                className="px-4 py-2 border-sc-green text-sc-green-dark hover:bg-green-500 hover:text-white rounded-lg"
                                 onClick={() => {
                                   setCancelMatchId(match.id);
                                   setCancelIsJoined(false);
@@ -518,7 +510,7 @@ const MyMatches = () => {
                               </Button>
                             ) : (
                               <Button
-                                className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg"
+                                className="px-4 py-2 bg-sc-green hover:brightness-95 text-sc-green-ink rounded-full font-bold"
                                 onClick={() => navigate(`/feedback?matchSlug=${match.slug}`)}
                                 disabled={
                                   (new Date().getTime() - new Date(`${match.match_date}T${match.match_time}Z`).getTime()) /
@@ -530,7 +522,7 @@ const MyMatches = () => {
                               </Button>
                             )}
                             <Button
-                              className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg"
+                              className="px-4 py-2 bg-sc-green hover:brightness-95 text-sc-green-ink rounded-full font-bold"
                               onClick={() => navigate(`/match/${match.slug}`)}
                             >
                               View Details
@@ -540,7 +532,7 @@ const MyMatches = () => {
                       );
                     })
                   ) : (
-                    <p className="text-sm text-gray-600 dark:text-gray-400 p-4">
+                    <p className="text-sm text-sc-ink3 dark:text-gray-400 p-4">
                       No organized matches found.
                     </p>
                   )}
@@ -555,39 +547,39 @@ const MyMatches = () => {
                       return (
                         <div
                           key={match.id}
-                          className="w-full p-4 mb-4 bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700"
+                          className="w-full p-4 mb-4 bg-white dark:bg-gray-800 rounded-3xl shadow-card dark:border-gray-700"
                         >
                           <div className="flex justify-between items-start">
                             <div className="space-y-2">
-                              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{match.title}</h3>
+                              <h3 className="text-lg font-semibold text-sc-ink dark:text-gray-100">{match.title}</h3>
                               <div className="flex items-center gap-2">
                                 <span className={`text-xs font-medium px-2 py-1 rounded-full ${statusLabel.className}`}>
                                   {statusLabel.text}
                                 </span>
                               </div>
-                              <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
+                              <p className="text-sm text-sc-ink3 dark:text-gray-400 flex items-center">
                                 <Calendar size={16} className="mr-2" />
                                 {dateStr} at {timeStr}
                               </p>
-                              <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
+                              <p className="text-sm text-sc-ink3 dark:text-gray-400 flex items-center">
                                 <MapPin size={16} className="mr-2" />
                                 {match.venue_name || "Venue TBD"}
                               </p>
                               {userId && match.is_recurring && (
-                                <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
+                                <p className="text-sm text-sc-ink3 dark:text-gray-400 flex items-center">
                                   <Repeat size={16} className="mr-2" />
                                   Repeats {match.recurring_frequency} for {match.recurring_occurrences} times
                                 </p>
                               )}
-                              <p className="text-sm text-gray-600 dark:text-gray-400">
+                              <p className="text-sm text-sc-ink3 dark:text-gray-400">
                                 Confirmation Code: {match.confirmation_code || "N/A"}
                               </p>
                               {match.is_paid && match.number_of_slots && (
-                                <p className="text-base font-medium text-gray-900 dark:text-gray-100">
-                                  Slots Purchased: <span className="text-green-600 dark:text-green-400">{match.number_of_slots}</span>
+                                <p className="text-base font-medium text-sc-ink dark:text-gray-100">
+                                  Slots Purchased: <span className="text-sc-green-dark dark:text-green-400">{match.number_of_slots}</span>
                                 </p>
                               )}
-                              <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
+                              <p className="text-sm text-sc-ink3 dark:text-gray-400 flex items-center">
                                 Organized by: {match.organizer_name || "Unknown"}
                                 {isVerified && <img src="/green-verified.png" alt="Verified" className="w-4 h-4 ml-1" />}
                               </p>
@@ -599,7 +591,7 @@ const MyMatches = () => {
                             !match.player_cancellation_status ? (
                               <Button
                                 variant="outline"
-                                className="px-4 py-2 border-green-500 text-green-500 hover:bg-green-500 hover:text-white rounded-lg"
+                                className="px-4 py-2 border-sc-green text-sc-green-dark hover:bg-green-500 hover:text-white rounded-lg"
                                 onClick={() => {
                                   setCancelMatchId(match.id);
                                   setCancelIsJoined(true);
@@ -611,7 +603,7 @@ const MyMatches = () => {
                               </Button>
                             ) : (
                               <Button
-                                className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg"
+                                className="px-4 py-2 bg-sc-green hover:brightness-95 text-sc-green-ink rounded-full font-bold"
                                 onClick={() => navigate(`/feedback?matchSlug=${match.slug}`)}
                                 disabled={
                                   (new Date().getTime() - new Date(`${match.match_date}T${match.match_time}Z`).getTime()) /
@@ -623,7 +615,7 @@ const MyMatches = () => {
                               </Button>
                             )}
                             <Button
-                              className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg"
+                              className="px-4 py-2 bg-sc-green hover:brightness-95 text-sc-green-ink rounded-full font-bold"
                               onClick={() => navigate(`/match/${match.slug}`)}
                             >
                               View Details
@@ -633,7 +625,7 @@ const MyMatches = () => {
                       );
                     })
                   ) : (
-                    <p className="text-sm text-gray-600 dark:text-gray-400 p-4">
+                    <p className="text-sm text-sc-ink3 dark:text-gray-400 p-4">
                       No joined matches found.
                     </p>
                   )}
@@ -645,19 +637,19 @@ const MyMatches = () => {
       </div>
 
       <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
-        <DialogContent className="max-w-md rounded-2xl bg-white dark:bg-gray-800 border-none shadow-lg">
+        <DialogContent className="max-w-md rounded-3xl bg-white dark:bg-gray-800 border-none shadow-card">
           <DialogHeader>
-            <DialogTitle className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+            <DialogTitle className="text-lg font-semibold text-sc-ink dark:text-gray-100">
               Confirm Cancellation
             </DialogTitle>
-            <DialogDescription className="text-sm text-gray-600 dark:text-gray-400">
+            <DialogDescription className="text-sm text-sc-ink3 dark:text-gray-400">
               Are you sure you want to cancel {cancelIsJoined ? "your participation in" : "this match"}? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex justify-between mt-4">
             <Button
               variant="outline"
-              className="w-1/2 px-4 py-2 border-gray-300 text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 rounded-lg"
+              className="w-1/2 px-4 py-2 border-sc-line text-sc-ink2 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 rounded-lg"
               onClick={() => setShowCancelDialog(false)}
             >
               No, Go Back

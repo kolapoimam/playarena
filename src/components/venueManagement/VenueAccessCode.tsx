@@ -211,7 +211,7 @@ const VenueAccessCode = ({ venueId }: VenueAccessCodeProps) => {
   const getStatusStyles = (status: string) => {
     switch (status) {
       case "active":
-        return "bg-green-100 text-green-700 border-green-300";
+        return "bg-sc-green-bg text-sc-green-dark border-green-300";
       case "inactive":
         return "bg-red-100 text-red-700 border-red-300";
       case "pending":
@@ -226,13 +226,13 @@ const VenueAccessCode = ({ venueId }: VenueAccessCodeProps) => {
   };
 
   return (
-    <Card className="bg-white dark:bg-gray-800 border-none shadow-lg rounded-xl">
+    <Card className="bg-white dark:bg-gray-800 border-none shadow-card rounded-3xl">
       <CardHeader>
-        <CardTitle className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex justify-between items-center">
+        <CardTitle className="text-lg font-semibold text-sc-ink dark:text-gray-100 flex justify-between items-center">
           Booking Code
           <Button
             onClick={() => setShowAccessCodeDialog(true)}
-            className="bg-green-500 hover:bg-green-600 text-white rounded-lg"
+            className="bg-sc-green hover:brightness-95 text-sc-green-ink rounded-full font-bold"
             disabled={loading}
           >
             Generate Code
@@ -241,7 +241,7 @@ const VenueAccessCode = ({ venueId }: VenueAccessCodeProps) => {
       </CardHeader>
       <CardContent>
         <Collapsible>
-          <CollapsibleTrigger className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
+          <CollapsibleTrigger className="text-sm font-medium text-sc-ink3 dark:text-gray-400 mb-2">
             {accessCodes.length > 0 ? `View ${accessCodes.length} Access Codes` : "No Access Codes"}
           </CollapsibleTrigger>
           <CollapsibleContent>
@@ -249,11 +249,11 @@ const VenueAccessCode = ({ venueId }: VenueAccessCodeProps) => {
               {accessCodes.map((code) => (
                 <div
                   key={code.id}
-                  className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600"
+                  className="p-4 bg-sc-soft dark:bg-gray-700 rounded-lg border border-sc-line dark:border-gray-600"
                 >
                   <div className="flex justify-between items-center">
                     <div>
-                      <p className="text-lg font-medium text-gray-900 dark:text-gray-100 flex items-center">
+                      <p className="text-lg font-medium text-sc-ink dark:text-gray-100 flex items-center">
                         Code: {code.code}
                         <Button
                           variant="ghost"
@@ -265,34 +265,34 @@ const VenueAccessCode = ({ venueId }: VenueAccessCodeProps) => {
                           <Copy size={16} />
                         </Button>
                       </p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                      <p className="text-sm text-sc-ink3 dark:text-gray-400">
                         Date: {new Date(code.match_date).toLocaleDateString("en-NG", { dateStyle: "medium" })}
                       </p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                      <p className="text-sm text-sc-ink3 dark:text-gray-400">
                         Time: {code.start_time} - {code.end_time}
                       </p>
                       {userId && code.is_recurring && (
-                        <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
+                        <p className="text-sm text-sc-ink3 dark:text-gray-400 flex items-center">
                           <Repeat className="w-4 h-4 mr-1" />
                           Repeats {code.recurring_frequency} for {code.recurring_occurrences} times
                         </p>
                       )}
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                      <p className="text-sm text-sc-ink3 dark:text-gray-400">
                         Expires: {new Date(code.expiry_date).toLocaleString("en-NG", {
                           dateStyle: "medium",
                           timeStyle: "short",
                         })}
                       </p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                      <p className="text-sm text-sc-ink3 dark:text-gray-400">
                         Created: {new Date(code.created_at).toLocaleString("en-NG", {
                           dateStyle: "medium",
                           timeStyle: "short",
                         })}
                       </p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                      <p className="text-sm text-sc-ink3 dark:text-gray-400">
                         Booker Name: {code.booker_name || "N/A"}
                       </p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                      <p className="text-sm text-sc-ink3 dark:text-gray-400">
                         Phone Number: {code.booker_phone || "N/A"}
                       </p>
                     </div>
@@ -310,10 +310,10 @@ const VenueAccessCode = ({ venueId }: VenueAccessCodeProps) => {
       </CardContent>
 
       <Dialog open={showAccessCodeDialog} onOpenChange={setShowAccessCodeDialog}>
-        <DialogContent className="w-auto bg-white dark:bg-gray-800 border-none shadow-lg rounded-2xl p-6">
+        <DialogContent className="w-auto bg-white dark:bg-gray-800 border-none shadow-card rounded-3xl p-6">
           <DialogHeader>
-            <DialogTitle className="text-lg font-semibold text-gray-900 dark:text-gray-100">Generate Access Code</DialogTitle>
-            <DialogDescription className="text-sm text-gray-600 dark:text-gray-400">
+            <DialogTitle className="text-lg font-semibold text-sc-ink dark:text-gray-100">Generate Access Code</DialogTitle>
+            <DialogDescription className="text-sm text-sc-ink3 dark:text-gray-400">
               Enter the date, time range, and recurring details for the free booking.
             </DialogDescription>
           </DialogHeader>
@@ -322,7 +322,7 @@ const VenueAccessCode = ({ venueId }: VenueAccessCodeProps) => {
               type="date"
               value={accessCodeForm.match_date}
               onChange={(e) => setAccessCodeForm({ ...accessCodeForm, match_date: e.target.value })}
-              className="text-base bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg"
+              className="text-base bg-white dark:bg-gray-700 border-sc-line dark:border-gray-600 text-sc-ink dark:text-gray-100 rounded-lg"
             />
             <TimeInput
               value={accessCodeForm.start_time}
@@ -339,9 +339,9 @@ const VenueAccessCode = ({ venueId }: VenueAccessCodeProps) => {
                 type="checkbox"
                 checked={accessCodeForm.is_recurring}
                 onChange={(e) => setAccessCodeForm({ ...accessCodeForm, is_recurring: e.target.checked })}
-                className="h-4 w-4 text-green-500 border-gray-300 rounded"
+                className="h-4 w-4 text-sc-green-dark border-sc-line rounded"
               />
-              <label className="text-sm text-gray-600 dark:text-gray-400">Recurring Booking</label>
+              <label className="text-sm text-sc-ink3 dark:text-gray-400">Recurring Booking</label>
             </div>
             {accessCodeForm.is_recurring && (
               <>
@@ -364,16 +364,16 @@ const VenueAccessCode = ({ venueId }: VenueAccessCodeProps) => {
                   value={accessCodeForm.recurring_occurrences}
                   onChange={(e) => setAccessCodeForm({ ...accessCodeForm, recurring_occurrences: e.target.value })}
                   placeholder="Number of occurrences"
-                  className="text-base bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg"
+                  className="text-base bg-white dark:bg-gray-700 border-sc-line dark:border-gray-600 text-sc-ink dark:text-gray-100 rounded-lg"
                 />
               </>
             )}
             {generatedCode && (
               <div className="text-center">
-                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                  Generated Code: <span className="text-green-500">{generatedCode}</span>
+                <p className="text-sm font-medium text-sc-ink dark:text-gray-100">
+                  Generated Code: <span className="text-sc-green-dark">{generatedCode}</span>
                 </p>
-                <p className="text-xs text-gray-600 dark:text-gray-400">
+                <p className="text-xs text-sc-ink3 dark:text-gray-400">
                   Share this code with an organizer to book the venue for free.
                 </p>
               </div>
@@ -394,14 +394,14 @@ const VenueAccessCode = ({ venueId }: VenueAccessCodeProps) => {
                   recurring_occurrences: "",
                 });
               }}
-              className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+              className="border-sc-line dark:border-gray-600 text-sc-ink2 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
             >
               Close
             </Button>
             {!generatedCode && (
               <Button
                 onClick={handleGenerateAccessCode}
-                className="bg-green-500 hover:bg-green-600 text-white rounded-lg"
+                className="bg-sc-green hover:brightness-95 text-sc-green-ink rounded-full font-bold"
                 disabled={loading}
               >
                 {loading ? (

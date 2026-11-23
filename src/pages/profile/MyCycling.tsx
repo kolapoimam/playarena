@@ -11,6 +11,7 @@ import { format, parse } from "date-fns";
 import { utcToZonedTime } from "date-fns-tz";
 import { DateTime } from "luxon";
 
+import { BackButton } from "@/components/sc/ui";
 type Landmark = {
   name: string;
   state: string;
@@ -177,48 +178,39 @@ const MyCycling = () => {
       const endDateTime = matchDateTime.plus({ hours: 1 }); // Assume 1-hour duration
 
       if (now < matchDateTime) return { text: "Upcoming", className: "bg-blue-100 text-blue-800" };
-      if (now.hasSame(matchDateTime, "day") && now < matchDateTime) return { text: "Today", className: "bg-green-100 text-green-700" };
-      if (now >= matchDateTime && now <= endDateTime) return { text: "Live", className: "bg-green-100 text-green-800" };
-      return { text: "Passed", className: "bg-gray-100 text-gray-800" };
+      if (now.hasSame(matchDateTime, "day") && now < matchDateTime) return { text: "Today", className: "bg-sc-green-bg text-sc-green-dark" };
+      if (now >= matchDateTime && now <= endDateTime) return { text: "Live", className: "bg-sc-green-bg text-sc-green-dark" };
+      return { text: "Passed", className: "bg-sc-soft text-sc-ink" };
     } catch {
-      return { text: "Unknown", className: "bg-gray-100 text-gray-800" };
+      return { text: "Unknown", className: "bg-sc-soft text-sc-ink" };
     }
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
+      <div className="min-h-screen flex items-center justify-center bg-sc-bg dark:bg-gray-900">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sc-green"></div>
       </div>
     );
   }
 
   if (!userId) {
     return (
-      <div className="min-h-screen flex flex-col bg-gray-100 dark:bg-gray-900">
-        <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg">
-          <div className="flex items-center justify-between max-w-7xl mx-auto">
-            <Button
-              variant="ghost"
-              onClick={() => navigate(-1)}
-              className="text-white hover:bg-green-600"
-            >
-              <ArrowLeft className="w-5 h-5 mr-2" />
-              Back
-            </Button>
-            <div className="text-center">
-              <h1 className="text-2xl font-bold">My Cycling</h1>
-            </div>
-            <div className="w-10"></div>
+      <div className="min-h-screen flex flex-col bg-sc-bg dark:bg-gray-900">
+        <header className="px-5 pt-[max(env(safe-area-inset-top),1rem)] flex flex-col gap-3.5">
+          <div className="pt-3 flex items-center justify-between min-h-11">
+            <BackButton />
+            <div className="flex gap-2"></div>
           </div>
+          <h1 className="m-0 text-[32px] leading-[38px] font-extrabold tracking-[-0.03em]">My cycling</h1>
         </header>
         <div className="flex-grow overflow-y-auto">
           <div className="container mx-auto px-4 py-6">
-            <p className="text-sm text-gray-600 dark:text-gray-400 p-4 text-center">
+            <p className="text-sm text-sc-ink3 dark:text-gray-400 p-4 text-center">
               Please log in to view your cycling events.
             </p>
             <Button
-              className="mx-auto block px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg"
+              className="mx-auto block px-4 py-2 bg-sc-green hover:brightness-95 text-sc-green-ink rounded-full font-bold"
               onClick={() => navigate("/auth")}
             >
               Log In
@@ -233,36 +225,27 @@ const MyCycling = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-100 dark:bg-gray-900">
-      <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg">
-        <div className="flex items-center justify-between max-w-7xl mx-auto">
-          <Button
-            variant="ghost"
-            onClick={() => navigate(-1)}
-            className="text-white hover:bg-green-600"
-          >
-            <ArrowLeft className="w-5 h-5 mr-2" />
-            Back
-          </Button>
-          <div className="text-center">
-            <h1 className="text-2xl font-bold">My Cycling</h1>
+    <div className="min-h-screen flex flex-col bg-sc-bg dark:bg-gray-900">
+      <header className="px-5 pt-[max(env(safe-area-inset-top),1rem)] flex flex-col gap-3.5">
+          <div className="pt-3 flex items-center justify-between min-h-11">
+            <BackButton />
+            <div className="flex gap-2"></div>
           </div>
-          <div className="w-10"></div>
-        </div>
-      </header>
+          <h1 className="m-0 text-[32px] leading-[38px] font-extrabold tracking-[-0.03em]">My cycling</h1>
+        </header>
 
       <div className="flex-grow overflow-y-auto">
         <div className="container mx-auto px-4 py-6">
-          <Card className="w-full bg-white dark:bg-gray-800 border-none shadow-xl rounded-xl">
+          <Card className="w-full bg-white dark:bg-gray-800 border-none shadow-card rounded-3xl">
             <CardHeader>
-              <CardTitle className="text-xl font-semibold text-green-700 dark:text-green-400 flex items-center">
+              <CardTitle className="text-xl font-semibold text-sc-green-dark dark:text-green-400 flex items-center">
                 <Bike className="mr-2 h-6 w-6" />
                 My Cycling
               </CardTitle>
             </CardHeader>
             <CardContent>
               <Tabs defaultValue="hosting" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 bg-gray-100 dark:bg-gray-700 rounded-t-lg">
+                <TabsList className="grid w-full grid-cols-2 bg-sc-soft dark:bg-gray-700 rounded-t-lg">
                   <TabsTrigger
                     value="hosting"
                     className="data-[state=active]:bg-green-500 data-[state=active]:text-white"
@@ -284,25 +267,25 @@ const MyCycling = () => {
                       return (
                         <div
                           key={event.id_uuid}
-                          className="w-full p-4 mb-4 bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700"
+                          className="w-full p-4 mb-4 bg-white dark:bg-gray-800 rounded-3xl shadow-card dark:border-gray-700"
                         >
                           <div className="flex justify-between items-start">
                             <div className="space-y-2">
-                              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{event.title}</h3>
+                              <h3 className="text-lg font-semibold text-sc-ink dark:text-gray-100">{event.title}</h3>
                               <div className="flex items-center gap-2">
                                 <span className={`text-xs font-medium px-2 py-1 rounded-full ${statusLabel.className}`}>
                                   {statusLabel.text}
                                 </span>
                               </div>
-                              <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
+                              <p className="text-sm text-sc-ink3 dark:text-gray-400 flex items-center">
                                 <Calendar size={16} className="mr-2" />
                                 {dateStr} at {timeStr}
                               </p>
-                              <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
+                              <p className="text-sm text-sc-ink3 dark:text-gray-400 flex items-center">
                                 <MapPin size={16} className="mr-2" />
                                 {event.start_landmark.name}, {event.start_landmark.state}
                               </p>
-                              <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                              <div className="text-sm text-sc-ink3 dark:text-gray-400 flex items-center gap-2">
                                 <span>Super Code:</span>
                                 <span className="flex items-center gap-1">
                                   <span>{event.supercode || "N/A"}</span>
@@ -322,10 +305,10 @@ const MyCycling = () => {
                                   </Button>
                                 </span>
                               </div>
-                              <p className="text-base font-medium text-gray-900 dark:text-gray-100">
-                                Slots: <span className="text-green-600 dark:text-green-400">{event.attendees.length}</span>/{event.max_attendees}
+                              <p className="text-base font-medium text-sc-ink dark:text-gray-100">
+                                Slots: <span className="text-sc-green-dark dark:text-green-400">{event.attendees.length}</span>/{event.max_attendees}
                               </p>
-                              <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
+                              <p className="text-sm text-sc-ink3 dark:text-gray-400 flex items-center">
                                 <Bike size={16} className="mr-2" />
                                 Organized by: {event.host_name || "Unknown"}
                               </p>
@@ -333,7 +316,7 @@ const MyCycling = () => {
                           </div>
                           <div className="mt-4 flex gap-2">
                             <Button
-                              className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg"
+                              className="px-4 py-2 bg-sc-green hover:brightness-95 text-sc-green-ink rounded-full font-bold"
                               onClick={() => navigate(`/cycling/${event.slug}`)}
                             >
                               View Details
@@ -343,7 +326,7 @@ const MyCycling = () => {
                       );
                     })
                   ) : (
-                    <p className="text-sm text-gray-600 dark:text-gray-400 p-4">
+                    <p className="text-sm text-sc-ink3 dark:text-gray-400 p-4">
                       No hosted cycling events found.
                     </p>
                   )}
@@ -356,28 +339,28 @@ const MyCycling = () => {
                       return (
                         <div
                           key={event.id_uuid}
-                          className="w-full p-4 mb-4 bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700"
+                          className="w-full p-4 mb-4 bg-white dark:bg-gray-800 rounded-3xl shadow-card dark:border-gray-700"
                         >
                           <div className="flex justify-between items-start">
                             <div className="space-y-2">
-                              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{event.title}</h3>
+                              <h3 className="text-lg font-semibold text-sc-ink dark:text-gray-100">{event.title}</h3>
                               <div className="flex items-center gap-2">
                                 <span className={`text-xs font-medium px-2 py-1 rounded-full ${statusLabel.className}`}>
                                   {statusLabel.text}
                                 </span>
                               </div>
-                              <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
+                              <p className="text-sm text-sc-ink3 dark:text-gray-400 flex items-center">
                                 <Calendar size={16} className="mr-2" />
                                 {dateStr} at {timeStr}
                               </p>
-                              <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
+                              <p className="text-sm text-sc-ink3 dark:text-gray-400 flex items-center">
                                 <MapPin size={16} className="mr-2" />
                                 {event.start_landmark.name}, {event.start_landmark.state}
                               </p>
-                              <p className="text-sm text-gray-600 dark:text-gray-400">
+                              <p className="text-sm text-sc-ink3 dark:text-gray-400">
                                 Confirmation Code: {event.confirmation_code || "N/A"}
                               </p>
-                              <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
+                              <p className="text-sm text-sc-ink3 dark:text-gray-400 flex items-center">
                                 <Bike size={16} className="mr-2" />
                                 Organized by: {event.host_name || "Unknown"}
                               </p>
@@ -385,7 +368,7 @@ const MyCycling = () => {
                           </div>
                           <div className="mt-4 flex gap-2">
                             <Button
-                              className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg"
+                              className="px-4 py-2 bg-sc-green hover:brightness-95 text-sc-green-ink rounded-full font-bold"
                               onClick={() => navigate(`/cycling/${event.slug}`)}
                             >
                               View Details
@@ -395,7 +378,7 @@ const MyCycling = () => {
                       );
                     })
                   ) : (
-                    <p className="text-sm text-gray-600 dark:text-gray-400 p-4">
+                    <p className="text-sm text-sc-ink3 dark:text-gray-400 p-4">
                       No joined cycling events found.
                     </p>
                   )}

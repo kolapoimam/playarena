@@ -71,13 +71,13 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({ title, children
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 w-full max-w-none">
+    <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 w-full max-w-none">
       <div
         className="flex justify-between items-center cursor-pointer"
         onClick={handleToggle}
       >
-        <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200">{title}</h2>
-        <span className="text-gray-800 dark:text-gray-200">{isOpen ? "-" : "+"}</span>
+        <h2 className="text-lg font-semibold text-sc-ink dark:text-gray-200">{title}</h2>
+        <span className="text-sc-ink dark:text-gray-200">{isOpen ? "-" : "+"}</span>
       </div>
       <div
         className={`transition-all duration-300 ease-in-out overflow-hidden ${
@@ -224,7 +224,7 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-      <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-6">New Venue</h2>
+      <h2 className="text-2xl font-semibold text-sc-ink dark:text-gray-200 mb-6">New Venue</h2>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           {/* Venue Details Section */}
@@ -245,7 +245,7 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
                     <FormControl>
                       <Input
                         {...field}
-                        className="w-full border-gray-300 dark:border-gray-600 focus:ring-0 focus:shadow-md dark:bg-gray-700 dark:text-white rounded-md"
+                        className="w-full border-sc-line dark:border-gray-600 focus:ring-0 focus:shadow-md dark:bg-gray-700 dark:text-white rounded-md"
                       />
                     </FormControl>
                     <FormMessage className="text-red-500" />
@@ -261,7 +261,7 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
                     <FormControl>
                       <Input
                         {...field}
-                        className="w-full border-gray-300 dark:border-gray-600 focus:ring-0 focus:shadow-md dark:bg-gray-700 dark:text-white rounded-md"
+                        className="w-full border-sc-line dark:border-gray-600 focus:ring-0 focus:shadow-md dark:bg-gray-700 dark:text-white rounded-md"
                       />
                     </FormControl>
                     <FormMessage className="text-red-500" />
@@ -277,7 +277,7 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
                     <FormControl>
                       <Input
                         {...field}
-                        className="w-full border-gray-300 dark:border-gray-600 focus:ring-0 focus:shadow-md dark:bg-gray-700 dark:text-white rounded-md"
+                        className="w-full border-sc-line dark:border-gray-600 focus:ring-0 focus:shadow-md dark:bg-gray-700 dark:text-white rounded-md"
                       />
                     </FormControl>
                     <FormMessage className="text-red-500" />
@@ -292,7 +292,7 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
                     <FormLabel>State</FormLabel>
                     <FormControl>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <SelectTrigger className="w-full border-gray-300 dark:border-gray-600 focus:ring-0 focus:shadow-md dark:bg-gray-700 dark:text-white rounded-md">
+                        <SelectTrigger className="w-full border-sc-line dark:border-gray-600 focus:ring-0 focus:shadow-md dark:bg-gray-700 dark:text-white rounded-md">
                           <SelectValue placeholder="Select a state" />
                         </SelectTrigger>
                         <SelectContent>
@@ -333,7 +333,7 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
                           const numericValue = e.target.value.replace(/\D/g, "");
                           field.onChange(numericValue.slice(0, 11));
                         }}
-                        className="w-full border-gray-300 dark:border-gray-600 focus:ring-0 focus:shadow-md dark:bg-gray-700 dark:text-white rounded-md"
+                        className="w-full border-sc-line dark:border-gray-600 focus:ring-0 focus:shadow-md dark:bg-gray-700 dark:text-white rounded-md"
                       />
                     </FormControl>
                     <FormDescription>Provide a valid phone number of the Venue owner or Manager (numbers only)</FormDescription>
@@ -350,7 +350,7 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
                     <FormControl>
                       <Input
                         {...field}
-                        className="w-full border-gray-300 dark:border-gray-600 focus:ring-0 focus:shadow-md dark:bg-gray-700 dark:text-white rounded-md"
+                        className="w-full border-sc-line dark:border-gray-600 focus:ring-0 focus:shadow-md dark:bg-gray-700 dark:text-white rounded-md"
                       />
                     </FormControl>
                     <FormDescription>Add a Google Maps link to help players find the venue easily</FormDescription>
@@ -369,7 +369,7 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
                         type="number"
                         {...field}
                         onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
-                        className="w-full border-gray-300 dark:border-gray-600 focus:ring-0 focus:shadow-md dark:bg-gray-700 dark:text-white rounded-md"
+                        className="w-full border-sc-line dark:border-gray-600 focus:ring-0 focus:shadow-md dark:bg-gray-700 dark:text-white rounded-md"
                       />
                     </FormControl>
                     <FormDescription>Enter the hourly booking fee in NGN (numbers only)</FormDescription>
@@ -436,7 +436,7 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
                     <FormControl>
                       <Input
                         {...field}
-                        className="w-full border-gray-300 dark:border-gray-600 focus:ring-0 focus:shadow-md dark:bg-gray-700 dark:text-white rounded-md"
+                        className="w-full border-sc-line dark:border-gray-600 focus:ring-0 focus:shadow-md dark:bg-gray-700 dark:text-white rounded-md"
                       />
                     </FormControl>
                     <FormDescription>Specify the venue's operating hours</FormDescription>
@@ -462,7 +462,7 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
                       accept="image/*"
                       onChange={(e) => handleFileChange(e.target.files)}
                       ref={fileInputRef}
-                      className="w-full border-gray-300 dark:border-gray-600 focus:ring-0 focus:shadow-md dark:bg-gray-700 dark:text-white rounded-md"
+                      className="w-full border-sc-line dark:border-gray-600 focus:ring-0 focus:shadow-md dark:bg-gray-700 dark:text-white rounded-md"
                     />
                   )}
                 </FormControl>
@@ -476,7 +476,7 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
             <Button
               type="submit"
               disabled={loading}
-              className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-3 text-lg shadow-md transition-colors"
+              className="w-full bg-sc-green hover:brightness-95 text-sc-green-ink font-bold rounded-full px-4 py-3 text-lg shadow-card transition-colors"
             >
               {loading ? "Creating..." : "Create Venue"}
             </Button>
@@ -485,7 +485,7 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
                 type="button"
                 variant="outline"
                 onClick={onCancel}
-                className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium rounded-lg px-4 py-3 text-lg shadow-md transition-colors"
+                className="w-full bg-sc-soft2 hover:bg-gray-300 text-sc-ink font-medium rounded-lg px-4 py-3 text-lg shadow-card transition-colors"
               >
                 Cancel
               </Button>

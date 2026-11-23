@@ -35,8 +35,8 @@ const getTeamColorScheme = (teamName: string) => {
       hover: 'hover:bg-red-100 dark:hover:bg-red-800/40'
     },
     'Team 3': {
-      jersey: 'text-green-600 dark:text-green-300',
-      background: 'bg-green-50 dark:bg-green-900/30',
+      jersey: 'text-sc-green-dark dark:text-green-300',
+      background: 'bg-sc-green-bg dark:bg-green-900/30',
       border: 'border-green-300 dark:border-green-500',
       hover: 'hover:bg-green-100 dark:hover:bg-green-800/40'
     },
@@ -106,9 +106,9 @@ const getTeamColorScheme = (teamName: string) => {
 
   // Default to gray for unknown teams
   return colorSchemes[teamName] || {
-    jersey: 'text-gray-500 dark:text-gray-400',
-    background: 'bg-gray-50 dark:bg-gray-900/50',
-    border: 'border-gray-200 dark:border-gray-700',
+    jersey: 'text-sc-ink3 dark:text-gray-400',
+    background: 'bg-sc-soft dark:bg-gray-900/50',
+    border: 'border-sc-line dark:border-gray-700',
     hover: 'hover:bg-gray-100 dark:hover:bg-gray-800/50'
   };
 };
@@ -125,7 +125,7 @@ const PlayerCard = ({ playerId, teamName, players }: { playerId: string; teamNam
   return (
     <div
       ref={drag}
-      className={`p-3 mb-2 rounded-lg flex items-center space-x-3 shadow-sm transition-opacity ${isDragging ? "opacity-50" : "opacity-100"}`}
+      className={`p-3 mb-2 rounded-lg flex items-center space-x-3 shadow-card transition-opacity ${isDragging ? "opacity-50" : "opacity-100"}`}
     >
       <Shirt className={`w-6 h-6 ${getTeamColorScheme(teamName).jersey}`} />
       <div className="flex-1">
@@ -162,10 +162,10 @@ const TeamColumn = ({
   }));
 
   return (
-    <div ref={drop} className="flex-1 p-3 sm:p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md">
-      <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">{team.name}</h3>
+    <div ref={drop} className="flex-1 p-3 sm:p-4 bg-white dark:bg-gray-800 rounded-3xl shadow-card">
+      <h3 className="text-base sm:text-lg font-semibold text-sc-ink dark:text-gray-200 mb-4">{team.name}</h3>
       {team.players.length === 0 ? (
-        <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">No players assigned</p>
+        <p className="text-xs sm:text-sm text-sc-ink3 dark:text-gray-400">No players assigned</p>
       ) : (
         team.players.map((playerId) => (
           <PlayerCard key={playerId} playerId={playerId} teamName={team.name} players={players} />
@@ -234,7 +234,7 @@ const TeamSelectionDialog = ({
         <DialogDescription>
           <p className="mb-4 text-xs sm:text-sm">Set the number of teams and players per team.</p>
           <div className="mb-4">
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">Number of Teams (2-10)</label>
+            <label className="block text-xs sm:text-sm font-medium text-sc-ink2 dark:text-gray-300">Number of Teams (2-10)</label>
             <Input
               type="number"
               value={numTeams}
@@ -245,7 +245,7 @@ const TeamSelectionDialog = ({
             />
           </div>
           <div className="mb-4">
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">Players per Team</label>
+            <label className="block text-xs sm:text-sm font-medium text-sc-ink2 dark:text-gray-300">Players per Team</label>
             <Input
               type="number"
               value={playersPerTeam}
@@ -257,7 +257,7 @@ const TeamSelectionDialog = ({
           </div>
           <Button
             onClick={generateTeams}
-            className="w-full bg-green-500 hover:bg-green-600 text-white text-xs sm:text-sm"
+            className="w-full bg-sc-green hover:brightness-95 text-sc-green-ink text-xs sm:text-sm font-bold"
             disabled={isMatchPast}
           >
             Generate Teams
@@ -313,7 +313,7 @@ const RulesTemplateDialog = ({ isOpen, onClose, matchId }: { isOpen: boolean; on
               <option key={rule} value={rule}>{rule}</option>
             ))}
           </select>
-          <Button onClick={applyRule} className="w-full bg-green-500 hover:bg-green-600 text-white text-xs sm:text-sm">
+          <Button onClick={applyRule} className="w-full bg-sc-green hover:brightness-95 text-sc-green-ink text-xs sm:text-sm font-bold">
             Apply Rule
           </Button>
         </DialogDescription>
@@ -466,20 +466,20 @@ const TeamMatchDetails = ({
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 sm:p-6 border border-gray-200 dark:border-gray-700">
-        <h2 className="text-lg sm:text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">{match.title}</h2>
+      <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-4 sm:p-6 dark:border-gray-700">
+        <h2 className="text-lg sm:text-xl font-semibold mb-4 text-sc-ink dark:text-gray-100">{match.title}</h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="flex items-center gap-3">
-            <Trophy size={16} className="text-green-500" />
-            <span className="text-xs sm:text-sm text-gray-900 dark:text-gray-100">Teams: {teams.length}</span>
+            <Trophy size={16} className="text-sc-green-dark" />
+            <span className="text-xs sm:text-sm text-sc-ink dark:text-gray-100">Teams: {teams.length}</span>
           </div>
           <div className="flex items-center gap-3">
-            <Clock size={16} className="text-green-500" />
-            <span className="text-xs sm:text-sm text-gray-900 dark:text-gray-100">{match.match_date} {formattedTime}</span>
+            <Clock size={16} className="text-sc-green-dark" />
+            <span className="text-xs sm:text-sm text-sc-ink dark:text-gray-100">{match.match_date} {formattedTime}</span>
           </div>
           <div className="flex items-center gap-3">
-            <MapPin size={16} className="text-green-500" />
-            <span className="text-xs sm:text-sm text-gray-900 dark:text-gray-100">{match.venue || "Venue TBD"}</span>
+            <MapPin size={16} className="text-sc-green-dark" />
+            <span className="text-xs sm:text-sm text-sc-ink dark:text-gray-100">{match.venue || "Venue TBD"}</span>
           </div>
         </div>
       </div>
@@ -494,7 +494,7 @@ const TeamMatchDetails = ({
           </Button>
           <Button
             onClick={() => setTeamSelectionOpen(true)}
-            className="bg-green-500 hover:bg-green-600 text-white text-xs sm:text-sm px-3 py-2 flex-1 sm:flex-none"
+            className="bg-sc-green hover:brightness-95 text-sc-green-ink text-xs sm:text-sm px-3 py-2 flex-1 sm:flex-none font-bold"
           >
             Regenerate Teams
           </Button>
@@ -550,7 +550,7 @@ const TeamMatchDetails = ({
 
       <div className="flex items-center gap-2 mb-4">
         <Switch checked={isPublic} onCheckedChange={togglePrivacy} />
-        <span className="text-xs sm:text-sm text-gray-900 dark:text-gray-100">Public Match</span>
+        <span className="text-xs sm:text-sm text-sc-ink dark:text-gray-100">Public Match</span>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">

@@ -5,6 +5,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import VenueForm from "@/components/venueManagement/VenueForm";
 import Navbar from "@/components/Navbar";
 
+import { BackButton } from "@/components/sc/ui";
 const VenueCreate = () => {
   const navigate = useNavigate();
 
@@ -13,21 +14,14 @@ const VenueCreate = () => {
   };
 
   return (
-    <div className="min-h-screen pb-20 bg-gray-100 dark:bg-gray-900">
-      <header className="sticky top-0 z-50 bg-gradient-to-r from-green-500 to-green-700 text-white shadow-lg">
-        <div className="p-4 flex items-center justify-between max-w-7xl mx-auto">
-          <Button 
-            variant="ghost" 
-            className="text-white hover:bg-green-600 transition-colors"
-            onClick={() => navigate(-1)}
-          >
-            <ArrowLeft size={18} className="mr-2" />
-            Back
-          </Button>
-          <h1 className="text-2xl font-bold">Create New Venue</h1>
-          <div className="w-10"></div> {/* Spacer for alignment */}
-        </div>
-      </header>
+    <div className="min-h-screen pb-20 bg-sc-bg dark:bg-gray-900">
+      <header className="px-5 pt-[max(env(safe-area-inset-top),1rem)] sticky top-0 z-20 bg-sc-bg/95 backdrop-blur-xl pb-3">
+          <div className="pt-3 flex items-center justify-between gap-3">
+            <BackButton />
+            <h1 className="m-0 flex-1 text-center text-[17px] font-extrabold truncate">List your venue</h1>
+            <div className="min-w-11 flex justify-end"></div>
+          </div>
+        </header>
 
       <div className="p-6 max-w-3xl mx-auto px-4">
         <VenueForm onSuccess={handleSuccess} />

@@ -98,7 +98,7 @@ const MatchHighlights = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-green-50">
-        <div className="text-xl font-semibold text-gray-800">Loading...</div>
+        <div className="text-xl font-semibold text-sc-ink">Loading...</div>
       </div>
     );
   }
@@ -106,7 +106,7 @@ const MatchHighlights = () => {
   if (!highlight) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-green-50">
-        <div className="text-xl font-semibold text-gray-800">
+        <div className="text-xl font-semibold text-sc-ink">
           No highlights available.
         </div>
       </div>
@@ -116,7 +116,7 @@ const MatchHighlights = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 pb-24">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-green-500 text-white shadow-md">
+      <header className="sticky top-0 z-50 bg-green-500 text-white shadow-card">
         <div className="p-4 flex items-center justify-between">
           <Button
             variant="ghost"
@@ -134,18 +134,18 @@ const MatchHighlights = () => {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Match Details Card */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6">
-          <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">
+        <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 mb-6">
+          <h2 className="text-xl font-semibold text-sc-ink dark:text-gray-200 mb-4">
             Match Details
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Match Title */}
             <div className="flex items-start space-x-3">
-              <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
+              <div className="p-2 bg-sc-green-bg dark:bg-green-900 rounded-lg">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 text-green-600 dark:text-green-300"
+                  className="h-5 w-5 text-sc-green-dark dark:text-green-300"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -159,10 +159,10 @@ const MatchHighlights = () => {
                 </svg>
               </div>
               <div>
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                <p className="text-xs font-medium text-sc-ink3 dark:text-gray-400">
                   TITLE
                 </p>
-                <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                <p className="text-sm font-medium text-sc-ink dark:text-gray-200">
                   {highlight.title}
                 </p>
               </div>
@@ -193,10 +193,10 @@ const MatchHighlights = () => {
                 </svg>
               </div>
               <div>
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                <p className="text-xs font-medium text-sc-ink3 dark:text-gray-400">
                   VENUE
                 </p>
-                <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                <p className="text-sm font-medium text-sc-ink dark:text-gray-200">
                   {highlight.venue || "Venue TBD"}
                 </p>
               </div>
@@ -221,10 +221,10 @@ const MatchHighlights = () => {
                 </svg>
               </div>
               <div>
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                <p className="text-xs font-medium text-sc-ink3 dark:text-gray-400">
                   DATE
                 </p>
-                <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                <p className="text-sm font-medium text-sc-ink dark:text-gray-200">
                   {highlight.match_date}
                 </p>
               </div>
@@ -249,10 +249,10 @@ const MatchHighlights = () => {
                 </svg>
               </div>
               <div>
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                <p className="text-xs font-medium text-sc-ink3 dark:text-gray-400">
                   TIME
                 </p>
-                <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                <p className="text-sm font-medium text-sc-ink dark:text-gray-200">
                   {highlight.match_time}
                 </p>
               </div>
@@ -262,21 +262,21 @@ const MatchHighlights = () => {
           {/* Score Display */}
           <div className="mt-6 flex items-center justify-center space-x-4">
             <div className="text-center">
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              <p className="text-sm font-medium text-sc-ink2 dark:text-gray-300">
                 {highlight.teams[0]?.name || "Team 1"}
               </p>
-              <p className="text-3xl font-bold text-gray-900 dark:text-white">
+              <p className="text-3xl font-bold text-sc-ink dark:text-white">
                 {highlight.teams[0]?.score || 0}
               </p>
             </div>
-            <div className="text-2xl font-bold text-gray-900 dark:text-white">
+            <div className="text-2xl font-bold text-sc-ink dark:text-white">
               -
             </div>
             <div className="text-center">
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              <p className="text-sm font-medium text-sc-ink2 dark:text-gray-300">
                 {highlight.teams[1]?.name || "Team 2"}
               </p>
-              <p className="text-3xl font-bold text-gray-900 dark:text-white">
+              <p className="text-3xl font-bold text-sc-ink dark:text-white">
                 {highlight.teams[1]?.score || 0}
               </p>
             </div>
@@ -285,18 +285,18 @@ const MatchHighlights = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Teams Section */}
-          <div className="md:col-span-2 bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-            <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">
+          <div className="md:col-span-2 bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6">
+            <h2 className="text-xl font-semibold text-sc-ink dark:text-gray-200 mb-4">
               Teams
             </h2>
             <div className="space-y-4">
               {highlight.teams.map((team, index) => (
                 <div
                   key={team.name}
-                  className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border-l-4 border-blue-500"
+                  className="bg-sc-soft dark:bg-gray-700 rounded-lg p-4 border-l-4 border-blue-500"
                 >
                   <div className="flex justify-between items-center mb-2">
-                    <h3 className="text-lg font-medium text-gray-800 dark:text-gray-200">
+                    <h3 className="text-lg font-medium text-sc-ink dark:text-gray-200">
                       {team.name}
                     </h3>
                     <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
@@ -305,21 +305,21 @@ const MatchHighlights = () => {
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>
-                      <p className="text-gray-600 dark:text-gray-400">
+                      <p className="text-sc-ink3 dark:text-gray-400">
                         Possession: {team.analytics.possession}%
                       </p>
-                      <p className="text-gray-600 dark:text-gray-400">
+                      <p className="text-sc-ink3 dark:text-gray-400">
                         Shots: {team.analytics.shots}
                       </p>
                     </div>
                     <div>
-                      <p className="text-gray-600 dark:text-gray-400">
+                      <p className="text-sc-ink3 dark:text-gray-400">
                         Fouls: {team.analytics.fouls}
                       </p>
-                      <p className="text-gray-600 dark:text-gray-400">
+                      <p className="text-sc-ink3 dark:text-gray-400">
                         Yellow Cards: {team.analytics.yellow_cards}
                       </p>
-                      <p className="text-gray-600 dark:text-gray-400">
+                      <p className="text-sc-ink3 dark:text-gray-400">
                         Red Cards: {team.analytics.red_cards}
                       </p>
                     </div>
@@ -330,11 +330,11 @@ const MatchHighlights = () => {
           </div>
 
           {/* Share Section */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 text-center">
-            <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">
+          <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 text-center">
+            <h2 className="text-xl font-semibold text-sc-ink dark:text-gray-200 mb-4">
               Spread the Word
             </h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            <p className="text-sm text-sc-ink3 dark:text-gray-400 mb-4">
               Enjoyed this match? Let your friends catch the action too — share
               the highlights!
             </p>
@@ -369,7 +369,7 @@ const MatchHighlights = () => {
                 rel="noopener noreferrer"
               >
                 <Button variant="outline" className="p-2">
-                  <MessageCircle size={20} className="text-green-500" />
+                  <MessageCircle size={20} className="text-sc-green-dark" />
                 </Button>
               </a>
               <Button
@@ -393,7 +393,7 @@ const MatchHighlights = () => {
                 }}
                 className="p-2"
               >
-                <Copy size={20} className="text-gray-600" />
+                <Copy size={20} className="text-sc-ink3" />
               </Button>
             </div>
           </div>

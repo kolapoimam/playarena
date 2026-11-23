@@ -51,20 +51,20 @@ const ManagerBookingView = ({
       <CollapsibleTrigger asChild>
         <Button
           variant="ghost"
-          className="w-full flex justify-between items-center text-lg font-semibold text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg p-2"
+          className="w-full flex justify-between items-center text-lg font-semibold text-sc-ink dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg p-2"
         >
           <span>Bookings</span>
           {isBookingsOpen ? (
-            <ChevronUp className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+            <ChevronUp className="w-5 h-5 text-sc-ink3 dark:text-gray-400" />
           ) : (
-            <ChevronDown className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+            <ChevronDown className="w-5 h-5 text-sc-ink3 dark:text-gray-400" />
           )}
         </Button>
       </CollapsibleTrigger>
       <CollapsibleContent>
         <div className="pt-4">
           <Tabs defaultValue="upcoming" className="w-full">
-            <TabsList className="w-full grid grid-cols-2 bg-gray-100 dark:bg-gray-700 rounded-t-lg sticky top-[64px] z-10">
+            <TabsList className="w-full grid grid-cols-2 bg-sc-soft dark:bg-gray-700 rounded-t-lg sticky top-[64px] z-10">
               <TabsTrigger
                 value="upcoming"
                 className="data-[state=active]:bg-green-500 data-[state=active]:text-white"
@@ -87,28 +87,28 @@ const ManagerBookingView = ({
                     return (
                       <div
                         key={booking.id}
-                        className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 w-full"
+                        className="p-4 bg-white dark:bg-gray-800 rounded-3xl shadow-card dark:border-gray-700 w-full"
                       >
-                        <h3 className="font-medium text-gray-900 dark:text-gray-100">{booking.title}</h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                        <h3 className="font-medium text-sc-ink dark:text-gray-100">{booking.title}</h3>
+                        <p className="text-sm text-sc-ink3 dark:text-gray-400">
                           Date: {format(new Date(booking.match_date), "MMM d, yyyy")}
                         </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                        <p className="text-sm text-sc-ink3 dark:text-gray-400">
                           Time: {format(new Date(`${booking.match_date}T${booking.start_time}`), "h:mm a")} -{" "}
                           {format(new Date(`${booking.match_date}T${booking.end_time}`), "h:mm a")}
                         </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                        <p className="text-sm text-sc-ink3 dark:text-gray-400">
                           Duration: {differenceInHours(
                             new Date(`${booking.match_date}T${booking.end_time}`),
                             new Date(`${booking.match_date}T${booking.start_time}`)
                           )} hours
                         </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
+                        <p className="text-sm text-sc-ink3 dark:text-gray-400 flex items-center">
                           Organizer: {booking.organizer_name}
                           {isVerified && <img src="/green-verified.png" alt="Verified" className="w-4 h-4 ml-1" />}
                         </p>
                         {userId && booking.is_recurring && (
-                          <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
+                          <p className="text-sm text-sc-ink3 dark:text-gray-400 flex items-center">
                             <Repeat className="w-4 h-4 mr-1" />
                             Repeats {booking.recurring_frequency} for {booking.recurring_occurrences} times
                           </p>
@@ -118,7 +118,7 @@ const ManagerBookingView = ({
                             <TooltipTrigger asChild>
                               <span>
                                 <Button
-                                  className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg"
+                                  className="px-4 py-2 bg-sc-green hover:brightness-95 text-sc-green-ink rounded-full font-bold"
                                   onClick={() => booking.slug && navigate(`/match/${booking.slug}`)}
                                   disabled={!booking.slug}
                                 >
@@ -138,7 +138,7 @@ const ManagerBookingView = ({
                   })}
                 </div>
               ) : (
-                <p className="text-sm text-gray-600 dark:text-gray-400 p-4">
+                <p className="text-sm text-sc-ink3 dark:text-gray-400 p-4">
                   No upcoming bookings found.
                 </p>
               )}
@@ -152,28 +152,28 @@ const ManagerBookingView = ({
                     return (
                       <div
                         key={booking.id}
-                        className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 w-full"
+                        className="p-4 bg-white dark:bg-gray-800 rounded-3xl shadow-card dark:border-gray-700 w-full"
                       >
-                        <h3 className="font-medium text-gray-900 dark:text-gray-100">{booking.title}</h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                        <h3 className="font-medium text-sc-ink dark:text-gray-100">{booking.title}</h3>
+                        <p className="text-sm text-sc-ink3 dark:text-gray-400">
                           Date: {format(new Date(booking.match_date), "MMM d, yyyy")}
                         </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                        <p className="text-sm text-sc-ink3 dark:text-gray-400">
                           Time: {format(new Date(`${booking.match_date}T${booking.start_time}`), "h:mm a")} -{" "}
                           {format(new Date(`${booking.match_date}T${booking.end_time}`), "h:mm a")}
                         </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                        <p className="text-sm text-sc-ink3 dark:text-gray-400">
                           Duration: {differenceInHours(
                             new Date(`${booking.match_date}T${booking.end_time}`),
                             new Date(`${booking.match_date}T${booking.start_time}`)
                           )} hours
                         </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
+                        <p className="text-sm text-sc-ink3 dark:text-gray-400 flex items-center">
                           Organizer: {booking.organizer_name}
                           {isVerified && <img src="/green-verified.png" alt="Verified" className="w-4 h-4 ml-1" />}
                         </p>
                         {userId && booking.is_recurring && (
-                          <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
+                          <p className="text-sm text-sc-ink3 dark:text-gray-400 flex items-center">
                             <Repeat className="w-4 h-4 mr-1" />
                             Repeats {booking.recurring_frequency} for {booking.recurring_occurrences} times
                           </p>
@@ -183,7 +183,7 @@ const ManagerBookingView = ({
                             <TooltipTrigger asChild>
                               <span>
                                 <Button
-                                  className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg"
+                                  className="px-4 py-2 bg-sc-green hover:brightness-95 text-sc-green-ink rounded-full font-bold"
                                   onClick={() => booking.slug && navigate(`/match/${booking.slug}`)}
                                   disabled={!booking.slug}
                                 >
@@ -203,7 +203,7 @@ const ManagerBookingView = ({
                   })}
                 </div>
               ) : (
-                <p className="text-sm text-gray-600 dark:text-gray-400 p-4">
+                <p className="text-sm text-sc-ink3 dark:text-gray-400 p-4">
                   No past bookings found.
                 </p>
               )}

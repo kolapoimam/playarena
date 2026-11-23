@@ -110,19 +110,19 @@ const OrganizerDetails = ({ userId }: { userId: string | null }) => {
 
   return (
     <div>
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
-        <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Organizer Details</h2>
+      <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 space-y-6">
+        <h2 className="text-xl font-semibold text-sc-ink dark:text-gray-200">Organizer Details</h2>
 
         <FormField
           control={form.control}
           name="organizer_name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Your Name</FormLabel>
+              <FormLabel className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Your Name</FormLabel>
               <FormControl>
                 <Input
                   placeholder={userId ? "" : "Enter your name"}
-                  className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                  className="text-base border-sc-line dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                   {...field}
                   readOnly={!!userId}
                 />
@@ -137,11 +137,11 @@ const OrganizerDetails = ({ userId }: { userId: string | null }) => {
           name="organizer_phone"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Phone Number (Optional)</FormLabel>
+              <FormLabel className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Phone Number (Optional)</FormLabel>
               <FormControl>
                 <Input
                   placeholder="Enter your 11-digit phone number"
-                  className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                  className="text-base border-sc-line dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                   value={organizerPhone}
                   onChange={(e) => {
                     const value = e.target.value.replace(/\D/g, "").slice(0, 11);
@@ -162,10 +162,10 @@ const OrganizerDetails = ({ userId }: { userId: string | null }) => {
           render={({ field }) => (
             <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
               <div className="space-y-0.5">
-                <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                <FormLabel className="text-sm font-medium text-sc-ink2 dark:text-gray-300">
                   Disclose Phone Number
                 </FormLabel>
-                <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                <FormDescription className="text-sm text-sc-ink3 dark:text-gray-400">
                   Allow players to see your phone number
                 </FormDescription>
               </div>
@@ -180,8 +180,8 @@ const OrganizerDetails = ({ userId }: { userId: string | null }) => {
         />
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6 mt-6">
-        <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Match Privacy</h2>
+      <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 space-y-6 mt-6">
+        <h2 className="text-xl font-semibold text-sc-ink dark:text-gray-200">Match Privacy</h2>
 
         <FormField
           control={form.control}
@@ -189,10 +189,10 @@ const OrganizerDetails = ({ userId }: { userId: string | null }) => {
           render={({ field }) => (
             <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
               <div className="space-y-0.5">
-                <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                <FormLabel className="text-sm font-medium text-sc-ink2 dark:text-gray-300">
                   Private Match
                 </FormLabel>
-                <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                <FormDescription className="text-sm text-sc-ink3 dark:text-gray-400">
                   Only players with the access password can join
                 </FormDescription>
               </div>
@@ -212,11 +212,11 @@ const OrganizerDetails = ({ userId }: { userId: string | null }) => {
             name="access_password"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Access Password</FormLabel>
+                <FormLabel className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Access Password</FormLabel>
                 <div className="flex items-center gap-2">
                   <FormControl>
                     <Input
-                      className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                      className="text-base border-sc-line dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                       value={field.value || ""}
                       readOnly
                     />
@@ -231,7 +231,7 @@ const OrganizerDetails = ({ userId }: { userId: string | null }) => {
                     Copy
                   </Button>
                 </div>
-                <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                <FormDescription className="text-sm text-sc-ink3 dark:text-gray-400">
                   Share this password with players to allow them to join
                 </FormDescription>
                 <FormMessage />
@@ -241,8 +241,8 @@ const OrganizerDetails = ({ userId }: { userId: string | null }) => {
         )}
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6 mt-6">
-        <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Payment Details</h2>
+      <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 space-y-6 mt-6">
+        <h2 className="text-xl font-semibold text-sc-ink dark:text-gray-200">Payment Details</h2>
 
         <FormField
           control={form.control}
@@ -250,10 +250,10 @@ const OrganizerDetails = ({ userId }: { userId: string | null }) => {
           render={({ field }) => (
             <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
               <div className="space-y-0.5">
-                <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                <FormLabel className="text-sm font-medium text-sc-ink2 dark:text-gray-300">
                   Paid Match
                 </FormLabel>
-                <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                <FormDescription className="text-sm text-sc-ink3 dark:text-gray-400">
                   Players will need to pay to join this match
                 </FormDescription>
               </div>
@@ -273,12 +273,12 @@ const OrganizerDetails = ({ userId }: { userId: string | null }) => {
             name="price"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Price per Player (₦)</FormLabel>
+                <FormLabel className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Price per Player (₦)</FormLabel>
                 <FormControl>
                   <Input
                     type="number"
                     min={0}
-                    className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                    className="text-base border-sc-line dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                     {...field}
                     value={field.value || ""}
                     onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : null)}
@@ -296,10 +296,10 @@ const OrganizerDetails = ({ userId }: { userId: string | null }) => {
           render={({ field }) => (
             <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
               <div className="space-y-0.5">
-                <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                <FormLabel className="text-sm font-medium text-sc-ink2 dark:text-gray-300">
                   Specify Number of Players
                 </FormLabel>
-                <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                <FormDescription className="text-sm text-sc-ink3 dark:text-gray-400">
                   Allow players to specify how many additional players they are bringing
                 </FormDescription>
               </div>
@@ -314,15 +314,15 @@ const OrganizerDetails = ({ userId }: { userId: string | null }) => {
         />
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6 mt-6">
-        <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Ticket Sales</h2>
+      <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 space-y-6 mt-6">
+        <h2 className="text-xl font-semibold text-sc-ink dark:text-gray-200">Ticket Sales</h2>
 
         <div className="flex flex-row items-center justify-between rounded-lg border p-4">
           <div className="space-y-0.5">
-            <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            <FormLabel className="text-sm font-medium text-sc-ink2 dark:text-gray-300">
               Sell Tickets to Fans
             </FormLabel>
-            <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+            <FormDescription className="text-sm text-sc-ink3 dark:text-gray-400">
               Allow fans to purchase tickets to watch the match
             </FormDescription>
           </div>
@@ -337,7 +337,7 @@ const OrganizerDetails = ({ userId }: { userId: string | null }) => {
 
         {sellTickets && (
           <div>
-            <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            <FormLabel className="text-sm font-medium text-sc-ink2 dark:text-gray-300">
               Ticket Price (₦)
             </FormLabel>
             <Input
@@ -356,7 +356,7 @@ const OrganizerDetails = ({ userId }: { userId: string | null }) => {
                 }
                 setTicketPrice(value);
               }}
-              className="text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+              className="text-base border-sc-line dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
               placeholder="Enter ticket price (minimum ₦200)"
             />
           </div>
@@ -366,7 +366,7 @@ const OrganizerDetails = ({ userId }: { userId: string | null }) => {
       <div className="flex gap-4 mt-6">
         <Button
           type="button"
-          className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-3 text-lg shadow-md transition-colors"
+          className="w-full bg-sc-green hover:brightness-95 text-sc-green-ink font-bold rounded-full px-4 py-3 text-lg shadow-card transition-colors"
           onClick={form.handleSubmit(onSubmit)}
         >
           Create Match

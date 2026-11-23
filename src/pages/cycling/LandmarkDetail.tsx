@@ -148,28 +148,28 @@ const LandmarkDetail = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-[50vh] bg-gray-50 dark:bg-gray-900">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
+      <div className="flex justify-center items-center min-h-[50vh] bg-sc-soft dark:bg-gray-900">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sc-green"></div>
       </div>
     );
   }
 
   if (error || !landmark) {
     return (
-      <div className="p-6 bg-gray-50 dark:bg-gray-900 min-h-screen">
+      <div className="p-6 bg-sc-bg dark:bg-gray-900 min-h-screen">
         <Button
           variant="ghost"
           onClick={() => navigate(-1)}
-          className="mb-4 text-gray-700 dark:text-gray-300"
+          className="mb-4 text-sc-ink2 dark:text-gray-300"
         >
           <ArrowLeft size={18} className="mr-2" />
           Back
         </Button>
         <div className="text-center py-8">
-          <h2 className="text-xl font-semibold mb-2 text-gray-900 dark:text-gray-100">
+          <h2 className="text-xl font-semibold mb-2 text-sc-ink dark:text-gray-100">
             {error ? "Error Loading Landmark" : "Landmark Not Found"}
           </h2>
-          <p className="text-gray-500 dark:text-gray-400">
+          <p className="text-sc-ink3 dark:text-gray-400">
             {error || "The landmark you're looking for doesn't exist or has been removed."}
           </p>
         </div>
@@ -188,9 +188,9 @@ const LandmarkDetail = () => {
         image={undefined}
         children={null}
       />
-      <div className="min-h-screen pb-20 bg-gray-50 dark:bg-gray-900">
+      <div className="min-h-screen pb-20 bg-sc-bg dark:bg-gray-900">
         <style>{quillStyles}</style>
-        <header className="sticky top-0 z-50 bg-green-500 text-white shadow-md">
+        <header className="sticky top-0 z-50 bg-green-500 text-white shadow-card">
           <div className="p-4 flex items-center justify-between">
             <Button
               variant="ghost"
@@ -206,7 +206,7 @@ const LandmarkDetail = () => {
         </header>
 
         <div className="p-6 max-w-3xl mx-auto">
-          <div className="rounded-xl overflow-hidden mb-6 h-64 shadow-md">
+          <div className="rounded-xl overflow-hidden mb-6 h-64 shadow-card">
             <img
               src={placeholderImage}
               alt={landmark.name}
@@ -214,27 +214,27 @@ const LandmarkDetail = () => {
             />
           </div>
 
-          <h1 className="text-3xl font-bold mb-2 text-gray-900 dark:text-gray-100">{landmark.name}</h1>
-          <div className="flex items-center text-gray-600 dark:text-gray-400 mb-4">
+          <h1 className="text-3xl font-bold mb-2 text-sc-ink dark:text-gray-100">{landmark.name}</h1>
+          <div className="flex items-center text-sc-ink3 dark:text-gray-400 mb-4">
             <MapPin size={18} className="mr-2" />
             <span>{landmark.state}</span>
           </div>
 
           <div className="space-y-6">
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-200 dark:border-gray-700">
-              <h2 className="font-semibold text-lg mb-4 text-gray-900 dark:text-gray-100">Landmark Details</h2>
+            <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-card dark:border-gray-700">
+              <h2 className="font-semibold text-lg mb-4 text-sc-ink dark:text-gray-100">Landmark Details</h2>
 
               <div className="space-y-4">
                 {landmark.description && (
                   <div className="flex items-start">
-                    <MapPin size={18} className="mr-2 text-gray-700 dark:text-gray-300 mt-1" />
+                    <MapPin size={18} className="mr-2 text-sc-ink2 dark:text-gray-300 mt-1" />
                     <div>
-                      <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Description</h3>
+                      <h3 className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Description</h3>
                       <ReactQuill
                         value={landmark.description || "<p>No description available.</p>"}
                         readOnly={true}
                         modules={quillModules}
-                        className="w-full border-none bg-transparent p-0 text-gray-600 dark:text-gray-400"
+                        className="w-full border-none bg-transparent p-0 text-sc-ink3 dark:text-gray-400"
                       />
                     </div>
                   </div>
@@ -246,7 +246,7 @@ const LandmarkDetail = () => {
                       href={landmark.map_link}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center text-green-500 hover:text-green-600 text-sm font-medium"
+                      className="inline-flex items-center text-sc-green-dark hover:text-green-600 text-sm font-medium"
                     >
                       <ExternalLink size={16} className="mr-2" />
                       View on Google Maps
@@ -256,42 +256,42 @@ const LandmarkDetail = () => {
               </div>
             </div>
 
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-200 dark:border-gray-700">
-              <h2 className="font-semibold text-lg mb-4 text-gray-900 dark:text-gray-100">Recent Events</h2>
+            <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-card dark:border-gray-700">
+              <h2 className="font-semibold text-lg mb-4 text-sc-ink dark:text-gray-100">Recent Events</h2>
 
               {eventsLoading ? (
                 <div className="flex justify-center py-4">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-500"></div>
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-sc-green"></div>
                 </div>
               ) : events.length > 0 ? (
                 <div className="space-y-4">
                   {events.map((event) => (
                     <div
                       key={event.id_uuid}
-                      className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer transition-colors"
+                      className="bg-sc-soft dark:bg-gray-700 rounded-lg p-4 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer transition-colors"
                       onClick={() => navigate(`/cycling/${event.slug}`)}
                     >
-                      <h3 className="font-medium text-gray-900 dark:text-gray-100">{event.title}</h3>
-                      <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400 mt-1">
+                      <h3 className="font-medium text-sc-ink dark:text-gray-100">{event.title}</h3>
+                      <div className="flex items-center gap-3 text-sm text-sc-ink3 dark:text-gray-400 mt-1">
                         <Calendar size={16} />
                         <span>{formatDate(event.event_date)}</span>
                         <Clock size={16} />
                         <span>{formatTime(event.start_time)}</span>
                       </div>
-                      <div className="mt-1 text-sm font-medium text-green-600 dark:text-green-400">
+                      <div className="mt-1 text-sm font-medium text-sc-green-dark dark:text-green-400">
                         {event.is_free ? "Free" : `₦${event.price?.toFixed(2)}`}
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-gray-600 dark:text-gray-400">No recent events found for this landmark.</p>
+                <p className="text-sm text-sc-ink3 dark:text-gray-400">No recent events found for this landmark.</p>
               )}
             </div>
 
             <div className="mt-6">
               <Button
-                className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2"
+                className="w-full bg-sc-green hover:brightness-95 text-sc-green-ink font-bold rounded-full px-4 py-2"
                 onClick={() => navigate(`/host-cycling?landmark=${landmark.slug}`)}
               >
                 <Bike size={16} className="mr-2" />

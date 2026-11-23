@@ -10,6 +10,7 @@ import Performance from "@/components/profile/Performance";
 import Navbar from "@/components/Navbar";
 import { ArrowLeft } from "lucide-react";
 
+import { BackButton } from "@/components/sc/ui";
 type Profile = {
   id: string;
 };
@@ -52,35 +53,26 @@ const ViewProfile = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
+      <div className="min-h-screen flex items-center justify-center bg-sc-bg dark:bg-gray-900">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sc-green"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-100 dark:bg-gray-900">
-      <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg">
-        <div className="flex items-center justify-between max-w-7xl mx-auto">
-          <Button
-            variant="ghost"
-            onClick={() => navigate("/profile")}
-            className="text-white hover:bg-green-600"
-          >
-            <ArrowLeft className="w-5 h-5 mr-2" />
-            Back
-          </Button>
-          <div className="text-center">
-            <h1 className="text-2xl font-bold">View Profile</h1>
+    <div className="min-h-screen flex flex-col bg-sc-bg dark:bg-gray-900">
+      <header className="px-5 pt-[max(env(safe-area-inset-top),1rem)]">
+          <div className="pt-3 flex items-center justify-between gap-3">
+            <BackButton to="/profile" />
+            <h1 className="m-0 flex-1 text-center text-[17px] font-extrabold truncate">Edit profile</h1>
+            <div className="min-w-11 flex justify-end"></div>
           </div>
-          <div className="w-10"></div>
-        </div>
-      </header>
+        </header>
 
       <div className="flex-grow overflow-y-auto">
         <div className="container mx-auto px-4 py-6">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2 bg-gray-100 dark:bg-gray-700 rounded-t-lg">
+            <TabsList className="grid w-full grid-cols-2 bg-sc-soft dark:bg-gray-700 rounded-t-lg">
               <TabsTrigger
                 value="statistics"
                 className="data-[state=active]:bg-green-500 data-[state=active]:text-white"
@@ -96,7 +88,7 @@ const ViewProfile = () => {
             </TabsList>
             <TabsContent value="statistics">
 <div className="my-4 flex justify-center">
-  <div className="relative inline-flex bg-gray-100 dark:bg-gray-700 rounded-full p-1 shadow-inner">
+  <div className="relative inline-flex bg-sc-soft dark:bg-gray-700 rounded-full p-1 shadow-inner">
     <button
       onClick={() => setDashboardType("match")}
       className={`px-4 py-2 text-sm font-medium rounded-full transition-all duration-300 ease-in-out relative z-10 min-w-[80px] ${

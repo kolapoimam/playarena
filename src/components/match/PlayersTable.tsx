@@ -36,7 +36,7 @@ const getStatusStyles = (status: string) => {
     case "registered":
       return "bg-yellow-500 text-white border-yellow-600";
     case "checked in":
-      return "bg-green-500 text-white border-green-600";
+      return "bg-green-500 text-white border-sc-green";
     case "absent":
       return "bg-red-500 text-white border-red-600";
     default:
@@ -64,7 +64,7 @@ const PlayersTable: React.FC<PlayersTableProps> = ({ match }) => {
   const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
 
   return (
-    <div className="border rounded-lg p-4 bg-card shadow-md">
+    <div className="border rounded-lg p-4 bg-card shadow-card">
       <h2 className="font-semibold mb-3">Players ({totalPlayerSlots}/{match.total_slots})</h2>
       
       {match.players && match.players.length > 0 ? (
@@ -94,14 +94,14 @@ const PlayersTable: React.FC<PlayersTableProps> = ({ match }) => {
       <div className="mt-6">
         {isEnded ? (
           <Button 
-            className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
+            className="w-full bg-sc-green hover:brightness-95 text-sc-green-ink font-bold"
             onClick={() => navigate(`/feedback?matchSlug=${match.slug}`)}
           >
             Give Feedback
           </Button>
         ) : isFull ? (
           <Button 
-            className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
+            className="w-full bg-sc-green hover:brightness-95 text-sc-green-ink font-bold"
             variant="outline"
             disabled
           >
@@ -109,7 +109,7 @@ const PlayersTable: React.FC<PlayersTableProps> = ({ match }) => {
           </Button>
         ) : (
           <Button 
-            className="w-full bg-playarena-500 hover:bg-playarena-600 text-white"
+            className="w-full bg-sc-green hover:brightness-95 text-sc-green-ink font-bold"
             onClick={() => navigate(`/join/${match.slug}`)}
           >
             Join This Match

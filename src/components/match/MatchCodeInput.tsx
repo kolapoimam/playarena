@@ -65,8 +65,8 @@ const MatchCodeInput = ({
   }, [userId, toast, setRecentSuperCodes]);
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6 border border-gray-200 dark:border-gray-700">
-      <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Match Super Code</h2>
+    <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 mb-6 dark:border-gray-700">
+      <h2 className="text-xl font-semibold mb-4 text-sc-ink dark:text-gray-100">Match Super Code</h2>
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="flex-1 relative">
           {userId && recentSuperCodes.length > 0 ? (
@@ -128,7 +128,7 @@ const MatchCodeInput = ({
           )}
         </div>
         <Button
-          className="bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 w-full sm:w-auto"
+          className="bg-sc-green hover:brightness-95 text-sc-green-ink font-bold rounded-full px-4 py-2 w-full sm:w-auto"
           onClick={fetchMatch}
           disabled={loading}
         >
