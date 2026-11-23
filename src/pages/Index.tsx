@@ -9,12 +9,9 @@ import {
   Heart,
   LayoutGrid,
   MapPin,
-  Plus,
-  Route,
   ShieldCheck,
   Store,
   Trophy,
-  Users,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { useToast } from "@/hooks/use-toast";
@@ -301,12 +298,6 @@ const Index = () => {
   const ridesToShow = cyclingEvents.length > 0 ? cyclingEvents : (recentScoped.length > 0 ? recentScoped : recentRides).slice(0, 3);
   const venuesShown = scoped ? popularVenues.filter((v) => sameState(v.state, userState)) : popularVenues;
 
-  const quickActions = [
-    { label: "Organise", icon: Plus, sport: "football" as const, onClick: handleOrganizeClick },
-    { label: "Manage", icon: Users, sport: "guide" as const, onClick: () => navigate("/confirm-checkin") },
-    { label: "Host ride", icon: Route, sport: "cycling" as const, onClick: () => navigate("/host-cycling") },
-    { label: "List venue", icon: Store, sport: "venue" as const, onClick: () => navigate("/venue-create") },
-  ];
 
   const SportTile = ({
     label,
@@ -367,22 +358,6 @@ const Index = () => {
         </header>
 
         <div className="flex flex-col gap-[22px] pt-5">
-          <div className="flex gap-2 px-5">
-            {quickActions.map((a) => (
-              <button
-                key={a.label}
-                type="button"
-                onClick={a.onClick}
-                className="flex-1 flex flex-col items-center gap-2 text-xs font-bold text-sc-ink"
-              >
-                <span className="w-[58px] h-[58px] rounded-[20px] bg-white flex items-center justify-center shadow-card active:scale-95 transition-transform" style={{ color: SPORT[a.sport].fg }}>
-                  <a.icon size={24} />
-                </span>
-                {a.label}
-              </button>
-            ))}
-          </div>
-
           <div className="grid grid-cols-2 gap-3 px-5">
             <SportTile label="Play" sub="Football matches" icon={Trophy} sport="football" to="/matches" big />
             <div className="flex flex-col gap-3">
