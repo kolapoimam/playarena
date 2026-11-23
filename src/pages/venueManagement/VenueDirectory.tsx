@@ -250,7 +250,7 @@ const VenueDirectory = () => {
         image={undefined}
         children={<meta name="keywords" content={META_KEYWORDS} />}
       />
-      <div className="min-h-screen pb-24 bg-sc-bg dark:bg-gray-900">
+      <div className="min-h-screen pb-32 bg-sc-bg dark:bg-gray-900">
         <header className="px-5 pt-[max(env(safe-area-inset-top),1rem)] flex flex-col gap-3.5">
           <div className="pt-3 flex items-center justify-between min-h-11">
             <BackButton />

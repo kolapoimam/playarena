@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Calendar, Clock, MapPin, Users, ChevronLeft, ChevronRight, Filter, Lock, ArrowLeft } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, ChevronLeft, ChevronRight, Filter, Lock, ArrowLeft, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -26,7 +26,7 @@ import TeamMatchDetails from "@/components/match/TeamMatchDetails";
 import UserMatches from "@/components/match/UserMatches";
 import { Seo } from "@/components/Seo";
 
-import { BackButton } from "@/components/sc/ui";
+import { Avatar, BackButton, DateBox, Meta, Pill, Progress, formatNaira, initialsOf, sportFor } from "@/components/sc/ui";
 // Match type definition based on the existing Supabase schema
 interface Match {
   id: string;
@@ -356,21 +356,18 @@ const Matches = () => {
         image={undefined}
         children={<meta name="keywords" content={META_KEYWORDS} />}
       />
-      <div className="min-h-screen pb-24 bg-sc-bg dark:bg-gray-900">
+      <div className="min-h-screen pb-32 bg-sc-bg dark:bg-gray-900">
         <header className="px-5 pt-[max(env(safe-area-inset-top),1rem)] flex flex-col gap-3.5">
           <div className="pt-3 flex items-center justify-between min-h-11">
             <BackButton />
-            <div className="flex gap-2"><Button
-              className="h-11 px-4 rounded-full bg-sc-ink text-white font-bold text-sm"
-              onClick={() => navigate("/organize")}
-            >
-              Organize Match
+            <div className="flex gap-2"><Button className="h-11 px-4 rounded-full bg-sc-green text-sc-green-ink font-bold text-sm" onClick={() => navigate("/organize")}>
+              <Plus size={18} /> Organise
             </Button></div>
           </div>
           <h1 className="m-0 text-[32px] leading-[38px] font-extrabold tracking-[-0.03em]">Football matches</h1>
         </header>
 
-        <div className="mt-6 px-4">
+        <div className="mt-4 px-5">
           <Collapsible
             open={isFilterOpen}
             onOpenChange={setIsFilterOpen}
@@ -528,7 +525,7 @@ const Matches = () => {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sc-green"></div>
           </div>
         ) : matches.length > 0 ? (
-          <div className="px-4 space-y-4">
+          <div className="px-5 flex flex-col gap-3.5">
             {matches.map((match) => {
               const { statusLabel, statusClass } = getMatchStatus(match);
               const organizer = organizers.find(org => org.id === match.organizer_id);
@@ -536,95 +533,60 @@ const Matches = () => {
               const isAccessible = !match.is_private || hasAccess(match.slug);
               
               return (
-                <div 
-                  key={match.id} 
-                  className="rounded-3xl overflow-hidden shadow-card bg-white dark:bg-gray-800"
-                >
-                  <div className="p-4">
-                    <div className="flex justify-between items-start">
-                      <h3 className="font-bold text-lg text-sc-ink dark:text-gray-200">
-                        {match.title}{" "}
-                        {match.is_private && (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Lock size={16} className="inline text-sc-ink3 dark:text-gray-400" />
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>This is a private match</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        )}
-                      </h3>
-                      <div className="flex flex-col gap-1">
-                        <Badge className={statusClass}>{statusLabel}</Badge>
-                        <Badge
-                          className={
-                            match.is_paid
-                              ? "bg-red-100 text-red-700"
-                              : "bg-sc-green-bg text-sc-green-dark"
-                          }
-                        >
-                          {match.is_paid ? `₦${match.price?.toFixed(2)}` : "FREE"}
-                        </Badge>
-                      </div>
+                <div key={match.id} className="bg-white rounded-3xl p-[18px] flex flex-col gap-3.5">
+                  <div className="flex gap-3.5 items-center">
+                    <DateBox date={match.match_date} />
+                    <div className="flex-1 min-w-0 flex flex-col gap-1">
+                      <span className="text-lg font-extrabold tracking-[-0.02em] truncate flex items-center gap-1.5">
+                        {match.title}
+                        {match.is_private && <Lock size={15} className="text-sc-ink3 shrink-0" aria-label="Private match" />}
+                      </span>
+                      <span className="text-[13px] text-sc-ink3">
+                        {match.status === "today" ? "Today" : match.status === "next_day" ? "Tomorrow" : formatDate(match.match_date)} · {formatTime(match.match_time)}
+                      </span>
                     </div>
-                    
-                    <div className="mt-2 space-y-2 text-sm text-sc-ink3 dark:text-gray-300">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-sc-ink3 dark:text-gray-300" />
-                        <span className="text-sm font-medium text-sc-ink dark:text-gray-200">
-                          {match.status === "today" ? "Today" : match.status === "next_day" ? "Tomorrow" : formatDate(match.match_date)}
-                        </span>
-                      </div>
-                      
-                      <div className="flex items-center gap-2">
-                        <Clock size={16} className="text-sc-ink3 dark:text-gray-300" />
-                        <span>{formatTime(match.match_time)}</span>
-                      </div>
-                      
-                      {match.venue && (
-                        <div className="flex items-center gap-2">
-                          <MapPin size={16} className="text-sc-ink3 dark:text-gray-300" />
-                          <a
-                            href={`/venue/${match.venue.slug}`}
-                            className="text-primary hover:underline"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              navigate(`/venue/${match.venue.slug}`);
-                            }}
-                          >
-                            {match.venue.name}, {match.venue.city}
-                          </a>
-                        </div>
-                      )}
-                      
-                      <div className="flex items-center gap-2">
-                        <Users size={16} className="text-sc-ink3 dark:text-gray-300" />
-                        <span>
-                          {match.players?.length || 0}/{match.total_slots} spots filled
-                        </span>
-                      </div>
+                  </div>
+                  {match.venue && (
+                    <button type="button" onClick={() => navigate(`/venue/${match.venue.slug}`)} className="text-left">
+                      <Meta icon={MapPin}>
+                        {match.venue.name}, {match.venue.city}
+                      </Meta>
+                    </button>
+                  )}
+                  <div className="flex gap-1.5 flex-wrap">
+                    <Pill sport={statusLabel === "Live" ? "red" : statusLabel === "Today" ? "football" : statusLabel === "Tomorrow" ? "tennis" : statusLabel === "Passed" ? "gray" : "guide"}>{statusLabel}</Pill>
+                    <Pill sport={match.is_paid ? "tennis" : "football"}>{match.is_paid ? formatNaira(match.price) : "Free"}</Pill>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <div className="flex justify-between text-[13px]">
+                      <span className="text-sc-ink3 font-semibold">
+                        {Math.max(0, match.total_slots - (match.players?.length || 0))} spots left
+                      </span>
+                      <span className="font-extrabold">
+                        {match.players?.length || 0}/{match.total_slots}
+                      </span>
                     </div>
-                    
-                    <div className="mt-4 flex justify-between items-center">
-                      <div>
-                        <span className="text-xs text-muted-foreground">Organized by:</span>
-                        <p className="font-medium text-sc-ink dark:text-gray-200 flex items-center">
+                    <Progress value={match.total_slots ? ((match.players?.length || 0) * 100) / match.total_slots : 0} />
+                  </div>
+                  <div className="h-px bg-sc-line" />
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <Avatar initials={initialsOf(match.organizer_name)} sport={sportFor(match.organizer_name)} size={34} />
+                      <span className="flex flex-col min-w-0">
+                        <span className="text-[11px] text-sc-ink3 font-semibold">Organised by</span>
+                        <span className="text-sm font-bold flex items-center gap-1 truncate">
                           {match.organizer_name}
-                          {isVerified && <img src="/green-verified.png" alt="Verified" className="w-4 h-4 ml-1" />}
-                        </p>
-                      </div>
-                      
-                      <Button 
-                        variant="outline"
-                        size="sm"
-                        onClick={() => navigate(`/match/${match.slug}`)}
-                      >
-                        View Details
-                      </Button>
+                          {isVerified && <img src="/green-verified.png" alt="Verified" className="w-4 h-4" />}
+                        </span>
+                      </span>
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/match/${match.slug}`)}
+                      className="h-10 px-4 rounded-full bg-sc-ink text-white text-sm font-bold flex items-center gap-1 shrink-0"
+                    >
+                      View <ChevronRight size={16} />
+                    </button>
                   </div>
                 </div>
               );

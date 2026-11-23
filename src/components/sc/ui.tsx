@@ -163,7 +163,7 @@ const AVATAR_SPORTS: Sport[] = ["football", "guide", "pink", "cycling", "venue",
 export const sportFor = (seed?: string | null): Sport => {
   const s = seed || "";
   let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  for (let i = 0; i < s.length; i++) h += s.charCodeAt(i);
   return AVATAR_SPORTS[h % AVATAR_SPORTS.length];
 };
 

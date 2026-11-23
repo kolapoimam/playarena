@@ -478,7 +478,7 @@ const JoinCycling = () => {
         image={undefined}
         children={<meta name="keywords" content={META_KEYWORDS} />}
       />
-      <div className="min-h-screen pb-24">
+      <div className="min-h-screen pb-32">
         <header className="px-5 pt-[max(env(safe-area-inset-top),1rem)]">
           <div className="pt-3 flex items-center justify-between gap-3">
             <BackButton />
