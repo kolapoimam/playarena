@@ -22,7 +22,7 @@ import Navbar from "@/components/Navbar";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Seo } from "@/components/Seo";
-import { Avatar, Bubble, FunEmpty, IconButton, Meta, Pill, Screen, Section, SPORT, formatNaira, initialsOf } from "@/components/sc/ui";
+import { Avatar, Bubble, FunEmpty, IconButton, Meta, Pill, Screen, Section, SPORT, formatNaira, initialsOf, Cover } from "@/components/sc/ui";
 import { LocationChip, useUserState } from "@/components/sc/location";
 import { sameState } from "@/lib/location";
 import { HomeRailSkeleton } from "@/components/sc/skeletons";
@@ -413,11 +413,7 @@ const Index = () => {
                       className="snap-start shrink-0 w-[250px] rounded-[26px] bg-white p-4 flex flex-col gap-3 text-left"
                     >
                       <div className="relative h-24 rounded-[18px] overflow-hidden flex items-end p-3" style={{ background: SPORT.football.bg, color: SPORT.football.fg }}>
-                        {m.venue?.image_urls?.[0] ? (
-                          <img src={m.venue.image_urls[0]} alt="" className="absolute inset-0 w-full h-full object-cover" />
-                        ) : (
-                          <Trophy aria-hidden="true" className="absolute opacity-35" size={110} strokeWidth={1.4} style={{ right: -14, top: -14 }} />
-                        )}
+                        <Cover src={m.venue?.image_urls?.[0]} kind="football" />
                         <span className="relative h-7 px-2.5 rounded-full bg-white text-sc-ink text-[13px] font-extrabold flex items-center">
                           {m.is_paid ? formatNaira(m.price) : "Free"}
                         </span>
@@ -459,11 +455,7 @@ const Index = () => {
                         className="snap-start shrink-0 w-[200px] flex flex-col gap-2.5 text-left"
                       >
                         <div className="relative h-[130px] rounded-[22px] overflow-hidden flex items-center justify-center" style={{ background: SPORT.venue.bg, color: SPORT.venue.fg }}>
-                          {venueImage ? (
-                            <img src={venueImage} alt={venue.name} className="absolute inset-0 w-full h-full object-cover" />
-                          ) : (
-                            <Store size={56} strokeWidth={1.3} />
-                          )}
+                          <Cover src={venueImage} kind="venue" alt={venue.name} />
                           {venue.is_verified && (
                             <span className="absolute left-2.5 top-2.5">
                               <Pill sport="football" icon={ShieldCheck}>Verified</Pill>

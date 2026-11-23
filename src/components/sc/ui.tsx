@@ -608,3 +608,27 @@ export function FunEmpty({
     </div>
   );
 }
+
+/* ---------- Cover images with designed fallbacks ---------- */
+export const PLACEHOLDER = {
+  venue: "/placeholders/stadium.webp",
+  football: "/placeholders/football.webp",
+  cycling: "/placeholders/cycling.webp",
+} as const;
+export type CoverKind = keyof typeof PLACEHOLDER;
+
+/** Fills its (relative) parent with the image, or the SportCliq artwork when there is none or it fails. */
+export function Cover({ src, kind, alt = "", className = "" }: { src?: string | null; kind: CoverKind; alt?: string; className?: string }) {
+  const [failed, setFailed] = useState(false);
+  const url = !src || failed ? PLACEHOLDER[kind] : src;
+  return (
+    <img
+      src={url}
+      alt={alt}
+      loading="lazy"
+      decoding="async"
+      onError={() => !failed && setFailed(true)}
+      className={`absolute inset-0 w-full h-full object-cover ${className}`}
+    />
+  );
+}

@@ -176,7 +176,7 @@ const LandmarkDetail = () => {
     );
   }
 
-  const placeholderImage = "https://images.unsplash.com/photo-1569336415962-a4bd9f69cd83?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80";
+  const placeholderImage = "/placeholders/cycling.webp";
 
   return (
     <>

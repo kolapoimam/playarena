@@ -30,7 +30,7 @@ import PlayersTable from "@/components/match/PlayersTable";
 import MatchDetailsDialogue from "@/components/match/MatchDetailsDialogue";
 import { Seo } from "@/components/Seo";
 
-import { Avatar, BackButton, Bubble, IconButton, Pill, ScButton, SPORT, StickyFooter, formatNaira, formatShortDate, initialsOf } from "@/components/sc/ui";
+import { Avatar, BackButton, Bubble, IconButton, Pill, ScButton, SPORT, StickyFooter, formatNaira, formatShortDate, initialsOf, Cover } from "@/components/sc/ui";
 import { RowsSkeleton, DetailSkeleton } from "@/components/sc/skeletons";
 const META_KEYWORDS = "Football in Nigeria, Sports in Nigeria, Play Sports Near You, Football Fields Near Me, Livescore, Osimhen, Asisat Oshola, Nigeria Startup, Sportstech, Football venues in Lagos, Football venues in Ilorin, Sports Betting in Nigeria, Organize sports in Nigeria, Football Matches, Bicycle Training in Nigeria, Cycling in Nigeria, Nigerian football, Nigerian cycling, Nigerian sports, Play football in Lagos, Play football in Ilorin, Play football in Abuja, Play football in Nigeria, Play cycling in Nigeria, Play sports in Nigeria, Nigerian sports tech, Nigerian sports startup, Nigerian sports community, Football events Nigeria, Cycling events Nigeria, Sport Cliq, SportCliq, sportcliq.com.ng, sportcliq.ng, sportcliq, sport cliq, sportcliq app, sportcliq platform, sportcliq football, sportcliq cycling, sportcliq venues, sportcliq matches, sportcliq events, sportcliq sports, sportcliq nigeria, sportcliq lagos, sportcliq ilorin, sportcliq abuja, sportcliq startup, sportcliq tech, sportcliq community, sportcliq platform, sportcliq app, sportcliq website, sportcliq online, sportcliq booking, sportcliq organize, sportcliq join, sportcliq play, sportcliq find, sportcliq search, sportcliq discover, sportcliq connect, sportcliq join match, sportcliq join cycling, sportcliq join event, sportcliq join venue, sportcliq join football, sportcliq join sports, sportcliq join nigeria, sportcliq join lagos, sportcliq join ilorin, sportcliq join abuja, sportcliq join startup, sportcliq join tech, sportcliq join community, sportcliq join platform, sportcliq join app, sportcliq join website, sportcliq join online, sportcliq join booking, sportcliq join organize, sportcliq join play, sportcliq join find, sportcliq join search, sportcliq join discover, sportcliq join connect";
 
@@ -101,7 +101,7 @@ const MatchDetail = () => {
         .select(`
           *,
           is_recurring, recurring_frequency, recurring_occurrences,
-          venue:venues(id, slug, name, city, map_link),
+          venue:venues(id, slug, name, city, map_link, image_urls),
           players(player_name, player_status, number_of_slots)
         `)
         .eq("slug", matchSlug)
@@ -196,7 +196,7 @@ const MatchDetail = () => {
         .select(`
           *,
           is_recurring, recurring_frequency, recurring_occurrences,
-          venue:venues(id, slug, name, city, map_link),
+          venue:venues(id, slug, name, city, map_link, image_urls),
           players(player_name, player_status, number_of_slots)
         `)
         .eq("slug", matchSlug)
@@ -363,20 +363,15 @@ const MatchDetail = () => {
       />
       <div className="min-h-screen pb-36 bg-sc-bg text-sc-ink font-sans">
         <div className="relative h-[300px] overflow-hidden rounded-b-[36px] bg-sc-green">
-          <svg aria-hidden="true" className="absolute inset-0 w-full h-full" viewBox="0 0 390 300" preserveAspectRatio="xMidYMid slice" fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="2.5">
-            <rect x="-20" y="40" width="430" height="300" rx="6" />
-            <path d="M195 40v300" />
-            <circle cx="195" cy="190" r="56" />
-            <rect x="-20" y="120" width="80" height="140" />
-            <rect x="330" y="120" width="80" height="140" />
-          </svg>
+          <Cover src={(match as any).venue?.image_urls?.[0]} kind="football" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-black/20" />
           <div className="absolute left-5 right-5 flex justify-between" style={{ top: "max(env(safe-area-inset-top), 1rem)" }}>
             <BackButton className="mt-3" />
             <div className="flex gap-2 mt-3">
               <IconButton icon={Bell} label="Add to calendar" onClick={addToCalendar} />
             </div>
           </div>
-          <div className="absolute left-5 right-5 bottom-[26px] flex flex-col gap-2.5 text-sc-green-ink">
+          <div className="absolute left-5 right-5 bottom-[26px] flex flex-col gap-2.5 text-white">
             <div className="flex gap-1.5 flex-wrap">
               {(match as any).match_type && <Pill sport="ink">{(match as any).match_type}</Pill>}
               {(match as any).skill_level && <Pill sport="ink">{(match as any).skill_level}</Pill>}

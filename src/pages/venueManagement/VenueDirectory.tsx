@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Seo } from "@/components/Seo";
 
-import { BackButton, FunEmpty, Meta, Pill, SPORT, formatNaira } from "@/components/sc/ui";
+import { BackButton, FunEmpty, Meta, Pill, SPORT, formatNaira, Cover } from "@/components/sc/ui";
 import { StateScope, useUserState } from "@/components/sc/location";
 import { getSavedState } from "@/lib/location";
 import { VenueListSkeleton } from "@/components/sc/skeletons";
@@ -370,11 +370,7 @@ const VenueDirectory = () => {
                       onClick={() => navigate(`/venue/${venue.slug}`)}
                     >
                       <div className="relative h-[150px] flex items-center justify-center" style={{ background: SPORT.venue.bg, color: SPORT.venue.fg }}>
-                        {venueImage ? (
-                          <img src={venueImage} alt={venue.name} className="absolute inset-0 w-full h-full object-cover" />
-                        ) : (
-                          <Store size={72} strokeWidth={1.2} />
-                        )}
+                        <Cover src={venueImage} kind="venue" alt={venue.name} />
                         {venue.is_verified && (
                           <span className="absolute left-3 top-3">
                             <Pill sport="football" icon={ShieldCheck}>Verified</Pill>

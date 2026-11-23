@@ -9,7 +9,7 @@ import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import { Seo } from "@/components/Seo";
 
-import { BackButton, Bubble, DateBox, Meta, Pill, ScButton, SPORT, Spinner, StickyFooter, formatNaira } from "@/components/sc/ui";
+import { BackButton, Bubble, DateBox, Meta, Pill, ScButton, SPORT, Spinner, StickyFooter, formatNaira, Cover } from "@/components/sc/ui";
 import { RowsSkeleton, DetailSkeleton } from "@/components/sc/skeletons";
 // Custom CSS to style ReactQuill for description and facilities
 const quillStyles = `
@@ -196,7 +196,7 @@ const VenueDetail = () => {
     );
   }
 
-  const defaultImage = "/Sportcliq_Stadium_Banner.png";
+  const defaultImage = "/placeholders/stadium.webp";
   const venueImage = venue.image_urls && venue.image_urls.length > 0 ? venue.image_urls[0] : defaultImage;
 
   return (
@@ -223,11 +223,7 @@ const VenueDetail = () => {
       <div className="min-h-screen pb-36 bg-sc-bg text-sc-ink font-sans">
         <style>{quillStyles}</style>
         <div className="relative h-[320px] overflow-hidden rounded-b-[36px]" style={{ background: SPORT.venue.solid }}>
-          {venue.image_urls && venue.image_urls.length > 0 ? (
-            <img src={venue.image_urls[0]} alt={venue.name} className="absolute inset-0 w-full h-full object-cover" />
-          ) : (
-            <Store aria-hidden="true" className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white/35" size={170} strokeWidth={0.9} />
-          )}
+          <Cover src={venue.image_urls?.[0]} kind="venue" alt={venue.name} />
           <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/25 to-transparent" />
           <div className="absolute left-5 right-5 flex justify-between" style={{ top: "max(env(safe-area-inset-top), 1rem)" }}>
             <BackButton className="mt-3" />

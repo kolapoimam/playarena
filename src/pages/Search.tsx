@@ -18,8 +18,7 @@ import {
   Spinner,
   SPORT,
   Sport,
-  formatNaira,
-} from "@/components/sc/ui";
+  formatNaira, Cover } from "@/components/sc/ui";
 
 const RECENT_KEY = "sc_recent_searches";
 const readRecent = (): string[] => {
@@ -531,11 +530,9 @@ const SearchPage = () => {
                   className="bg-white rounded-3xl p-[18px] flex flex-col gap-3.5 cursor-pointer active:scale-[0.99] transition-transform"
                 >
                   <div className="flex gap-3.5 items-center">
-                    {venue.image_urls?.[0] ? (
-                      <img src={venue.image_urls[0]} alt="" className="w-[60px] h-[60px] rounded-[18px] object-cover shrink-0" />
-                    ) : (
-                      <Bubble icon={Store} sport="venue" size={60} radius={18} />
-                    )}
+                    <div className="relative w-[60px] h-[60px] rounded-[18px] overflow-hidden shrink-0">
+                      <Cover src={venue.image_urls?.[0]} kind="venue" />
+                    </div>
                     <div className="flex-1 min-w-0 flex flex-col gap-1">
                       <span className="text-[17px] font-extrabold truncate">{venue.name}</span>
                       <span className="text-[13px] text-sc-ink3 truncate">

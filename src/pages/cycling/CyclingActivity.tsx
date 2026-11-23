@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import Navbar from "@/components/Navbar";
 import { DateTime } from "luxon";
 
-import { BackButton, DateBox, FunEmpty, Meta, Pill, Progress, SPORT, formatNaira } from "@/components/sc/ui";
+import { BackButton, Cover, DateBox, FunEmpty, Meta, Pill, Progress, SPORT, formatNaira } from "@/components/sc/ui";
 import { StateScope, useUserState } from "@/components/sc/location";
 import { sameState } from "@/lib/location";
 import { EventListSkeleton } from "@/components/sc/skeletons";
@@ -408,7 +408,10 @@ const CyclingActivity = () => {
               const isPast = event.status === "passed";
               const totalAttendeeSlots = event.cycling_attendees?.reduce((sum, attendee) => sum + (attendee.number_of_slots || 1), 0) || 0;
               return (
-                <div key={event.id_uuid} className="bg-white rounded-3xl p-[18px] flex flex-col gap-3.5">
+                <div key={event.id_uuid} className="bg-white rounded-3xl p-[18px] flex flex-col gap-3.5 overflow-hidden">
+                  <div className="relative -mx-[18px] -mt-[18px] h-[120px] overflow-hidden">
+                    <Cover kind="cycling" />
+                  </div>
                   <div className="flex gap-3.5 items-center">
                     <DateBox date={event.event_date} sport="cycling" />
                     <div className="flex-1 min-w-0 flex flex-col gap-1">

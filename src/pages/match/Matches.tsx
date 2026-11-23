@@ -26,7 +26,7 @@ import TeamMatchDetails from "@/components/match/TeamMatchDetails";
 import UserMatches from "@/components/match/UserMatches";
 import { Seo } from "@/components/Seo";
 
-import { Avatar, BackButton, DateBox, FunEmpty, Meta, Pill, Progress, formatNaira, initialsOf, sportFor } from "@/components/sc/ui";
+import { Avatar, BackButton, Cover, DateBox, FunEmpty, Meta, Pill, Progress, formatNaira, initialsOf, sportFor } from "@/components/sc/ui";
 import { StateScope, useUserState } from "@/components/sc/location";
 import { getSavedState } from "@/lib/location";
 import { EventListSkeleton } from "@/components/sc/skeletons";
@@ -52,6 +52,7 @@ interface Match {
     name: string;
     city: string;
     state: string;
+    image_urls?: string[] | null;
   } | null;
   players: {
     player_name: string;
@@ -154,7 +155,7 @@ const Matches = () => {
         .select(
           `
           id, slug, title, match_date, match_time, start_time, end_time, total_slots, is_paid, price, notes, organizer_name, organizer_id, is_private, access_password,
-          venue:venues${stateFilter && stateFilter !== "all" ? "!inner" : ""}(slug, name, city, state),
+          venue:venues${stateFilter && stateFilter !== "all" ? "!inner" : ""}(slug, name, city, state, image_urls),
           players(*),
           created_at
         `,
@@ -550,7 +551,10 @@ const Matches = () => {
               const isAccessible = !match.is_private || hasAccess(match.slug);
               
               return (
-                <div key={match.id} className="bg-white rounded-3xl p-[18px] flex flex-col gap-3.5">
+                <div key={match.id} className="bg-white rounded-3xl p-[18px] flex flex-col gap-3.5 overflow-hidden">
+                  <div className="relative -mx-[18px] -mt-[18px] h-[120px] overflow-hidden">
+                    <Cover src={match.venue?.image_urls?.[0]} kind="football" />
+                  </div>
                   <div className="flex gap-3.5 items-center">
                     <DateBox date={match.match_date} />
                     <div className="flex-1 min-w-0 flex flex-col gap-1">
