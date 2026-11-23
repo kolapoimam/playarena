@@ -1,45 +1,22 @@
 // ThemeToggle.tsx
-import { useEffect, useState } from "react";
-import { Moon, Sun } from "lucide-react";
+// The redesigned app ships in light mode only. useTheme always applies the
+// light theme and clears any saved dark preference, and ThemeToggle renders nothing.
+import { useEffect } from "react";
 
 export const useTheme = () => {
-  const [theme, setTheme] = useState<"light" | "dark">("light");
-
   useEffect(() => {
-    const storedTheme = localStorage.getItem("theme");
-    if (storedTheme === "dark" || (!storedTheme && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
-      setTheme("dark");
-      document.documentElement.classList.add("dark");
-    } else {
-      setTheme("light");
-      document.documentElement.classList.remove("dark");
+    document.documentElement.classList.remove("dark");
+    try {
+      localStorage.setItem("theme", "light");
+    } catch {
+      /* storage can be unavailable in private mode */
     }
   }, []);
 
-  const toggleTheme = () => {
-    const newTheme = theme === "light" ? "dark" : "light";
-    setTheme(newTheme);
-    localStorage.setItem("theme", newTheme);
-    if (newTheme === "dark") {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-  };
-
-  return { theme, toggleTheme };
+  return { theme: "light" as const, toggleTheme: () => {} };
 };
 
 export default function ThemeToggle() {
-  const { theme, toggleTheme } = useTheme();
-
-  return (
-    <button
-      onClick={toggleTheme}
-      className="p-2 rounded-full bg-secondary text-foreground hover:bg-accent transition-colors duration-200"
-      aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
-    >
-      {theme === "light" ? <Moon size={20} /> : <Sun size={20} />}
-    </button>
-  );
+  useTheme();
+  return null;
 }

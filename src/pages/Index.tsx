@@ -1,15 +1,28 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Store, Plus, Calendar, Users, Clock } from "lucide-react";
-import SearchBar from "@/components/SearchBar";
+import {
+  Bell,
+  Bike,
+  Calendar,
+  ChevronRight,
+  Heart,
+  LayoutGrid,
+  MapPin,
+  Plus,
+  Route,
+  Search as SearchIcon,
+  ShieldCheck,
+  SlidersHorizontal,
+  Store,
+  Trophy,
+  Users,
+} from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { useToast } from "@/hooks/use-toast";
-import { Button } from "@/components/ui/button";
-import { useTheme } from "next-themes";
-import ThemeToggle from "@/components/ThemeToggle";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Seo } from "@/components/Seo";
+import { Avatar, Bubble, IconButton, Meta, Pill, Screen, Section, Spinner, SPORT, formatNaira, initialsOf } from "@/components/sc/ui";
 
 type Match = {
   id: string;
@@ -49,6 +62,8 @@ type Venue = {
   city: string;
   state: string;
   image_urls: string[] | null;
+  is_verified?: boolean | null;
+  booking_fee?: number | null;
   match_count: number;
 };
 
@@ -68,11 +83,10 @@ const formatTime = (timeString: string) => {
 const Index = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { theme } = useTheme();
   const [upcomingMatches, setUpcomingMatches] = useState<(Match | CyclingEvent)[]>([]);
   const [popularVenues, setPopularVenues] = useState<Venue[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeFaqTab, setActiveFaqTab] = useState('general');
+  const [nickname, setNickname] = useState<string | null>(null);
   const [isOrganizeDialogOpen, setIsOrganizeDialogOpen] = useState(false);
 
   useEffect(() => {
@@ -209,6 +223,8 @@ const Index = () => {
             city,
             state,
             image_urls,
+            is_verified,
+            booking_fee,
             matches:matches!venue_id(count)
           `)
           .order("created_at", { ascending: false })
@@ -238,6 +254,20 @@ const Index = () => {
     fetchData();
   }, [toast]);
 
+  useEffect(() => {
+    const loadProfile = async () => {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userId = sessionData.session?.user?.id;
+      if (!userId) return;
+      const { data } = await supabase.from("profiles").select("nickname, first_name").eq("id", userId).maybeSingle();
+      setNickname(data?.nickname || data?.first_name || null);
+    };
+    loadProfile();
+  }, []);
+
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+
   const handleOrganizeClick = () => {
     setIsOrganizeDialogOpen(true);
   };
@@ -246,6 +276,48 @@ const Index = () => {
     setIsOrganizeDialogOpen(false);
     navigate(type === "football" ? "/organize" : "/host-cycling");
   };
+
+  const footballEvents = upcomingMatches.filter((e): e is Match => e.type === "football");
+  const cyclingEvents = upcomingMatches.filter((e): e is CyclingEvent => e.type === "cycling");
+
+  const quickActions = [
+    { label: "Organise", icon: Plus, sport: "football" as const, onClick: handleOrganizeClick },
+    { label: "Manage", icon: Users, sport: "guide" as const, onClick: () => navigate("/confirm-checkin") },
+    { label: "Host ride", icon: Route, sport: "cycling" as const, onClick: () => navigate("/host-cycling") },
+    { label: "List venue", icon: Store, sport: "venue" as const, onClick: () => navigate("/venue-create") },
+  ];
+
+  const SportTile = ({
+    label,
+    sub,
+    icon: Icon,
+    sport,
+    to,
+    big,
+  }: {
+    label: string;
+    sub: string;
+    icon: typeof Trophy;
+    sport: "football" | "cycling" | "venue";
+    to: string;
+    big?: boolean;
+  }) => (
+    <button
+      type="button"
+      onClick={() => navigate(to)}
+      className="relative overflow-hidden rounded-[26px] p-4 flex flex-col justify-between text-left active:scale-[0.98] transition-transform"
+      style={{ background: SPORT[sport].solid, color: SPORT[sport].onSolid, height: big ? 196 : 92 }}
+    >
+      <Icon aria-hidden="true" className="absolute opacity-25" size={big ? 130 : 90} strokeWidth={1.4} style={{ right: -22, bottom: -26 }} />
+      <span className="w-10 h-10 rounded-full bg-white/25 flex items-center justify-center">
+        <Icon size={22} />
+      </span>
+      <span className="relative flex flex-col">
+        <span className={big ? "text-2xl font-extrabold tracking-[-0.02em]" : "text-lg font-extrabold tracking-[-0.02em]"}>{label}</span>
+        <span className="text-[13px] font-semibold opacity-90">{sub}</span>
+      </span>
+    </button>
+  );
 
   return (
     <>
@@ -256,382 +328,250 @@ const Index = () => {
         image={undefined}
         children={null}
       />
-      <div className="min-h-screen pb-24 relative">
-        <div className="sticky top-0 z-50 p-4 flex items-center justify-between bg-green-50 dark:bg-green-900 shadow-md mb-4">
-          <div className="flex items-center w-full max-w-[calc(100%-60px)]">
-            <img
-              src="/navlogo.png"
-              alt="PlayArena Logo"
-              className="h-10 w-10 object-contain mr-4"
-            />
-            <div className="flex-1 max-w-[500px]">
-              <SearchBar />
+      <Screen>
+        <header className="px-5 pt-[max(env(safe-area-inset-top),1rem)] flex flex-col gap-[18px]">
+          <div className="pt-3 flex items-center justify-between">
+            <div className="flex items-center gap-3 min-w-0">
+              {nickname ? <Avatar initials={initialsOf(nickname)} size={46} /> : <img src="/brand/sportcliq-mark.png" alt="SportCliq" className="w-[46px] h-[46px]" />}
+              <div className="flex flex-col gap-0.5 min-w-0">
+                <span className="text-[13px] text-sc-ink3 font-semibold">{greeting}</span>
+                <span className="text-lg font-extrabold tracking-[-0.02em] truncate">{nickname || "Welcome to SportCliq"}</span>
+              </div>
+            </div>
+            <IconButton icon={Bell} label="Notifications" onClick={() => navigate("/profile/notifications")} />
+          </div>
+          <h1 className="m-0 text-[32px] leading-[38px] font-extrabold tracking-[-0.035em]">
+            What are we
+            <br />
+            playing today?
+          </h1>
+          <button
+            type="button"
+            onClick={() => navigate("/search")}
+            className="h-[54px] rounded-[18px] bg-white flex items-center gap-2.5 pl-4 pr-2 text-sc-ink3 text-base shadow-card text-left"
+          >
+            <SearchIcon size={20} />
+            <span className="flex-1">Matches, venues, rides</span>
+            <span className="w-10 h-10 rounded-[14px] bg-sc-ink text-white flex items-center justify-center">
+              <SlidersHorizontal size={18} />
+            </span>
+          </button>
+        </header>
+
+        <div className="flex flex-col gap-[22px] pt-5">
+          <div className="flex gap-2 px-5">
+            {quickActions.map((a) => (
+              <button
+                key={a.label}
+                type="button"
+                onClick={a.onClick}
+                className="flex-1 flex flex-col items-center gap-2 text-xs font-bold text-sc-ink"
+              >
+                <span className="w-[58px] h-[58px] rounded-[20px] bg-white flex items-center justify-center shadow-card active:scale-95 transition-transform" style={{ color: SPORT[a.sport].fg }}>
+                  <a.icon size={24} />
+                </span>
+                {a.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 px-5">
+            <SportTile label="Play" sub="Football matches" icon={Trophy} sport="football" to="/matches" big />
+            <div className="flex flex-col gap-3">
+              <SportTile label="Cycle" sub="Group rides" icon={Bike} sport="cycling" to="/cycling-activities" />
+              <SportTile label="Book" sub="Venues" icon={Store} sport="venue" to="/venues" />
             </div>
           </div>
-          <div className="fixed top-4 right-4 z-50">
-            <ThemeToggle />
-          </div>
-        </div>
 
-        <div className="grid grid-cols-3 gap-2 px-4 mb-8">
-          <Button
-            className="flex flex-col items-center justify-center h-20 bg-green-500 hover:bg-green-600 text-white rounded-xl transition-transform hover:scale-105 flex-1 text-sm py-2"
-            onClick={handleOrganizeClick}
-          >
-            <Plus size={20} className="mb-1" />
-            <span className="font-medium">Organize</span>
-          </Button>
-          <Button
-            className="flex flex-col items-center justify-center h-20 bg-blue-500 hover:bg-blue-600 text-white rounded-xl transition-transform hover:scale-105 flex-1 text-sm py-2"
-            onClick={() => navigate("/confirm-checkin")}
-          >
-            <Users size={20} className="mb-1" />
-            <span className="font-medium">Manage</span>
-          </Button>
-          <Button
-            className="flex flex-col items-center justify-center h-20 bg-purple-500 hover:bg-purple-600 text-white rounded-xl transition-transform hover:scale-105 flex-1 text-sm py-2"
-            onClick={() => navigate("/venue-create")}
-          >
-            <Store size={20} className="mb-1" />
-            <span className="font-medium">Add Venue</span>
-          </Button>
-        </div>
-
-        <div className="px-4 mb-8" style={{ overflow: 'hidden', borderRadius: '16px' }}>
-          <img
-            src="/downolad now.jpg"
-            alt="Download Now"
-            className="w-full h-auto object-cover"
-            style={{ borderRadius: '16px' }}
-          />
-        </div>
-
-        {loading ? (
-          <div className="flex justify-center items-center h-32">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
-          </div>
-        ) : (
-          <>
-            <section className="mb-8">
-              <div className="flex justify-between items-center px-4 mb-3">
-                <h2 className="text-2xl font-bold">Activities</h2>
-                <Button
-                  variant="outline"
-                  className="text-green-600 hover:bg-green-600 hover:text-white transition-colors"
-                  onClick={() => navigate("/activities")}
-                >
-                  See All
-                </Button>
-              </div>
-
-              {upcomingMatches.length > 0 ? (
-                <div className="flex gap-4 overflow-x-auto px-4 pb-4">
-                  {upcomingMatches.map((event) => (
-                    <div
-                      key={event.id}
-                      className="min-w-[280px] bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 border border-gray-200 dark:border-gray-700"
+          {loading ? (
+            <Spinner />
+          ) : (
+            <>
+              <Section title="Upcoming matches" action="See all" onAction={() => navigate("/matches")} />
+              {footballEvents.length > 0 ? (
+                <div className="flex gap-3 overflow-x-auto px-5 pb-1 snap-x [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  {footballEvents.map((m) => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => navigate(`/match/${m.slug}`)}
+                      className="snap-start shrink-0 w-[250px] rounded-[26px] bg-white p-4 flex flex-col gap-3 text-left"
                     >
-                      <h3 className="font-bold text-lg mb-2">{event.title}</h3>
-
-                      <div className="space-y-3 mb-4">
-                        <div className="flex items-center gap-2">
-                          <Calendar size={18} />
-                          <span>{formatDate(event.match_date || event.event_date)}</span>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          <Clock size={18} />
-                          <span>{formatTime(event.match_time || event.start_time)}</span>
-                        </div>
-
-                        {event.type === "football" && event.venue && (
-                          <div
-                            className="flex items-start gap-2 cursor-pointer"
-                            onClick={() => navigate(`/venue/${event.venue?.slug}`)}
-                          >
-                            <Store size={18} />
-                            <span>{event.venue.name}</span>
-                          </div>
+                      <div className="relative h-24 rounded-[18px] overflow-hidden flex items-end p-3" style={{ background: SPORT.football.bg, color: SPORT.football.fg }}>
+                        {m.venue?.image_urls?.[0] ? (
+                          <img src={m.venue.image_urls[0]} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                        ) : (
+                          <Trophy aria-hidden="true" className="absolute opacity-35" size={110} strokeWidth={1.4} style={{ right: -14, top: -14 }} />
                         )}
-
-                        {event.type === "cycling" && event.start_landmark && (
-                          <div className="flex items-start gap-2">
-                            <Store size={18} />
-                            <span>{event.start_landmark.name}, {event.start_landmark.state}</span>
-                          </div>
-                        )}
-
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">
-                            {event.type === "football"
-                              ? event.is_paid
-                                ? `₦${event.price?.toFixed(2)}`
-                                : "Free"
-                              : event.is_free
-                              ? "Free"
-                              : "Paid"}
-                          </span>
-                        </div>
+                        <span className="relative h-7 px-2.5 rounded-full bg-white text-sc-ink text-[13px] font-extrabold flex items-center">
+                          {m.is_paid ? formatNaira(m.price) : "Free"}
+                        </span>
                       </div>
-
-                      <Button
-                        onClick={() =>
-                          navigate(event.type === "football" ? `/match/${event.slug}` : `/cycling/${event.slug}`)
-                        }
-                        className="w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-md font-medium transition-colors"
-                      >
-                        {event.type === "football" ? "Join Match" : "Join Event"}
-                      </Button>
-                    </div>
+                      <span className="text-[17px] font-extrabold tracking-[-0.02em] line-clamp-1">{m.title}</span>
+                      <div className="flex flex-col gap-1.5">
+                        <Meta icon={Calendar}>
+                          {formatDate(m.match_date)} · {formatTime(m.match_time)}
+                        </Meta>
+                        {m.venue && <Meta icon={MapPin}>{m.venue.name}{m.venue.city ? `, ${m.venue.city}` : ""}</Meta>}
+                      </div>
+                      <span className="h-11 rounded-full bg-sc-green text-sc-green-ink text-[15px] font-extrabold flex items-center justify-center">Join match</span>
+                    </button>
                   ))}
                 </div>
               ) : (
-                <div className="px-4 py-8 text-center">
-                  <p className="text-muted-foreground">No upcoming activities yet.</p>
-                  <Button
-                    variant="link"
-                    className="mt-2 text-green-600"
-                    onClick={handleOrganizeClick}
-                  >
-                    Create the first activity!
-                  </Button>
+                <div className="mx-5 rounded-3xl bg-white p-5 flex items-center gap-3">
+                  <Bubble icon={Trophy} sport="football" />
+                  <span className="flex-1 text-sm text-sc-ink2">No upcoming matches yet.</span>
+                  <button type="button" onClick={handleOrganizeClick} className="text-sm font-bold text-sc-green-dark">
+                    Organise one
+                  </button>
                 </div>
               )}
-            </section>
 
-            <section>
-              <div className="flex justify-between items-center px-4 mb-3">
-                <h2 className="text-2xl font-bold">Venues</h2>
-                <Button
-                  variant="outline"
-                  className="text-green-600 hover:bg-green-600 hover:text-white transition-colors"
-                  onClick={() => navigate("/venues")}
-                >
-                  See All
-                </Button>
-              </div>
-
+              <Section title="Featured venues" action="See all" onAction={() => navigate("/venues")} />
               {popularVenues.length > 0 ? (
-                <div className="flex gap-4 overflow-x-auto px-4 pb-4">
+                <div className="flex gap-3 overflow-x-auto px-5 pb-1 snap-x [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {popularVenues.map((venue) => {
-                    const defaultImage = "/Sportcliq_Stadium_Banner.png";
-                    const venueImage = venue.image_urls?.[0] || defaultImage;
-
+                    const venueImage = venue.image_urls?.[0];
                     return (
-                      <div
+                      <button
                         key={venue.id}
-                        className="min-w-[280px] bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 cursor-pointer"
+                        type="button"
                         onClick={() => navigate(`/venue/${venue.slug}`)}
+                        className="snap-start shrink-0 w-[200px] flex flex-col gap-2.5 text-left"
                       >
-                        <img
-                          src={venueImage}
-                          alt={venue.name}
-                          className="w-full h-40 object-cover rounded-t-lg"
-                        />
-                        <div className="p-4">
-                          <div className="flex items-center gap-1 mb-2">
-                            <h3 className="font-bold text-lg">{venue.name}</h3>
-                            {venue.is_verified && (
-                              <img
-                                src="/green-verified.png"
-                                alt="Verified"
-                                className="ml-1 w-4 h-4 object-contain"
-                                onError={(e) => {
-                                  e.currentTarget.onerror = null;
-                                  e.currentTarget.src =
-                                    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%234CAF50'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z'/%3E%3C/svg%3E";
-                                }}
-                              />
-                            )}
-                          </div>
-                          <p className="text-sm text-muted-foreground mb-1">
-                            {`${venue.city}, ${venue.state}`}
-                          </p>
-                          <p className="text-sm font-medium">
-                            {`${venue.match_count} Match${venue.match_count !== 1 ? "es" : ""}`}
-                          </p>
+                        <div className="relative h-[130px] rounded-[22px] overflow-hidden flex items-center justify-center" style={{ background: SPORT.venue.bg, color: SPORT.venue.fg }}>
+                          {venueImage ? (
+                            <img src={venueImage} alt={venue.name} className="absolute inset-0 w-full h-full object-cover" />
+                          ) : (
+                            <Store size={56} strokeWidth={1.3} />
+                          )}
+                          {venue.is_verified && (
+                            <span className="absolute left-2.5 top-2.5">
+                              <Pill sport="football" icon={ShieldCheck}>Verified</Pill>
+                            </span>
+                          )}
+                          <span className="absolute right-2.5 top-2.5 w-8 h-8 rounded-full bg-white text-sc-ink flex items-center justify-center">
+                            <Heart size={16} />
+                          </span>
                         </div>
-                      </div>
+                        <span className="text-base font-extrabold truncate">{venue.name}</span>
+                        <span className="text-[13px] text-sc-ink3 truncate">
+                          {venue.city}
+                          {venue.booking_fee ? ` · ${formatNaira(venue.booking_fee)}/hr` : ` · ${venue.match_count} match${venue.match_count !== 1 ? "es" : ""}`}
+                        </span>
+                      </button>
                     );
                   })}
                 </div>
               ) : (
-                <div className="px-4 py-8 text-center">
-                  <p className="text-muted-foreground">No venues added yet.</p>
-                  <Button
-                    variant="link"
-                    className="mt-2 text-green-600"
-                    onClick={() => navigate("/venue-create")}
-                  >
-                    Add the first venue!
-                  </Button>
+                <div className="mx-5 rounded-3xl bg-white p-5 flex items-center gap-3">
+                  <Bubble icon={Store} sport="venue" />
+                  <span className="flex-1 text-sm text-sc-ink2">No venues added yet.</span>
+                  <button type="button" onClick={() => navigate("/venue-create")} className="text-sm font-bold text-sc-green-dark">
+                    Add one
+                  </button>
                 </div>
               )}
-            </section>
 
-            <section className="px-4 py-6 bg-gradient-to-b from-green-50 to-white dark:from-green-900 dark:to-gray-800 rounded-lg mt-8">
-              <h2 className="text-2xl font-bold mb-4 text-center">Frequently Asked Questions</h2>
-              <div className="flex space-x-4 mb-4 justify-center">
-                <button
-                  className={`px-4 py-2 rounded-md ${
-                    activeFaqTab === "general" ? "bg-green-500 text-white" : "bg-white dark:bg-gray-700"
-                  }`}
-                  onClick={() => setActiveFaqTab("general")}
-                >
-                  General
-                </button>
-                <button
-                  className={`px-4 py-2 rounded-md ${
-                    activeFaqTab === "venues" ? "bg-green-500 text-white" : "bg-white dark:bg-gray-700"
-                  }`}
-                  onClick={() => setActiveFaqTab("venues")}
-                >
-                  Venues
-                </button>
-                <button
-                  className={`px-4 py-2 rounded-md ${
-                    activeFaqTab === "matches" ? "bg-green-500 text-white" : "bg-white dark:bg-gray-700"
-                  }`}
-                  onClick={() => setActiveFaqTab("matches")}
-                >
-                  Matches
-                </button>
+              <Section title="Rides this week" action="See all" onAction={() => navigate("/cycling-activities")} />
+              <div className="px-5 flex flex-col gap-3">
+                {cyclingEvents.length > 0 ? (
+                  cyclingEvents.map((e) => {
+                    const d = new Date(e.event_date);
+                    return (
+                      <button
+                        key={e.id}
+                        type="button"
+                        onClick={() => navigate(`/cycling/${e.slug}`)}
+                        className="bg-white rounded-3xl p-[18px] flex items-center gap-3.5 text-left"
+                      >
+                        <div className="w-[60px] h-[66px] rounded-[18px] flex flex-col items-center justify-center shrink-0" style={{ background: SPORT.cycling.bg }}>
+                          <span className="text-[11px] font-extrabold tracking-[0.08em]" style={{ color: SPORT.cycling.fg }}>
+                            {d.toLocaleDateString("en-US", { month: "short" }).toUpperCase()}
+                          </span>
+                          <span className="text-2xl leading-[26px] font-extrabold">{d.getDate()}</span>
+                        </div>
+                        <div className="flex-1 min-w-0 flex flex-col gap-1">
+                          <span className="text-[17px] font-extrabold truncate">{e.title}</span>
+                          <span className="text-[13px] text-sc-ink3 truncate">
+                            {formatTime(e.start_time)}
+                            {e.start_landmark ? ` · ${e.start_landmark.name}` : ""}
+                          </span>
+                        </div>
+                        <Pill sport={e.is_free ? "football" : "tennis"}>{e.is_free ? "Free" : "Paid"}</Pill>
+                        <span className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: SPORT.cycling.bg, color: SPORT.cycling.fg }}>
+                          <ChevronRight size={18} />
+                        </span>
+                      </button>
+                    );
+                  })
+                ) : (
+                  <div className="rounded-3xl bg-white p-5 flex items-center gap-3">
+                    <Bubble icon={Bike} sport="cycling" />
+                    <span className="flex-1 text-sm text-sc-ink2">No rides this week.</span>
+                    <button type="button" onClick={() => navigate("/host-cycling")} className="text-sm font-bold text-sc-green-dark">
+                      Host one
+                    </button>
+                  </div>
+                )}
               </div>
-              <div className={`space-y-4 ${activeFaqTab === "general" ? "block" : "hidden"}`}>
-                <details className="bg-white dark:bg-gray-700 rounded-md p-4">
-                  <summary className="font-semibold cursor-pointer">What is Sport Cliq?</summary>
-                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-                    Sport Cliq is a platform for organizing and joining football matches and cycling events across Nigeria.
-                  </p>
-                </details>
-                <details className="bg-white dark:bg-gray-700 rounded-md p-4">
-                  <summary className="font-semibold cursor-pointer">How do I get started?</summary>
-                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-                    No account needed! You can browse matches and events immediately. To organize an activity or add a venue, use the 'Organize' or 'Add Venue' buttons.
-                  </p>
-                </details>
-                <details className="bg-white dark:bg-gray-700 rounded-md p-4">
-                  <summary className="font-semibold cursor-pointer">Is there a cost to use Sport Cliq?</summary>
-                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-                    Basic features are free, but some matches or events may have a fee set by organizers.
-                  </p>
-                </details>
-                <details className="bg-white dark:bg-gray-700 rounded-md p-4">
-                  <summary className="font-semibold cursor-pointer">How can I contact support?</summary>
-                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-                    You can reach us directly on social media @PIousGeek
-                  </p>
-                </details>
-                <details className="bg-white dark:bg-gray-700 rounded-md p-4">
-                  <summary className="font-semibold cursor-pointer">What devices support Sport Cliq?</summary>
-                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-                    Sport Cliq works on web browsers on desktops, tablets, and mobile devices.
-                  </p>
-                </details>
+
+              <div className="px-5">
+                <img
+                  src="/downolad now.jpg"
+                  alt="Organise football matches in 3 clicks. Download now on Google Play and the App Store."
+                  className="w-full h-auto object-cover rounded-[26px]"
+                />
               </div>
-              <div className={`space-y-4 ${activeFaqTab === "venues" ? "block" : "hidden"}`}>
-                <details className="bg-white dark:bg-gray-700 rounded-md p-4">
-                  <summary className="font-semibold cursor-pointer">How do I add a venue?</summary>
-                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-                    Click 'Add Venue', fill in the details, and upload images to list your venue.
-                  </p>
-                </details>
-                <details className="bg-white dark:bg-gray-700 rounded-md p-4">
-                  <summary className="font-semibold cursor-pointer">Can I edit my venue details?</summary>
-                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-                    Yes, go to your venue page and use the edit option to update details.
-                  </p>
-                </details>
-                <details className="bg-white dark:bg-gray-700 rounded-md p-4">
-                  <summary className="font-semibold cursor-pointer">What images should I upload?</summary>
-                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-                    Upload clear photos of the venue, up to 3 images under 2MB each.
-                  </p>
-                </details>
-                <details className="bg-white dark:bg-gray-700 rounded-md p-4">
-                  <summary className="font-semibold cursor-pointer">How are venues ranked?</summary>
-                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-                    Venues are ranked by the number of matches hosted, shown as 'Match Count'.
-                  </p>
-                </details>
-                <details className="bg-white dark:bg-gray-700 rounded-md p-4">
-                  <summary className="font-semibold cursor-pointer">Can I remove my venue?</summary>
-                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-                    Contact support to request venue removal if needed.
-                  </p>
-                </details>
-              </div>
-              <div className={`space-y-4 ${activeFaqTab === "matches" ? "block" : "hidden"}`}>
-                <details className="bg-white dark:bg-gray-700 rounded-md p-4">
-                  <summary className="font-semibold cursor-pointer">How do I join a match?</summary>
-                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-                    Use the 'Join Match' button on the match card to participate.
-                  </p>
-                </details>
-                <details className="bg-white dark:bg-gray-700 rounded-md p-4">
-                  <summary className="font-semibold cursor-pointer">Can I organize a paid match?</summary>
-                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-                    Yes, set the price when organizing via the 'Organize' page.
-                  </p>
-                </details>
-                <details className="bg-white dark:bg-gray-700 rounded-md p-4">
-                  <summary className="font-semibold cursor-pointer">What if a match is canceled?</summary>
-                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-                    Organizers will notify participants; refunds are handled case-by-case.
-                  </p>
-                </details>
-                <details className="bg-white dark:bg-gray-700 rounded-md p-4">
-                  <summary className="font-semibold cursor-pointer">How are match times set?</summary>
-                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-                    Organizers set the date and time in their local timezone.
-                  </p>
-                </details>
-                <details className="bg-white dark:bg-gray-700 rounded-md p-4">
-                  <summary className="font-semibold cursor-pointer">Can I see past matches?</summary>
-                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-                    Yes, use the 'See All' button on the Matches section and filter to view history.
-                  </p>
-                </details>
-              </div>
-            </section>
-          </>
-        )}
+
+              <button
+                type="button"
+                onClick={() => navigate("/activities")}
+                className="mx-5 rounded-3xl bg-white p-4 flex items-center gap-3 text-left"
+              >
+                <Bubble icon={LayoutGrid} sport="guide" />
+                <span className="flex-1 flex flex-col">
+                  <span className="text-[15px] font-extrabold">All activities</span>
+                  <span className="text-[13px] text-sc-ink3">Matches, rides, bookings and guides</span>
+                </span>
+                <ChevronRight size={18} className="text-[#9AA19C]" />
+              </button>
+            </>
+          )}
+        </div>
 
         <Dialog open={isOrganizeDialogOpen} onOpenChange={setIsOrganizeDialogOpen}>
-          <DialogContent className="max-w-md rounded-2xl p-6 bg-white dark:bg-gray-800 border-none shadow-2xl">
+          <DialogContent className="max-w-[calc(100%-2.5rem)] sm:max-w-md rounded-[28px] p-6 bg-white border-none shadow-float font-sans">
             <DialogHeader>
-              <DialogTitle className="text-2xl font-bold text-center text-gray-900 dark:text-white">
-                Create Your Adventure
-              </DialogTitle>
-              <DialogDescription className="text-center text-gray-600 dark:text-gray-300 mt-2">
-                Ready to bring people together? Choose whether you want to organize a thrilling football match or an exciting cycling event!
-              </DialogDescription>
+              <DialogTitle className="text-2xl font-extrabold text-center text-sc-ink tracking-[-0.02em]">What are you organising?</DialogTitle>
+              <DialogDescription className="text-center text-sc-ink2 mt-1">Bring people together for a match or a group ride.</DialogDescription>
             </DialogHeader>
-            <div className="flex flex-col gap-4 mt-6">
-              <Button
+            <div className="grid grid-cols-2 gap-3 mt-4">
+              <button
+                type="button"
                 onClick={() => handleOrganizeSelect("football")}
-                className="bg-green-500 hover:bg-green-600 text-white font-semibold py-3 rounded-xl transition-all duration-300 flex items-center justify-center gap-2"
+                className="rounded-3xl p-4 h-36 flex flex-col justify-between text-left"
+                style={{ background: SPORT.football.solid, color: SPORT.football.onSolid }}
               >
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15.93l-3.95-3.95 1.41-1.41L11 14.17l5.59-5.59 1.41 1.41L11 15.93z" />
-                </svg>
-                Organize Footballers
-              </Button>
-              <Button
+                <Trophy size={28} />
+                <span className="text-lg font-extrabold leading-tight">Football match</span>
+              </button>
+              <button
+                type="button"
                 onClick={() => handleOrganizeSelect("cycling")}
-                className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 rounded-xl transition-all duration-300 flex items-center justify-center gap-2"
+                className="rounded-3xl p-4 h-36 flex flex-col justify-between text-left"
+                style={{ background: SPORT.cycling.solid, color: SPORT.cycling.onSolid }}
               >
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M15.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM5 12c-2.8 0-5 2.2-5 5s2.2 5 5 5 5-2.2 5-5-2.2-5-5-5zm0 8.5c-1.9 0-3.5-1.6-3.5-3.5s1.6-3.5 3.5-3.5 3.5 1.6 3.5 3.5-1.6 3.5-3.5 3.5zm5.8-10l2.4-2.4.8.8c1.3 1.3 3 2.1 5.1 2.1V9c-1.5 0-2.7-.6-3.6-1.5l-1.9-1.9c-.5-.4-1-.6-1.6-.6s-1.1.2-1.4.6L7.8 8.4c-.4.4-.6.9-.6 1.4 0 .6.2 1.1.6 1.4L11 14v5h2v-6.2l-2.2-2.3L12 9.1l-2.2 2.2c-.4-.4-.9-.6-1.4-.6s-1 .2-1.4.6L5 13.3V11H3v3.7l3.3-3.3c.4-.4.9-.6 1.4-.6s1 .2 1.4.6l2.2 2.2 2.2-2.2c.4-.4.6-.9.6-1.4 0-.5-.2-1-.6-1.4z" />
-                </svg>
-                Host Cyclers
-              </Button>
+                <Bike size={28} />
+                <span className="text-lg font-extrabold leading-tight">Cycling ride</span>
+              </button>
             </div>
           </DialogContent>
         </Dialog>
 
         <Navbar />
-      </div>
+      </Screen>
     </>
   );
 };

@@ -2,6 +2,14 @@ import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 
+// The redesigned app is light mode only.
+document.documentElement.classList.remove('dark');
+try {
+  localStorage.setItem('theme', 'light');
+} catch {
+  /* ignore */
+}
+
 // Debug: Log to check for Rb.Configuration
 if (typeof window.Rb !== 'undefined') {
   console.log('Rb exists:', window.Rb, 'Rb.Configuration:', window.Rb.Configuration);
