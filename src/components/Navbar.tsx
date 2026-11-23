@@ -1,15 +1,16 @@
-
 import { useState, useEffect } from "react";
-import { Home, Search, Map, BookOpen, User } from "lucide-react";
+import { Home, Search, LayoutGrid, User, LucideIcon } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
 
+type Tab = { label: string; to: string; icon: LucideIcon; match: (path: string) => boolean };
+
+// Floating pill tab bar: Home, Activities, Search, Profile.
 export default function Navbar() {
   const location = useLocation();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [activeTab, setActiveTab] = useState<string>(location.pathname);
 
-  // Check authentication status
   useEffect(() => {
     const checkAuth = async () => {
       const { data: session } = await supabase.auth.getSession();
@@ -17,7 +18,6 @@ export default function Navbar() {
     };
     checkAuth();
 
-    // Listen for auth state changes
     const { data: authListener } = supabase.auth.onAuthStateChange((_, session) => {
       setIsLoggedIn(!!session);
     });
@@ -27,105 +27,56 @@ export default function Navbar() {
     };
   }, []);
 
-  // Update active tab when location changes
-  useEffect(() => {
-    setActiveTab(location.pathname);
-  }, [location.pathname]);
-
-  const handleTabClick = (path: string) => {
-    setActiveTab(path);
-  };
-
-  const isActive = (path: string) => {
-    return location.pathname === path;
-  };
+  const path = location.pathname;
+  const tabs: Tab[] = [
+    { label: "Home", to: "/", icon: Home, match: (p) => p === "/" },
+    {
+      label: "Activities",
+      to: "/activities",
+      icon: LayoutGrid,
+      match: (p) =>
+        ["/activities", "/matches", "/cycling-activities", "/guides", "/venues", "/landmarks"].some((r) => p === r || p.startsWith(r + "/")),
+    },
+    { label: "Search", to: "/search", icon: Search, match: (p) => p.startsWith("/search") },
+    {
+      label: "Profile",
+      to: isLoggedIn ? "/profile" : "/auth",
+      icon: User,
+      match: (p) => p.startsWith("/profile") || p.startsWith("/auth"),
+    },
+  ];
 
   return (
-    <>
-      <nav className="fixed bottom-0 left-0 right-0 bg-gray-900 dark:bg-gray-800 border-t border-gray-700 z-10 shadow-lg">
-        <div className="flex justify-around pt-3 pb-6 px-4">
+    <nav
+      aria-label="Main"
+      className="fixed z-40 left-5 right-5 h-[68px] rounded-[34px] bg-white/90 backdrop-blur-xl shadow-nav flex items-center justify-between px-2"
+      style={{ bottom: "max(env(safe-area-inset-bottom), 1.25rem)" }}
+    >
+      {tabs.map((t) => {
+        const active = t.match(path);
+        const Icon = t.icon;
+        return (
           <Link
-            to="/"
-            onClick={() => handleTabClick("/")}
-            className={`flex items-center p-2 rounded-full transition-all duration-300 ${
-              isActive("/") ? "bg-[#17a34a] text-white px-4" : "text-gray-400 hover:text-white"
-            }`}
-          >
-            <Home size={24} />
-            {isActive("/") && (
-              <span className="ml-2 text-sm font-medium animate-slide-in">Home</span>
+            key={t.label}
+            to={t.to}
+            aria-label={t.label}
+            aria-current={active ? "page" : undefined}
+            className={cn(
+              "h-[52px] rounded-full flex items-center justify-center gap-2 transition-all duration-300",
+              active ? "bg-sc-ink text-white px-5" : "w-[52px] text-sc-ink2 active:scale-95"
             )}
-          </Link>
-
-          <Link
-            to="/activities"
-            onClick={() => handleTabClick("/activities")}
-            className={`flex items-center p-2 rounded-full transition-all duration-300 ${
-              isActive("/activities") ? "bg-[#17a34a] text-white px-4" : "text-gray-400 hover:text-white"
-            }`}
           >
-            <Map size={24} />
-            {isActive("/activities") && (
-              <span className="ml-2 text-sm font-medium animate-slide-in">Activities</span>
-            )}
+            <Icon size={active ? 22 : 24} strokeWidth={active ? 2 : 1.9} />
+            {active && <span className="text-[15px] font-bold animate-[sc-slide-in_0.3s_ease-out]">{t.label}</span>}
           </Link>
-
-          <Link
-            to="/search"
-            onClick={() => handleTabClick("/search")}
-            className={`flex items-center p-2 rounded-full transition-all duration-300 ${
-              isActive("/search") ? "bg-[#17a34a] text-white px-4" : "text-gray-400 hover:text-white"
-            }`}
-          >
-            <Search size={24} />
-            {isActive("/search") && (
-              <span className="ml-2 text-sm font-medium animate-slide-in">Search</span>
-            )}
-          </Link>
-
-          <Link
-            to="/guides"
-            onClick={() => handleTabClick("/guides")}
-            className={`flex items-center p-2 rounded-full transition-all duration-300 ${
-              isActive("/guides") ? "bg-[#17a34a] text-white px-4" : "text-gray-400 hover:text-white"
-            }`}
-          >
-            <BookOpen size={24} />
-            {isActive("/guides") && (
-              <span className="ml-2 text-sm font-medium animate-slide-in">Guides</span>
-            )}
-          </Link>
-
-          <Link
-            to={isLoggedIn ? "/profile" : "/auth"}
-            onClick={() => handleTabClick(isLoggedIn ? "/profile" : "/auth")}
-            className={`flex items-center p-2 rounded-full transition-all duration-300 ${
-              isActive(isLoggedIn ? "/profile" : "/auth") ? "bg-[#17a34a] text-white px-4" : "text-gray-400 hover:text-white"
-            }`}
-          >
-            <User size={24} />
-            {isActive(isLoggedIn ? "/profile" : "/auth") && (
-              <span className="ml-2 text-sm font-medium animate-slide-in">Profile</span>
-            )}
-          </Link>
-        </div>
-      </nav>
-
+        );
+      })}
       <style>{`
-        @keyframes slide-in {
-          from {
-            opacity: 0;
-            transform: translateX(-10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateX(0);
-          }
-        }
-        .animate-slide-in {
-          animation: slide-in 0.3s ease-in-out;
+        @keyframes sc-slide-in {
+          from { opacity: 0; transform: translateX(-8px); }
+          to { opacity: 1; transform: translateX(0); }
         }
       `}</style>
-    </>
+    </nav>
   );
 }
