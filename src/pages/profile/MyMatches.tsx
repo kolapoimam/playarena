@@ -36,6 +36,7 @@ import UserMatches from "@/components/profile/UserMatches";
 
 import { BackButton } from "@/components/sc/ui";
 import { PageSkeleton } from "@/components/sc/skeletons";
+import { ViewTicketButton } from "@/components/sc/TicketCard";
 type Match = {
   id: string;
   title: string;
@@ -570,9 +571,26 @@ const MyMatches = () => {
                                   Repeats {match.recurring_frequency} for {match.recurring_occurrences} times
                                 </p>
                               )}
-                              <p className="text-sm text-sc-ink3 dark:text-gray-400">
-                                Confirmation Code: {match.confirmation_code || "N/A"}
-                              </p>
+                              <div className="flex items-center justify-between gap-2 py-1">
+                                <span className="text-sm text-sc-ink3">
+                                  Code <b className="text-sc-ink tracking-[0.12em]">{match.confirmation_code || "N/A"}</b>
+                                </span>
+                                <ViewTicketButton
+                                  ticket={{
+                                    sport: "football",
+                                    kind: "Match ticket",
+                                    title: match.title,
+                                    code: match.confirmation_code,
+                                    rows: [
+                                      { label: "Date", value: dateStr },
+                                      { label: "Time", value: timeStr },
+                                      { label: "Venue", value: match.venue_name || "To be confirmed" },
+                                      { label: "Slots", value: String(match.number_of_slots || 1) },
+                                    ],
+                                    footnote: "The organiser scans this QR code on match day.",
+                                  }}
+                                />
+                              </div>
                               {match.is_paid && match.number_of_slots && (
                                 <p className="text-base font-medium text-sc-ink dark:text-gray-100">
                                   Slots Purchased: <span className="text-sc-green-dark dark:text-green-400">{match.number_of_slots}</span>

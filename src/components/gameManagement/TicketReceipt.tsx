@@ -12,6 +12,8 @@ import jsPDF from "jspdf";
 
 import { BackButton } from "@/components/sc/ui";
 import { RowsSkeleton } from "@/components/sc/skeletons";
+import TicketCard, { downloadElementAsPng } from "@/components/sc/TicketCard";
+import { Check } from "lucide-react";
 type Ticket = {
   ticket_code: string;
   buyer_name: string;
@@ -73,31 +75,15 @@ const TicketReceipt = () => {
 
   const handleDownload = async () => {
     if (!cardRef.current) {
-      toast({
-        title: "Error",
-        description: "Ticket card is not ready. Please try again.",
-        variant: "destructive",
-      });
+      toast({ title: "One moment", description: "Your ticket is still loading." });
       return;
     }
     setIsDownloading(true);
     try {
-      const canvas = await html2canvas(cardRef.current, { scale: 2 });
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'px',
-        format: [canvas.width, canvas.height],
-      });
-      pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
-      pdf.save(`SportCliq-Ticket-${ticket?.match.title.replace(/\s+/g, '-')}.pdf`);
+      await downloadElementAsPng(cardRef.current, `SportCliq-Ticket-${ticket?.match.title}-${ticket?.ticket_code}.png`);
     } catch (error) {
       console.error("Error generating ticket:", error);
-      toast({
-        title: "Error",
-        description: "Failed to download ticket as PDF.",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to download your ticket.", variant: "destructive" });
     } finally {
       setIsDownloading(false);
     }
@@ -170,89 +156,43 @@ const TicketReceipt = () => {
           </div>
         </header>
 
-      <div className="p-6 max-w-3xl mx-auto">
-        <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6">
-          <h2 className="text-xl font-semibold text-sc-ink dark:text-gray-200 mb-4">Tickets Purchased!</h2>
-          <p className="text-sc-ink3 dark:text-gray-300 mb-4 text-sm">
-            Your tickets have been successfully purchased. Below is your unique 6-digit ticket code for entry.
-          </p>
-          <div className="relative">
-            {/* Ticket Card with Clipped Edges */}
-            <div
-              ref={cardRef}
-              className="relative bg-gradient-to-r from-green-500 to-green-700 rounded-lg p-6 text-white shadow-xl max-w-md mx-auto overflow-hidden border-4 border-dashed border-white/30 animate-ticket-reveal"
-              style={{
-                backgroundImage: 'linear-gradient(45deg, rgba(255,255,255,0.1) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.1) 75%, transparent 75%, transparent)',
-                backgroundSize: '40px 40px',
-                clipPath: 'polygon(10% 0%, 90% 0%, 100% 10%, 100% 90%, 90% 100%, 10% 100%, 0% 90%, 0% 10%)',
-                backgroundColor: backgroundColor,
-              }}
-            >
-              {/* Perforated Edge Semi-Circles */}
-              <div className="absolute top-0 left-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '20%' }} />
-              <div className="absolute top-0 left-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '50%' }} />
-              <div className="absolute top-0 left-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '80%' }} />
-              <div className="absolute top-0 right-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '20%' }} />
-              <div className="absolute top-0 right-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '50%' }} />
-              <div className="absolute top-0 right-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '80%' }} />
-
-              {/* Ticket Content */}
-              <div className="flex items-center justify-between mb-4">
-                <img src={logoSrc} alt="PlayArena Logo" className="h-10 w-auto" />
-                <Ticket className="h-6 w-6" />
-              </div>
-              <div className="flex items-center justify-around mb-4">
-                <Trophy className="h-6 w-6 text-yellow-300" />
-                <Volleyball className="h-6 w-6 text-red-500" />
-                <Medal className="h-6 w-6 text-blue-300" />
-              </div>
-              <h2 className="text-2xl font-bold mb-2 tracking-tight font-condensed uppercase text-center">{ticket.match.title}</h2>
-              <div className="text-center mb-4">
-                <p className="text-sm"><MapPin className="inline h-4 w-4 mr-1" /> {ticket.match.venue?.name || "Venue"}, {ticket.match.venue?.city || ""}</p>
-                <p className="text-sm"><Calendar className="inline h-4 w-4 mr-1" /> {format(new Date(ticket.match.match_date), "PPP")} at {format(new Date(`1970-01-01T${ticket.match.match_time}`), "p")}</p>
-                <p className="text-sm font-semibold">Holder: {ticket.buyer_name}</p>
-                <p className="text-sm">Slots: {ticket.number_of_tickets}</p>
-              </div>
-              <div className="bg-white text-sc-green-dark rounded-md p-4 text-center shadow-inner">
-                <p className="text-sm font-medium uppercase tracking-wide">Ticket Code</p>
-                <p className="text-4xl font-bold tracking-wider mt-1 font-mono">{ticket.ticket_code}</p>
-              </div>
-            </div>
-            <select
-              value={backgroundColor}
-              onChange={(e) => setBackgroundColor(e.target.value)}
-              className="mt-4 w-full p-2 border rounded-lg"
-            >
-              <option value="#4CAF50">Green</option>
-              <option value="#FF5722">Orange</option>
-              <option value="#2196F3">Blue</option>
-              <option value="#9C27B0">Purple</option>
-              <option value="#000000">Black</option>
-            </select>
-          </div>
-          <p className="text-sm text-sc-ink3 dark:text-gray-400 my-4 text-center">
-            <strong>Note:</strong> Save or download this ticket code. You'll need it for entry on match day.
-          </p>
-<div className="flex justify-center gap-4 px-6 py-4">
-  <Button
-    className="flex-1 bg-sc-green hover:brightness-95 text-sc-green-ink font-bold rounded-full px-6 py-3 shadow-card transition-colors duration-200 border-0 max-w-xs"
-    onClick={handleDownload}
-    disabled={isDownloading}
-    aria-label="Download ticket as PDF"
-  >
-    <Download size={16} className="mr-2" />
-    {isDownloading ? "Downloading..." : "Download"}
-  </Button>
-  <Button
-    className="flex-1 bg-sc-green hover:brightness-95 text-sc-green-ink font-bold rounded-full px-6 py-3 shadow-card transition-colors duration-200 border-0 max-w-xs"
-    onClick={handleShare}
-    disabled={isDownloading}
-    aria-label="Share ticket receipt"
-  >
-    <Share2 size={16} className="mr-2" />
-    Share
-  </Button>
-</div>
+      <div className="px-5 pt-2 pb-32 flex flex-col gap-4">
+        <div className="flex flex-col items-center gap-2 text-center">
+          <span className="w-14 h-14 rounded-full text-white flex items-center justify-center" style={{ background: "#EC4899" }}>
+            <Check size={28} strokeWidth={3} />
+          </span>
+          <h2 className="m-0 text-2xl font-extrabold tracking-[-0.02em]">Tickets confirmed</h2>
+          <p className="m-0 text-sm text-sc-ink2 max-w-[290px]">Show this QR code at the gate. The code below works too.</p>
+        </div>
+        <TicketCard
+          ref={cardRef}
+          sport="pink"
+          kind="Spectator"
+          title={ticket.match.title}
+          rows={[
+            { label: "Date", value: format(new Date(ticket.match.match_date), "EEE, d MMM yyyy") },
+            { label: "Time", value: format(new Date(`1970-01-01T${ticket.match.match_time}`), "p") },
+            { label: "Venue", value: `${ticket.match.venue?.name || "Venue"}${ticket.match.venue?.city ? `, ${ticket.match.venue.city}` : ""}` },
+            { label: "Holder", value: ticket.buyer_name },
+            { label: "Tickets", value: String(ticket.number_of_tickets) },
+          ]}
+          code={ticket.ticket_code}
+          codeLabel="Ticket code"
+          footnote="Gate staff scan this QR code on match day."
+        />
+        <div className="flex gap-2.5">
+          <button
+            type="button"
+            onClick={handleDownload}
+            disabled={isDownloading}
+            className="flex-1 h-[52px] rounded-full text-white font-bold flex items-center justify-center gap-2 disabled:opacity-60"
+            style={{ background: "#EC4899" }}
+          >
+            <Download size={18} /> {isDownloading ? "Saving..." : "Save as image"}
+          </button>
+          <button type="button" onClick={handleShare} className="h-[52px] px-5 rounded-full bg-white border border-sc-line font-bold flex items-center gap-2">
+            <Share2 size={18} /> Share
+          </button>
         </div>
       </div>
       <Navbar />

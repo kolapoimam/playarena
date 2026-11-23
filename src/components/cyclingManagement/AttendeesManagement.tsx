@@ -15,6 +15,7 @@ import { ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import { z } from "zod";
 import { isPast, addHours, addDays } from "date-fns";
 
+import QrScannerDialog, { QrScanButton } from "@/components/sc/QrScanner";
 type CyclingEvent = {
   id_uuid: string;
   slug: string;
@@ -259,6 +260,16 @@ const AttendeesManagement = ({
     setIsAttendeesOpen(true);
   };
 
+  const [scanOpen, setScanOpen] = useState(false);
+  const handleScannedCode = async (code: string) => {
+    const attendee = event?.cycling_attendees?.find((a) => a.confirmation_code === code);
+    if (!attendee) {
+      toast({ title: "Code not found", description: "No rider in this event has that code.", variant: "destructive" });
+      return;
+    }
+    await handleCheckin(attendee.id_uuid, code);
+  };
+
   const handleCheckinCodeChange = (attendeeId: string, code: string) => {
     const numericCode = code.replace(/[^0-9]/g, "").slice(0, 6);
     setCheckinCodes((prev) => ({ ...prev, [attendeeId]: numericCode }));
@@ -269,7 +280,7 @@ const AttendeesManagement = ({
     }));
   };
 
-  const handleCheckin = async (attendeeId: string) => {
+  const handleCheckin = async (attendeeId: string, override?: string) => {
     if (!event) return;
 
     const attendee = event.cycling_attendees?.find((p) => p.id_uuid === attendeeId);
@@ -282,7 +293,7 @@ const AttendeesManagement = ({
       return;
     }
 
-    const code = checkinCodes[attendeeId];
+    const code = override ?? checkinCodes[attendeeId];
     if (!code || code.length !== 6) {
       setCheckinCodeErrors((prev) => ({
         ...prev,
@@ -414,6 +425,11 @@ const AttendeesManagement = ({
           {isAttendeesOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
         </button>
 
+        {mode === "checkin" && (
+          <div className="mb-4">
+            <QrScanButton label="Scan rider QR code" onClick={() => setScanOpen(true)} />
+          </div>
+        )}
         {isAttendeesOpen && (
           <div className="space-y-4">
             {event.cycling_attendees?.length === 0 ? (
@@ -513,6 +529,8 @@ const AttendeesManagement = ({
           )}
         </Button>
       )}
+
+      <QrScannerDialog open={scanOpen} onOpenChange={setScanOpen} onCode={handleScannedCode} hint="Point the camera at the QR code on the rider's ticket" />
 
       <Dialog open={checkinDialogOpen} onOpenChange={setCheckinDialogOpen}>
         <DialogContent className="sm:max-w-md rounded-lg">

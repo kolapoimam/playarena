@@ -9,6 +9,7 @@ import { ChevronDown, ChevronUp, Loader2, Ticket } from "lucide-react";
 import { z } from "zod";
 import { differenceInMinutes, isPast, addHours } from "date-fns";
 
+import QrScannerDialog, { QrScanButton } from "@/components/sc/QrScanner";
 type Match = {
   id: string;
   slug: string;
@@ -163,8 +164,11 @@ const TicketManagement = ({
     setTicketError(validation.success ? null : validation.error?.errors[0].message);
   };
 
-  const validateTicketCode = async () => {
-    if (!ticketInput || ticketInput.length !== 6) {
+  const [scanOpen, setScanOpen] = useState(false);
+
+  const validateTicketCode = async (override?: unknown) => {
+    const code = typeof override === "string" ? override : ticketInput;
+    if (!code || code.length !== 6) {
       toast({
         title: "Invalid Code",
         description: "Please enter a 6-digit ticket code",
@@ -189,7 +193,7 @@ const TicketManagement = ({
         .from('tickets')
         .select('id, buyer_name, number_of_tickets, ticket_code, checked_in')
         .eq('match_id', match.id)
-        .eq('ticket_code', ticketInput)
+        .eq('ticket_code', code)
         .single();
 
       if (error || !data) throw new Error(error?.message || "Ticket not found");
@@ -263,6 +267,7 @@ const TicketManagement = ({
         </button>
         {isTicketsOpen && (
           <div className="space-y-4">
+            {mode === "checkin" && <QrScanButton label="Scan ticket QR code" onClick={() => setScanOpen(true)} />}
             {mode === "checkin" && (
               <div className="flex gap-2 w-full">
                 <Input
@@ -356,6 +361,16 @@ const TicketManagement = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <QrScannerDialog
+        open={scanOpen}
+        onOpenChange={setScanOpen}
+        onCode={async (code) => {
+          setTicketInput(code);
+          await validateTicketCode(code);
+        }}
+        title="Scan spectator ticket"
+        hint="Point the camera at the QR code on the spectator's ticket"
+      />
     </div>
   );
 };

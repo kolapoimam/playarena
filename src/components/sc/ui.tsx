@@ -546,6 +546,7 @@ export const formatNaira = (n?: number | null) =>
 
 export const formatTime12 = (t?: string | null) => {
   if (!t) return "";
+  if (/am|pm/i.test(t)) return t.replace(/^0/, "");
   const [h, m] = t.split(":");
   const hr = parseInt(h, 10);
   if (isNaN(hr)) return t;

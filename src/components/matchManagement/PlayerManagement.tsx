@@ -9,6 +9,7 @@ import { ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import { z } from "zod";
 import { differenceInMinutes, isPast, addHours } from "date-fns";
 
+import QrScannerDialog, { QrScanButton } from "@/components/sc/QrScanner";
 type Match = {
   id: string;
   slug: string;
@@ -314,6 +315,22 @@ const PlayerManagement = ({
     return isEndTimeFuture;
   };
 
+  const [scanFor, setScanFor] = useState<"player" | "ticket" | null>(null);
+
+  const handleScannedCode = async (code: string) => {
+    if (scanFor === "ticket") {
+      setTicketInput(code);
+      await validateTicketCode(code);
+      return;
+    }
+    const player = match?.players?.find((p) => p.confirmation_code === code);
+    if (!player) {
+      toast({ title: "Code not found", description: "No player in this match has that code.", variant: "destructive" });
+      return;
+    }
+    await validateCheckinCode(player.id, code);
+  };
+
   const handleCheckinMode = () => {
     if (!match || match.cancellation_status) {
       toast({
@@ -378,8 +395,8 @@ const PlayerManagement = ({
     setTicketError(validation.success ? null : validation.error?.errors[0].message);
   };
 
-  const validateCheckinCode = async (playerId: string) => {
-    const code = checkinCodes[playerId];
+  const validateCheckinCode = async (playerId: string, override?: string) => {
+    const code = override ?? checkinCodes[playerId];
     if (!code || code.length !== 6) {
       toast({
         title: "Invalid Code",
@@ -494,8 +511,9 @@ const PlayerManagement = ({
     }
   };
 
-  const validateTicketCode = async () => {
-    if (!ticketInput || ticketInput.length !== 6) {
+  const validateTicketCode = async (override?: unknown) => {
+    const code = typeof override === "string" ? override : ticketInput;
+    if (!code || code.length !== 6) {
       toast({
         title: "Invalid Code",
         description: "Please enter a 6-digit ticket code",
@@ -520,7 +538,7 @@ const PlayerManagement = ({
         .from('tickets')
         .select('id, buyer_name, number_of_tickets, ticket_code, checked_in')
         .eq('match_id', match.id)
-        .eq('ticket_code', ticketInput)
+        .eq('ticket_code', code)
         .single();
 
       if (error || !data) throw new Error(error?.message || "Ticket not found");
@@ -627,6 +645,11 @@ const PlayerManagement = ({
           Players
           {isPlayersOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
         </button>
+        {mode === "checkin" && (
+          <div className="mb-4">
+            <QrScanButton label="Scan player QR code" onClick={() => setScanFor("player")} />
+          </div>
+        )}
         {isPlayersOpen && (
           <div className="space-y-4">
             {(match.players || []).length === 0 ? (
@@ -708,6 +731,9 @@ const PlayerManagement = ({
           </button>
           {isTicketsOpen && (
             <div className="space-y-4">
+              {mode === "ticket" && (
+                <QrScanButton label="Scan ticket QR code" onClick={() => setScanFor("ticket")} />
+              )}
               {mode === "ticket" && (
                 <div className="flex gap-2 w-full">
                   <Input
@@ -796,6 +822,14 @@ const PlayerManagement = ({
           )}
         </Button>
       )}
+
+      <QrScannerDialog
+        open={!!scanFor}
+        onOpenChange={(v) => !v && setScanFor(null)}
+        onCode={handleScannedCode}
+        title={scanFor === "ticket" ? "Scan spectator ticket" : "Scan to check in"}
+        hint={scanFor === "ticket" ? "Point the camera at the QR code on the spectator's ticket" : "Point the camera at the QR code on the player's ticket"}
+      />
 
       <Dialog open={checkinDialogOpen} onOpenChange={setCheckinDialogOpen}>
         <DialogContent className="max-w-md rounded-lg">

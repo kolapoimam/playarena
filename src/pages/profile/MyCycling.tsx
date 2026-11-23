@@ -13,6 +13,7 @@ import { DateTime } from "luxon";
 
 import { BackButton } from "@/components/sc/ui";
 import { PageSkeleton } from "@/components/sc/skeletons";
+import { ViewTicketButton } from "@/components/sc/TicketCard";
 type Landmark = {
   name: string;
   state: string;
@@ -356,9 +357,26 @@ const MyCycling = () => {
                                 <MapPin size={16} className="mr-2" />
                                 {event.start_landmark.name}, {event.start_landmark.state}
                               </p>
-                              <p className="text-sm text-sc-ink3 dark:text-gray-400">
-                                Confirmation Code: {event.confirmation_code || "N/A"}
-                              </p>
+                              <div className="flex items-center justify-between gap-2 py-1">
+                                <span className="text-sm text-sc-ink3">
+                                  Code <b className="text-sc-ink tracking-[0.12em]">{event.confirmation_code || "N/A"}</b>
+                                </span>
+                                <ViewTicketButton
+                                  ticket={{
+                                    sport: "cycling",
+                                    kind: "Ride ticket",
+                                    title: event.title,
+                                    code: event.confirmation_code,
+                                    rows: [
+                                      { label: "Date", value: dateStr },
+                                      { label: "Starts", value: timeStr },
+                                      { label: "Meet at", value: `${event.start_landmark.name}, ${event.start_landmark.state}` },
+                                      { label: "Host", value: event.host_name || "SportCliq host" },
+                                    ],
+                                    footnote: "The host scans this QR code on ride day.",
+                                  }}
+                                />
+                              </div>
                               <p className="text-sm text-sc-ink3 dark:text-gray-400 flex items-center">
                                 <Bike size={16} className="mr-2" />
                                 Organized by: {event.host_name || "Unknown"}

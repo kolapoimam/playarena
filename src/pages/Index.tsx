@@ -77,6 +77,8 @@ const formatDate = (dateString: string) => {
 };
 
 const formatTime = (timeString: string) => {
+  if (!timeString) return "";
+  if (/am|pm/i.test(timeString)) return timeString.replace(/^0/, "");
   const [hours, minutes] = timeString.split(":");
   const hour = parseInt(hours);
   const period = hour >= 12 ? "PM" : "AM";
