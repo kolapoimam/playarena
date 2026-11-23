@@ -8,14 +8,14 @@ const skillLevels = ["Beginner", "Amateur", "Intermediate", "Advanced", "Profess
 const matchTypes = ["4-a-side", "5-a-side", "7-a-side", "11-a-side (Regular)", "Double", "Friendly", "All", "None"] as const;
 const genders = ["Male", "Female", "All", "None"] as const;
 
-const PreferencesForm = () => {
+const PreferencesForm = ({ defaultOpen = false }: { defaultOpen?: boolean } = {}) => {
   const form = useFormContext<FormValues>();
-  const [isPreferencesOpen, setIsPreferencesOpen] = useState(false);
+  const [isPreferencesOpen, setIsPreferencesOpen] = useState(defaultOpen);
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
+    <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 space-y-6">
       <div className="flex justify-between items-center cursor-pointer" onClick={() => setIsPreferencesOpen(!isPreferencesOpen)}>
-        <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Preferences (Optional)</h2>
+        <h2 className="text-xl font-semibold text-sc-ink dark:text-gray-200">Preferences (Optional)</h2>
         <span>{isPreferencesOpen ? '-' : '+'}</span>
       </div>
       {isPreferencesOpen && (
@@ -25,10 +25,10 @@ const PreferencesForm = () => {
             name="skill_level"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Skill Level</FormLabel>
+                <FormLabel className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Skill Level</FormLabel>
                 <Select onValueChange={field.onChange} value={field.value || undefined}>
                   <FormControl>
-                    <SelectTrigger className="w-full text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white">
+                    <SelectTrigger className="w-full text-base border-sc-line dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white">
                       <SelectValue placeholder="Select Skill Level" />
                     </SelectTrigger>
                   </FormControl>
@@ -40,7 +40,7 @@ const PreferencesForm = () => {
                     ))}
                   </SelectContent>
                 </Select>
-                <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                <FormDescription className="text-sm text-sc-ink3 dark:text-gray-400">
                   Select the preferred skill level for this match (optional)
                 </FormDescription>
                 <FormMessage />
@@ -52,10 +52,10 @@ const PreferencesForm = () => {
             name="match_type"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Match Type</FormLabel>
+                <FormLabel className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Match Type</FormLabel>
                 <Select onValueChange={field.onChange} value={field.value || undefined}>
                   <FormControl>
-                    <SelectTrigger className="w-full text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white">
+                    <SelectTrigger className="w-full text-base border-sc-line dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white">
                       <SelectValue placeholder="Select Match Type" />
                     </SelectTrigger>
                   </FormControl>
@@ -67,7 +67,7 @@ const PreferencesForm = () => {
                     ))}
                   </SelectContent>
                 </Select>
-                <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                <FormDescription className="text-sm text-sc-ink3 dark:text-gray-400">
                   Select the type of match (optional)
                 </FormDescription>
                 <FormMessage />
@@ -79,10 +79,10 @@ const PreferencesForm = () => {
             name="gender"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">Gender Preference</FormLabel>
+                <FormLabel className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Gender Preference</FormLabel>
                 <Select onValueChange={field.onChange} value={field.value || undefined}>
                   <FormControl>
-                    <SelectTrigger className="w-full text-base border-gray-300 dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white">
+                    <SelectTrigger className="w-full text-base border-sc-line dark:border-gray-600 focus:ring-green-500 dark:bg-gray-700 dark:text-white">
                       <SelectValue placeholder="Select Gender" />
                     </SelectTrigger>
                   </FormControl>
@@ -94,7 +94,7 @@ const PreferencesForm = () => {
                     ))}
                   </SelectContent>
                 </Select>
-                <FormDescription className="text-sm text-gray-500 dark:text-gray-400">
+                <FormDescription className="text-sm text-sc-ink3 dark:text-gray-400">
                   Select the preferred gender for this match (optional)
                 </FormDescription>
                 <FormMessage />

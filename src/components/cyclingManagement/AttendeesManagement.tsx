@@ -15,6 +15,7 @@ import { ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import { z } from "zod";
 import { isPast, addHours, addDays } from "date-fns";
 
+import QrScannerDialog, { QrScanButton } from "@/components/sc/QrScanner";
 type CyclingEvent = {
   id_uuid: string;
   slug: string;
@@ -259,6 +260,16 @@ const AttendeesManagement = ({
     setIsAttendeesOpen(true);
   };
 
+  const [scanOpen, setScanOpen] = useState(false);
+  const handleScannedCode = async (code: string) => {
+    const attendee = event?.cycling_attendees?.find((a) => a.confirmation_code === code);
+    if (!attendee) {
+      toast({ title: "Code not found", description: "No rider in this event has that code.", variant: "destructive" });
+      return;
+    }
+    await handleCheckin(attendee.id_uuid, code);
+  };
+
   const handleCheckinCodeChange = (attendeeId: string, code: string) => {
     const numericCode = code.replace(/[^0-9]/g, "").slice(0, 6);
     setCheckinCodes((prev) => ({ ...prev, [attendeeId]: numericCode }));
@@ -269,7 +280,7 @@ const AttendeesManagement = ({
     }));
   };
 
-  const handleCheckin = async (attendeeId: string) => {
+  const handleCheckin = async (attendeeId: string, override?: string) => {
     if (!event) return;
 
     const attendee = event.cycling_attendees?.find((p) => p.id_uuid === attendeeId);
@@ -282,7 +293,7 @@ const AttendeesManagement = ({
       return;
     }
 
-    const code = checkinCodes[attendeeId];
+    const code = override ?? checkinCodes[attendeeId];
     if (!code || code.length !== 6) {
       setCheckinCodeErrors((prev) => ({
         ...prev,
@@ -367,7 +378,7 @@ const AttendeesManagement = ({
       case "registered":
         return "bg-yellow-500 text-white border-yellow-600";
       case "checked_in":
-        return "bg-green-500 text-white border-green-600";
+        return "bg-green-500 text-white border-sc-green";
       case "absent":
         return "bg-red-500 text-white border-red-600";
       default:
@@ -383,8 +394,8 @@ const AttendeesManagement = ({
   if (!event) return null;
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700">
-      <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">
+    <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 dark:border-gray-700">
+      <h2 className="text-xl font-semibold mb-4 text-sc-ink dark:text-gray-100">
         Manage Attendees
       </h2>
 
@@ -408,16 +419,21 @@ const AttendeesManagement = ({
       <div className="max-h-[400px] overflow-y-auto">
         <button
           onClick={() => setIsAttendeesOpen(!isAttendeesOpen)}
-          className="flex items-center gap-2 w-full text-left text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4"
+          className="flex items-center gap-2 w-full text-left text-lg font-semibold text-sc-ink dark:text-gray-100 mb-4"
         >
           Attendees ({event.cycling_attendees?.length || 0})
           {isAttendeesOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
         </button>
 
+        {mode === "checkin" && (
+          <div className="mb-4">
+            <QrScanButton label="Scan rider QR code" onClick={() => setScanOpen(true)} />
+          </div>
+        )}
         {isAttendeesOpen && (
           <div className="space-y-4">
             {event.cycling_attendees?.length === 0 ? (
-              <p className="text-gray-600 dark:text-gray-400">
+              <p className="text-sc-ink3 dark:text-gray-400">
                 No attendees registered.
               </p>
             ) : (
@@ -426,23 +442,23 @@ const AttendeesManagement = ({
                 return (
                   <div
                     key={attendee.id_uuid}
-                    className="relative flex flex-col sm:flex-row gap-4 items-start sm:items-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg"
+                    className="relative flex flex-col sm:flex-row gap-4 items-start sm:items-center p-4 bg-sc-soft dark:bg-gray-700 rounded-lg"
                   >
                     <div className="flex-1">
-                      <p className="font-medium text-gray-900 dark:text-gray-100">{attendee.attendee_name}</p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                      <p className="font-medium text-sc-ink dark:text-gray-100">{attendee.attendee_name}</p>
+                      <p className="text-sm text-sc-ink3 dark:text-gray-400">
                         Phone: {attendee.attendee_phone || "N/A"}
                       </p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                      <p className="text-sm text-sc-ink3 dark:text-gray-400">
                         Slots: {Number(attendee.number_of_slots) || 1}
                       </p>
                       {attendee.is_own_bike && (
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                        <p className="text-sm text-sc-ink3 dark:text-gray-400">
                           Own Bike
                         </p>
                       )}
                       {attendee.is_rental_bike && (
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                        <p className="text-sm text-sc-ink3 dark:text-gray-400">
                           Rental Bike
                         </p>
                       )}
@@ -500,7 +516,7 @@ const AttendeesManagement = ({
       {mode === "checkin" && (
         <Button
           onClick={() => setMode(null)}
-          className="mt-4 bg-green-500 hover:bg-green-600 text-white"
+          className="mt-4 bg-sc-green hover:brightness-95 text-sc-green-ink font-bold"
           disabled={loading}
         >
           {loading ? (
@@ -513,6 +529,8 @@ const AttendeesManagement = ({
           )}
         </Button>
       )}
+
+      <QrScannerDialog open={scanOpen} onOpenChange={setScanOpen} onCode={handleScannedCode} hint="Point the camera at the QR code on the rider's ticket" />
 
       <Dialog open={checkinDialogOpen} onOpenChange={setCheckinDialogOpen}>
         <DialogContent className="sm:max-w-md rounded-lg">
@@ -531,7 +549,7 @@ const AttendeesManagement = ({
           <DialogFooter>
             <Button
               onClick={() => setCheckinDialogOpen(false)}
-              className="bg-green-500 hover:bg-green-600 text-white rounded-md"
+              className="bg-sc-green hover:brightness-95 text-sc-green-ink rounded-full font-bold"
             >
               Close
             </Button>

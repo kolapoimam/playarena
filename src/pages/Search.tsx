@@ -2,11 +2,32 @@ import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
-import SearchBar from "@/components/SearchBar";
-import { Calendar, MapPin, Users, CheckCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Calendar, MapPin, Bike, Clock, Flag, Search as SearchIcon, ShieldCheck, Store, Trophy, X, ChevronLeft, ChevronRight, LucideIcon } from "lucide-react";
+import {
+  Bubble,
+  DateBox,
+  EmptyState,
+  ListGroup,
+  ListRow,
+  Meta,
+  PageHeader,
+  Pill,
+  Progress,
+  Screen,
+  Segmented,
+  Spinner,
+  SPORT,
+  Sport,
+  formatNaira, Cover } from "@/components/sc/ui";
+
+const RECENT_KEY = "sc_recent_searches";
+const readRecent = (): string[] => {
+  try {
+    return JSON.parse(localStorage.getItem(RECENT_KEY) || "[]");
+  } catch {
+    return [];
+  }
+};
 import { format } from "date-fns";
 import { DateTime } from "luxon";
 import { Seo } from "@/components/Seo";
@@ -57,6 +78,28 @@ const SearchPage = () => {
   const [hasSearched, setHasSearched] = useState(false);
   const [activeTab, setActiveTab] = useState<"matches" | "venues">("matches");
   const [currentPage, setCurrentPage] = useState(1);
+  const [term, setTerm] = useState(searchParams.get("q") || "");
+  const [recent, setRecent] = useState<string[]>(readRecent());
+
+  const saveRecent = (list: string[]) => {
+    setRecent(list);
+    try {
+      localStorage.setItem(RECENT_KEY, JSON.stringify(list));
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const runSearch = (q: string) => {
+    const clean = q.replace(/[^A-Za-z\s]/g, "").trim();
+    if (!clean) return;
+    saveRecent([clean, ...recent.filter((r) => r.toLowerCase() !== clean.toLowerCase())].slice(0, 6));
+    navigate(`/search?q=${encodeURIComponent(clean)}`);
+  };
+
+  useEffect(() => {
+    setTerm(searchParams.get("q") || "");
+  }, [searchParams]);
 
   useEffect(() => {
     const query = searchParams.get("q")?.trim();
@@ -284,6 +327,16 @@ const SearchPage = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  const statusSport = (label: string): Sport =>
+    label === "Cancelled" ? "red" : label === "Live" ? "red" : label === "Today" ? "football" : label === "Passed" ? "gray" : "guide";
+
+  const browse: { label: string; icon: LucideIcon; sport: Sport; to: string }[] = [
+    { label: "Matches", icon: Trophy, sport: "football", to: "/matches" },
+    { label: "Venues", icon: Store, sport: "venue", to: "/venues" },
+    { label: "Cycling", icon: Bike, sport: "cycling", to: "/cycling-activities" },
+    { label: "Landmarks", icon: Flag, sport: "guide", to: "/landmarks" },
+  ];
+
   return (
     <>
       <Seo
@@ -293,259 +346,251 @@ const SearchPage = () => {
         image={undefined}
         children={null}
       />
-      <div className="min-h-screen pb-24 bg-gray-50 dark:bg-gray-900">
-        <div className="p-4 max-w-5xl mx-auto">
-          <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">Find Match or Venue</h1>
+      <Screen>
+        <PageHeader title="Search" />
 
-          <div className="mb-6">
-            <SearchBar />
-          </div>
-
-          {hasSearched && (
-            <div className="mb-6 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                Search Summary
-              </h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Found {matches.length} {matches.length === 1 ? "match" : "matches"} and{" "}
-                {venues.length} {venues.length === 1 ? "venue" : "venues"} for "
-                {searchParams.get("q")}"
-              </p>
-            </div>
-          )}
-
-          <div className="flex justify-between items-center mb-4">
-            <Tabs
-              value={activeTab}
-              onValueChange={(value) => {
-                setActiveTab(value as "matches" | "venues");
-                setCurrentPage(1);
-              }}
-              className="w-full"
-            >
-              <TabsList className="grid w-full grid-cols-2 bg-gray-200 dark:bg-gray-700 rounded-lg p-1">
-                <TabsTrigger
-                  value="matches"
-                  className="rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-gray-600 data-[state=active]:shadow-sm"
-                >
-                  Matches ({matches.length})
-                </TabsTrigger>
-                <TabsTrigger
-                  value="venues"
-                  className="rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-gray-600 data-[state=active]:shadow-sm"
-                >
-                  Venues ({venues.length})
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
-
-          {loading ? (
-            <div className="flex justify-center items-center h-32">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
-            </div>
-          ) : hasSearched ? (
-            <Tabs value={activeTab} className="w-full">
-              <TabsContent value="matches">
-                {paginatedMatches.length > 0 ? (
-                  <div className="space-y-4">
-                    {paginatedMatches.map((match) => {
-                      const { statusLabel, statusClass, isFull, isFeedbackWindow } = getMatchStatus(match);
-                      const totalPlayerSlots = match.players.reduce(
-                        (sum, player) => sum + (player.cancellation_status ? 0 : player.number_of_slots || 1),
-                        0
-                      );
-
-                      return (
-                        <div
-                          key={match.id}
-                          className="border rounded-lg p-4 bg-white dark:bg-gray-800 hover:border-green-500 transition-colors cursor-pointer shadow-sm"
-                          onClick={() => navigate(`/match/${match.slug}`)}
-                        >
-                          <div className="flex justify-between items-start">
-                            <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100">
-                              {match.title}
-                            </h3>
-                            <Badge className={`${statusClass}`}>
-                              {statusLabel}
-                            </Badge>
-                          </div>
-
-                          <div className="mt-2 space-y-2">
-                            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                              <Calendar size={16} />
-                              <span>
-                                {formatDate(match.match_date)} at{" "}
-                                {formatTime(match.match_time)}
-                              </span>
-                            </div>
-
-                            {match.venue && (
-                              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                                <MapPin size={16} />
-                                <span>
-                                  {match.venue.name}, {match.venue.city}
-                                  {match.venue.state ? `, ${match.venue.state}` : ""}
-                                </span>
-                              </div>
-                            )}
-
-                            <div className="flex items-center justify-between mt-2">
-                              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                                <Users size={16} />
-                                <span>
-                                  {totalPlayerSlots}/{match.total_slots}{" "}
-                                  players
-                                </span>
-                              </div>
-
-                              <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                                {match.is_paid
-                                  ? `₦${match.price?.toFixed(2)}`
-                                  : "Free"}
-                              </span>
-                            </div>
-                          </div>
-
-                          <div className="mt-4 flex gap-2">
-                            {statusLabel === "Passed" ? (
-                              <Button
-                                className="flex-1 bg-green-500 hover:bg-green-600 text-white rounded-lg"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  navigate(`/match/${match.slug}`);
-                                }}
-                              >
-                                Watch Highlight
-                              </Button>
-                            ) : match.cancellation_status || isFull ? (
-                              <Button
-                                className="flex-1 bg-gray-500 text-white rounded-lg"
-                                disabled
-                              >
-                                {match.cancellation_status || match.status === "cancelled"
-                                  ? "Cancelled"
-                                  : match.status === "completed"
-                                  ? "Completed"
-                                  : "Full"}
-                              </Button>
-                            ) : (
-                              <Button
-                                className="flex-1 bg-green-500 hover:bg-green-600 text-white rounded-lg"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  navigate(`/join/${match.slug}`);
-                                }}
-                              >
-                                Join Match
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <p className="text-muted-foreground">
-                      No matches found for "{searchParams.get("q")}".
-                    </p>
-                    <p className="mt-2">Try searching with different keywords.</p>
-                  </div>
-                )}
-              </TabsContent>
-
-              <TabsContent value="venues">
-                {paginatedVenues.length > 0 ? (
-                  <div className="space-y-4">
-                    {paginatedVenues.map((venue) => (
-                      <div
-                        key={venue.id}
-                        className="border rounded-lg p-4 bg-white dark:bg-gray-800 hover:border-green-500 transition-colors cursor-pointer shadow-sm"
-                        onClick={() => navigate(`/venue/${venue.slug}`)}
-                      >
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100">
-                            {venue.name}
-                          </h3>
-                          {venue.is_verified && (
-                            <img 
-                              src="/green-verified.png" 
-                              alt="Verified" 
-                              className="w-4 h-4 object-contain"
-                            />
-                          )}
-                        </div>
-                        <div className="mt-2 space-y-2">
-                          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                            <MapPin size={16} />
-                            <span>
-                              {venue.city}
-                              {venue.state ? `, ${venue.state}` : ""}
-                            </span>
-                          </div>
-                        </div>
-                        {venue.is_verified && (
-                          <div className="mt-4">
-                            <Button
-                              className="w-full bg-green-500 hover:bg-green-600 text-white rounded-lg"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                navigate(`/venue/${venue.slug}/book`);
-                              }}
-                            >
-                              Book Now
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <p className="text-muted-foreground">
-                      No venues found for "{searchParams.get("q")}".
-                    </p>
-                    <p className="mt-2">Try searching with different keywords.</p>
-                  </div>
-                )}
-              </TabsContent>
-            </Tabs>
-          ) : (
-            <div className="flex items-center justify-center h-[50vh]">
-              <p className="text-muted-foreground text-center p-4">
-                Search for matches or venues by title, name, city, or state
-              </p>
-            </div>
-          )}
-
-          {hasSearched && (paginatedMatches.length > 0 || paginatedVenues.length > 0) && (
-            <div className="mt-6 flex justify-center items-center gap-2">
-              <Button
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1}
-                variant="outline"
-                size="sm"
-              >
-                Previous
-              </Button>
-              <span className="text-sm text-gray-600 dark:text-gray-400">
-                Page {currentPage} of {totalPages}
-              </span>
-              <Button
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage === totalPages}
-                variant="outline"
-                size="sm"
-              >
-                Next
-              </Button>
-            </div>
-          )}
+        <div className="px-5 pt-4">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              runSearch(term);
+            }}
+            className="h-[54px] rounded-[18px] bg-white flex items-center gap-2.5 pl-4 pr-2 text-sc-ink3 shadow-card"
+          >
+            <SearchIcon size={20} className="shrink-0" />
+            <input
+              aria-label="Search matches or venues"
+              value={term}
+              onChange={(e) => setTerm(e.target.value.replace(/[^A-Za-z\s]/g, ""))}
+              placeholder="Matches, venues, cities"
+              className="flex-1 min-w-0 bg-transparent outline-none text-base text-sc-ink placeholder:text-[#8A918C]"
+            />
+            {term && (
+              <button type="button" aria-label="Clear search" onClick={() => setTerm("")} className="w-8 h-8 flex items-center justify-center text-sc-ink3">
+                <X size={18} />
+              </button>
+            )}
+            <button type="submit" className="h-10 px-4 rounded-[14px] bg-sc-ink text-white text-sm font-bold">
+              Search
+            </button>
+          </form>
         </div>
 
+        {!hasSearched ? (
+          <main className="px-5 pt-5 flex flex-col gap-5">
+            <div className="flex flex-col gap-2.5">
+              <span className="text-[13px] font-bold text-sc-ink2">Browse</span>
+              <div className="grid grid-cols-2 gap-2.5">
+                {browse.map((b) => (
+                  <button
+                    key={b.label}
+                    type="button"
+                    onClick={() => navigate(b.to)}
+                    className="relative overflow-hidden h-[92px] rounded-[22px] p-3.5 flex flex-col justify-between text-left active:scale-[0.98] transition-transform"
+                    style={{ background: SPORT[b.sport].bg, color: SPORT[b.sport].fg }}
+                  >
+                    <b.icon aria-hidden="true" className="absolute opacity-30" size={80} strokeWidth={1.4} style={{ right: -14, bottom: -18 }} />
+                    <b.icon size={24} />
+                    <span className="relative text-base font-extrabold text-sc-ink">{b.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            {recent.length > 0 && (
+              <ListGroup title="Recent">
+                {recent.map((r) => (
+                  <ListRow
+                    key={r}
+                    icon={Clock}
+                    sport="gray"
+                    title={r}
+                    onClick={() => runSearch(r)}
+                    chevron={false}
+                    right={
+                      <span
+                        role="button"
+                        aria-label={`Remove ${r}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          saveRecent(recent.filter((x) => x !== r));
+                        }}
+                        className="w-8 h-8 flex items-center justify-center text-sc-ink3"
+                      >
+                        <X size={16} />
+                      </span>
+                    }
+                  />
+                ))}
+              </ListGroup>
+            )}
+            {recent.length === 0 && (
+              <p className="text-sm text-sc-ink3 text-center px-6">Search for matches or venues by title, name, city or state.</p>
+            )}
+          </main>
+        ) : (
+          <main className="px-5 pt-4 flex flex-col gap-3">
+            <Segmented
+              value={activeTab}
+              onChange={(v) => {
+                setActiveTab(v);
+                setCurrentPage(1);
+              }}
+              options={[
+                { value: "matches", label: `Matches ${matches.length}` },
+                { value: "venues", label: `Venues ${venues.length}` },
+              ]}
+            />
+            <span className="text-[13px] font-semibold text-sc-ink3">
+              {matches.length} {matches.length === 1 ? "match" : "matches"} and {venues.length} {venues.length === 1 ? "venue" : "venues"} for “{searchParams.get("q")}”
+            </span>
+
+            {loading ? (
+              <Spinner />
+            ) : activeTab === "matches" ? (
+              paginatedMatches.length > 0 ? (
+                paginatedMatches.map((match) => {
+                  const { statusLabel, isFull } = getMatchStatus(match);
+                  const totalPlayerSlots = match.players.reduce(
+                    (sum, player) => sum + (player.cancellation_status ? 0 : player.number_of_slots || 1),
+                    0
+                  );
+                  const pct = match.total_slots ? (totalPlayerSlots * 100) / match.total_slots : 0;
+                  return (
+                    <div
+                      key={match.id}
+                      onClick={() => navigate(`/match/${match.slug}`)}
+                      className="bg-white rounded-3xl p-[18px] flex flex-col gap-3.5 cursor-pointer active:scale-[0.99] transition-transform"
+                    >
+                      <div className="flex gap-3.5 items-center">
+                        <DateBox date={match.match_date} />
+                        <div className="flex-1 min-w-0 flex flex-col gap-1">
+                          <span className="text-lg font-extrabold tracking-[-0.02em] truncate">{match.title}</span>
+                          <span className="text-[13px] text-sc-ink3">
+                            {formatDate(match.match_date)} · {formatTime(match.match_time)}
+                          </span>
+                        </div>
+                      </div>
+                      {match.venue && (
+                        <Meta icon={MapPin}>
+                          {match.venue.name}, {match.venue.city}
+                          {match.venue.state ? `, ${match.venue.state}` : ""}
+                        </Meta>
+                      )}
+                      <div className="flex gap-1.5 flex-wrap">
+                        <Pill sport={statusSport(statusLabel)}>{statusLabel}</Pill>
+                        <Pill sport={match.is_paid ? "tennis" : "football"}>{match.is_paid ? formatNaira(match.price) : "Free"}</Pill>
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <div className="flex justify-between text-[13px]">
+                          <span className="text-sc-ink3 font-semibold">Players</span>
+                          <span className="font-extrabold">
+                            {totalPlayerSlots}/{match.total_slots}
+                          </span>
+                        </div>
+                        <Progress value={pct} />
+                      </div>
+                      {statusLabel === "Passed" ? (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/match/${match.slug}`);
+                          }}
+                          className="h-11 rounded-full bg-sc-green-bg text-sc-green-dark text-[15px] font-bold flex items-center justify-center gap-2"
+                        >
+                          Watch highlights
+                        </button>
+                      ) : match.cancellation_status || isFull ? (
+                        <button type="button" disabled className="h-11 rounded-full bg-sc-soft text-sc-ink3 text-[15px] font-bold">
+                          {match.cancellation_status || match.status === "cancelled" ? "Cancelled" : match.status === "completed" ? "Completed" : "Full"}
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/join/${match.slug}`);
+                          }}
+                          className="h-11 rounded-full bg-sc-green text-sc-green-ink text-[15px] font-extrabold"
+                        >
+                          Join match
+                        </button>
+                      )}
+                    </div>
+                  );
+                })
+              ) : (
+                <EmptyState icon={Trophy} sport="football" title="No matches found" subtitle="Try searching with different keywords." />
+              )
+            ) : paginatedVenues.length > 0 ? (
+              paginatedVenues.map((venue: any) => (
+                <div
+                  key={venue.id}
+                  onClick={() => navigate(`/venue/${venue.slug}`)}
+                  className="bg-white rounded-3xl p-[18px] flex flex-col gap-3.5 cursor-pointer active:scale-[0.99] transition-transform"
+                >
+                  <div className="flex gap-3.5 items-center">
+                    <div className="relative w-[60px] h-[60px] rounded-[18px] overflow-hidden shrink-0">
+                      <Cover src={venue.image_urls?.[0]} kind="venue" />
+                    </div>
+                    <div className="flex-1 min-w-0 flex flex-col gap-1">
+                      <span className="text-[17px] font-extrabold truncate">{venue.name}</span>
+                      <span className="text-[13px] text-sc-ink3 truncate">
+                        {venue.city}
+                        {venue.state ? `, ${venue.state}` : ""}
+                      </span>
+                    </div>
+                    {venue.is_verified ? <Pill sport="football" icon={ShieldCheck}>Verified</Pill> : <Pill sport="venue">Venue</Pill>}
+                  </div>
+                  {venue.is_verified && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/venue/${venue.slug}/book`);
+                      }}
+                      className="h-11 rounded-full text-white text-[15px] font-extrabold"
+                      style={{ background: SPORT.venue.solid }}
+                    >
+                      Book now
+                    </button>
+                  )}
+                </div>
+              ))
+            ) : (
+              <EmptyState icon={Store} sport="venue" title="No venues found" subtitle="Try searching with different keywords." />
+            )}
+
+            {!loading && totalPages > 1 && (
+              <div className="flex justify-center items-center gap-3 pt-2">
+                <button
+                  type="button"
+                  aria-label="Previous page"
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="w-11 h-11 rounded-full bg-white flex items-center justify-center disabled:opacity-40"
+                >
+                  <ChevronLeft size={20} />
+                </button>
+                <span className="text-sm font-bold text-sc-ink2">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <button
+                  type="button"
+                  aria-label="Next page"
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className="w-11 h-11 rounded-full bg-white flex items-center justify-center disabled:opacity-40"
+                >
+                  <ChevronRight size={20} />
+                </button>
+              </div>
+            )}
+          </main>
+        )}
+
         <Navbar />
-      </div>
+      </Screen>
     </>
   );
 };

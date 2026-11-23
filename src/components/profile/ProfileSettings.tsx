@@ -450,11 +450,11 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
 
   return (
     <div className="space-y-8">
-      <Card className="bg-white dark:bg-gray-800 border-none shadow-lg rounded-xl overflow-hidden">
+      <Card className="bg-white dark:bg-gray-800 border-none shadow-card rounded-3xl overflow-hidden">
         <details className="group">
-          <summary className="flex items-center justify-between p-4 text-xl font-semibold text-green-700 dark:text-green-400 cursor-pointer bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900 dark:to-green-800 hover:bg-green-200 dark:hover:bg-green-700 transition-colors">
+          <summary className="flex items-center justify-between p-4 text-xl font-semibold text-sc-green-dark dark:text-green-400 cursor-pointer bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900 dark:to-green-800 hover:bg-green-200 dark:hover:bg-green-700 transition-colors">
             Account Details
-            <ChevronDown className="w-6 h-6 transition-transform group-open:rotate-180 text-green-600 dark:text-green-400" />
+            <ChevronDown className="w-6 h-6 transition-transform group-open:rotate-180 text-sc-green-dark dark:text-green-400" />
           </summary>
           <CardContent className="p-4 pt-6">
             <Form {...form}>
@@ -465,12 +465,12 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
                     name="first_name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-gray-700 dark:text-gray-300">First Name</FormLabel>
+                        <FormLabel className="text-sc-ink2 dark:text-gray-300">First Name</FormLabel>
                         <FormControl>
                           <Input
                             {...field}
                             disabled={!profile?.is_initial_setup}
-                            className="text-base bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg"
+                            className="text-base bg-white dark:bg-gray-700 border-sc-line dark:border-gray-600 text-sc-ink dark:text-gray-100 rounded-lg"
                           />
                         </FormControl>
                         <FormMessage />
@@ -482,12 +482,12 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
                     name="last_name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-gray-700 dark:text-gray-300">Last Name</FormLabel>
+                        <FormLabel className="text-sc-ink2 dark:text-gray-300">Last Name</FormLabel>
                         <FormControl>
                           <Input
                             {...field}
                             disabled={!profile?.is_initial_setup}
-                            className="text-base bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg"
+                            className="text-base bg-white dark:bg-gray-700 border-sc-line dark:border-gray-600 text-sc-ink dark:text-gray-100 rounded-lg"
                           />
                         </FormControl>
                         <FormMessage />
@@ -500,11 +500,11 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
                   name="nickname"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-gray-700 dark:text-gray-300">Nickname</FormLabel>
+                      <FormLabel className="text-sc-ink2 dark:text-gray-300">Nickname</FormLabel>
                       <FormControl>
                         <Input
                           {...field}
-                          className="text-base bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg"
+                          className="text-base bg-white dark:bg-gray-700 border-sc-line dark:border-gray-600 text-sc-ink dark:text-gray-100 rounded-lg"
                         />
                       </FormControl>
                       <FormMessage />
@@ -516,14 +516,14 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
                   name="phone_number"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-gray-700 dark:text-gray-300">Phone Number</FormLabel>
+                      <FormLabel className="text-sc-ink2 dark:text-gray-300">Phone Number</FormLabel>
                       <FormControl>
                         <Input
                           {...field}
                           disabled={!profile?.is_initial_setup}
                           inputMode="numeric"
                           maxLength={11}
-                          className="text-base bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg"
+                          className="text-base bg-white dark:bg-gray-700 border-sc-line dark:border-gray-600 text-sc-ink dark:text-gray-100 rounded-lg"
                         />
                       </FormControl>
                       <FormMessage />
@@ -531,17 +531,17 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
                   )}
                 />
                 <div>
-                  <FormLabel className="text-gray-700 dark:text-gray-300">Email Address</FormLabel>
+                  <FormLabel className="text-sc-ink2 dark:text-gray-300">Email Address</FormLabel>
                   <div className="flex items-center gap-2">
                     <Input
                       value={profile?.email}
                       disabled
-                      className="text-base bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg flex-1"
+                      className="text-base bg-white dark:bg-gray-700 border-sc-line dark:border-gray-600 text-sc-ink dark:text-gray-100 rounded-lg flex-1"
                     />
                     <Button
                       type="button"
                       variant="outline"
-                      className="text-green-500 border-green-500 hover:bg-green-500 hover:text-white rounded-lg"
+                      className="text-sc-green-dark border-sc-green hover:bg-green-500 hover:text-white rounded-lg"
                       onClick={() => setShowChangeEmailDialog(true)}
                       disabled={!canChangeEmail()}
                     >
@@ -550,7 +550,7 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
                     </Button>
                   </div>
                   {!canChangeEmail() && (
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    <p className="text-sm text-sc-ink3 dark:text-gray-400 mt-1">
                       Email change is available again in 30 days from last change.
                     </p>
                   )}
@@ -559,7 +559,7 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
                   <Button
                     type="button"
                     variant="outline"
-                    className="w-full text-green-500 border-green-500 hover:bg-green-500 hover:text-white rounded-lg"
+                    className="w-full text-sc-green-dark border-sc-green hover:bg-green-500 hover:text-white rounded-lg"
                     onClick={() => setShowResetPasswordDialog(true)}
                   >
                     <Lock size={16} className="mr-2" />
@@ -568,7 +568,7 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
                 </div>
                 <Button
                   type="submit"
-                  className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 text-sm flex items-center justify-center"
+                  className="w-full bg-sc-green hover:brightness-95 text-sc-green-ink font-bold rounded-full px-4 py-2 text-sm flex items-center justify-center"
                   disabled={loading}
                 >
                   {loading ? (
@@ -589,11 +589,11 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
         </details>
       </Card>
 
-      <Card className="bg-white dark:bg-gray-800 border-none shadow-lg rounded-xl overflow-hidden">
+      <Card className="bg-white dark:bg-gray-800 border-none shadow-card rounded-3xl overflow-hidden">
         <details className="group">
-          <summary className="flex items-center justify-between p-4 text-xl font-semibold text-green-700 dark:text-green-400 cursor-pointer bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900 dark:to-green-800 hover:bg-green-200 dark:hover:bg-green-700 transition-colors">
+          <summary className="flex items-center justify-between p-4 text-xl font-semibold text-sc-green-dark dark:text-green-400 cursor-pointer bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900 dark:to-green-800 hover:bg-green-200 dark:hover:bg-green-700 transition-colors">
             Match Preferences
-            <ChevronDown className="w-6 h-6 transition-transform group-open:rotate-180 text-green-600 dark:text-green-400" />
+            <ChevronDown className="w-6 h-6 transition-transform group-open:rotate-180 text-sc-green-dark dark:text-green-400" />
           </summary>
           <CardContent className="p-4 pt-6">
             <Form {...form}>
@@ -603,14 +603,14 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
                   name="state"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-gray-700 dark:text-gray-300">State</FormLabel>
+                      <FormLabel className="text-sc-ink2 dark:text-gray-300">State</FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         value={field.value}
                         className="text-base"
                       >
                         <FormControl>
-                          <SelectTrigger className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg">
+                          <SelectTrigger className="bg-white dark:bg-gray-700 border-sc-line dark:border-gray-600 text-sc-ink dark:text-gray-100 rounded-lg">
                             <SelectValue placeholder="Select state" />
                           </SelectTrigger>
                         </FormControl>
@@ -625,7 +625,7 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
                             <SelectItem
                               key={state}
                               value={state}
-                              className="text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                              className="text-base bg-white dark:bg-gray-700 text-sc-ink dark:text-gray-100"
                             >
                               {state}
                             </SelectItem>
@@ -641,14 +641,14 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
                   name="skill_level"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-gray-700 dark:text-gray-300">Skill Level</FormLabel>
+                      <FormLabel className="text-sc-ink2 dark:text-gray-300">Skill Level</FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         value={field.value}
                         className="text-base"
                       >
                         <FormControl>
-                          <SelectTrigger className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg">
+                          <SelectTrigger className="bg-white dark:bg-gray-700 border-sc-line dark:border-gray-600 text-sc-ink dark:text-gray-100 rounded-lg">
                             <SelectValue placeholder="Select skill level" />
                           </SelectTrigger>
                         </FormControl>
@@ -657,7 +657,7 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
                             <SelectItem
                               key={level}
                               value={level}
-                              className="text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                              className="text-base bg-white dark:bg-gray-700 text-sc-ink dark:text-gray-100"
                             >
                               {level}
                             </SelectItem>
@@ -673,7 +673,7 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
                   name="gender"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-gray-700 dark:text-gray-300">Gender</FormLabel>
+                      <FormLabel className="text-sc-ink2 dark:text-gray-300">Gender</FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         value={field.value}
@@ -681,20 +681,20 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
                         className="text-base"
                       >
                         <FormControl>
-                          <SelectTrigger className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg">
+                          <SelectTrigger className="bg-white dark:bg-gray-700 border-sc-line dark:border-gray-600 text-sc-ink dark:text-gray-100 rounded-lg">
                             <SelectValue placeholder="Select gender" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           <SelectItem
                             value="male"
-                            className="text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                            className="text-base bg-white dark:bg-gray-700 text-sc-ink dark:text-gray-100"
                           >
                             Male
                           </SelectItem>
                           <SelectItem
                             value="female"
-                            className="text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                            className="text-base bg-white dark:bg-gray-700 text-sc-ink dark:text-gray-100"
                           >
                             Female
                           </SelectItem>
@@ -709,17 +709,17 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
                   name="date_of_birth"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-gray-700 dark:text-gray-300">Date of Birth</FormLabel>
+                      <FormLabel className="text-sc-ink2 dark:text-gray-300">Date of Birth</FormLabel>
                       <FormControl>
                         <Input
                           type="date"
                           {...field}
                           disabled={!profile?.is_initial_setup}
-                          className="text-base bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg"
+                          className="text-base bg-white dark:bg-gray-700 border-sc-line dark:border-gray-600 text-sc-ink dark:text-gray-100 rounded-lg"
                         />
                       </FormControl>
                       {profile?.date_of_birth && !profile.is_initial_setup && (
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                        <p className="text-sm text-sc-ink3 dark:text-gray-400 mt-1">
                           Age: {calculateAge(profile.date_of_birth)} years
                         </p>
                       )}
@@ -729,7 +729,7 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
                 />
                 <Button
                   type="submit"
-                  className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 text-sm flex items-center justify-center"
+                  className="w-full bg-sc-green hover:brightness-95 text-sc-green-ink font-bold rounded-full px-4 py-2 text-sm flex items-center justify-center"
                   disabled={loading}
                 >
                   {loading ? (
@@ -750,11 +750,11 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
         </details>
       </Card>
 
-      <Card className="bg-white dark:bg-gray-800 border-none shadow-lg rounded-xl overflow-hidden">
+      <Card className="bg-white dark:bg-gray-800 border-none shadow-card rounded-3xl overflow-hidden">
         <details className="group">
-          <summary className="flex items-center justify-between p-4 text-xl font-semibold text-green-700 dark:text-green-400 cursor-pointer bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900 dark:to-green-800 hover:bg-green-200 dark:hover:bg-green-700 transition-colors">
-            Wallet <span className="text-sm text-gray-500 dark:text-gray-400">Coming Soon</span>
-            <ChevronDown className="w-6 h-6 transition-transform group-open:rotate-180 text-green-600 dark:text-green-400" />
+          <summary className="flex items-center justify-between p-4 text-xl font-semibold text-sc-green-dark dark:text-green-400 cursor-pointer bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900 dark:to-green-800 hover:bg-green-200 dark:hover:bg-green-700 transition-colors">
+            Wallet <span className="text-sm text-sc-ink3 dark:text-gray-400">Coming Soon</span>
+            <ChevronDown className="w-6 h-6 transition-transform group-open:rotate-180 text-sc-green-dark dark:text-green-400" />
           </summary>
           <CardContent className="p-4 pt-6">
             <div className="relative bg-gradient-to-br from-green-600 to-green-800 text-white rounded-xl p-6 shadow-2xl max-w-md mx-auto">
@@ -786,17 +786,17 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
         </details>
       </Card>
 
-      <Card className="bg-white dark:bg-gray-800 border-none shadow-lg rounded-xl overflow-hidden">
+      <Card className="bg-white dark:bg-gray-800 border-none shadow-card rounded-3xl overflow-hidden">
         <details className="group">
-          <summary className="flex items-center justify-between p-4 text-xl font-semibold text-green-700 dark:text-green-400 cursor-pointer bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900 dark:to-green-800 hover:bg-green-200 dark:hover:bg-green-700 transition-colors">
+          <summary className="flex items-center justify-between p-4 text-xl font-semibold text-sc-green-dark dark:text-green-400 cursor-pointer bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900 dark:to-green-800 hover:bg-green-200 dark:hover:bg-green-700 transition-colors">
             Manage Venues
-            <ChevronDown className="w-6 h-6 transition-transform group-open:rotate-180 text-green-600 dark:text-green-400" />
+            <ChevronDown className="w-6 h-6 transition-transform group-open:rotate-180 text-sc-green-dark dark:text-green-400" />
           </summary>
           <CardContent className="p-4 pt-6">
             <Button
               type="button"
               variant="outline"
-              className="w-full text-green-500 border-green-500 hover:bg-green-500 hover:text-white rounded-lg"
+              className="w-full text-sc-green-dark border-sc-green hover:bg-green-500 hover:text-white rounded-lg"
               onClick={() => setShowVenueDialog(true)}
             >
               View and Manage Venues
@@ -809,13 +809,13 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
         open={showResetPasswordDialog}
         onOpenChange={handleDialogOpenChange(setShowResetPasswordDialog, resetPasswordShouldClose, setResetPasswordShouldClose)}
       >
-        <DialogContent className="sm:max-w-md rounded-2xl bg-white dark:bg-gray-800 shadow-2xl border-none">
+        <DialogContent className="sm:max-w-md rounded-3xl bg-white dark:bg-gray-800 shadow-2xl border-none">
           <DialogHeader>
-            <DialogTitle className="text-xl font-semibold text-green-700 dark:text-green-400 flex items-center">
+            <DialogTitle className="text-xl font-semibold text-sc-green-dark dark:text-green-400 flex items-center">
               <Lock size={20} className="mr-2" />
               Reset Password
             </DialogTitle>
-            <DialogDescription className="text-gray-600 dark:text-gray-300">
+            <DialogDescription className="text-sc-ink3 dark:text-gray-300">
               Enter your email address to receive a password reset link. Please check your inbox and spam folder after submitting.
             </DialogDescription>
           </DialogHeader>
@@ -826,12 +826,12 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
                 name="new_email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-gray-700 dark:text-gray-300">Email</FormLabel>
+                    <FormLabel className="text-sc-ink2 dark:text-gray-300">Email</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
                         type="email"
-                        className="text-base bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg"
+                        className="text-base bg-white dark:bg-gray-700 border-sc-line dark:border-gray-600 text-sc-ink dark:text-gray-100 rounded-lg"
                         placeholder="Enter your email address"
                       />
                     </FormControl>
@@ -848,14 +848,14 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
                     setShowResetPasswordDialog(false);
                     resetPasswordForm.reset();
                   }}
-                  className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                  className="border-sc-line dark:border-gray-600 text-sc-ink2 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
                   disabled={operationLoading}
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
-                  className="bg-green-500 hover:bg-green-600 text-white rounded-lg"
+                  className="bg-sc-green hover:brightness-95 text-sc-green-ink rounded-full font-bold"
                   disabled={operationLoading}
                 >
                   {operationLoading ? (
@@ -877,13 +877,13 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
         open={showChangeEmailDialog}
         onOpenChange={handleDialogOpenChange(setShowChangeEmailDialog, changeEmailShouldClose, setChangeEmailShouldClose)}
       >
-        <DialogContent className="sm:max-w-md rounded-2xl bg-white dark:bg-gray-800 shadow-2xl border-none">
+        <DialogContent className="sm:max-w-md rounded-3xl bg-white dark:bg-gray-800 shadow-2xl border-none">
           <DialogHeader>
-            <DialogTitle className="text-xl font-semibold text-green-700 dark:text-green-400 flex items-center">
+            <DialogTitle className="text-xl font-semibold text-sc-green-dark dark:text-green-400 flex items-center">
               <Mail size={20} className="mr-2" />
               Change Email
             </DialogTitle>
-            <DialogDescription className="text-gray-600 dark:text-gray-300">
+            <DialogDescription className="text-sc-ink3 dark:text-gray-300">
               Enter your new email address. You'll receive confirmation emails in both your new and old inboxes. Note: Email changes are limited to once every 30 days.
             </DialogDescription>
           </DialogHeader>
@@ -894,12 +894,12 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
                 name="new_email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-gray-700 dark:text-gray-300">New Email</FormLabel>
+                    <FormLabel className="text-sc-ink2 dark:text-gray-300">New Email</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
                         type="email"
-                        className="text-base bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg"
+                        className="text-base bg-white dark:bg-gray-700 border-sc-line dark:border-gray-600 text-sc-ink dark:text-gray-100 rounded-lg"
                         placeholder="Enter new email address"
                       />
                     </FormControl>
@@ -916,14 +916,14 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
                     setShowChangeEmailDialog(false);
                     emailForm.reset();
                   }}
-                  className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                  className="border-sc-line dark:border-gray-600 text-sc-ink2 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
                   disabled={operationLoading}
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
-                  className="bg-green-500 hover:bg-green-600 text-white rounded-lg"
+                  className="bg-sc-green hover:brightness-95 text-sc-green-ink rounded-full font-bold"
                   disabled={operationLoading}
                 >
                   {operationLoading ? (
@@ -945,10 +945,10 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
         open={showVenueDialog}
         onOpenChange={handleDialogOpenChange(setShowVenueDialog, venueShouldClose, setVenueShouldClose)}
       >
-        <DialogContent className="sm:max-w-md rounded-2xl bg-white dark:bg-gray-800 shadow-2xl border-none">
+        <DialogContent className="sm:max-w-md rounded-3xl bg-white dark:bg-gray-800 shadow-2xl border-none">
           <DialogHeader>
-            <DialogTitle className="text-xl font-semibold text-green-700 dark:text-green-400">Manage Venues</DialogTitle>
-            <DialogDescription className="text-gray-600 dark:text-gray-300">
+            <DialogTitle className="text-xl font-semibold text-sc-green-dark dark:text-green-400">Manage Venues</DialogTitle>
+            <DialogDescription className="text-sc-ink3 dark:text-gray-300">
               Enter a 6-character access pin to link a venue to your profile, or manage existing linked venues.
             </DialogDescription>
           </DialogHeader>
@@ -960,13 +960,13 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
                   name="access_pin"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-gray-700 dark:text-gray-300">Access Pin</FormLabel>
+                      <FormLabel className="text-sc-ink2 dark:text-gray-300">Access Pin</FormLabel>
                       <FormControl>
                         <Input
                           {...field}
                           type="text"
                           maxLength={6}
-                          className="text-base bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg"
+                          className="text-base bg-white dark:bg-gray-700 border-sc-line dark:border-gray-600 text-sc-ink dark:text-gray-100 rounded-lg"
                           placeholder="Enter 6-character pin"
                         />
                       </FormControl>
@@ -976,7 +976,7 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
                 />
                 <Button
                   type="submit"
-                  className="w-full bg-green-500 hover:bg-green-600 text-white rounded-lg"
+                  className="w-full bg-sc-green hover:brightness-95 text-sc-green-ink rounded-full font-bold"
                   disabled={operationLoading}
                 >
                   {operationLoading ? (
@@ -992,20 +992,20 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
             </Form>
             {venues.length > 0 && (
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Linked Venues</h3>
+                <h3 className="text-lg font-semibold text-sc-ink dark:text-gray-100">Linked Venues</h3>
                 {venues.map((venue) => (
-                  <div key={venue.id} className="border-b border-gray-200 dark:border-gray-700 pb-2">
+                  <div key={venue.id} className="border-b border-sc-line dark:border-gray-700 pb-2">
                     <div className="flex justify-between items-center">
                       <div>
-                        <p className="font-medium text-gray-900 dark:text-gray-100">{venue.name}</p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Pin: {venue.pin}</p>
+                        <p className="font-medium text-sc-ink dark:text-gray-100">{venue.name}</p>
+                        <p className="text-sm text-sc-ink3 dark:text-gray-400">Pin: {venue.pin}</p>
                       </div>
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
                         onClick={() => handleManageVenue(venue.id)}
-                        className="text-green-500 border-green-500 hover:bg-green-500 hover:text-white"
+                        className="text-sc-green-dark border-sc-green hover:bg-green-500 hover:text-white"
                         disabled={operationLoading}
                       >
                         Manage
@@ -1025,7 +1025,7 @@ const ProfileSettings = ({ profile, setProfile, setShowSettings }: ProfileSettin
                 setShowVenueDialog(false);
                 pinForm.reset();
               }}
-              className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+              className="border-sc-line dark:border-gray-600 text-sc-ink2 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
               disabled={operationLoading}
             >
               Close

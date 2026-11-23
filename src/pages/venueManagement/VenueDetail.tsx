@@ -3,12 +3,14 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { MapPin, ArrowLeft, ExternalLink, Calendar, Clock, MessageCircle, CalendarPlus, Star, CalendarCheck, Wallet, Info, Building } from "lucide-react";
+import { MapPin, ArrowLeft, ExternalLink, Calendar, Clock, MessageCircle, CalendarPlus, Star, CalendarCheck, Wallet, Info, Building, ShieldCheck, Store } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import { Seo } from "@/components/Seo";
 
+import { BackButton, Bubble, DateBox, Meta, Pill, ScButton, SPORT, Spinner, StickyFooter, formatNaira, Cover } from "@/components/sc/ui";
+import { RowsSkeleton, DetailSkeleton } from "@/components/sc/skeletons";
 // Custom CSS to style ReactQuill for description and facilities
 const quillStyles = `
   .ql-container {
@@ -168,29 +170,25 @@ const VenueDetail = () => {
   };
 
   if (loading) {
-    return (
-      <div className="flex justify-center items-center min-h-[50vh] bg-gray-50 dark:bg-gray-900">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
-      </div>
-    );
+    return <DetailSkeleton />;
   }
 
   if (error || !venue) {
     return (
-      <div className="p-6 bg-gray-50 dark:bg-gray-900 min-h-screen">
+      <div className="p-6 bg-sc-bg dark:bg-gray-900 min-h-screen">
         <Button
           variant="ghost"
           onClick={() => navigate(-1)}
-          className="mb-4 text-gray-700 dark:text-gray-300"
+          className="mb-4 text-sc-ink2 dark:text-gray-300"
         >
           <ArrowLeft size={18} className="mr-2" />
           Back
         </Button>
         <div className="text-center py-8">
-          <h2 className="text-xl font-semibold mb-2 text-gray-900 dark:text-gray-100">
+          <h2 className="text-xl font-semibold mb-2 text-sc-ink dark:text-gray-100">
             {error ? "Error Loading Venue" : "Venue Not Found"}
           </h2>
-          <p className="text-gray-500 dark:text-gray-400">
+          <p className="text-sc-ink3 dark:text-gray-400">
             {error || "The venue you're looking for doesn't exist or has been removed."}
           </p>
         </div>
@@ -198,7 +196,7 @@ const VenueDetail = () => {
     );
   }
 
-  const defaultImage = "/Sportcliq_Stadium_Banner.png";
+  const defaultImage = "/placeholders/stadium.webp";
   const venueImage = venue.image_urls && venue.image_urls.length > 0 ? venue.image_urls[0] : defaultImage;
 
   return (
@@ -209,192 +207,148 @@ const VenueDetail = () => {
         url={window.location.href}
         image={venue && venue.image_urls && venue.image_urls[0] ? venue.image_urls[0] : undefined}
         children={<meta name="keywords" content={META_KEYWORDS} />}
+        jsonLd={{
+          "@type": "SportsActivityLocation",
+          name: venue.name,
+          image: venue.image_urls?.[0],
+          telephone: venue.venue_phone || undefined,
+          address: { "@type": "PostalAddress", streetAddress: venue.address, addressLocality: venue.city, addressRegion: venue.state, addressCountry: "NG" },
+          hasMap: venue.map_link || undefined,
+          openingHours: venue.opening_hours || undefined,
+          priceRange: venue.booking_fee ? `₦${venue.booking_fee} per hour` : undefined,
+          aggregateRating: venue.aggregated_rating ? { "@type": "AggregateRating", ratingValue: venue.aggregated_rating, bestRating: 5 } : undefined,
+          url: window.location.href,
+        }}
       />
-      <div className="min-h-screen pb-20 bg-gray-50 dark:bg-gray-900">
+      <div className="min-h-screen pb-36 bg-sc-bg text-sc-ink font-sans">
         <style>{quillStyles}</style>
-        <header className="sticky top-0 z-50 bg-green-500 text-white shadow-md">
-          <div className="p-4 flex items-center justify-between">
-            <Button
-              variant="ghost"
-              onClick={() => navigate(-1)}
-              className="text-white hover:text-gray-200"
-            >
-              <ArrowLeft size={18} className="mr-2" />
-              Back
-            </Button>
-            <h1 className="text-2xl font-bold">Venue Details</h1>
-            <div className="w-10"></div>
+        <div className="relative h-[320px] overflow-hidden rounded-b-[36px]" style={{ background: SPORT.venue.solid }}>
+          <Cover src={venue.image_urls?.[0]} kind="venue" alt={venue.name} />
+          <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/25 to-transparent" />
+          <div className="absolute left-5 right-5 flex justify-between" style={{ top: "max(env(safe-area-inset-top), 1rem)" }}>
+            <BackButton className="mt-3" />
           </div>
-        </header>
+          {venue.image_urls && venue.image_urls.length > 1 && (
+            <span className="absolute right-5 bottom-3.5 h-[30px] px-3 rounded-full bg-sc-ink/60 text-white text-[13px] font-bold flex items-center">
+              {venue.image_urls.length} photos
+            </span>
+          )}
+        </div>
 
-        <div className="p-6 max-w-3xl mx-auto">
-          <div className="rounded-xl overflow-hidden mb-6 h-64 shadow-md">
-            <img
-              src={venueImage}
-              alt={venue.name}
-              className="w-full h-full object-cover"
-            />
+        <div className="px-5 pt-[18px] flex flex-col gap-3.5">
+          <div className="flex flex-col gap-1.5">
+            <span className="flex gap-1.5 flex-wrap">
+              {venue.verified_status === "True" && <Pill sport="football" icon={ShieldCheck}>Verified venue</Pill>}
+              {venue.aggregated_rating ? <Pill sport="tennis" icon={Star}>{venue.aggregated_rating.toFixed(1)}</Pill> : null}
+            </span>
+            <h1 className="m-0 text-[30px] leading-[34px] font-extrabold tracking-[-0.03em]">{venue.name}</h1>
+            <Meta icon={MapPin}>
+              {venue.address ? `${venue.address}, ` : ""}
+              {venue.city}, {venue.state}
+            </Meta>
           </div>
 
-          <div className="flex items-center">
-            <h1 className="text-3xl font-bold mb-2 text-gray-900 dark:text-gray-100">{venue.name}</h1>
-            {venue.verified_status === 'True' && (
-              <img 
-                src="/green-verified.png" 
-                alt="Verified" 
-                className="ml-2 w-6 h-6" 
-              />
+          <div className="flex gap-2.5">
+            {venue.map_link && (
+              <a
+                href={venue.map_link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 h-[46px] rounded-full bg-white border border-sc-line text-sc-ink text-[15px] font-bold flex items-center justify-center gap-2"
+              >
+                <ExternalLink size={18} /> Directions
+              </a>
             )}
+            <button
+              type="button"
+              onClick={handleBookVenue}
+              disabled={!venue.venue_phone}
+              className="flex-1 h-[46px] rounded-full bg-white border border-sc-line text-sc-ink text-[15px] font-bold flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              <MessageCircle size={18} /> Contact
+            </button>
           </div>
-          <div className="flex items-center text-gray-600 dark:text-gray-400 mb-4">
-            <MapPin size={18} className="mr-2" />
-            <span>{venue.city}, {venue.state}</span>
-          </div>
-          <div className="flex items-center text-yellow-500 mb-6">
-            <Star size={18} className="mr-2 fill-yellow-500" />
-            <span className="text-gray-900 dark:text-gray-100 font-semibold">{venue.aggregated_rating?.toFixed(1) || "N/A"}</span>
-          </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-200 dark:border-gray-700">
-            <div className="space-y-4">
-              <div className="flex items-center">
-                <MapPin size={18} className="mr-2 text-gray-700 dark:text-gray-300" />
-                <div>
-                  <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Address</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{venue.address}</p>
-                </div>
-              </div>
-
-              {venue.description && (
-                <div className="flex items-start">
-                  <Info size={18} className="mr-2 text-gray-700 dark:text-gray-300 mt-1" />
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Description</h3>
-                    <ReactQuill
-                      value={venue.description || "<p>No description available.</p>"}
-                      readOnly={true}
-                      modules={quillModules}
-                      className="w-full border-none bg-transparent p-0 text-gray-600 dark:text-gray-400"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {venue.facilities && (
-                <div className="flex items-start">
-                  <Building size={18} className="mr-2 text-gray-700 dark:text-gray-300 mt-1" />
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Facilities</h3>
-                    <ReactQuill
-                      value={venue.facilities || "<p>No facilities information available.</p>"}
-                      readOnly={true}
-                      modules={quillModules}
-                      className="w-full border-none bg-transparent p-0 text-gray-600 dark:text-gray-400"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {venue.opening_hours && (
-                <div className="flex items-center">
-                  <Clock size={18} className="mr-2 text-gray-700 dark:text-gray-300" />
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Opening Hours</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">{venue.opening_hours}</p>
-                  </div>
-                </div>
-              )}
-
-              {venue.booking_fee !== null && (
-                <div className="flex items-center">
-                  <Wallet size={18} className="mr-2 text-gray-700 dark:text-gray-300" />
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Booking Fee (per hour)</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">NGN {venue.booking_fee?.toFixed(2)}</p>
-                  </div>
-                </div>
-              )}
-
-              {venue.map_link && (
-                <div className="pt-2">
-                  <a
-                    href={venue.map_link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center text-green-500 hover:text-green-600 text-sm font-medium"
-                  >
-                    <ExternalLink size={16} className="mr-2" />
-                    View on Google Maps
-                  </a>
-                </div>
-              )}
-
-              <div className="pt-2">
-                <Button
-                  className="bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 w-full sm:w-auto"
-                  onClick={handleBookVenue}
-                  disabled={!venue.venue_phone}
-                >
-                  <MessageCircle size={16} className="mr-2" />
-                  Contact
-                </Button>
-              </div>
+          {venue.image_urls && venue.image_urls.length > 1 && (
+            <div className="flex gap-2.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {venue.image_urls.slice(1).map((u) => (
+                <img key={u} src={u} alt="" className="w-28 h-20 rounded-2xl object-cover shrink-0" />
+              ))}
             </div>
-          </div>
+          )}
 
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-200 dark:border-gray-700">
-            <h2 className="font-semibold text-lg mb-4 text-gray-900 dark:text-gray-100">Recent Matches</h2>
+          {venue.description && (
+            <div className="bg-white rounded-3xl p-[18px] flex flex-col gap-1">
+              <span className="text-base font-extrabold">About</span>
+              <ReactQuill value={venue.description} readOnly={true} modules={quillModules} className="w-full border-none bg-transparent p-0 text-sc-ink2" />
+            </div>
+          )}
 
-            {matchesLoading ? (
-              <div className="flex justify-center py-4">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-500"></div>
-              </div>
-            ) : matches.length > 0 ? (
-              <div className="space-y-4">
-                {matches.map((match) => (
-                  <div
-                    key={match.id}
-                    className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer transition-colors"
-                    onClick={() => navigate(`/match/${match.slug}`)}
-                  >
-                    <h3 className="font-medium text-gray-900 dark:text-gray-100">{match.title}</h3>
-                    <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400 mt-1">
-                      <Calendar size={16} />
-                      <span>{formatDate(match.match_date)}</span>
-                      <Clock size={16} />
-                      <span>{formatTime(match.match_time)}</span>
-                    </div>
-                    <div className="mt-1 text-sm font-medium text-green-600 dark:text-green-400">
-                      {match.is_paid ? `₦${match.price?.toFixed(2)}` : "Free"}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-gray-600 dark:text-gray-400">No recent matches found for this venue.</p>
-            )}
-          </div>
+          {venue.facilities && (
+            <div className="bg-white rounded-3xl p-[18px] flex flex-col gap-1">
+              <span className="text-base font-extrabold flex items-center gap-2">
+                <Bubble icon={Building} sport="venue" size={32} /> Facilities
+              </span>
+              <ReactQuill value={venue.facilities} readOnly={true} modules={quillModules} className="w-full border-none bg-transparent p-0 text-sc-ink2" />
+            </div>
+          )}
 
-          <div className="mt-6 flex flex-row gap-4 w-full">
-            <Button
-              className="flex-1 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 w-full sm:w-auto"
-              onClick={() => navigate(`/venue/${venue.slug}/book`)}
-            >
-              <CalendarCheck size={16} className="mr-2" />
-              Book Venue
-            </Button>
-            <Button
-              className="flex-1 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 w-full sm:w-auto"
-              onClick={() => navigate(`/organize?venue=${venue.slug}`)}
-            >
-              <CalendarPlus size={16} className="mr-2" />
-              Organise Match
-            </Button>
+          {venue.opening_hours && (
+            <div className="bg-white rounded-3xl p-[18px] flex items-center gap-3">
+              <Bubble icon={Clock} sport="guide" size={40} />
+              <span className="flex flex-col">
+                <span className="text-xs text-sc-ink3 font-semibold">Opening hours</span>
+                <span className="text-[15px] font-bold">{venue.opening_hours}</span>
+              </span>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between pt-1">
+            <h2 className="m-0 text-xl font-extrabold tracking-[-0.02em]">Matches here</h2>
+            <button type="button" onClick={() => navigate(`/organize?venue=${venue.slug}`)} className="text-sm font-bold text-sc-green-dark flex items-center gap-1">
+              <CalendarPlus size={16} /> Organise
+            </button>
           </div>
+          {matchesLoading ? (
+            <Spinner className="py-4" />
+          ) : matches.length > 0 ? (
+            matches.map((match) => (
+              <button
+                key={match.id}
+                type="button"
+                onClick={() => navigate(`/match/${match.slug}`)}
+                className="bg-white rounded-3xl p-4 flex items-center gap-3 text-left"
+              >
+                <DateBox date={match.match_date} size={52} />
+                <span className="flex-1 min-w-0 flex flex-col gap-0.5">
+                  <span className="text-base font-extrabold truncate">{match.title}</span>
+                  <span className="text-[13px] text-sc-ink3">{formatTime(match.match_time)}</span>
+                </span>
+                <Pill sport={match.is_paid ? "tennis" : "football"}>{match.is_paid ? formatNaira(match.price) : "Free"}</Pill>
+              </button>
+            ))
+          ) : (
+            <p className="m-0 text-sm text-sc-ink3">No recent matches at this venue yet.</p>
+          )}
         </div>
       </div>
 
-      <Navbar />
+      <StickyFooter>
+        <div className="flex items-center gap-3.5">
+          {venue.booking_fee !== null && (
+            <div className="flex flex-col shrink-0">
+              <span className="text-xs text-sc-ink3 font-semibold">Booking fee</span>
+              <span className="text-[22px] font-extrabold tracking-[-0.02em]">
+                {formatNaira(venue.booking_fee)}
+                <span className="text-sm text-sc-ink3">/hr</span>
+              </span>
+            </div>
+          )}
+          <ScButton kind="venue" icon={CalendarCheck} onClick={() => navigate(`/venue/${venue.slug}/book`)}>
+            Book venue
+          </ScButton>
+        </div>
+      </StickyFooter>
     </>
   );
 };

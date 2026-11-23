@@ -1,6 +1,6 @@
 // SportCliq light design kit.
 // Small, presentational building blocks shared by the redesigned screens.
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight, LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -19,7 +19,7 @@ export type Sport =
 
 // bg, fg (text safe), solid fill
 export const SPORT: Record<Sport, { bg: string; fg: string; solid: string; onSolid: string }> = {
-  football: { bg: "#DCFCE7", fg: "#15803D", solid: "#22C55E", onSolid: "#052E16" },
+  football: { bg: "#DCFCE7", fg: "#15803D", solid: "#16A34A", onSolid: "#FFFFFF" },
   cycling: { bg: "#FFEDD5", fg: "#C2410C", solid: "#FB923C", onSolid: "#FFFFFF" },
   venue: { bg: "#EDE9FE", fg: "#6D28D9", solid: "#8B5CF6", onSolid: "#FFFFFF" },
   tennis: { bg: "#FEF9C3", fg: "#854D0E", solid: "#FACC15", onSolid: "#0E1411" },
@@ -116,22 +116,46 @@ export function Pill({
   );
 }
 
+// Dicebear avatars. The style is picked from the seed, so each person keeps the same look everywhere.
+const DICEBEAR_STYLES = ["adventurer", "avataaars", "big-smile", "lorelei", "micah", "notionists", "personas", "fun-emoji"];
+const DICEBEAR_BG = ["dcfce7", "ffedd5", "ede9fe", "fef9c3", "dbeafe", "ccfbf1", "fce7f3"];
+export const dicebearUrl = (seed?: string | null) => {
+  const s = (seed || "sportcliq").trim().toLowerCase();
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 100003;
+  const style = DICEBEAR_STYLES[h % DICEBEAR_STYLES.length];
+  return `https://api.dicebear.com/9.x/${style}/svg?seed=${encodeURIComponent(s)}&backgroundColor=${DICEBEAR_BG.join(",")}&radius=50`;
+};
+
 export function Avatar({
   initials,
   sport = "football",
   size = 36,
   solid = true,
   src,
+  seed,
 }: {
   initials: string;
   sport?: Sport;
   size?: number;
   solid?: boolean;
   src?: string | null;
+  seed?: string | null;
 }) {
   const c = SPORT[sport];
-  if (src) {
-    return <img src={src} alt="" className="rounded-full object-cover shrink-0" style={{ width: size, height: size }} />;
+  const [failed, setFailed] = useState(false);
+  const url = src || (seed ? dicebearUrl(seed) : null);
+  if (url && !failed) {
+    return (
+      <img
+        src={url}
+        alt=""
+        loading="lazy"
+        onError={() => setFailed(true)}
+        className="rounded-full object-cover shrink-0 bg-sc-soft"
+        style={{ width: size, height: size }}
+      />
+    );
   }
   return (
     <span
@@ -163,7 +187,7 @@ const AVATAR_SPORTS: Sport[] = ["football", "guide", "pink", "cycling", "venue",
 export const sportFor = (seed?: string | null): Sport => {
   const s = seed || "";
   let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  for (let i = 0; i < s.length; i++) h += s.charCodeAt(i);
   return AVATAR_SPORTS[h % AVATAR_SPORTS.length];
 };
 
@@ -184,7 +208,7 @@ export function DateBox({ date, sport = "football", size = 60 }: { date: string 
   );
 }
 
-export function Progress({ value, color = "#22C55E", height = 8, track = "#E6E9E3" }: { value: number; color?: string; height?: number; track?: string }) {
+export function Progress({ value, color = "#16A34A", height = 8, track = "#E6E9E3" }: { value: number; color?: string; height?: number; track?: string }) {
   const pct = Math.max(0, Math.min(100, value));
   return (
     <div className="overflow-hidden rounded-full" style={{ height, background: track }}>
@@ -522,6 +546,7 @@ export const formatNaira = (n?: number | null) =>
 
 export const formatTime12 = (t?: string | null) => {
   if (!t) return "";
+  if (/am|pm/i.test(t)) return t.replace(/^0/, "");
   const [h, m] = t.split(":");
   const hr = parseInt(h, 10);
   if (isNaN(hr)) return t;
@@ -534,3 +559,76 @@ export const formatShortDate = (d?: string | null) => {
   if (isNaN(date.getTime())) return d;
   return date.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
 };
+
+/** Illustrated empty state with a friendly line and up to two actions. */
+export function FunEmpty({
+  icon: Icon,
+  sport = "football",
+  title,
+  body,
+  primary,
+  secondary,
+}: {
+  icon: LucideIcon;
+  sport?: Sport;
+  title: ReactNode;
+  body?: ReactNode;
+  primary?: { label: string; onClick: () => void };
+  secondary?: { label: string; onClick: () => void };
+}) {
+  const c = SPORT[sport];
+  return (
+    <div className="bg-white rounded-[28px] px-6 pt-8 pb-6 flex flex-col items-center text-center gap-3">
+      <div className="relative w-[132px] h-[132px] flex items-center justify-center" aria-hidden="true">
+        <span className="absolute inset-0 rounded-full" style={{ background: c.bg }} />
+        <span className="absolute inset-[18px] rounded-full border-2 border-dashed" style={{ borderColor: c.solid, opacity: 0.45 }} />
+        <span className="absolute w-3 h-3 rounded-full top-2 right-5" style={{ background: SPORT.tennis.solid }} />
+        <span className="absolute w-2 h-2 rounded-full bottom-5 left-2" style={{ background: SPORT.pink.solid }} />
+        <span className="absolute w-2.5 h-2.5 rounded-[3px] rotate-12 bottom-2 right-8" style={{ background: SPORT.guide.solid }} />
+        <span className="relative w-[64px] h-[64px] rounded-[22px] flex items-center justify-center rotate-[-6deg] shadow-float" style={{ background: c.solid, color: c.onSolid }}>
+          <Icon size={30} />
+        </span>
+      </div>
+      <span className="text-[19px] font-extrabold tracking-[-0.02em] mt-1">{title}</span>
+      {body && <span className="text-sm leading-[21px] text-sc-ink2 max-w-[280px]">{body}</span>}
+      {(primary || secondary) && (
+        <div className="w-full flex flex-col gap-2 pt-2">
+          {primary && (
+            <button type="button" onClick={primary.onClick} className="h-[50px] rounded-full font-bold text-[15px]" style={{ background: c.solid, color: c.onSolid }}>
+              {primary.label}
+            </button>
+          )}
+          {secondary && (
+            <button type="button" onClick={secondary.onClick} className="h-[46px] rounded-full font-bold text-[15px] bg-sc-soft text-sc-ink">
+              {secondary.label}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------- Cover images with designed fallbacks ---------- */
+export const PLACEHOLDER = {
+  venue: "/placeholders/stadium.webp",
+  football: "/placeholders/football.webp",
+  cycling: "/placeholders/cycling.webp",
+} as const;
+export type CoverKind = keyof typeof PLACEHOLDER;
+
+/** Fills its (relative) parent with the image, or the SportCliq artwork when there is none or it fails. */
+export function Cover({ src, kind, alt = "", className = "" }: { src?: string | null; kind: CoverKind; alt?: string; className?: string }) {
+  const [failed, setFailed] = useState(false);
+  const url = !src || failed ? PLACEHOLDER[kind] : src;
+  return (
+    <img
+      src={url}
+      alt={alt}
+      loading="lazy"
+      decoding="async"
+      onError={() => !failed && setFailed(true)}
+      className={`absolute inset-0 w-full h-full object-cover ${className}`}
+    />
+  );
+}

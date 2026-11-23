@@ -10,6 +10,10 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { format, differenceInHours } from "date-fns";
 import Navbar from "@/components/Navbar";
 
+import { BackButton } from "@/components/sc/ui";
+import { EventListSkeleton } from "@/components/sc/skeletons";
+import { FunEmpty } from "@/components/sc/ui";
+import { CalendarCheck as CalendarCheckIcon } from "lucide-react";
 type Booking = { 
   id: string; 
   venue_id: string;
@@ -208,55 +212,47 @@ const MyBookings = () => {
   }, [navigate, toast]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-100 dark:bg-gray-900">
-      <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg">
-        <div className="flex items-center justify-between max-w-7xl mx-auto">
-          <Button
-            variant="ghost"
-            onClick={() => navigate("/profile")}
-            className="text-white hover:bg-green-600"
-          >
-            <ChevronLeft className="w-5 h-5 mr-2" /> Back
-          </Button>
-          <h1 className="text-2xl font-bold">My Bookings</h1>
-          <div className="w-10"></div>
-        </div>
-      </header>
+    <div className="min-h-screen flex flex-col bg-sc-bg dark:bg-gray-900">
+      <header className="px-5 pt-[max(env(safe-area-inset-top),1rem)] flex flex-col gap-3.5">
+          <div className="pt-3 flex items-center justify-between min-h-11">
+            <BackButton to="/profile" />
+            <div className="flex gap-2"></div>
+          </div>
+          <h1 className="m-0 text-[32px] leading-[38px] font-extrabold tracking-[-0.03em]">My bookings</h1>
+        </header>
 
       <main className="flex-grow max-w-7xl mx-auto px-4 py-6 w-full">
         {loading ? (
-          <div className="flex justify-center items-center h-64">
-            <Loader2 className="w-8 h-8 animate-spin text-green-500" />
-          </div>
+          <div className="w-full px-1"><EventListSkeleton /></div>
         ) : !venueId ? (
-          <Card className="w-full bg-gradient-to-b from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 shadow-lg rounded-xl border border-gray-200 dark:border-gray-700">
+          <Card className="w-full bg-gradient-to-b from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 shadow-lg rounded-xl border border-sc-line dark:border-gray-700">
             <CardContent className="text-center py-6">
-              <p className="text-gray-600 dark:text-gray-400">No linked venue found. Please link a venue.</p>
+              <p className="text-sc-ink3 dark:text-gray-400">No linked venue found. Please link a venue.</p>
               <Button
                 onClick={() => navigate("/profile/my-venue")}
-                className="mt-4 bg-green-500 hover:bg-green-600 text-white"
+                className="mt-4 bg-sc-green hover:brightness-95 text-sc-green-ink font-bold"
               >
                 Link Venue
               </Button>
             </CardContent>
           </Card>
         ) : (
-          <Card className="w-full bg-gradient-to-b from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 shadow-lg rounded-xl border border-gray-200 dark:border-gray-700">
+          <Card className="w-full bg-gradient-to-b from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 shadow-lg rounded-xl border border-sc-line dark:border-gray-700">
             <CardHeader>
-              <CardTitle className="text-lg font-semibold text-gray-700 dark:text-gray-300">Venue Bookings</CardTitle>
+              <CardTitle className="text-lg font-semibold text-sc-ink2 dark:text-gray-300">Venue Bookings</CardTitle>
             </CardHeader>
             <CardContent>
               <Tabs defaultValue="upcoming" className="w-full">
-                <TabsList className="w-full grid grid-cols-2 bg-gray-200 dark:bg-gray-700 rounded-t-lg">
+                <TabsList className="w-full grid grid-cols-2 bg-sc-soft2 dark:bg-gray-700 rounded-t-lg">
                   <TabsTrigger
                     value="upcoming"
-                    className="data-[state=active]:bg-green-500 data-[state=active]:text-white"
+                    className="data-[state=active]:bg-white data-[state=active]:text-sc-ink data-[state=active]:shadow-[0_1px_3px_rgba(14,20,17,0.12)]"
                   >
                     Upcoming
                   </TabsTrigger>
                   <TabsTrigger
                     value="past"
-                    className="data-[state=active]:bg-green-500 data-[state=active]:text-white"
+                    className="data-[state=active]:bg-white data-[state=active]:text-sc-ink data-[state=active]:shadow-[0_1px_3px_rgba(14,20,17,0.12)]"
                   >
                     Past
                   </TabsTrigger>
@@ -268,35 +264,35 @@ const MyBookings = () => {
                         const organizer = organizers.find(org => org.id === booking.organizer_id);
                         const isVerified = organizer?.is_verified || false;
                         return (
-                          <Card key={booking.id} className="w-full p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md">
-                            <h3 className="font-medium text-gray-900 dark:text-gray-100">{booking.title}</h3>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                          <Card key={booking.id} className="w-full p-4 bg-white dark:bg-gray-800 rounded-3xl shadow-card">
+                            <h3 className="font-medium text-sc-ink dark:text-gray-100">{booking.title}</h3>
+                            <p className="text-sm text-sc-ink3 dark:text-gray-400">
                               Date: {format(new Date(booking.match_date), "MMM d, yyyy")}
                             </p>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                            <p className="text-sm text-sc-ink3 dark:text-gray-400">
                               Time: {format(new Date(`${booking.match_date}T${booking.start_time}`), "h:mm a")} -{" "}
                               {format(new Date(`${booking.match_date}T${booking.end_time}`), "h:mm a")}
                             </p>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                            <p className="text-sm text-sc-ink3 dark:text-gray-400">
                               Duration: {differenceInHours(
                                 new Date(`${booking.match_date}T${booking.end_time}`),
                                 new Date(`${booking.match_date}T${booking.start_time}`)
                               )} hours
                             </p>
-                            <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
+                            <p className="text-sm text-sc-ink3 dark:text-gray-400 flex items-center">
                               Organizer: {booking.organizer_name}
                               {isVerified && <img src="/green-verified.png" alt="Verified" className="w-4 h-4 ml-1" />}
                             </p>
                             {userId && booking.is_recurring && (
-                              <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
+                              <p className="text-sm text-sc-ink3 dark:text-gray-400 flex items-center">
                                 <Repeat className="w-4 h-4 mr-1" />
                                 Repeats {booking.recurring_frequency} for {booking.recurring_occurrences} times
                               </p>
                             )}
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                            <p className="text-sm text-sc-ink3 dark:text-gray-400">
                               Booker Name: {booking.booker_name || "N/A"}
                             </p>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                            <p className="text-sm text-sc-ink3 dark:text-gray-400">
                               Phone Number: {booking.booker_phone || "N/A"}
                             </p>
                             <div className="mt-4">
@@ -304,7 +300,7 @@ const MyBookings = () => {
                                 <TooltipTrigger asChild>
                                   <span>
                                     <Button
-                                      className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg"
+                                      className="px-4 py-2 bg-sc-green hover:brightness-95 text-sc-green-ink rounded-full font-bold"
                                       onClick={() => {
                                         if (booking.slug) {
                                           navigate(`/match/${booking.slug}`);
@@ -328,7 +324,7 @@ const MyBookings = () => {
                       })}
                     </div>
                   ) : (
-                    <p className="text-sm text-gray-600 dark:text-gray-400 p-4">No upcoming bookings found.</p>
+<FunEmpty icon={CalendarCheckIcon} sport="venue" title="Nothing booked ahead" body="Upcoming venue bookings and their access codes will show here." />
                   )}
                 </TabsContent>
                 <TabsContent value="past">
@@ -338,35 +334,35 @@ const MyBookings = () => {
                         const organizer = organizers.find(org => org.id === booking.organizer_id);
                         const isVerified = organizer?.is_verified || false;
                         return (
-                          <Card key={booking.id} className="w-full p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md">
-                            <h3 className="font-medium text-gray-900 dark:text-gray-100">{booking.title}</h3>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                          <Card key={booking.id} className="w-full p-4 bg-white dark:bg-gray-800 rounded-3xl shadow-card">
+                            <h3 className="font-medium text-sc-ink dark:text-gray-100">{booking.title}</h3>
+                            <p className="text-sm text-sc-ink3 dark:text-gray-400">
                               Date: {format(new Date(booking.match_date), "MMM d, yyyy")}
                             </p>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                            <p className="text-sm text-sc-ink3 dark:text-gray-400">
                               Time: {format(new Date(`${booking.match_date}T${booking.start_time}`), "h:mm a")} -{" "}
                               {format(new Date(`${booking.match_date}T${booking.end_time}`), "h:mm a")}
                             </p>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                            <p className="text-sm text-sc-ink3 dark:text-gray-400">
                               Duration: {differenceInHours(
                                 new Date(`${booking.match_date}T${booking.end_time}`),
                                 new Date(`${booking.match_date}T${booking.start_time}`)
                               )} hours
                             </p>
-                            <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
+                            <p className="text-sm text-sc-ink3 dark:text-gray-400 flex items-center">
                               Organizer: {booking.organizer_name}
                               {isVerified && <img src="/green-verified.png" alt="Verified" className="w-4 h-4 ml-1" />}
                             </p>
                             {userId && booking.is_recurring && (
-                              <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
+                              <p className="text-sm text-sc-ink3 dark:text-gray-400 flex items-center">
                                 <Repeat className="w-4 h-4 mr-1" />
                                 Repeats {booking.recurring_frequency} for {booking.recurring_occurrences} times
                               </p>
                             )}
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                            <p className="text-sm text-sc-ink3 dark:text-gray-400">
                               Booker Name: {booking.booker_name || "N/A"}
                             </p>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                            <p className="text-sm text-sc-ink3 dark:text-gray-400">
                               Phone Number: {booking.booker_phone || "N/A"}
                             </p>
                             <div className="mt-4">
@@ -374,7 +370,7 @@ const MyBookings = () => {
                                 <TooltipTrigger asChild>
                                   <span>
                                     <Button
-                                      className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg"
+                                      className="px-4 py-2 bg-sc-green hover:brightness-95 text-sc-green-ink rounded-full font-bold"
                                       onClick={() => {
                                         if (booking.slug) {
                                           navigate(`/match/${booking.slug}`);
@@ -398,7 +394,7 @@ const MyBookings = () => {
                       })}
                     </div>
                   ) : (
-                    <p className="text-sm text-gray-600 dark:text-gray-400 p-4">No past bookings found.</p>
+<FunEmpty icon={CalendarCheckIcon} sport="gray" title="No past bookings" body="Your booking history builds up here over time." />
                   )}
                 </TabsContent>
               </Tabs>

@@ -39,7 +39,7 @@ const Home = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 font-nunito overflow-hidden">
+    <div className="min-h-screen bg-sc-bg font-nunito overflow-hidden">
       {/* Hero Section */}
       <div
         className="relative h-screen bg-cover bg-center"
@@ -82,12 +82,12 @@ const Home = () => {
       {/* Feature Highlights */}
       <section className="py-16 bg-white">
         <div className="container mx-auto px-4 text-center">
-          <h2 className="text-4xl font-bold text-gray-900 mb-12">Why Sport Cliq?</h2>
+          <h2 className="text-4xl font-bold text-sc-ink mb-12">Why Sport Cliq?</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
               {
                 title: "Zero Stress",
-                icon: <UsersIcon className="h-12 w-12 text-green-500 mx-auto mb-2" />,
+                icon: <UsersIcon className="h-12 w-12 text-sc-green-dark mx-auto mb-2" />,
                 description: "No more organizing hassles. We connect you with the sports you love.",
               },
               {
@@ -103,15 +103,15 @@ const Home = () => {
             ].map((feature, index) => (
               <motion.div
                 key={index}
-                className="p-6 bg-gray-50 rounded-lg shadow-md"
+                className="p-6 bg-sc-soft rounded-lg shadow-card"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 * index, duration: 0.5 }}
                 whileHover={{ scale: 1.05 }}
               >
                 {feature.icon}
-                <h3 className="text-xl font-medium text-gray-900 mt-2">{feature.title}</h3>
-                <p className="text-sm text-gray-600 mt-2">{feature.description}</p>
+                <h3 className="text-xl font-medium text-sc-ink mt-2">{feature.title}</h3>
+                <p className="text-sm text-sc-ink3 mt-2">{feature.description}</p>
               </motion.div>
             ))}
           </div>
@@ -119,10 +119,10 @@ const Home = () => {
       </section>
 
       {/* Waitlist/Business Section */}
-      <section id="waitlist" className="py-16 bg-gray-100">
+      <section id="waitlist" className="py-16 bg-sc-soft">
         <div className="container mx-auto px-4 text-center">
-          <h2 className="text-4xl font-bold text-gray-900 mb-6">Be the First to Play</h2>
-          <p className="text-lg text-gray-600 mb-8">
+          <h2 className="text-4xl font-bold text-sc-ink mb-6">Be the First to Play</h2>
+          <p className="text-lg text-sc-ink3 mb-8">
             Over {waitlistCount.toLocaleString()} people are already on the waitlist. Sign up now for exclusive access!
           </p>
           <motion.div
@@ -149,7 +149,7 @@ const Home = () => {
             </form>
           </motion.div>
           <motion.div
-            className="mt-4 text-2xl text-green-600 font-semibold"
+            className="mt-4 text-2xl text-sc-green-dark font-semibold"
             animate={{ scale: [1, 1.1, 1] }}
             transition={{ duration: 1, repeat: Infinity }}
           >
@@ -157,8 +157,8 @@ const Home = () => {
           </motion.div>
 
           <div className="mt-12">
-            <h3 className="text-2xl font-semibold text-gray-900 mb-4">Introducing: Sport Cliq for Teams</h3>
-            <p className="text-lg text-gray-600 mb-6">
+            <h3 className="text-2xl font-semibold text-sc-ink mb-4">Introducing: Sport Cliq for Teams</h3>
+            <p className="text-lg text-sc-ink3 mb-6">
               The better way for teams, clubs, and organizers to automate sports events and player coordination.
             </p>
             <form onSubmit={handleBusinessSignup} className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">

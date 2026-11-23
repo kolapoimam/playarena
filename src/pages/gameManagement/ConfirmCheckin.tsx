@@ -27,6 +27,8 @@ import HostCashout from "@/components/cyclingManagement/HostCashout";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Toggle } from "@/components/ui/toggle";
 
+import { BackButton } from "@/components/sc/ui";
+import { RowsSkeleton } from "@/components/sc/skeletons";
 type Match = {
   id: string;
   slug: string;
@@ -581,26 +583,19 @@ const ConfirmCheckin = () => {
   }, [match?.id, cyclingEvent?.id_uuid, isCyclingEvent]);
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
-      <header className="sticky top-0 z-50 dark:bg-gray-50 bg-green-500 text-white">
-        <div className="p-4 flex items-center justify-between">
-          <Button
-            variant="ghost"
-            onClick={() => navigate(-1)}
-            className="text-white hover:text-gray-300"
-          >
-            <ArrowLeft size={18} className="mr-2" />
-            Back
-          </Button>
-          <h2 className="text-xl font-bold">Manage Events</h2>
-          <div className="w-10"></div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-sc-bg dark:bg-gray-900">
+      <header className="sticky top-0 z-30 bg-sc-bg/95 backdrop-blur-xl px-5 pb-3 pt-[max(env(safe-area-inset-top),1rem)]">
+          <div className="pt-3 flex items-center justify-between gap-3">
+            <BackButton />
+            <h1 className="m-0 flex-1 text-center text-[17px] font-extrabold truncate">Manage and check in</h1>
+            <div className="min-w-11" />
+          </div>
+        </header>
 
       <div className="max-w-4xl mx-auto p-4 mt-4 pb-24">
         {superCode.length < 6 && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6 border border-gray-200 dark:border-gray-700">
-            <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">
+          <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 mb-6 dark:border-gray-700">
+            <h2 className="text-xl font-semibold mb-4 text-sc-ink dark:text-gray-100">
               Select Event Type
             </h2>
             <div className="flex gap-4">
@@ -662,14 +657,11 @@ const ConfirmCheckin = () => {
         )}
 
         {loading && (
-          <div className="flex items-center py-4">
-            <Loader2 className="animate-spin text-green-600" size={24} />
-            <span className="ml-3 text-gray-700">Loading...</span>
-          </div>
+          <div className="py-2"><RowsSkeleton rows={3} /></div>
         )}
 
         {error && !loading && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 text-center">
+          <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-4 text-center">
             <AlertCircle
               size={36}
               className="text-red-600 dark:text-red-400 mx-auto"
@@ -677,12 +669,12 @@ const ConfirmCheckin = () => {
             <h2 className="text-lg font-semibold text-red-600 dark:text-red-400">
               Error
             </h2>
-            <p className="mt-2 text-gray-500 dark:text-gray-400">{error}</p>
+            <p className="mt-2 text-sc-ink3 dark:text-gray-400">{error}</p>
           </div>
         )}
 
         {eventNotFound && !loading && !error && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-4">
+          <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 mb-4">
             <AlertCircle
               size={36}
               className="text-red-400 dark:text-red-400 mx-auto"
@@ -690,7 +682,7 @@ const ConfirmCheckin = () => {
             <h2 className="text-lg font-semibold text-center text-red-600 dark:text-red-400">
               Event Not Found
             </h2>
-            <p className="mt-2 text-center text-gray-600 dark:text-gray-400">
+            <p className="mt-2 text-center text-sc-ink3 dark:text-gray-400">
               No {isCyclingEvent ? "cycling event" : "match"} found with super code "
               <strong>{superCode}</strong>".
             </p>
@@ -699,23 +691,23 @@ const ConfirmCheckin = () => {
 
         {(match || cyclingEvent) && !error && (
           <Tabs defaultValue="details" className="w-full">
-            <div className="sticky top-16 z-10 bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
-              <TabsList className="w-full grid grid-cols-3 bg-gray-100 dark:bg-gray-700 rounded-lg h-12">
+            <div className="sticky top-16 z-10 bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 mb-6">
+              <TabsList className="w-full grid grid-cols-3 bg-sc-soft dark:bg-gray-700 rounded-lg h-12">
                 <TabsTrigger
                   value="details"
-                  className="data-[state=active]:bg-green-500 data-[state=active]:text-white py-2 text-sm font-semibold rounded-lg"
+                  className="data-[state=active]:bg-white data-[state=active]:text-sc-ink data-[state=active]:shadow-[0_1px_3px_rgba(14,20,17,0.12)] py-2 text-sm font-semibold rounded-lg"
                 >
                   Details
                 </TabsTrigger>
                 <TabsTrigger
                   value="manage"
-                  className="data-[state=active]:bg-green-500 data-[state=active]:text-white py-2 text-sm font-semibold rounded-lg"
+                  className="data-[state=active]:bg-white data-[state=active]:text-sc-ink data-[state=active]:shadow-[0_1px_3px_rgba(14,20,17,0.12)] py-2 text-sm font-semibold rounded-lg"
                 >
                   Manage
                 </TabsTrigger>
                 <TabsTrigger
                   value="cashout"
-                  className="data-[state=active]:bg-green-500 data-[state=active]:text-white py-2 text-sm"
+                  className="data-[state=active]:bg-white data-[state=active]:text-sc-ink data-[state=active]:shadow-[0_1px_3px_rgba(14,20,17,0.12)] py-2 text-sm"
                 >
                   Cashout
                 </TabsTrigger>
@@ -808,7 +800,7 @@ const ConfirmCheckin = () => {
                 Confirm {isCyclingEvent ? "Event" : "Match"} Cancellation
               </DialogTitle>
               <DialogDescription
-                className="text-sm text-center mt-2 text-gray-600"
+                className="text-sm text-center mt-2 text-sc-ink3"
               >
                 Are you sure you want to cancel this {isCyclingEvent ? "event" : "match"}?
                 This action cannot be undone, and {isCyclingEvent ? "attendees" : "players"} will be notified.

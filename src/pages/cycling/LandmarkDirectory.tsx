@@ -16,6 +16,11 @@ import { Label } from "@/components/ui/label";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Seo } from "@/components/Seo";
 
+import { BackButton, SPORT } from "@/components/sc/ui";
+import { Map as MapIcon } from "lucide-react";
+import { EventListSkeleton } from "@/components/sc/skeletons";
+import { FunEmpty } from "@/components/sc/ui";
+import { Flag as FlagIcon } from "lucide-react";
 // Define the Landmark type
 type Landmark = {
   id_uuid: string;
@@ -246,22 +251,13 @@ const LandmarkDirectory = () => {
         image={undefined}
         children={null}
       />
-      <div className="min-h-screen pb-24 bg-gray-100 dark:bg-gray-900">
-        <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg">
-          <div className="flex items-center justify-between max-w-7xl mx-auto">
-            <Button
-              variant="ghost"
-              onClick={() => navigate(-1)}
-              className="text-white hover:bg-green-600"
-            >
-              <ArrowLeft size={18} className="mr-2" />
-              Back
-            </Button>
-            <div className="text-center">
-              <h1 className="text-2xl font-bold">Landmark Directory</h1>
-            </div>
-            <div className="w-10"></div>
+      <div className="min-h-screen pb-32 bg-sc-bg dark:bg-gray-900">
+        <header className="px-5 pt-[max(env(safe-area-inset-top),1rem)] flex flex-col gap-3.5">
+          <div className="pt-3 flex items-center justify-between min-h-11">
+            <BackButton />
+            <div className="flex gap-2"></div>
           </div>
+          <h1 className="m-0 text-[32px] leading-[38px] font-extrabold tracking-[-0.03em]">Landmarks</h1>
         </header>
 
         <div className="mt-6 px-4">
@@ -276,10 +272,10 @@ const LandmarkDirectory = () => {
                 {isFilterOpen ? "Hide Filters" : "Show Filters"}
               </Button>
             </CollapsibleTrigger>
-            <CollapsibleContent className="mt-4 p-4 border rounded-lg bg-white dark:bg-gray-800 space-y-4">
+            <CollapsibleContent className="mt-4 p-4 rounded-3xl bg-white dark:bg-gray-800 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="state-filter" className="text-gray-700 dark:text-gray-300">Filter by State</Label>
+                  <Label htmlFor="state-filter" className="text-sc-ink2 dark:text-gray-300">Filter by State</Label>
                   <Select
                     value={stateFilter}
                     onValueChange={(value) => {
@@ -287,7 +283,7 @@ const LandmarkDirectory = () => {
                       setCurrentPage(1);
                     }}
                   >
-                    <SelectTrigger id="state-filter" className="border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                    <SelectTrigger id="state-filter" className="border-sc-line dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                       <SelectValue placeholder="Select a state" />
                     </SelectTrigger>
                     <SelectContent>
@@ -302,7 +298,7 @@ const LandmarkDirectory = () => {
                 </div>
 
                 <div>
-                  <Label htmlFor="activity-filter" className="text-gray-700 dark:text-gray-300">Filter by Activity</Label>
+                  <Label htmlFor="activity-filter" className="text-sc-ink2 dark:text-gray-300">Filter by Activity</Label>
                   <Select
                     value={activityFilter}
                     onValueChange={(value) => {
@@ -310,7 +306,7 @@ const LandmarkDirectory = () => {
                       setCurrentPage(1);
                     }}
                   >
-                    <SelectTrigger id="activity-filter" className="border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                    <SelectTrigger id="activity-filter" className="border-sc-line dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                       <SelectValue placeholder="Select activity" />
                     </SelectTrigger>
                     <SelectContent>
@@ -324,7 +320,7 @@ const LandmarkDirectory = () => {
                 </div>
 
                 <div>
-                  <Label htmlFor="sort-order" className="text-gray-700 dark:text-gray-300">Sort by Popularity</Label>
+                  <Label htmlFor="sort-order" className="text-sc-ink2 dark:text-gray-300">Sort by Popularity</Label>
                   <Select
                     value={sortOrder}
                     onValueChange={(value) => {
@@ -332,7 +328,7 @@ const LandmarkDirectory = () => {
                       setCurrentPage(1);
                     }}
                   >
-                    <SelectTrigger id="sort-order" className="border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                    <SelectTrigger id="sort-order" className="border-sc-line dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                       <SelectValue placeholder="Select sort order" />
                     </SelectTrigger>
                     <SelectContent>
@@ -352,29 +348,25 @@ const LandmarkDirectory = () => {
 
         <div className="px-4 space-y-4">
           {loading ? (
-            <div className="flex justify-center items-center h-[50vh]">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
-            </div>
+            <div className="w-full px-1"><EventListSkeleton /></div>
           ) : filteredLandmarks.length > 0 ? (
             <>
               <div className="space-y-4">
                 {currentLandmarks.map((landmark) => {
-                  const placeholderImage = "https://images.unsplash.com/photo-1569336415962-a4bd9f69cd83?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80";
+                  const placeholderImage = "/placeholders/cycling.webp";
 
                   return (
                     <div
                       key={landmark.id_uuid}
-                      className="border rounded-lg overflow-hidden shadow-sm bg-white dark:bg-gray-800 cursor-pointer relative"
+                      className="rounded-3xl overflow-hidden shadow-card bg-white dark:bg-gray-800 cursor-pointer relative"
                       onClick={() => navigate(`/landmark/${landmark.slug}`)}
                     >
-                      <img
-                        src={placeholderImage}
-                        alt={landmark.name}
-                        className="w-full h-36 object-cover"
-                      />
+                      <div className="w-full h-36 flex items-center justify-center" style={{ background: SPORT.guide.bg, color: SPORT.guide.fg }}>
+                        <MapIcon size={56} strokeWidth={1.3} />
+                      </div>
                       <Button
                         variant="ghost"
-                        className="absolute bottom-2 right-2 text-red-500 hover:text-red-700"
+                        className="absolute top-3 right-3 w-9 h-9 p-0 rounded-full bg-white text-sport-red hover:bg-white"
                         onClick={(e) => {
                           e.stopPropagation();
                           toggleFavorite(landmark.id_uuid);
@@ -386,10 +378,10 @@ const LandmarkDirectory = () => {
                         />
                       </Button>
                       <div className="p-4">
-                        <h3 className="font-bold text-lg text-gray-800 dark:text-gray-200 mb-1">{landmark.name}</h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{landmark.state}</p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{truncateDescription(landmark.description)}</p>
-                        <div className="flex items-center text-sm font-medium text-green-600 dark:text-green-400">
+                        <h3 className="font-bold text-lg text-sc-ink dark:text-gray-200 mb-1">{landmark.name}</h3>
+                        <p className="text-sm text-sc-ink3 dark:text-gray-400 mb-1">{landmark.state}</p>
+                        <p className="text-sm text-sc-ink3 dark:text-gray-400 mb-1">{truncateDescription(landmark.description)}</p>
+                        <div className="flex items-center text-sm font-medium text-sc-green-dark dark:text-green-400">
                           <MapPin className="h-4 w-4 mr-1" />
                           <span>{`${landmark.event_count} Event${landmark.event_count !== 1 ? "s" : ""}`}</span>
                         </div>
@@ -404,19 +396,19 @@ const LandmarkDirectory = () => {
                   variant="outline"
                   disabled={currentPage === 1}
                   onClick={handlePreviousPage}
-                  className="bg-white dark:bg-gray-800 text-green-600 border-green-500 hover:bg-green-600 hover:text-white transition-colors"
+                  className="bg-white dark:bg-gray-800 text-sc-green-dark border-sc-green hover:bg-green-600 hover:text-white transition-colors"
                 >
                   <ChevronLeft size={16} className="mr-2" />
                   Previous
                 </Button>
-                <span className="text-gray-700 dark:text-gray-300">
+                <span className="text-sc-ink2 dark:text-gray-300">
                   Page {currentPage} of {totalPages}
                 </span>
                 <Button
                   variant="outline"
                   disabled={currentPage === totalPages || totalPages === 0}
                   onClick={handleNextPage}
-                  className="bg-white dark:bg-gray-800 text-green-600 border-green-500 hover:bg-green-600 hover:text-white transition-colors"
+                  className="bg-white dark:bg-gray-800 text-sc-green-dark border-sc-green hover:bg-green-600 hover:text-white transition-colors"
                 >
                   Next
                   <ChevronRight size={16} className="ml-2" />
@@ -424,9 +416,7 @@ const LandmarkDirectory = () => {
               </div>
             </>
           ) : (
-            <div className="flex items-center justify-center h-[50vh] flex-col gap-4">
-              <p className="text-gray-500 dark:text-gray-400 text-center p-4">No landmarks match your filters.</p>
-            </div>
+<FunEmpty icon={FlagIcon} sport="guide" title="No landmarks here yet" body="Add the roundabout, gate or park your crew always meets at, and rides can start from it." primary={{ label: "Host a ride", onClick: () => navigate("/host-cycling") }} />
           )}
         </div>
 

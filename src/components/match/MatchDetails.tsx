@@ -198,7 +198,7 @@ const MatchDetails = ({ match, cashout, handleCancelMatch, loading, isMatchPast 
   const getStatusStyles = (status: string) => {
     switch (status) {
       case "Successful":
-        return "bg-green-100 text-green-700 border-green-300";
+        return "bg-sc-green-bg text-sc-green-dark border-green-300";
       case "Failed":
         return "bg-red-100 text-red-700 border-red-300";
       case "Processed":
@@ -267,9 +267,9 @@ const MatchDetails = ({ match, cashout, handleCancelMatch, loading, isMatchPast 
   if (!match) return null;
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700">
+    <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 dark:border-gray-700">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Match Details</h2>
+        <h2 className="text-xl font-semibold text-sc-ink dark:text-gray-100">Match Details</h2>
         <div className="flex items-center gap-2">
           {match.cancellation_status && (
             <span className="inline-block px-3 py-1 text-sm font-medium rounded border bg-red-100 text-red-700 border-red-300">
@@ -289,41 +289,41 @@ const MatchDetails = ({ match, cashout, handleCancelMatch, loading, isMatchPast 
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
         <div className="flex items-center gap-3">
-          <Trophy size={20} className="text-green-500" />
+          <Trophy size={20} className="text-sc-green-dark" />
           <div>
-            <p className="font-medium text-gray-900 dark:text-gray-100">{match.title || "Untitled Match"}</p>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <p className="font-medium text-sc-ink dark:text-gray-100">{match.title || "Untitled Match"}</p>
+            <p className="text-sm text-sc-ink3 dark:text-gray-400">
               Organized by {match.organizer_name || "Unknown Organizer"}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <MapPin size={20} className="text-green-500" />
-          <span className="text-gray-900 dark:text-gray-100">
+          <MapPin size={20} className="text-sc-green-dark" />
+          <span className="text-sc-ink dark:text-gray-100">
             {match.venue?.name || "Unknown Venue"}, {match.venue?.city || "Unknown City"}
           </span>
         </div>
         <div className="flex items-center gap-3">
-          <Calendar size={20} className="text-green-500" />
-          <span className="text-gray-900 dark:text-gray-100">
+          <Calendar size={20} className="text-sc-green-dark" />
+          <span className="text-sc-ink dark:text-gray-100">
             {match.match_date ? formatDate(match.match_date) : "Date TBD"}
           </span>
         </div>
         <div className="flex items-center gap-3">
-          <Clock size={20} className="text-green-500" />
-          <span className="text-gray-900 dark:text-gray-100">
+          <Clock size={20} className="text-sc-green-dark" />
+          <span className="text-sc-ink dark:text-gray-100">
             {match.match_time ? formatTime(match.match_time) : "Time TBD"}
           </span>
         </div>
         <div className="flex items-center gap-3">
-          <Users size={20} className="text-green-500" />
-          <span className="text-gray-900 dark:text-gray-100">
+          <Users size={20} className="text-sc-green-dark" />
+          <span className="text-sc-ink dark:text-gray-100">
             {calculateTotalSlotsOccupied()}/{match.total_slots || 0} slots
           </span>
         </div>
         <div className="flex items-center gap-3">
-          <DollarSign size={20} className="text-green-500" />
-          <span className="text-gray-900 dark:text-gray-100">
+          <DollarSign size={20} className="text-sc-green-dark" />
+          <span className="text-sc-ink dark:text-gray-100">
             {match.is_paid ? `₦${match.price?.toLocaleString() || "0"} per ticket` : "Free"}
             {match.sell_tickets && match.ticket_price
               ? ` | Tickets: ₦${match.ticket_price.toLocaleString()} each`
@@ -331,8 +331,8 @@ const MatchDetails = ({ match, cashout, handleCancelMatch, loading, isMatchPast 
           </span>
         </div>
         <div className="flex items-center gap-3">
-          <Wallet size={20} className="text-green-500" />
-          <span className="text-gray-900 dark:text-gray-100">
+          <Wallet size={20} className="text-sc-green-dark" />
+          <span className="text-sc-ink dark:text-gray-100">
             Wallet: ₦{walletBalance.toLocaleString() || "0"}
           </span>
         </div>

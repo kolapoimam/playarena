@@ -8,6 +8,8 @@ import Navbar from "@/components/Navbar";
 import UserNotifications from "@/components/profile/UserNotifications";
 import { ChevronLeft } from "lucide-react";
 
+import { BackButton } from "@/components/sc/ui";
+import { PageSkeleton } from "@/components/sc/skeletons";
 const Notifications = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -63,33 +65,22 @@ const Notifications = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
-      </div>
+      <PageSkeleton />
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-100 dark:bg-gray-900">
-      <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg">
-        <div className="flex items-center justify-between max-w-7xl mx-auto">
-          <Button
-            variant="ghost"
-            onClick={() => navigate("/profile")}
-            className="text-white hover:bg-green-600"
-          >
-            <ChevronLeft className="w-5 h-5 mr-2" />
-            Back
-          </Button>
-          <div className="text-center">
-            <h1 className="text-2xl font-bold">Notifications</h1>
+    <div className="min-h-screen flex flex-col bg-sc-bg dark:bg-gray-900">
+      <header className="px-5 pt-[max(env(safe-area-inset-top),1rem)] flex flex-col gap-3.5">
+          <div className="pt-3 flex items-center justify-between min-h-11">
+            <BackButton to="/profile" />
+            <div className="flex gap-2"></div>
           </div>
-          <div className="w-10"></div>
-        </div>
-      </header>
+          <h1 className="m-0 text-[32px] leading-[38px] font-extrabold tracking-[-0.03em]">Notifications</h1>
+        </header>
 
       <div className="flex-grow overflow-y-auto">
-        <Card className="bg-white dark:bg-gray-800 border-none shadow-lg rounded-xl">
+        <Card className="bg-white dark:bg-gray-800 border-none shadow-card rounded-3xl">
           <CardContent className="p-6">
             <UserNotifications
               profile={profile}

@@ -100,7 +100,7 @@ const Performance = ({ profile }: PerformanceProps) => {
       case "First Kickoff":
         return "bg-gradient-to-br from-blue-200 to-blue-400 dark:from-blue-700 dark:to-blue-900 border-blue-500";
       case "Match Maestro":
-        return "bg-gradient-to-br from-green-200 to-green-400 dark:from-green-700 dark:to-green-900 border-green-500";
+        return "bg-gradient-to-br from-green-200 to-green-400 dark:from-green-700 dark:to-green-900 border-sc-green";
       case "Venue Visionary":
         return "bg-gradient-to-br from-purple-200 to-purple-400 dark:from-purple-700 dark:to-purple-900 border-purple-500";
       case "Deca-Paid Star":
@@ -201,9 +201,9 @@ const Performance = ({ profile }: PerformanceProps) => {
   const totalBadgesCount = badges.length;
 
   return (
-    <Card className="bg-white dark:bg-gray-800 border-none shadow-xl rounded-xl">
+    <Card className="bg-white dark:bg-gray-800 border-none shadow-card rounded-3xl">
       <CardHeader>
-        <CardTitle className="text-xl font-semibold text-green-700 dark:text-green-400 flex items-center">
+        <CardTitle className="text-xl font-semibold text-sc-green-dark dark:text-green-400 flex items-center">
           <Trophy className="mr-2 h-6 w-6" />
           Your Achievements
         </CardTitle>
@@ -211,13 +211,13 @@ const Performance = ({ profile }: PerformanceProps) => {
       <CardContent>
         <div className="space-y-6">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Summary</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <h3 className="text-lg font-semibold text-sc-ink dark:text-gray-100 mb-2">Summary</h3>
+            <p className="text-sm text-sc-ink3 dark:text-gray-400">
               You've earned {earnedBadgesCount} out of {totalBadgesCount} badges. Keep joining matches, organizing events, and listing venues to unlock more achievements!
             </p>
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Your Badges</h3>
+            <h3 className="text-lg font-semibold text-sc-ink dark:text-gray-100 mb-4">Your Badges</h3>
             {badges.length > 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                 {badges.map((badge) => {
@@ -225,14 +225,14 @@ const Performance = ({ profile }: PerformanceProps) => {
                   return (
                     <div
                       key={badge.id}
-                      className={`p-4 ${getBadgeStyles(badge.name)} rounded-lg flex flex-col items-center gap-3 shadow-md ${
+                      className={`p-4 ${getBadgeStyles(badge.name)} rounded-lg flex flex-col items-center gap-3 shadow-card ${
                         isEarned ? "cursor-pointer" : "opacity-50 cursor-not-allowed"
                       }`}
                       onClick={isEarned ? () => setSelectedBadge(badge) : undefined}
                     >
                       {getBadgeIcon(badge.icon, isEarned)}
-                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300 text-center">{badge.name}</p>
-                      <p className="text-xs text-gray-600 dark:text-gray-400">
+                      <p className="text-sm font-medium text-sc-ink2 dark:text-gray-300 text-center">{badge.name}</p>
+                      <p className="text-xs text-sc-ink3 dark:text-gray-400">
                         {isEarned
                           ? `Earned: ${new Date(badge.earned_at!).toLocaleDateString()}`
                           : "Not yet earned"}
@@ -242,7 +242,7 @@ const Performance = ({ profile }: PerformanceProps) => {
                 })}
               </div>
             ) : (
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-sm text-sc-ink3 dark:text-gray-400">
                 No badges earned yet. Keep playing to unlock achievements!
               </p>
             )}
@@ -264,9 +264,9 @@ const Performance = ({ profile }: PerformanceProps) => {
             className={`p-6 ${selectedBadge ? getBadgeStyles(selectedBadge.name) : ''} rounded-2xl flex flex-col items-center gap-3 border-4 w-[350px] h-[250px] relative shadow-lg`}
           >
             {selectedBadge && getBadgeIcon(selectedBadge.icon, true)}
-            <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{	selectedBadge?.name}</p>
-            <p className="text-sm text-gray-700 dark:text-gray-300 text-center">{selectedBadge?.description}</p>
-            <p className="text-xs text-gray-600 dark:text-gray-400">
+            <p className="text-lg font-bold text-sc-ink dark:text-gray-100">{	selectedBadge?.name}</p>
+            <p className="text-sm text-sc-ink2 dark:text-gray-300 text-center">{selectedBadge?.description}</p>
+            <p className="text-xs text-sc-ink3 dark:text-gray-400">
               Earned: {selectedBadge?.earned_at ? new Date(selectedBadge.earned_at).toLocaleDateString() : "N/A"}
             </p>
             <img
@@ -277,13 +277,13 @@ const Performance = ({ profile }: PerformanceProps) => {
           </div>
           <div className="flex gap-2 justify-center">
             <Button
-              className="bg-green-500 hover:bg-green-600 text-white"
+              className="bg-sc-green hover:brightness-95 text-sc-green-ink font-bold"
               onClick={() => selectedBadge && handleShareBadge(selectedBadge)}
             >
               Share to Socials
             </Button>
             <Button
-              className="bg-green-500 hover:bg-green-600 text-white"
+              className="bg-sc-green hover:brightness-95 text-sc-green-ink font-bold"
               onClick={handleDownloadBadge}
             >
               Download Badge

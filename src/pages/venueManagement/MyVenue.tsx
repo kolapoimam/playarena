@@ -16,6 +16,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import VenueWallet from "@/components/venueManagement/VenueWallet";
 import Navbar from "@/components/Navbar";
 
+import { BackButton } from "@/components/sc/ui";
+import { EventListSkeleton } from "@/components/sc/skeletons";
 const pinSchema = z.object({
   access_code: z
     .string()
@@ -307,59 +309,46 @@ const MyVenue = () => {
 
   return (
     <TooltipProvider>
-      <div className="min-h-screen flex flex-col bg-gray-100 dark:bg-gray-900">
-        <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg">
-          <div className="flex items-center justify-between max-w-7xl mx-auto">
-            <Button
-              variant="ghost"
-              onClick={() => navigate("/profile")}
-              className="text-white hover:bg-green-600"
-            >
-              <ChevronLeft className="w-5 h-5 mr-2" />
-              Back
-            </Button>
-            <div className="text-center">
-              <h1 className="text-2xl font-bold">My Venue</h1>
-            </div>
-            <div className="w-10"></div>
+      <div className="min-h-screen flex flex-col bg-sc-bg dark:bg-gray-900">
+        <header className="px-5 pt-[max(env(safe-area-inset-top),1rem)] flex flex-col gap-3.5">
+          <div className="pt-3 flex items-center justify-between min-h-11">
+            <BackButton to="/profile" />
+            <div className="flex gap-2"></div>
           </div>
+          <h1 className="m-0 text-[32px] leading-[38px] font-extrabold tracking-[-0.03em]">My venues</h1>
         </header>
 
         <div className="flex-grow overflow-y-auto">
           <div className="container mx-auto px-4 py-6">
             {loading ? (
-              <div className="flex justify-center items-center h-64">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
-              </div>
+              <div className="w-full px-1"><EventListSkeleton /></div>
             ) : isVenueLinked && venueId ? (
               statsLoading ? (
-                <div className="flex justify-center items-center h-64">
-                  <Loader2 className="w-8 h-8 animate-spin text-green-500" />
-                </div>
+                <div className="w-full px-1"><EventListSkeleton /></div>
               ) : !venueStats ? (
-                <p className="text-center text-gray-600 dark:text-gray-400">No venue data available.</p>
+                <p className="text-center text-sc-ink3 dark:text-gray-400">No venue data available.</p>
               ) : (
                 <div className="space-y-6">
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div className="p-4 bg-green-50 dark:bg-green-900/50 rounded-lg flex items-center gap-3 shadow-md">
-                      <Users className="h-8 w-8 text-green-600" />
+                    <div className="p-4 bg-sc-green-bg dark:bg-green-900/50 rounded-lg flex items-center gap-3 shadow-card">
+                      <Users className="h-8 w-8 text-sc-green-dark" />
                       <div>
-                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Events</p>
-                        <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{totalEvents}</p>
+                        <p className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Total Events</p>
+                        <p className="text-lg font-semibold text-sc-ink dark:text-gray-100">{totalEvents}</p>
                       </div>
                     </div>
-                    <div className="p-4 bg-green-50 dark:bg-green-900/50 rounded-lg flex items-center gap-3 shadow-md">
-                      <Trophy className="h-8 w-8 text-green-600" />
+                    <div className="p-4 bg-sc-green-bg dark:bg-green-900/50 rounded-lg flex items-center gap-3 shadow-card">
+                      <Trophy className="h-8 w-8 text-sc-green-dark" />
                       <div>
-                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Funds</p>
-                        <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">₦{totalFunds.toFixed(2)}</p>
+                        <p className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Total Funds</p>
+                        <p className="text-lg font-semibold text-sc-ink dark:text-gray-100">₦{totalFunds.toFixed(2)}</p>
                       </div>
                     </div>
-                    <div className="p-4 bg-green-50 dark:bg-green-900/50 rounded-lg flex items-center gap-3 shadow-md">
-                      <CheckCircle className="h-8 w-8 text-green-600" />
+                    <div className="p-4 bg-sc-green-bg dark:bg-green-900/50 rounded-lg flex items-center gap-3 shadow-card">
+                      <CheckCircle className="h-8 w-8 text-sc-green-dark" />
                       <div>
-                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Verified Since</p>
-                        <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                        <p className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Verified Since</p>
+                        <p className="text-lg font-semibold text-sc-ink dark:text-gray-100">
                           {verifiedSince ? format(new Date(verifiedSince), "MMM d, yyyy") : "Not Verified"}
                         </p>
                       </div>
@@ -377,13 +366,13 @@ const MyVenue = () => {
         </div>
 
         <Dialog open={showLinkDialog} onOpenChange={setShowLinkDialog}>
-          <DialogContent className="sm:max-w-md rounded-2xl bg-white dark:bg-gray-800 shadow-2xl border-none">
+          <DialogContent className="sm:max-w-md rounded-3xl bg-white dark:bg-gray-800 shadow-2xl border-none">
             <DialogHeader>
-              <DialogTitle className="text-xl font-semibold text-green-700 dark:text-green-400 flex items-center">
+              <DialogTitle className="text-xl font-semibold text-sc-green-dark dark:text-green-400 flex items-center">
                 <MapPin size={20} className="mr-2" />
                 Manage Venues
               </DialogTitle>
-              <DialogDescription className="text-gray-600 dark:text-gray-300">
+              <DialogDescription className="text-sc-ink3 dark:text-gray-300">
                 Enter a 6-character access code to link a venue to your profile, or manage existing linked venues.
               </DialogDescription>
             </DialogHeader>
@@ -395,13 +384,13 @@ const MyVenue = () => {
                     name="access_code"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-gray-700 dark:text-gray-300">Access Code</FormLabel>
+                        <FormLabel className="text-sc-ink2 dark:text-gray-300">Access Code</FormLabel>
                         <FormControl>
                           <Input
                             {...field}
                             type="text"
                             maxLength={6}
-                            className="text-base bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg"
+                            className="text-base bg-white dark:bg-gray-700 border-sc-line dark:border-gray-600 text-sc-ink dark:text-gray-100 rounded-lg"
                             placeholder="Enter 6-character code"
                           />
                         </FormControl>
@@ -411,7 +400,7 @@ const MyVenue = () => {
                   />
                   <Button
                     type="submit"
-                    className="w-full bg-green-500 hover:bg-green-600 text-white rounded-lg"
+                    className="w-full bg-sc-green hover:brightness-95 text-sc-green-ink rounded-full font-bold"
                     disabled={operationLoading}
                   >
                     {operationLoading ? (
@@ -427,20 +416,20 @@ const MyVenue = () => {
               </Form>
               {venues.length > 0 && (
                 <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Linked Venues</h3>
+                  <h3 className="text-lg font-semibold text-sc-ink dark:text-gray-100">Linked Venues</h3>
                   {venues.map((venue) => (
-                    <div key={venue.id} className="border-b border-gray-200 dark:border-gray-700 pb-2">
+                    <div key={venue.id} className="border-b border-sc-line dark:border-gray-700 pb-2">
                       <div className="flex justify-between items-center">
                         <div>
-                          <p className="font-medium text-gray-900 dark:text-gray-100">{venue.name}</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">Code: {venue.pin}</p>
+                          <p className="font-medium text-sc-ink dark:text-gray-100">{venue.name}</p>
+                          <p className="text-sm text-sc-ink3 dark:text-gray-400">Code: {venue.pin}</p>
                         </div>
                         <Button
                           type="button"
                           variant="outline"
                           size="sm"
                           onClick={() => handleManageVenue(venue.id)}
-                          className="text-green-500 border-green-500 hover:bg-green-500 hover:text-white"
+                          className="text-sc-green-dark border-sc-green hover:bg-green-500 hover:text-white"
                           disabled={operationLoading}
                         >
                           Manage
@@ -459,7 +448,7 @@ const MyVenue = () => {
                   setShowLinkDialog(false);
                   navigate("/profile");
                 }}
-                className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                className="border-sc-line dark:border-gray-600 text-sc-ink2 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
                 disabled={operationLoading}
               >
                 Close

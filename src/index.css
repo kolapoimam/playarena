@@ -18,8 +18,8 @@
     --popover: 0 0% 100%;
     --popover-foreground: 150 18% 7%;
 
-    --primary: 142 71% 45%;
-    --primary-foreground: 145 80% 10%;
+    --primary: 142 76% 36%;
+    --primary-foreground: 0 0% 100%;
 
     --secondary: 84 14% 93%;
     --secondary-foreground: 150 18% 7%;
@@ -35,7 +35,7 @@
 
     --border: 90 11% 89%;
     --input: 90 11% 89%;
-    --ring: 142 71% 45%;
+    --ring: 142 76% 36%;
 
     --radius: 1rem;
 
@@ -112,4 +112,18 @@
   margin: 0;
   padding: 0;
   text-align: left;
+}
+
+/* Skeleton shimmer */
+@keyframes sc-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.sc-skel {
+  background: linear-gradient(90deg, #E6E9E3 0%, #F1F3EE 40%, #E6E9E3 80%);
+  background-size: 200% 100%;
+  animation: sc-shimmer 1.4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sc-skel { animation: none; }
 }

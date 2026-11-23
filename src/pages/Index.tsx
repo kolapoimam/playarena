@@ -22,7 +22,10 @@ import Navbar from "@/components/Navbar";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Seo } from "@/components/Seo";
-import { Avatar, Bubble, IconButton, Meta, Pill, Screen, Section, Spinner, SPORT, formatNaira, initialsOf } from "@/components/sc/ui";
+import { Avatar, Bubble, FunEmpty, IconButton, Meta, Pill, Screen, Section, SPORT, formatNaira, initialsOf, Cover } from "@/components/sc/ui";
+import { LocationChip, useUserState } from "@/components/sc/location";
+import { sameState } from "@/lib/location";
+import { HomeRailSkeleton } from "@/components/sc/skeletons";
 
 type Match = {
   id: string;
@@ -36,6 +39,7 @@ type Match = {
     slug: string;
     name: string;
     city: string;
+    state?: string | null;
     image_urls: string[] | null;
   } | null;
   type: "football";
@@ -73,6 +77,8 @@ const formatDate = (dateString: string) => {
 };
 
 const formatTime = (timeString: string) => {
+  if (!timeString) return "";
+  if (/am|pm/i.test(timeString)) return timeString.replace(/^0/, "");
   const [hours, minutes] = timeString.split(":");
   const hour = parseInt(hours);
   const period = hour >= 12 ? "PM" : "AM";
@@ -108,7 +114,7 @@ const Index = () => {
             match_time,
             is_paid,
             price,
-            venue:venues(slug, name, city, image_urls)
+            venue:venues(slug, name, city, state, image_urls)
           `)
           .gte("match_date", currentDate)
           .order("match_date", { ascending: true })
@@ -175,7 +181,7 @@ const Index = () => {
               match_time,
               is_paid,
               price,
-              venue:venues(slug, name, city, image_urls)
+              venue:venues(slug, name, city, state, image_urls)
             `)
             .order("match_date", { ascending: false })
             .order("match_time", { ascending: false })
@@ -277,8 +283,14 @@ const Index = () => {
     navigate(type === "football" ? "/organize" : "/host-cycling");
   };
 
-  const footballEvents = upcomingMatches.filter((e): e is Match => e.type === "football");
-  const cyclingEvents = upcomingMatches.filter((e): e is CyclingEvent => e.type === "cycling");
+  const userState = useUserState();
+  const [showAll, setShowAll] = useState(false);
+  const scoped = userState && !showAll;
+  const footballAll = upcomingMatches.filter((e): e is Match => e.type === "football");
+  const cyclingAll = upcomingMatches.filter((e): e is CyclingEvent => e.type === "cycling");
+  const footballEvents = scoped ? footballAll.filter((m) => sameState(m.venue?.state, userState)) : footballAll;
+  const cyclingEvents = scoped ? cyclingAll.filter((e) => sameState(e.start_landmark?.state, userState)) : cyclingAll;
+  const venuesShown = scoped ? popularVenues.filter((v) => sameState(v.state, userState)) : popularVenues;
 
   const quickActions = [
     { label: "Organise", icon: Plus, sport: "football" as const, onClick: handleOrganizeClick },
@@ -332,19 +344,17 @@ const Index = () => {
         <header className="px-5 pt-[max(env(safe-area-inset-top),1rem)] flex flex-col gap-[18px]">
           <div className="pt-3 flex items-center justify-between">
             <div className="flex items-center gap-3 min-w-0">
-              {nickname ? <Avatar initials={initialsOf(nickname)} size={46} /> : <img src="/brand/sportcliq-mark.png" alt="SportCliq" className="w-[46px] h-[46px]" />}
+              {nickname ? <Avatar seed={nickname} initials={initialsOf(nickname)} size={46} /> : <img src="/brand/sportcliq-mark.png" alt="SportCliq" className="w-[46px] h-[46px]" />}
               <div className="flex flex-col gap-0.5 min-w-0">
                 <span className="text-[13px] text-sc-ink3 font-semibold">{greeting}</span>
                 <span className="text-lg font-extrabold tracking-[-0.02em] truncate">{nickname || "Welcome to SportCliq"}</span>
               </div>
             </div>
-            <IconButton icon={Bell} label="Notifications" onClick={() => navigate("/profile/notifications")} />
+            <div className="flex items-center gap-2">
+              <LocationChip />
+              <IconButton icon={Bell} label="Notifications" onClick={() => navigate("/profile/notifications")} />
+            </div>
           </div>
-          <h1 className="m-0 text-[32px] leading-[38px] font-extrabold tracking-[-0.035em]">
-            What are we
-            <br />
-            playing today?
-          </h1>
           <button
             type="button"
             onClick={() => navigate("/search")}
@@ -384,12 +394,17 @@ const Index = () => {
           </div>
 
           {loading ? (
-            <Spinner />
+            <>
+              <Section title="Upcoming matches" />
+              <HomeRailSkeleton />
+              <Section title="Featured venues" />
+              <HomeRailSkeleton />
+            </>
           ) : (
             <>
               <Section title="Upcoming matches" action="See all" onAction={() => navigate("/matches")} />
               {footballEvents.length > 0 ? (
-                <div className="flex gap-3 overflow-x-auto px-5 pb-1 snap-x [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <div className="flex gap-3 overflow-x-auto px-5 pb-1 snap-x scroll-px-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {footballEvents.map((m) => (
                     <button
                       key={m.id}
@@ -398,11 +413,7 @@ const Index = () => {
                       className="snap-start shrink-0 w-[250px] rounded-[26px] bg-white p-4 flex flex-col gap-3 text-left"
                     >
                       <div className="relative h-24 rounded-[18px] overflow-hidden flex items-end p-3" style={{ background: SPORT.football.bg, color: SPORT.football.fg }}>
-                        {m.venue?.image_urls?.[0] ? (
-                          <img src={m.venue.image_urls[0]} alt="" className="absolute inset-0 w-full h-full object-cover" />
-                        ) : (
-                          <Trophy aria-hidden="true" className="absolute opacity-35" size={110} strokeWidth={1.4} style={{ right: -14, top: -14 }} />
-                        )}
+                        <Cover src={m.venue?.image_urls?.[0]} kind="football" />
                         <span className="relative h-7 px-2.5 rounded-full bg-white text-sc-ink text-[13px] font-extrabold flex items-center">
                           {m.is_paid ? formatNaira(m.price) : "Free"}
                         </span>
@@ -419,19 +430,22 @@ const Index = () => {
                   ))}
                 </div>
               ) : (
-                <div className="mx-5 rounded-3xl bg-white p-5 flex items-center gap-3">
-                  <Bubble icon={Trophy} sport="football" />
-                  <span className="flex-1 text-sm text-sc-ink2">No upcoming matches yet.</span>
-                  <button type="button" onClick={handleOrganizeClick} className="text-sm font-bold text-sc-green-dark">
-                    Organise one
-                  </button>
+                <div className="px-5">
+                  <FunEmpty
+                    icon={Trophy}
+                    sport="football"
+                    title={scoped ? `No matches in ${userState} this week` : "No kickoffs on the calendar"}
+                    body={scoped ? "Your city is waiting for a whistle. Organise a game and the squad will follow." : "Start the first match and watch the slots fill up."}
+                    primary={{ label: "Organise a match", onClick: handleOrganizeClick }}
+                    secondary={scoped ? { label: "See all of Nigeria", onClick: () => setShowAll(true) } : undefined}
+                  />
                 </div>
               )}
 
               <Section title="Featured venues" action="See all" onAction={() => navigate("/venues")} />
-              {popularVenues.length > 0 ? (
-                <div className="flex gap-3 overflow-x-auto px-5 pb-1 snap-x [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                  {popularVenues.map((venue) => {
+              {venuesShown.length > 0 ? (
+                <div className="flex gap-3 overflow-x-auto px-5 pb-1 snap-x scroll-px-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  {venuesShown.map((venue) => {
                     const venueImage = venue.image_urls?.[0];
                     return (
                       <button
@@ -441,11 +455,7 @@ const Index = () => {
                         className="snap-start shrink-0 w-[200px] flex flex-col gap-2.5 text-left"
                       >
                         <div className="relative h-[130px] rounded-[22px] overflow-hidden flex items-center justify-center" style={{ background: SPORT.venue.bg, color: SPORT.venue.fg }}>
-                          {venueImage ? (
-                            <img src={venueImage} alt={venue.name} className="absolute inset-0 w-full h-full object-cover" />
-                          ) : (
-                            <Store size={56} strokeWidth={1.3} />
-                          )}
+                          <Cover src={venueImage} kind="venue" alt={venue.name} />
                           {venue.is_verified && (
                             <span className="absolute left-2.5 top-2.5">
                               <Pill sport="football" icon={ShieldCheck}>Verified</Pill>
@@ -467,9 +477,9 @@ const Index = () => {
               ) : (
                 <div className="mx-5 rounded-3xl bg-white p-5 flex items-center gap-3">
                   <Bubble icon={Store} sport="venue" />
-                  <span className="flex-1 text-sm text-sc-ink2">No venues added yet.</span>
+                  <span className="flex-1 text-sm text-sc-ink2">{scoped ? `No venues listed in ${userState} yet.` : "No venues listed yet."}</span>
                   <button type="button" onClick={() => navigate("/venue-create")} className="text-sm font-bold text-sc-green-dark">
-                    Add one
+                    List yours
                   </button>
                 </div>
               )}
@@ -500,16 +510,13 @@ const Index = () => {
                           </span>
                         </div>
                         <Pill sport={e.is_free ? "football" : "tennis"}>{e.is_free ? "Free" : "Paid"}</Pill>
-                        <span className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: SPORT.cycling.bg, color: SPORT.cycling.fg }}>
-                          <ChevronRight size={18} />
-                        </span>
                       </button>
                     );
                   })
                 ) : (
                   <div className="rounded-3xl bg-white p-5 flex items-center gap-3">
                     <Bubble icon={Bike} sport="cycling" />
-                    <span className="flex-1 text-sm text-sc-ink2">No rides this week.</span>
+                    <span className="flex-1 text-sm text-sc-ink2">{scoped ? `No rides in ${userState} yet. Lead the first one.` : "No rides yet. Lead the first one."}</span>
                     <button type="button" onClick={() => navigate("/host-cycling")} className="text-sm font-bold text-sc-green-dark">
                       Host one
                     </button>

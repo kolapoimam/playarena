@@ -85,7 +85,7 @@ const MatchPreviewDialog = ({ open, onOpenChange, formValues, selectedVenue }: M
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-full max-w-[90vw] sm:max-w-[500px] rounded-2xl p-4 sm:p-6">
-        <DialogTitle className="text-xl font-bold text-gray-800 dark:text-white text-center">Match Preview</DialogTitle>
+        <DialogTitle className="text-xl font-bold text-sc-ink dark:text-white text-center">Match Preview</DialogTitle>
         <DialogDescription className="flex flex-col items-center">
           <div className="relative w-full max-w-md">
             <select
@@ -222,12 +222,12 @@ const MatchPreviewDialog = ({ open, onOpenChange, formValues, selectedVenue }: M
               </div>
             </div>
           </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400 my-4 text-center max-w-xs">
+          <p className="text-sm text-sc-ink3 dark:text-gray-400 my-4 text-center max-w-xs">
             <strong>Note:</strong> Review your match details and download the preview if needed.
           </p>
           <div className="flex justify-center mt-4">
             <Button
-              className="bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 transition-colors"
+              className="bg-sc-green hover:brightness-95 text-sc-green-ink font-bold rounded-full px-4 py-2 transition-colors"
               onClick={() => onOpenChange(false)}
             >
               Close

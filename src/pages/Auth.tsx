@@ -4,7 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Eye, EyeOff } from "lucide-react";
+import { Loader2, Eye, EyeOff, Trophy } from "lucide-react";
+import { BrandMark, Segmented } from "@/components/sc/ui";
 import Navbar from "@/components/Navbar";
 import { useTheme } from "next-themes";
 import { NavLink } from "react-router-dom";
@@ -226,41 +227,45 @@ const Auth = () => {
         image={undefined}
         children={null}
       />
-      <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-b from-[#e6f3f5] to-[#d1e8eb] dark:from-gray-900 dark:to-gray-800 relative pb-20">
-        <div className="absolute top-10 left-1/2 transform -translate-x-1/2">
-          <img src="/navlogo.png" alt="PlayArena Logo" className="h-16 w-auto" />
+      <div className="min-h-screen bg-sc-bg text-sc-ink font-sans pb-36">
+        <div className="relative h-[250px] overflow-hidden rounded-b-[40px] bg-sc-green px-6 flex flex-col justify-end gap-[18px] pb-7" style={{ paddingTop: "max(env(safe-area-inset-top), 3rem)" }}>
+          <Trophy aria-hidden="true" className="absolute text-white/15" size={220} strokeWidth={1.1} style={{ right: -40, bottom: -60 }} />
+          <BrandMark size={52} />
+          <h1 className="relative m-0 text-[34px] leading-[38px] font-extrabold tracking-[-0.04em] text-sc-green-ink">
+            {isSignUp ? (
+              <>
+                Join the squad,
+                <br />
+                let&apos;s play.
+              </>
+            ) : (
+              <>
+                Welcome back,
+                <br />
+                let&apos;s play.
+              </>
+            )}
+          </h1>
         </div>
 
-        <div className="w-full max-w-md mt-12 mb-32">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-8">
-            <div className="flex border-b border-gray-200 dark:border-gray-700 mb-6">
-              <button
-                className={`flex-1 py-2 text-center text-sm font-medium ${
-                  !isSignUp
-                    ? "border-b-2 border-[#17a34a] text-[#17a34a]"
-                    : "text-gray-500 dark:text-gray-400"
-                }`}
-                onClick={() => setIsSignUp(false)}
-              >
-                Sign In
-              </button>
-              <button
-                className={`flex-1 py-2 text-center text-sm font-medium ${
-                  isSignUp
-                    ? "border-b-2 border-[#17a34a] text-[#17a34a]"
-                    : "text-gray-500 dark:text-gray-400"
-                }`}
-                onClick={() => setIsSignUp(true)}
-              >
-                Sign Up
-              </button>
+        <div className="w-full px-5 pt-[22px]">
+          <div>
+            <div className="mb-4">
+              <Segmented
+                value={isSignUp ? "up" : "in"}
+                onChange={(v) => setIsSignUp(v === "up")}
+                options={[
+                  { value: "in", label: "Sign in" },
+                  { value: "up", label: "Sign up" },
+                ]}
+              />
             </div>
 
             <div className="space-y-4">
               {isSignUp && (
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-[13px] font-bold text-sc-ink2 mb-2">
                       First Name
                     </label>
                     <Input
@@ -273,7 +278,7 @@ const Auth = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-[13px] font-bold text-sc-ink2 mb-2">
                       Last Name
                     </label>
                     <Input
@@ -289,7 +294,7 @@ const Auth = () => {
               )}
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-[13px] font-bold text-sc-ink2 mb-2">
                   Email
                 </label>
                 <Input
@@ -303,7 +308,7 @@ const Auth = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-[13px] font-bold text-sc-ink2 mb-2">
                   {isSignUp ? "Create Password" : "Password"}
                 </label>
                 <div className="relative">
@@ -318,7 +323,7 @@ const Auth = () => {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-sc-ink3 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
                   >
                     {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </button>
@@ -329,16 +334,17 @@ const Auth = () => {
                 <div className="text-right">
                   <button
                     onClick={() => setShowForgotPassword(true)}
-                    className="text-sm text-[#17a34a] hover:underline"
+                    className="text-sm font-bold text-sc-green-dark"
                   >
                     Forgot password?
                   </button>
                 </div>
               )}
 
-              <div className="flex gap-2">
+              <div className="flex flex-col gap-3">
                 <Button
-                  className="flex-1 bg-[#17a34a] hover:bg-[#138d3a] text-white font-medium py-2"
+                  size="lg"
+                  className="w-full bg-sc-green hover:brightness-95 text-sc-green-ink font-bold"
                   onClick={handleEmailAuth}
                   disabled={loading || (isSignUp && (!firstName.trim() || !lastName.trim()))}
                 >
@@ -351,9 +357,15 @@ const Auth = () => {
                   )}
                 </Button>
 
+                <div className="flex items-center gap-3 text-sc-ink3 text-[13px] font-semibold">
+                  <span className="flex-1 h-px bg-sc-line" />
+                  or
+                  <span className="flex-1 h-px bg-sc-line" />
+                </div>
                 <Button
                   variant="outline"
-                  className="flex-1 flex items-center justify-center gap-2"
+                  size="lg"
+                  className="w-full flex items-center justify-center gap-2.5"
                   onClick={handleGoogleAuth}
                   disabled={loading}
                 >
@@ -381,16 +393,16 @@ const Auth = () => {
                       fill="#EA4335"
                     />
                   </svg>
-                  Google
+                  Continue with Google
                 </Button>
               </div>
 
               {isSignUp && (
-                <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                <p className="text-xs text-sc-ink3 dark:text-gray-400 text-center">
                   By signing up, you agree to our{' '}
                   <NavLink
                     to="/terms-privacy"
-                    className="text-green-500 hover:text-green-600 underline transition-colors"
+                    className="text-sc-green-dark hover:text-green-600 underline transition-colors"
                   >
                     Terms & Privacy Policy
                   </NavLink>
@@ -402,12 +414,12 @@ const Auth = () => {
 
         {showForgotPassword && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 w-full max-w-xs">
+            <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 w-full max-w-xs">
               <div className="text-center mb-5">
-                <h2 className="text-xl font-bold text-gray-800 dark:text-white">
+                <h2 className="text-xl font-bold text-sc-ink dark:text-white">
                   Reset Password
                 </h2>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                <p className="text-sm text-sc-ink3 dark:text-gray-400 mt-2">
                   Enter your email to receive a password reset link.
                 </p>
               </div>
@@ -430,7 +442,7 @@ const Auth = () => {
                   Cancel
                 </Button>
                 <Button
-                  className="bg-[#17a34a] hover:bg-[#138d3a] text-white px-4 rounded-lg"
+                  className="bg-sc-green hover:brightness-95 text-sc-green-ink px-4 rounded-full font-bold"
                   onClick={handleForgotPassword}
                   disabled={loading}
                 >
@@ -441,11 +453,6 @@ const Auth = () => {
           </div>
         )}
 
-        <div className="absolute bottom-16 left-0 w-full">
-          <div className="w-full h-48 bg-gradient-to-t from-[#e6f3f5] to-[#d1e8eb] dark:from-gray-900 dark:to-gray-800 flex justify-center items-center">
-            <img src="/AuthFooter.png" alt="Auth Footer" className="w-full h-full object-contain" />
-          </div>
-        </div>
 
         <Navbar />
       </div>

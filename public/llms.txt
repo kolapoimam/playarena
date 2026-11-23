@@ -1,0 +1,38 @@
+# SportCliq
+
+> SportCliq (also written Sport Cliq) is a mobile web app for amateur sport in Nigeria. People use it to find and join football matches, host and join group cycling rides, and book verified sports venues by the hour. Organisers can create free or paid matches, check players in with QR codes and cash out earnings. The app runs in the browser and installs to the home screen as a progressive web app at https://app.sportcliq.com.
+
+SportCliq is built for players, ride hosts, match organisers and venue owners in Nigerian cities such as Lagos, Ilorin, Abuja and Offa. Prices are in Naira (NGN) and payments are processed by Paystack.
+
+## What people can do
+
+- [Find football matches](https://app.sportcliq.com/matches): browse upcoming 4-a-side, 5-a-side, 7-a-side, 11-a-side, doubles and friendly matches, filtered by state, price, skill level and gender.
+- [Organise a match](https://app.sportcliq.com/organize): a 4 step flow covering venue, date and time, player slots (2 to 100), free or paid entry (up to ₦100,000 per player), private matches with a password, spectator tickets, recurring weekly or monthly games, and organiser details.
+- [Cycling rides](https://app.sportcliq.com/cycling-activities): join group rides that start from known landmarks, or host a ride with distance, duration, bike rental and registration deadline.
+- [Landmarks](https://app.sportcliq.com/landmarks): start and finish points for rides, with map links.
+- [Venues](https://app.sportcliq.com/venues): verified football pitches and courts with photos, facilities, opening hours and an hourly booking fee. Bookings issue an access code.
+- [List a venue](https://app.sportcliq.com/venue-create): venue owners submit a listing for verification, then manage bookings, check customers in and request cashouts.
+- [Guides](https://app.sportcliq.com/guides): how to organise, play, host rides and list venues.
+- [Search](https://app.sportcliq.com/search): search matches and venues by name, city or state.
+
+## How joining works
+
+1. Open a match or ride and tap Join.
+2. Paid entries are paid through Paystack. Free entries confirm instantly.
+3. The player gets a ticket with a QR code and a 6 digit confirmation code. It can be saved as an image.
+4. On match day the organiser scans the QR code (or types the code) to check the player in.
+
+## Key facts
+
+- Website: https://app.sportcliq.com
+- Country: Nigeria (all 36 states and the FCT)
+- Sports today: football and cycling. Tennis, basketball, volleyball, running, ping pong and walking are coming soon.
+- Accounts: email and password, or Google sign in.
+- Cost: free to use. Organisers, hosts and venue owners set their own fees.
+- Install: Android browsers offer Install. On iPhone, open in Safari, tap Share, then Add to Home Screen.
+- Support: support@sportcliq.com and @SportCliq on X.
+
+## Optional
+
+- [Terms and privacy](https://app.sportcliq.com/terms-privacy)
+- [Full description for AI assistants](https://app.sportcliq.com/llms-full.txt)

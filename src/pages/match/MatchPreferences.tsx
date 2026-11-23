@@ -27,6 +27,8 @@ import MatchSuccessDialog from "@/components/match/MatchSuccessDialog";
 import TeamMatchDetails from "@/components/match/TeamMatchDetails";
 import UserMatches from "@/components/match/UserMatches";
 
+import { BackButton } from "@/components/sc/ui";
+import { PageSkeleton } from "@/components/sc/skeletons";
 const profileSchema = z.object({
   state: z.string().min(1, "State is required"),
   skill_level: z.string().optional(),
@@ -132,34 +134,23 @@ const MatchPreferences = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
-      </div>
+      <PageSkeleton />
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-100 dark:bg-gray-900">
-      <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg">
-        <div className="flex items-center justify-between max-w-7xl mx-auto">
-          <Button
-            variant="ghost"
-            onClick={() => navigate("/profile")}
-            className="text-white hover:bg-green-600"
-          >
-            <ChevronLeft className="w-5 h-5 mr-2" />
-            Back
-          </Button>
-          <div className="text-center">
-            <h1 className="text-2xl font-bold">Preferences</h1>
+    <div className="min-h-screen flex flex-col bg-sc-bg dark:bg-gray-900">
+      <header className="px-5 pt-[max(env(safe-area-inset-top),1rem)]">
+          <div className="pt-3 flex items-center justify-between gap-3">
+            <BackButton to="/profile" />
+            <h1 className="m-0 flex-1 text-center text-[17px] font-extrabold truncate">Match preferences</h1>
+            <div className="min-w-11 flex justify-end"></div>
           </div>
-          <div className="w-10"></div>
-        </div>
-      </header>
+        </header>
 
       <div className="flex-grow overflow-y-auto">
         <div className="container mx-auto px-4 py-6">
-          <Card className="bg-white dark:bg-gray-800 border-none shadow-lg rounded-xl">
+          <Card className="bg-white dark:bg-gray-800 border-none shadow-card rounded-3xl">
             <CardContent className="p-6">
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -168,10 +159,10 @@ const MatchPreferences = () => {
                     name="state"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-gray-700 dark:text-gray-300">State</FormLabel>
+                        <FormLabel className="text-sc-ink2 dark:text-gray-300">State</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value} className="text-base">
                           <FormControl>
-                            <SelectTrigger className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg">
+                            <SelectTrigger className="bg-white dark:bg-gray-700 border-sc-line dark:border-gray-600 text-sc-ink dark:text-gray-100 rounded-lg">
                               <SelectValue placeholder="Select state" />
                             </SelectTrigger>
                           </FormControl>
@@ -186,7 +177,7 @@ const MatchPreferences = () => {
                               <SelectItem
                                 key={state}
                                 value={state}
-                                className="text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                className="text-base bg-white dark:bg-gray-700 text-sc-ink dark:text-gray-100"
                               >
                                 {state}
                               </SelectItem>
@@ -202,10 +193,10 @@ const MatchPreferences = () => {
                     name="skill_level"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-gray-700 dark:text-gray-300">Skill Level</FormLabel>
+                        <FormLabel className="text-sc-ink2 dark:text-gray-300">Skill Level</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value} className="text-base">
                           <FormControl>
-                            <SelectTrigger className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg">
+                            <SelectTrigger className="bg-white dark:bg-gray-700 border-sc-line dark:border-gray-600 text-sc-ink dark:text-gray-100 rounded-lg">
                               <SelectValue placeholder="Select skill level" />
                             </SelectTrigger>
                           </FormControl>
@@ -214,7 +205,7 @@ const MatchPreferences = () => {
                               <SelectItem
                                 key={level}
                                 value={level}
-                                className="text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                className="text-base bg-white dark:bg-gray-700 text-sc-ink dark:text-gray-100"
                               >
                                 {level}
                               </SelectItem>
@@ -230,23 +221,23 @@ const MatchPreferences = () => {
                     name="gender"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-gray-700 dark:text-gray-300">Gender</FormLabel>
+                        <FormLabel className="text-sc-ink2 dark:text-gray-300">Gender</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value} className="text-base">
                           <FormControl>
-                            <SelectTrigger className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg">
+                            <SelectTrigger className="bg-white dark:bg-gray-700 border-sc-line dark:border-gray-600 text-sc-ink dark:text-gray-100 rounded-lg">
                               <SelectValue placeholder="Select gender" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
                             <SelectItem
                               value="male"
-                              className="text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                              className="text-base bg-white dark:bg-gray-700 text-sc-ink dark:text-gray-100"
                             >
                               Male
                             </SelectItem>
                             <SelectItem
                               value="female"
-                              className="text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                              className="text-base bg-white dark:bg-gray-700 text-sc-ink dark:text-gray-100"
                             >
                               Female
                             </SelectItem>
@@ -261,17 +252,17 @@ const MatchPreferences = () => {
                     name="date_of_birth"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-gray-700 dark:text-gray-300">Date of Birth</FormLabel>
+                        <FormLabel className="text-sc-ink2 dark:text-gray-300">Date of Birth</FormLabel>
                         <FormControl>
                           <Input
                             type="date"
                             {...field}
                             disabled={!!profile?.date_of_birth}
-                            className="text-base bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg"
+                            className="text-base bg-white dark:bg-gray-700 border-sc-line dark:border-gray-600 text-sc-ink dark:text-gray-100 rounded-lg"
                           />
                         </FormControl>
                         {dateOfBirth && (
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                          <p className="text-sm text-sc-ink3 dark:text-gray-400 mt-1">
                             Age: {calculateAge(dateOfBirth)} years
                           </p>
                         )}
@@ -281,7 +272,7 @@ const MatchPreferences = () => {
                   />
                   <Button
                     type="submit"
-                    className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 text-sm flex items-center justify-center"
+                    className="w-full bg-sc-green hover:brightness-95 text-sc-green-ink font-bold rounded-full px-4 py-2 text-sm flex items-center justify-center"
                     disabled={loading}
                   >
                     {loading ? (

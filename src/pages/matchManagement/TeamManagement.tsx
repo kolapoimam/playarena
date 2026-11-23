@@ -13,6 +13,7 @@ import Navbar from "@/components/Navbar";
 import MatchReport from "@/components/match/MatchReport";
 import TeamMatchDetails from "@/components/match/TeamMatchDetails";
 
+import { BackButton } from "@/components/sc/ui";
 type Player = { id: string; player_name: string };
 type Team = {
   name: string;
@@ -233,23 +234,20 @@ const TeamManagement = () => {
 
   if (!match) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <p className="text-gray-600 dark:text-gray-400">Loading match details...</p>
+      <div className="min-h-screen bg-sc-bg dark:bg-gray-900 flex items-center justify-center">
+        <p className="text-sc-ink3 dark:text-gray-400">Loading match details...</p>
       </div>
     );
   }
 
   return (
     <DndProvider backend={typeof window !== "undefined" && "ontouchstart" in window ? TouchBackend : HTML5Backend}>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-24">
-        <header className="sticky top-0 z-50 bg-green-500 text-white shadow-md">
-          <div className="p-4 flex items-center justify-between">
-            <Button variant="ghost" onClick={() => navigate(-1)} className="text-white hover:text-gray-200">
-              <ArrowLeft size={18} className="mr-2" />
-              Back
-            </Button>
-            <h1 className="text-xl sm:text-2xl font-bold">Team Management</h1>
-            <div className="w-10"></div>
+      <div className="min-h-screen bg-sc-bg dark:bg-gray-900 pb-24">
+        <header className="sticky top-0 z-30 bg-sc-bg/95 backdrop-blur-xl px-5 pb-3 pt-[max(env(safe-area-inset-top),1rem)]">
+          <div className="pt-3 flex items-center justify-between gap-3">
+            <BackButton />
+            <h1 className="m-0 flex-1 text-center text-[17px] font-extrabold truncate">Manage match</h1>
+            <div className="min-w-11" />
           </div>
         </header>
 
@@ -265,7 +263,7 @@ const TeamManagement = () => {
                   placeholder="Enter supercode"
                   className="mb-4"
                 />
-                <Button onClick={handleVerifySupercode} className="w-full bg-green-500 hover:bg-green-600 text-white">
+                <Button onClick={handleVerifySupercode} className="w-full bg-sc-green hover:brightness-95 text-sc-green-ink font-bold">
                   Verify
                 </Button>
               </DialogDescription>

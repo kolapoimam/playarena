@@ -12,6 +12,8 @@ import VenueAccessCode from "@/components/venueManagement/VenueAccessCode";
 import Navbar from "@/components/Navbar";
 import ManagerBookingView from "@/components/venueManagement/ManagerBookingView";
 
+import { BackButton } from "@/components/sc/ui";
+import { RowsSkeleton } from "@/components/sc/skeletons";
 type Venue = { id: string; name: string; city: string; price_per_hour: number; is_verified: string };
 type Booking = { 
   id: string; 
@@ -213,49 +215,42 @@ const VenueManagerDashboard = () => {
 
   return (
     <TooltipProvider>
-      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex flex-col">
-        <div className="bg-gradient-to-r from-green-600 to-green-800 text-white p-4 flex items-center justify-between shadow-lg sticky top-0 z-20">
-          <Button
-            variant="ghost"
-            onClick={() => navigate("/profile")}
-            className="text-white hover:text-gray-200 text-sm flex items-center"
-          >
-            <ArrowLeft className="w-5 h-5 mr-2" />
-            Back
-          </Button>
-          <h1 className="text-2xl font-bold text-center flex-1">Venue Manager</h1>
-          <div className="w-10" /> {/* Spacer for alignment */}
-        </div>
+      <div className="min-h-screen bg-sc-bg dark:bg-gray-900 flex flex-col">
+        <header className="sticky top-0 z-30 bg-sc-bg/95 backdrop-blur-xl px-5 pb-3 pt-[max(env(safe-area-inset-top),1rem)]">
+          <div className="pt-3 flex items-center justify-between gap-3">
+            <BackButton to="/profile" />
+            <h1 className="m-0 flex-1 text-center text-[17px] font-extrabold truncate">Venue manager</h1>
+            <div className="min-w-11" />
+          </div>
+        </header>
 
         <main className="container mx-auto p-4 pb-24 space-y-8 flex-1">
           {loading ? (
-            <div className="flex justify-center items-center h-64">
-              <Loader2 className="w-8 h-8 animate-spin text-green-500" />
-            </div>
+            <div className="w-full"><RowsSkeleton /></div>
           ) : !venue ? (
-            <p className="text-center text-gray-600 dark:text-gray-400">No venue data available.</p>
+            <p className="text-center text-sc-ink3 dark:text-gray-400">No venue data available.</p>
           ) : (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div className="p-4 bg-green-50 dark:bg-green-900/50 rounded-lg flex items-center gap-3 shadow-md">
-                  <Users className="h-8 w-8 text-green-600" />
+                <div className="p-4 bg-sc-green-bg dark:bg-green-900/50 rounded-lg flex items-center gap-3 shadow-card">
+                  <Users className="h-8 w-8 text-sc-green-dark" />
                   <div>
-                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Events</p>
-                    <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{totalEvents}</p>
+                    <p className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Total Events</p>
+                    <p className="text-lg font-semibold text-sc-ink dark:text-gray-100">{totalEvents}</p>
                   </div>
                 </div>
-                <div className="p-4 bg-green-50 dark:bg-green-900/50 rounded-lg flex items-center gap-3 shadow-md">
-                  <Trophy className="h-8 w-8 text-green-600" />
+                <div className="p-4 bg-sc-green-bg dark:bg-green-900/50 rounded-lg flex items-center gap-3 shadow-card">
+                  <Trophy className="h-8 w-8 text-sc-green-dark" />
                   <div>
-                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Funds</p>
-                    <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">₦{totalFunds.toFixed(2)}</p>
+                    <p className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Total Funds</p>
+                    <p className="text-lg font-semibold text-sc-ink dark:text-gray-100">₦{totalFunds.toFixed(2)}</p>
                   </div>
                 </div>
-                <div className="p-4 bg-green-50 dark:bg-green-900/50 rounded-lg flex items-center gap-3 shadow-md">
-                  <CheckCircle className="h-8 w-8 text-green-600" />
+                <div className="p-4 bg-sc-green-bg dark:bg-green-900/50 rounded-lg flex items-center gap-3 shadow-card">
+                  <CheckCircle className="h-8 w-8 text-sc-green-dark" />
                   <div>
-                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Verified Since</p>
-                    <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                    <p className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Verified Since</p>
+                    <p className="text-lg font-semibold text-sc-ink dark:text-gray-100">
                       {verifiedSince ? format(new Date(verifiedSince), "MMM d, yyyy") : "Not Verified"}
                     </p>
                   </div>
@@ -268,7 +263,7 @@ const VenueManagerDashboard = () => {
                 setAvailableFunds={setAvailableFunds}
               />
 
-              <Card className="bg-white dark:bg-gray-800 border-none shadow-lg rounded-xl">
+              <Card className="bg-white dark:bg-gray-800 border-none shadow-card rounded-3xl">
                 <CardHeader>
                   <ManagerBookingView
                     upcomingBookings={upcomingBookings}

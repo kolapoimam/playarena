@@ -40,13 +40,13 @@ export default function MatchCard({
 
   if (now > endDateTime) {
     statusLabel = "Passed";
-    statusClass = "bg-gray-200 text-gray-600";
+    statusClass = "bg-sc-soft2 text-sc-ink3";
   } else if (now >= startDateTime && now <= endDateTime) {
     statusLabel = "Live";
     statusClass = "bg-red-100 text-red-700 animate-pulse";
   } else if (now.hasSame(matchDate, "day") && now < startDateTime) {
     statusLabel = "Today";
-    statusClass = "bg-green-100 text-green-700";
+    statusClass = "bg-sc-green-bg text-sc-green-dark";
   } else if (matchDate > tomorrow) {
     statusLabel = "Upcoming";
     statusClass = "bg-blue-100 text-blue-800";
@@ -57,7 +57,7 @@ export default function MatchCard({
 
   return (
     <div
-      className="flex flex-col rounded-lg overflow-hidden bg-card shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+      className="flex flex-col rounded-lg overflow-hidden bg-card shadow-card cursor-pointer hover:shadow-md transition-shadow"
       onClick={() => navigate(`/match/${slug}`)}
     >
       <div className="relative h-48 overflow-hidden">
@@ -93,7 +93,7 @@ export default function MatchCard({
               Paid: ₦{price?.toFixed(2)}
             </span>
           ) : (
-            <span className="text-sm font-medium text-green-500">
+            <span className="text-sm font-medium text-sc-green-dark">
               Free
             </span>
           )}

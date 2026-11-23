@@ -21,6 +21,8 @@ import { format, isToday, isPast } from "date-fns";
 import MatchJoinersDialog from "@/components/match/MatchJoinersDialog";
 import { Seo } from "@/components/Seo";
 
+import { BackButton } from "@/components/sc/ui";
+import { RowsSkeleton, PageSkeleton } from "@/components/sc/skeletons";
 const META_KEYWORDS = "Football in Nigeria, Sports in Nigeria, Play Sports Near You, Football Fields Near Me, Livescore, Osimhen, Asisat Oshola, Nigeria Startup, Sportstech, Football venues in Lagos, Football venues in Ilorin, Sports Betting in Nigeria, Organize sports in Nigeria, Football Matches, Bicycle Training in Nigeria, Cycling in Nigeria, Nigerian football, Nigerian cycling, Nigerian sports, Play football in Lagos, Play football in Ilorin, Play football in Abuja, Play football in Nigeria, Play cycling in Nigeria, Play sports in Nigeria, Nigerian sports tech, Nigerian sports startup, Nigerian sports community, Football events Nigeria, Cycling events Nigeria, Sport Cliq, SportCliq, sportcliq.com.ng, sportcliq.ng, sportcliq, sport cliq, sportcliq app, sportcliq platform, sportcliq football, sportcliq cycling, sportcliq venues, sportcliq matches, sportcliq events, sportcliq sports, sportcliq nigeria, sportcliq lagos, sportcliq ilorin, sportcliq abuja, sportcliq startup, sportcliq tech, sportcliq community, sportcliq platform, sportcliq app, sportcliq website, sportcliq online, sportcliq booking, sportcliq organize, sportcliq join, sportcliq play, sportcliq find, sportcliq search, sportcliq discover, sportcliq connect, sportcliq join match, sportcliq join cycling, sportcliq join event, sportcliq join venue, sportcliq join football, sportcliq join sports, sportcliq join nigeria, sportcliq join lagos, sportcliq join ilorin, sportcliq join abuja, sportcliq join startup, sportcliq join tech, sportcliq join community, sportcliq join platform, sportcliq join app, sportcliq join website, sportcliq join online, sportcliq join booking, sportcliq join organize, sportcliq join play, sportcliq join find, sportcliq join search, sportcliq join discover, sportcliq join connect";
 
 type Match = {
@@ -449,11 +451,7 @@ const JoinMatch = () => {
   };
 
   if (loading || verifyingPayment) {
-    return (
-      <div className="flex justify-center items-center h-[50vh]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-playarena-500"></div>
-      </div>
-    );
+    return <PageSkeleton />;
   }
 
   if (!match) {
@@ -486,22 +484,17 @@ const JoinMatch = () => {
         image={undefined}
         children={<meta name="keywords" content={META_KEYWORDS} />}
       />
-      <div className="min-h-screen pb-24">
-        <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg">
-          <div className="flex items-center justify-between">
-            <Button variant="ghost" onClick={() => navigate(-1)} className="text-white hover:bg-green-600">
-              <ArrowLeft size={18} className="mr-2" />
-              Back
-            </Button>
-            <div className="text-center">
-              <h1 className="text-2xl font-bold">Join Match</h1>
-            </div>
-            <div className="w-10"></div>
+      <div className="min-h-screen pb-32">
+        <header className="px-5 pt-[max(env(safe-area-inset-top),1rem)]">
+          <div className="pt-3 flex items-center justify-between gap-3">
+            <BackButton />
+            <h1 className="m-0 flex-1 text-center text-[17px] font-extrabold truncate">Join match</h1>
+            <div className="min-w-11 flex justify-end"></div>
           </div>
         </header>
 
         <div className="p-6">
-          <div className="bg-card rounded-lg shadow-md p-6 mb-6">
+          <div className="bg-card rounded-lg shadow-card p-6 mb-6">
             <h2 className="text-xl font-semibold mb-2">{match.title}</h2>
             <div className="text-muted-foreground mb-2">
               <div className="flex items-center gap-2">
@@ -530,7 +523,7 @@ const JoinMatch = () => {
               <span>Spots available: {match.total_slots - totalPlayerSlots} / {match.total_slots}</span>
             </div>
             {match.is_paid && (
-              <div className="mt-2 font-medium text-green-600">Price: ₦{match.price?.toFixed(2)} per slot</div>
+              <div className="mt-2 font-medium text-sc-green-dark">Price: ₦{match.price?.toFixed(2)} per slot</div>
             )}
             {match.disclose_phone && match.organizer_phone && (
               <div className="mt-2 flex items-center gap-2 text-sm">
@@ -543,7 +536,7 @@ const JoinMatch = () => {
                   href={`https://wa.me/${match.organizer_phone}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center text-green-600 hover:underline"
+                  className="flex items-center text-sc-green-dark hover:underline"
                 >
                   <MessageSquare size={16} className="mr-1" />
                   WhatsApp
@@ -553,26 +546,26 @@ const JoinMatch = () => {
           </div>
 
           {isPastMatch ? (
-            <div className="text-center py-6 bg-muted rounded-lg shadow-sm">
-              <h2 className="text-lg font-semibold text-gray-700">This match has already passed</h2>
+            <div className="text-center py-6 bg-muted rounded-lg shadow-card">
+              <h2 className="text-lg font-semibold text-sc-ink2">This match has already passed</h2>
               <p className="text-muted-foreground mt-2">You cannot join this match anymore.</p>
-              <Button className="mt-4 bg-green-500 hover:bg-green-600 text-white" onClick={() => navigate("/matches")}>
+              <Button className="mt-4 bg-sc-green hover:brightness-95 text-sc-green-ink font-bold" onClick={() => navigate("/matches")}>
                 Browse Other Matches
               </Button>
             </div>
           ) : isFull ? (
-            <div className="text-center py-6 bg-muted rounded-lg shadow-sm">
-              <h2 className="text-lg font-semibold text-gray-700">This match is full</h2>
+            <div className="text-center py-6 bg-muted rounded-lg shadow-card">
+              <h2 className="text-lg font-semibold text-sc-ink2">This match is full</h2>
               <p className="text-muted-foreground mt-2">All player slots have been filled.</p>
-              <Button className="mt-4 bg-green-500 hover:bg-green-600 text-white" onClick={() => navigate(`/match/${match.slug}`)}>
+              <Button className="mt-4 bg-sc-green hover:brightness-95 text-sc-green-ink font-bold" onClick={() => navigate(`/match/${match.slug}`)}>
                 View Match Details
               </Button>
             </div>
           ) : (
             <>
               {match.is_paid && paymentStatus === "pending" ? (
-                <div className="bg-card rounded-lg shadow-md p-6 space-y-4">
-                  <h3 className="text-lg font-semibold text-gray-800">Payment Required</h3>
+                <div className="bg-card rounded-lg shadow-card p-6 space-y-4">
+                  <h3 className="text-lg font-semibold text-sc-ink">Payment Required</h3>
                   <p className="text-muted-foreground">
                     This is a paid match. Please complete the payment to join.
                   </p>
@@ -608,7 +601,7 @@ const JoinMatch = () => {
                   </div>
                   <Button
                     type="button"
-                    className="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg transition-colors"
+                    className="w-full bg-sc-green hover:brightness-95 text-sc-green-ink py-2 rounded-full transition-colors font-bold"
                     onClick={handlePaymentInitiation}
                     disabled={joining || !paystackLoaded}
                   >
@@ -624,9 +617,9 @@ const JoinMatch = () => {
                 </div>
               ) : (
                 <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 bg-card rounded-lg shadow-md p-6">
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 bg-card rounded-lg shadow-card p-6">
                     {match.is_paid && paymentStatus === "success" && (
-                      <div className="bg-green-50 p-4 rounded-md border border-green-200 text-green-700">
+                      <div className="bg-sc-green-bg p-4 rounded-md border border-green-200 text-sc-green-dark">
                         <p className="font-medium">Payment Successful!</p>
                         <p className="text-sm">Please complete your registration below for {selectedSlots} slot{selectedSlots > 1 ? "s" : ""}.</p>
                         {paymentReference && (
@@ -642,14 +635,14 @@ const JoinMatch = () => {
                         name={field}
                         render={({ field: formField }) => (
                           <FormItem>
-                            <FormLabel className="text-gray-700">{field.charAt(0).toUpperCase() + field.slice(1)}</FormLabel>
+                            <FormLabel className="text-sc-ink2">{field.charAt(0).toUpperCase() + field.slice(1)}</FormLabel>
                             <FormControl>
                               <Input
                                 placeholder={`Enter your ${field}`}
                                 {...formField}
                                 type={field === "phone" ? "tel" : "text"}
                                 inputMode={field === "phone" ? "numeric" : "text"}
-                                className="border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                                className="border-sc-line rounded-md focus:ring-green-500 focus:border-green-500"
                                 disabled={userId && (field === "name" || field === "phone")}
                                 {...(field === "phone" && !userId && {
                                   pattern: "[0-9]*",
@@ -669,7 +662,7 @@ const JoinMatch = () => {
 
                     <Button
                       type="submit"
-                      className="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg transition-colors"
+                      className="w-full bg-sc-green hover:brightness-95 text-sc-green-ink py-2 rounded-full transition-colors font-bold"
                       disabled={joining}
                     >
                       {joining ? (

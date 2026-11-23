@@ -255,7 +255,7 @@ const MatchReport = ({
         </Button>
         <Button
           onClick={handleShare}
-          className="bg-green-500 hover:bg-green-600 text-white text-xs sm:text-sm px-3 py-2 flex-1 sm:flex-none"
+          className="bg-sc-green hover:brightness-95 text-sc-green-ink text-xs sm:text-sm px-3 py-2 flex-1 sm:flex-none font-bold"
         >
           <Share2 size={16} className="mr-2" />
           Share
@@ -267,7 +267,7 @@ const MatchReport = ({
           <DialogTitle>Share Match Highlights</DialogTitle>
           <DialogDescription>
             <p className="text-sm mb-4">Relive the excitement! Share this epic match with your friends and teammates!</p>
-            <p className="text-sm mb-4 break-all bg-gray-100 dark:bg-gray-700 p-2 rounded">{`${window.location.origin}/highlights/${match.slug}`}</p>
+            <p className="text-sm mb-4 break-all bg-sc-soft dark:bg-gray-700 p-2 rounded">{`${window.location.origin}/highlights/${match.slug}`}</p>
             <div className="flex justify-center gap-4 mb-4">
               <a href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(`${window.location.origin}/highlights/${match.slug}`)}&text=Check out this epic match on SportCliq!`} target="_blank" rel="noopener noreferrer">
                 <Button variant="outline" className="p-2">
@@ -281,14 +281,14 @@ const MatchReport = ({
               </a>
               <a href={`https://api.whatsapp.com/send?text=Check out this epic match on SportCliq! ${encodeURIComponent(`${window.location.origin}/highlights/${match.slug}`)}`} target="_blank" rel="noopener noreferrer">
                 <Button variant="outline" className="p-2">
-                  <MessageCircle size={20} className="text-green-500" />
+                  <MessageCircle size={20} className="text-sc-green-dark" />
                 </Button>
               </a>
               <Button variant="outline" onClick={copyShareLink} className="p-2">
-                <Copy size={20} className="text-gray-600" />
+                <Copy size={20} className="text-sc-ink3" />
               </Button>
             </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 text-center">Powered by @SportCliq</p>
+            <p className="text-xs text-sc-ink3 dark:text-gray-400 text-center">Powered by @SportCliq</p>
           </DialogDescription>
         </DialogContent>
       </Dialog>
@@ -303,7 +303,7 @@ const MatchReport = ({
                 <Button
                   key={team.name}
                   onClick={() => addEvent(eventType!, team.name)}
-                  className="bg-green-500 hover:bg-green-600 text-white text-sm px-4 py-2 flex-1 min-w-[120px]"
+                  className="bg-sc-green hover:brightness-95 text-sc-green-ink text-sm px-4 py-2 flex-1 min-w-[120px] font-bold"
                 >
                   {team.name}
                 </Button>
@@ -313,29 +313,29 @@ const MatchReport = ({
         </DialogContent>
       </Dialog>
 
-      <div ref={reportRef} className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 sm:p-6 border border-gray-200 dark:border-gray-700 md:space-y-6">
+      <div ref={reportRef} className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-4 sm:p-6 dark:border-gray-700 md:space-y-6">
         {/* Mobile-optimized view */}
         <div className="md:hidden space-y-4">
           <div className="text-center">
             <img src="/playarenalight.png" alt="PlayArena Logo" className="w-24 mx-auto mb-2" />
             <h2 className="text-xl font-bold text-blue-800">{match.title}</h2>
-            <p className="text-xs text-gray-600">{match.match_date} at {match.match_time} | {match.venue}</p>
-            <div className="mt-2 text-2xl font-bold text-gray-800">
+            <p className="text-xs text-sc-ink3">{match.match_date} at {match.match_time} | {match.venue}</p>
+            <div className="mt-2 text-2xl font-bold text-sc-ink">
               {teams[0].name} {teams[0].score} - {teams[1].score} {teams[1].name}
             </div>
           </div>
 
           <div className="space-y-4">
-            <div className="bg-white rounded-lg shadow-sm p-4 border-l-4 border-blue-500">
-              <h3 className="text-base font-semibold text-gray-800 mb-2">Score</h3>
+            <div className="bg-white rounded-3xl shadow-card p-4 border-l-4 border-blue-500">
+              <h3 className="text-base font-semibold text-sc-ink mb-2">Score</h3>
               {teams.map((team) => (
-                <div key={team.name} className="flex justify-between items-center py-2 border-b border-gray-200">
-                  <span className="text-gray-800 font-medium">{team.name}</span>
+                <div key={team.name} className="flex justify-between items-center py-2 border-b border-sc-line">
+                  <span className="text-sc-ink font-medium">{team.name}</span>
                   <Input
                     type="number"
                     value={team.score}
                     onChange={(e) => handleScoreChange(team.name, e.target.value)}
-                    className="w-16 text-sm text-center border-gray-300 focus:border-blue-500"
+                    className="w-16 text-sm text-center border-sc-line focus:border-blue-500"
                     min="0"
                     max="29"
                   />
@@ -343,34 +343,34 @@ const MatchReport = ({
               ))}
             </div>
 
-            <div className="bg-white rounded-lg shadow-sm p-4 border-l-4 border-green-500">
-              <h3 className="text-base font-semibold text-gray-800 mb-2">Analytics</h3>
+            <div className="bg-white rounded-3xl shadow-card p-4 border-l-4 border-sc-green">
+              <h3 className="text-base font-semibold text-sc-ink mb-2">Analytics</h3>
               {teams.map((team) => (
-                <div key={team.name} className="py-2 border-b border-gray-200">
+                <div key={team.name} className="py-2 border-b border-sc-line">
                   <div className="flex justify-between">
-                    <span className="text-gray-800 font-medium">{team.name}</span>
-                    <span className="text-gray-800">Possession: {team.analytics.possession}%</span>
+                    <span className="text-sc-ink font-medium">{team.name}</span>
+                    <span className="text-sc-ink">Possession: {team.analytics.possession}%</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-800">Shots: {team.analytics.shots}</span>
-                    <span className="text-gray-800">Fouls: {team.analytics.fouls}</span>
+                    <span className="text-sc-ink">Shots: {team.analytics.shots}</span>
+                    <span className="text-sc-ink">Fouls: {team.analytics.fouls}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-800">Yellow: {team.analytics.yellow_cards}</span>
-                    <span className="text-gray-800">Red: {team.analytics.red_cards}</span>
+                    <span className="text-sc-ink">Yellow: {team.analytics.yellow_cards}</span>
+                    <span className="text-sc-ink">Red: {team.analytics.red_cards}</span>
                   </div>
                 </div>
               ))}
             </div>
 
-            <div className="bg-white rounded-lg shadow-sm p-4 border-l-4 border-yellow-500">
-              <h3 className="text-base font-semibold text-gray-800 mb-2">Events</h3>
+            <div className="bg-white rounded-3xl shadow-card p-4 border-l-4 border-yellow-500">
+              <h3 className="text-base font-semibold text-sc-ink mb-2">Events</h3>
               {events.length === 0 ? (
-                <p className="text-sm text-gray-600">No events recorded.</p>
+                <p className="text-sm text-sc-ink3">No events recorded.</p>
               ) : (
                 <ul className="space-y-2">
                   {events.map((event) => (
-                    <li key={event.id} className="text-sm text-gray-600 flex items-center">
+                    <li key={event.id} className="text-sm text-sc-ink3 flex items-center">
                       <span className="inline-block w-10 text-center font-semibold text-blue-600">{event.minute}'</span>
                       <span className="flex-1">{event.type.replace("_", " ")} ({event.team_name})</span>
                     </li>
@@ -386,47 +386,47 @@ const MatchReport = ({
           <div className="text-center">
             <img src="/playarenalight.png" alt="PlayArena Logo" className="w-32 mx-auto mb-4" />
             <h2 className="text-2xl font-bold text-blue-800">{match.title}</h2>
-            <p className="text-sm text-gray-600">{match.match_date} at {match.match_time} | {match.venue}</p>
-            <div className="mt-4 text-4xl font-bold text-gray-800">
+            <p className="text-sm text-sc-ink3">{match.match_date} at {match.match_time} | {match.venue}</p>
+            <div className="mt-4 text-4xl font-bold text-sc-ink">
               {teams[0].name} {teams[0].score} - {teams[1].score} {teams[1].name}
             </div>
           </div>
 
           <div className="grid grid-cols-1 gap-6">
-            <div className="bg-white rounded-lg shadow-sm p-4 border-l-4 border-blue-500">
-              <h3 className="text-lg font-semibold text-gray-800 mb-3">Score Table</h3>
+            <div className="bg-white rounded-3xl shadow-card p-4 border-l-4 border-blue-500">
+              <h3 className="text-lg font-semibold text-sc-ink mb-3">Score Table</h3>
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-sm">
                   <thead>
                     <tr className="bg-blue-100">
-                      <th className="p-3 text-gray-800 font-semibold">Team</th>
-                      <th className="p-3 text-gray-800 font-semibold">Score</th>
-                      <th className="p-3 text-gray-800 font-semibold">Possession</th>
-                      <th className="p-3 text-gray-800 font-semibold">Shots</th>
-                      <th className="p-3 text-gray-800 font-semibold">Fouls</th>
-                      <th className="p-3 text-gray-800 font-semibold">Yellow</th>
-                      <th className="p-3 text-gray-800 font-semibold">Red</th>
+                      <th className="p-3 text-sc-ink font-semibold">Team</th>
+                      <th className="p-3 text-sc-ink font-semibold">Score</th>
+                      <th className="p-3 text-sc-ink font-semibold">Possession</th>
+                      <th className="p-3 text-sc-ink font-semibold">Shots</th>
+                      <th className="p-3 text-sc-ink font-semibold">Fouls</th>
+                      <th className="p-3 text-sc-ink font-semibold">Yellow</th>
+                      <th className="p-3 text-sc-ink font-semibold">Red</th>
                     </tr>
                   </thead>
                   <tbody>
                     {teams.map((team, index) => (
-                      <tr key={team.name} className="border-b border-gray-200">
-                        <td className="p-3 text-gray-800 font-medium">{team.name}</td>
+                      <tr key={team.name} className="border-b border-sc-line">
+                        <td className="p-3 text-sc-ink font-medium">{team.name}</td>
                         <td className="p-3">
                           <Input
                             type="number"
                             value={team.score}
                             onChange={(e) => handleScoreChange(team.name, e.target.value)}
-                            className="w-16 text-sm text-center border-gray-300 focus:border-blue-500"
+                            className="w-16 text-sm text-center border-sc-line focus:border-blue-500"
                             min="0"
                             max="29"
                           />
                         </td>
-                        <td className="p-3 text-gray-800 text-center">{team.analytics.possession}%</td>
-                        <td className="p-3 text-gray-800 text-center">{team.analytics.shots}</td>
-                        <td className="p-3 text-gray-800 text-center">{team.analytics.fouls}</td>
-                        <td className="p-3 text-gray-800 text-center">{team.analytics.yellow_cards}</td>
-                        <td className="p-3 text-gray-800 text-center">{team.analytics.red_cards}</td>
+                        <td className="p-3 text-sc-ink text-center">{team.analytics.possession}%</td>
+                        <td className="p-3 text-sc-ink text-center">{team.analytics.shots}</td>
+                        <td className="p-3 text-sc-ink text-center">{team.analytics.fouls}</td>
+                        <td className="p-3 text-sc-ink text-center">{team.analytics.yellow_cards}</td>
+                        <td className="p-3 text-sc-ink text-center">{team.analytics.red_cards}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -434,29 +434,29 @@ const MatchReport = ({
               </div>
             </div>
 
-            <div className="bg-white rounded-lg shadow-sm p-4 border-l-4 border-green-500">
-              <h3 className="text-lg font-semibold text-gray-800 mb-3">Rankings</h3>
+            <div className="bg-white rounded-3xl shadow-card p-4 border-l-4 border-sc-green">
+              <h3 className="text-lg font-semibold text-sc-ink mb-3">Rankings</h3>
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-sm">
                   <thead>
-                    <tr className="bg-green-100">
-                      <th className="p-3 text-gray-800 font-semibold">Rank</th>
-                      <th className="p-3 text-gray-800 font-semibold">Team</th>
-                      <th className="p-3 text-gray-800 font-semibold">Points</th>
-                      <th className="p-3 text-gray-800 font-semibold">Goals</th>
-                      <th className="p-3 text-gray-800 font-semibold">Yellow</th>
-                      <th className="p-3 text-gray-800 font-semibold">Red</th>
+                    <tr className="bg-sc-green-bg">
+                      <th className="p-3 text-sc-ink font-semibold">Rank</th>
+                      <th className="p-3 text-sc-ink font-semibold">Team</th>
+                      <th className="p-3 text-sc-ink font-semibold">Points</th>
+                      <th className="p-3 text-sc-ink font-semibold">Goals</th>
+                      <th className="p-3 text-sc-ink font-semibold">Yellow</th>
+                      <th className="p-3 text-sc-ink font-semibold">Red</th>
                     </tr>
                   </thead>
                   <tbody>
                     {rankings.map((team, index) => (
-                      <tr key={team.name} className="border-b border-gray-200">
-                        <td className="p-3 text-gray-800 text-center">{index + 1}</td>
-                        <td className="p-3 text-gray-800 font-medium">{team.name}</td>
-                        <td className="p-3 text-gray-800 text-center">{team.points}</td>
-                        <td className="p-3 text-gray-800 text-center">{team.goals}</td>
-                        <td className="p-3 text-gray-800 text-center">{team.yellow_cards}</td>
-                        <td className="p-3 text-gray-800 text-center">{team.red_cards}</td>
+                      <tr key={team.name} className="border-b border-sc-line">
+                        <td className="p-3 text-sc-ink text-center">{index + 1}</td>
+                        <td className="p-3 text-sc-ink font-medium">{team.name}</td>
+                        <td className="p-3 text-sc-ink text-center">{team.points}</td>
+                        <td className="p-3 text-sc-ink text-center">{team.goals}</td>
+                        <td className="p-3 text-sc-ink text-center">{team.yellow_cards}</td>
+                        <td className="p-3 text-sc-ink text-center">{team.red_cards}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -464,14 +464,14 @@ const MatchReport = ({
               </div>
             </div>
 
-            <div className="bg-white rounded-lg shadow-sm p-4 border-l-4 border-yellow-500">
-              <h3 className="text-lg font-semibold text-gray-800 mb-3">Events</h3>
+            <div className="bg-white rounded-3xl shadow-card p-4 border-l-4 border-yellow-500">
+              <h3 className="text-lg font-semibold text-sc-ink mb-3">Events</h3>
               {events.length === 0 ? (
-                <p className="text-sm text-gray-600">No events recorded.</p>
+                <p className="text-sm text-sc-ink3">No events recorded.</p>
               ) : (
                 <ul className="space-y-2">
                   {events.map((event) => (
-                    <li key={event.id} className="text-sm text-gray-600 flex items-center">
+                    <li key={event.id} className="text-sm text-sc-ink3 flex items-center">
                       <span className="inline-block w-12 text-center font-semibold text-blue-600">{event.minute}'</span>
                       <span className="flex-1">{event.type.replace("_", " ")} ({event.team_name}): {event.description}</span>
                     </li>
@@ -482,17 +482,17 @@ const MatchReport = ({
           </div>
 
           <div className="text-center mt-6">
-            <p className="text-xs text-gray-500">Generated on May 21, 2025, 09:40 PM WAT</p>
-            <p className="text-xs text-gray-500">Powered by @SportCliq</p>
+            <p className="text-xs text-sc-ink3">Generated on May 21, 2025, 09:40 PM WAT</p>
+            <p className="text-xs text-sc-ink3">Powered by @SportCliq</p>
           </div>
         </div>
 
         <div className="mt-6">
-          <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Record Events</h3>
+          <h3 className="text-lg font-semibold text-sc-ink dark:text-gray-200">Record Events</h3>
           <div className="flex justify-center flex-wrap gap-3 mt-3">
             <Button
               onClick={() => { setEventType("goal"); setEventDialogOpen(true); }}
-              className="bg-green-500 hover:bg-green-600 text-white text-sm px-4 py-2 min-w-[80px]"
+              className="bg-sc-green hover:brightness-95 text-sc-green-ink text-sm px-4 py-2 min-w-[80px] font-bold"
             >
               Goal
             </Button>

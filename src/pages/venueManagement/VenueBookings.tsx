@@ -16,6 +16,10 @@ import { Loader2, MapPin, Calendar, Clock, CreditCard } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { cn } from "@/lib/utils";
 
+import { BackButton } from "@/components/sc/ui";
+import { EventListSkeleton } from "@/components/sc/skeletons";
+import { FunEmpty } from "@/components/sc/ui";
+import { CalendarCheck as CalendarCheckIcon } from "lucide-react";
 type Booking = {
   id: string;
   venue_id: string;
@@ -109,35 +113,24 @@ const VenueBookings = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 pb-20">
-      <header className="sticky top-0 z-50 bg-gradient-to-r from-green-500 to-green-700 text-white shadow-lg">
-        <div className="p-4 flex items-center justify-between max-w-7xl mx-auto">
-          <Button
-            variant="ghost"
-            className="text-white hover:bg-green-600 transition-colors"
-            onClick={() => navigate(-1)}
-          >
-            <MapPin size={18} className="mr-2" />
-            Back
-          </Button>
-          <h1 className="text-2xl font-bold">Venue Bookings</h1>
-          <div className="w-10"></div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-sc-bg dark:bg-gray-900 pb-20">
+      <header className="px-5 pt-[max(env(safe-area-inset-top),1rem)] sticky top-0 z-20 bg-sc-bg/95 backdrop-blur-xl pb-3">
+          <div className="pt-3 flex items-center justify-between gap-3">
+            <BackButton />
+            <h1 className="m-0 flex-1 text-center text-[17px] font-extrabold truncate">Bookings</h1>
+            <div className="min-w-11 flex justify-end"></div>
+          </div>
+        </header>
 
       <div className="p-6 max-w-5xl mx-auto">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">
+        <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6">
+          <h2 className="text-xl font-semibold text-sc-ink dark:text-gray-200 mb-4">
             Booking History
           </h2>
           {loading ? (
-            <div className="flex justify-center items-center h-32">
-              <Loader2 className="h-8 w-8 animate-spin text-green-500" />
-            </div>
+            <div className="w-full px-1"><EventListSkeleton /></div>
           ) : bookings.length === 0 ? (
-            <p className="text-gray-500 dark:text-gray-400 text-center">
-              No bookings found.
-            </p>
+<FunEmpty icon={CalendarCheckIcon} sport="venue" title="No bookings yet" body="When players book your venue, their slots and access codes show up here." />
           ) : (
             <div className="overflow-x-auto">
               <Table>
@@ -182,7 +175,7 @@ const VenueBookings = () => {
                           className={cn(
                             "px-2 py-1 rounded-full text-xs font-medium",
                             booking.payment_status === "completed"
-                              ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
+                              ? "bg-sc-green-bg text-sc-green-dark dark:bg-green-900 dark:text-green-300"
                               : "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
                           )}
                         >

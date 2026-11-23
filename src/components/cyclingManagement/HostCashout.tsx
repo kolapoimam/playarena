@@ -401,7 +401,7 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
   const getStatusStyles = (status: string) => {
     switch (status) {
       case 'Successful':
-        return 'bg-green-100 dark:bg-green-800 text-green-700 dark:text-green-200 border-green-300 dark:border-green-600';
+        return 'bg-sc-green-bg dark:bg-green-800 text-sc-green-dark dark:text-green-200 border-green-300 dark:border-green-600';
       case 'Failed':
         return 'bg-red-100 dark:bg-red-800 text-red-700 dark:text-red-200 border-red-300 dark:border-red-600';
       case 'Processed':
@@ -409,16 +409,16 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
       case 'Review':
         return 'bg-yellow-100 dark:bg-yellow-800 text-yellow-700 dark:text-yellow-200 border-yellow-300 dark:border-yellow-600';
       default:
-        return 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600';
+        return 'bg-sc-soft dark:bg-gray-700 text-sc-ink2 dark:text-gray-200 border-sc-line dark:border-gray-600';
     }
   };
 
   if (!event) return null;
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-600">
+    <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 dark:border-gray-600">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Cashout</h2>
+        <h2 className="text-lg font-semibold text-sc-ink dark:text-white">Cashout</h2>
         <Button
           onClick={() => {
             fetchWalletBalance();
@@ -432,7 +432,7 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
       </div>
 
       <div className="mb-6">
-        <p className="text-gray-900 dark:text-gray-100">
+        <p className="text-sc-ink dark:text-gray-100">
           Available Balance: ₦{walletBalance.toLocaleString()}
         </p>
       </div>
@@ -443,25 +443,25 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
           description: "No funds available for cashout.",
           variant: "destructive",
         })}
-        className="bg-green-500 dark:bg-green-600 hover:bg-green-600 dark:hover:bg-green-700 text-white dark:text-gray-100 mb-6"
+        className="bg-sc-green dark:bg-green-600 hover:brightness-95 dark:hover:bg-green-700 text-sc-green-ink dark:text-gray-100 mb-6 font-bold"
         disabled={event.cancellation_status || loading || walletBalance <= 0}
       >
         Request Cashout
       </Button>
 
-      <h3 className="text-md font-semibold mb-4 text-gray-900 dark:text-white">Cashout History</h3>
+      <h3 className="text-md font-semibold mb-4 text-sc-ink dark:text-white">Cashout History</h3>
       {cashoutRequests.length === 0 ? (
-        <p className="text-gray-600 dark:text-gray-400">No cashout requests found.</p>
+        <p className="text-sc-ink3 dark:text-gray-400">No cashout requests found.</p>
       ) : (
         <div className="space-y-4 max-h-96 overflow-y-auto">
           {cashoutRequests.map(request => (
-            <div key={request.id} className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+            <div key={request.id} className="p-4 bg-sc-soft dark:bg-gray-700 rounded-lg border border-sc-line dark:border-gray-600">
               <div className="flex justify-between items-center">
                 <div>
-                  <p className="font-medium text-gray-900 dark:text-white">₦{request.total_amount_paid.toLocaleString()}</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{request.account_name}</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{request.bank_name} - {request.bank_account_number}</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{new Date(request.created_at).toLocaleString()}</p>
+                  <p className="font-medium text-sc-ink dark:text-white">₦{request.total_amount_paid.toLocaleString()}</p>
+                  <p className="text-sm text-sc-ink3 dark:text-gray-400">{request.account_name}</p>
+                  <p className="text-sm text-sc-ink3 dark:text-gray-400">{request.bank_name} - {request.bank_account_number}</p>
+                  <p className="text-sm text-sc-ink3 dark:text-gray-400">{new Date(request.created_at).toLocaleString()}</p>
                 </div>
                 <span className={`px-3 py-1 text-sm font-medium rounded border ${getStatusStyles(request.status)}`}>
                   {request.status}
@@ -480,7 +480,7 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium text-gray-700 optimally-visible:text-gray-300">Amount (₦)</label>
+              <label className="text-sm font-medium text-sc-ink2 optimally-visible:text-gray-300">Amount (₦)</label>
               <Input
                 type="number"
                 value={cashoutAmount}
@@ -493,7 +493,7 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
               )}
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700 optimally-visible:text-gray-300">Bank</label>
+              <label className="text-sm font-medium text-sc-ink2 optimally-visible:text-gray-300">Bank</label>
               <Select onValueChange={value => handleInputChange('bankName', value)} value={bankName}>
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder="Select bank" />
@@ -509,7 +509,7 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
               )}
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700 optimally-visible:text-gray-300">Account Number</label>
+              <label className="text-sm font-medium text-sc-ink2 optimally-visible:text-gray-300">Account Number</label>
               <Input
                 type="number"
                 value={bankAccountNumber}
@@ -524,7 +524,7 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
               )}
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700 optimally-visible:text-gray-300">Account Name</label>
+              <label className="text-sm font-medium text-sc-ink2 optimally-visible:text-gray-300">Account Name</label>
               <Input
                 value={accountName}
                 onChange={(e) => handleInputChange('accountName', e.target.value)}
@@ -546,7 +546,7 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
             </Button>
             <Button
               onClick={handleCashoutSubmit}
-              className="bg-green-500 hover:bg-green-600 text-white rounded-md"
+              className="bg-sc-green hover:brightness-95 text-sc-green-ink rounded-full font-bold"
               disabled={loading}
             >
               {loading ? (

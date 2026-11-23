@@ -140,7 +140,7 @@ const CreateLandmarkDialog = ({ open, onOpenChange, onSave }: CreateLandmarkDial
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button type="submit" className="bg-green-500 hover:bg-green-600 text-white">
+              <Button type="submit" className="bg-sc-green hover:brightness-95 text-sc-green-ink font-bold">
                 Save
               </Button>
             </DialogFooter>

@@ -284,9 +284,9 @@ const CyclingDetailsDialogue: React.FC<CyclingDetailsDialogueProps> = ({
         }}
       >
         <DialogContent className="w-full max-w-[90vw] sm:max-w-md rounded-2xl p-4 sm:p-6">
-          <DialogTitle className="text-xl font-bold text-gray-800 dark:text-white text-center">Event Details</DialogTitle>
+          <DialogTitle className="text-xl font-bold text-sc-ink dark:text-white text-center">Event Details</DialogTitle>
           <DialogDescription className="flex flex-col items-center">
-            <p className="text-gray-600 dark:text-gray-300 mb-4 text-sm text-center max-w-xs">
+            <p className="text-sc-ink3 dark:text-gray-300 mb-4 text-sm text-center max-w-xs">
               Download or share this card to invite friends to your cycling event.
               {!isValid && " Some event details may be missing."}
             </p>
@@ -367,12 +367,12 @@ const CyclingDetailsDialogue: React.FC<CyclingDetailsDialogueProps> = ({
                 </div>
               </div>
             </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400 my-4 text-center max-w-xs">
+            <p className="text-sm text-sc-ink3 dark:text-gray-400 my-4 text-center max-w-xs">
               <strong>Note:</strong> Share this card to invite friends to your event.
             </p>
             <div className="flex justify-center w-full">
               <Button
-                className="bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg px-6 py-3 shadow-sm transition-colors duration-200 border-0 max-w-xs w-full sm:w-auto"
+                className="bg-sc-green hover:brightness-95 text-sc-green-ink font-bold rounded-full px-6 py-3 shadow-card transition-colors duration-200 border-0 max-w-xs w-full sm:w-auto"
                 onClick={handleDownload}
                 disabled={!isImageLoaded || isDownloading}
                 aria-label="Download cycling details card as image"

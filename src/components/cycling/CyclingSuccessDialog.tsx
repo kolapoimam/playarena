@@ -1,9 +1,9 @@
 import { useState, useRef } from "react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { MapPin, CalendarIcon, Clock, User, Bike, Share2, Download, Trophy, Medal } from "lucide-react";
+import { Check, Share2, Download } from "lucide-react";
+import TicketCard, { downloadElementAsPng } from "@/components/sc/TicketCard";
 import { format } from "date-fns";
-import html2canvas from "html2canvas";
 import { useToast } from "@/hooks/use-toast";
 import {
   DropdownMenu,
@@ -147,60 +147,21 @@ const CyclingSuccessDialog = ({
     window.open(facebookUrl, "_blank");
   };
 
-  const handleImageLoad = () => {
-    setIsImageLoaded(true);
-  };
-
   const handleDownload = async () => {
     if (!cardRef.current || !isImageLoaded) {
-      toast({
-        title: "Error",
-        description: "Card is not ready for download. Please wait a moment and try again.",
-        variant: "destructive",
-      });
+      toast({ title: "One moment", description: "Your ticket is still loading. Try again in a second." });
       return;
     }
     setIsDownloading(true);
     try {
-      const canvas = await html2canvas(cardRef.current, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        scrollX: 0,
-        scrollY: -window.scrollY,
-      });
-
-      const blob = await new Promise<Blob | null>((resolve) =>
-        canvas.toBlob((blob) => resolve(blob), "image/png")
-      );
-
-      if (!blob) {
-        throw new Error("Failed to convert canvas to Blob");
-      }
-
-      const filename = `SportCliq-${supercode ? "Supercode" : "ConfirmationCode"}-${formValues.title.replace(/\s+/g, '-')}.png`;
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      await downloadElementAsPng(cardRef.current, `SportCliq-${supercode ? "Ride-Host" : "Ride-Ticket"}-${formValues.title}-${code}.png`);
     } catch (error) {
       console.error("Error generating image:", error);
-      toast({
-        title: "Error",
-        description: "Failed to download card.",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to download your ticket.", variant: "destructive" });
     } finally {
       setIsDownloading(false);
     }
   };
-
-  const isDarkBackground = backgroundColor === '#4CAF50' || backgroundColor === '#000000' || backgroundColor === '#2196F3' || backgroundColor === '#9C27B0';
-  const logoSrc = isDarkBackground ? '/playarenadark.png' : '/playarenalight.png';
 
   return (
     <Dialog
@@ -212,98 +173,60 @@ const CyclingSuccessDialog = ({
         onOpenChange(newOpen);
       }}
     >
-      <DialogContent className="w-full max-w-[90vw] sm:max-w-[500px] rounded-2xl p-4 sm:p-6">
-        <DialogTitle className="text-xl font-bold text-gray-800 dark:text-white text-center">
-          {supercode ? "Event Created Successfully!" : "Joined Event Successfully!"}
-        </DialogTitle>
-        <DialogDescription className="flex flex-col items-center">
-          <p className="text-gray-600 dark:text-gray-300 mb-4 text-sm text-center max-w-xs">
+      <DialogContent className="w-full max-w-[calc(100%-1.5rem)] sm:max-w-[420px] max-h-[92vh] overflow-y-auto bg-sc-bg p-5">
+        <div className="flex flex-col items-center gap-2 text-center pt-2">
+          <span className="w-14 h-14 rounded-full text-white flex items-center justify-center" style={{ background: "#FB923C" }}>
+            <Check size={28} strokeWidth={3} />
+          </span>
+          <DialogTitle className="text-2xl font-extrabold tracking-[-0.02em] text-sc-ink">{supercode ? "Your ride is live" : "You're riding!"}</DialogTitle>
+          <DialogDescription className="text-sm text-sc-ink2 max-w-[290px]">
             {supercode
-              ? "Your cycling event has been created. Below is your unique 6-digit supercode for check-ins."
-              : "You have joined the cycling event. Below is your 6-digit confirmation code for check-in."}
-          </p>
-          <div className="relative w-full max-w-md">
-            <div
-              ref={cardRef}
-              className="relative bg-gradient-to-r from-green-500 to-green-700 rounded-lg p-6 text-white shadow-xl mx-auto overflow-hidden border-4 border-dashed border-white/30 animate-ticket-reveal"
-              style={{
-                backgroundImage: 'linear-gradient(45deg, rgba(255,255,255,0.1) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.1) 75%, transparent 75%, transparent)',
-                backgroundSize: '40px 40px',
-                clipPath: 'polygon(10% 0%, 90% 0%, 100% 10%, 100% 90%, 90% 100%, 10% 100%, 0% 90%, 0% 10%)',
-                backgroundColor: backgroundColor,
-              }}
-            >
-              {/* Perforated Edge Semi-Circles */}
-              <div className="absolute top-0 left-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '20%' }} />
-              <div className="absolute top-0 left-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '50%' }} />
-              <div className="absolute top-0 left-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '80%' }} />
-              <div className="absolute top-0 right-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '20%' }} />
-              <div className="absolute top-0 right-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '50%' }} />
-              <div className="absolute top-0 right-[-12px] w-6 h-6 bg-white/20 rounded-full" style={{ top: '80%' }} />
-
-              {/* Ticket Content */}
-              <div className="flex items-center justify-between mb-4">
-                <img 
-                  src={logoSrc}
-                  alt="SportCliq Logo" 
-                  className="h-10 w-auto"
-                  crossOrigin="anonymous"
-                  onLoad={handleImageLoad}
-                  onError={() => {
-                    toast({
-                      title: "Error",
-                      description: "Failed to load logo image.",
-                      variant: "destructive",
-                    });
-                    setIsImageLoaded(true);
-                  }}
-                />
-                <Bike className="h-6 w-6" />
-              </div>
-              <div className="flex items-center justify-around mb-4">
-                <Trophy className="h-6 w-6 text-yellow-300" />
-                <Bike className="h-6 w-6 text-red-500" />
-                <Medal className="h-6 w-6 text-blue-300" />
-              </div>
-              <h2 className="text-2xl font-bold mb-2 tracking-tight font-condensed uppercase text-center">{formValues.title || 'Untitled Event'}</h2>
-              <div className="text-center mb-4">
-                <p className="text-sm"><MapPin className="inline h-4 w-4 mr-1" /> {selectedLandmark.name || 'Unknown Location'}, {selectedLandmark.state || 'Unknown State'}</p>
-                <p className="text-sm"><CalendarIcon className="inline h-4 w-4 mr-1" /> {formattedDate}</p>
-                <p className="text-sm"><Clock className="inline h-4 w-4 mr-1" /> {formValues.start_time || 'Unknown Time'}</p>
-                <p className="text-sm"><User className="inline h-4 w-4 mr-1" /> Hosted by {formValues.host_name || 'Unknown Host'}</p>
-              </div>
-              <div className="bg-white text-green-600 rounded-md p-4 text-center shadow-inner">
-                <p className="text-sm font-medium uppercase tracking-wide">{supercode ? "Supercode" : "Confirmation Code"}</p>
-                <p className="text-4xl font-bold tracking-wider mt-1 font-mono">{code}</p>
-              </div>
-            </div>
-            <select
-              value={backgroundColor}
-              onChange={(e) => setBackgroundColor(e.target.value)}
-              className="mt-4 w-full p-2 border rounded-lg"
-            >
-              <option value="#4CAF50">Green</option>
-              <option value="#FF5722">Orange</option>
-              <option value="#2196F3">Blue</option>
-              <option value="#9C27B0">Purple</option>
-              <option value="#000000">Black</option>
-            </select>
-          </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400 my-4 text-center max-w-xs">
-            <strong>Note:</strong> Save or share this code. You'll need it on event day.
-          </p>
-          <div className="flex flex-col sm:flex-row justify-center gap-4 w-full">
-            <Button 
-              className="bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg px-6 py-3 shadow-sm transition-colors duration-200 border-0 max-w-xs w-full sm:w-auto"
-              onClick={handleDownload}
-              disabled={!isImageLoaded || isDownloading}
-              aria-label="Download event card as image"
-            >
-              <Download size={16} className="mr-2" />
-              {isDownloading ? "Downloading..." : "Download Code"}
-            </Button>
-          </div>
-        </DialogDescription>
+              ? "Keep this supercode private. You'll use it to manage riders and check them in."
+              : "Show this QR code or the code below to the host when you arrive."}
+          </DialogDescription>
+        </div>
+        <TicketCard
+          ref={cardRef}
+          sport="cycling"
+          kind={supercode ? "Host pass" : "Ride ticket"}
+          title={formValues.title || "Your ride"}
+          rows={[
+            { label: "Date", value: formattedDate },
+            { label: "Starts", value: formValues.start_time || "TBC" },
+            { label: "Meet at", value: `${selectedLandmark.name || "Start point"}${selectedLandmark.state ? `, ${selectedLandmark.state}` : ""}` },
+            { label: "Host", value: formValues.host_name || "SportCliq host" },
+          ]}
+          code={code}
+          codeLabel={supercode ? "Supercode" : "Confirmation code"}
+          qr={!supercode}
+          footnote={supercode ? "Do not share this code with riders." : "The host scans this QR code on ride day."}
+          onReady={() => setIsImageLoaded(true)}
+        />
+        <div className="flex flex-col gap-2.5 pt-1">
+          <button
+            type="button"
+            onClick={handleDownload}
+            disabled={!isImageLoaded || isDownloading}
+            className="h-[52px] rounded-full text-white font-bold flex items-center justify-center gap-2 disabled:opacity-60"
+            style={{ background: "#FB923C" }}
+          >
+            <Download size={18} /> {isDownloading ? "Saving..." : "Save ticket as image"}
+          </button>
+          {!supercode && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button type="button" className="h-[46px] rounded-full bg-white border border-sc-line text-sc-ink font-bold flex items-center justify-center gap-2">
+                  <Share2 size={16} /> Share ride
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="center" className="w-[220px]">
+                <DropdownMenuItem onClick={shareToWhatsApp}>Share to WhatsApp</DropdownMenuItem>
+                <DropdownMenuItem onClick={shareToTwitter}>Share to X</DropdownMenuItem>
+                <DropdownMenuItem onClick={shareToFacebook}>Share to Facebook</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );

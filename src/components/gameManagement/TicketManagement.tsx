@@ -9,6 +9,7 @@ import { ChevronDown, ChevronUp, Loader2, Ticket } from "lucide-react";
 import { z } from "zod";
 import { differenceInMinutes, isPast, addHours } from "date-fns";
 
+import QrScannerDialog, { QrScanButton } from "@/components/sc/QrScanner";
 type Match = {
   id: string;
   slug: string;
@@ -163,8 +164,11 @@ const TicketManagement = ({
     setTicketError(validation.success ? null : validation.error?.errors[0].message);
   };
 
-  const validateTicketCode = async () => {
-    if (!ticketInput || ticketInput.length !== 6) {
+  const [scanOpen, setScanOpen] = useState(false);
+
+  const validateTicketCode = async (override?: unknown) => {
+    const code = typeof override === "string" ? override : ticketInput;
+    if (!code || code.length !== 6) {
       toast({
         title: "Invalid Code",
         description: "Please enter a 6-digit ticket code",
@@ -189,7 +193,7 @@ const TicketManagement = ({
         .from('tickets')
         .select('id, buyer_name, number_of_tickets, ticket_code, checked_in')
         .eq('match_id', match.id)
-        .eq('ticket_code', ticketInput)
+        .eq('ticket_code', code)
         .single();
 
       if (error || !data) throw new Error(error?.message || "Ticket not found");
@@ -240,8 +244,8 @@ const TicketManagement = ({
   if (!match) return null;
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700">
-      <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Manage Tickets</h2>
+    <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 dark:border-gray-700">
+      <h2 className="text-xl font-semibold mb-4 text-sc-ink dark:text-gray-100">Manage Tickets</h2>
       
       <div className="flex gap-3 mb-4">
         <Button
@@ -256,13 +260,14 @@ const TicketManagement = ({
       <div className="max-h-[400px] overflow-y-auto">
         <button
           onClick={() => setIsTicketsOpen(!isTicketsOpen)}
-          className="flex items-center gap-2 w-full text-left text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4"
+          className="flex items-center gap-2 w-full text-left text-lg font-semibold text-sc-ink dark:text-gray-100 mb-4"
         >
           Tickets
           {isTicketsOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
         </button>
         {isTicketsOpen && (
           <div className="space-y-4">
+            {mode === "checkin" && <QrScanButton label="Scan ticket QR code" onClick={() => setScanOpen(true)} />}
             {mode === "checkin" && (
               <div className="flex gap-2 w-full">
                 <Input
@@ -292,21 +297,21 @@ const TicketManagement = ({
               <p className="text-sm text-red-600 mt-1">{ticketError}</p>
             )}
             {confirmedTickets.length === 0 ? (
-              <p className="text-gray-600 dark:text-gray-400">No tickets confirmed for this match.</p>
+              <p className="text-sc-ink3 dark:text-gray-400">No tickets confirmed for this match.</p>
             ) : (
               confirmedTickets.map((ticket) => (
                 <div
                   key={ticket.id}
-                  className="relative flex flex-col sm:flex-row gap-4 items-start sm:items-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg"
+                  className="relative flex flex-col sm:flex-row gap-4 items-start sm:items-center p-4 bg-sc-soft dark:bg-gray-700 rounded-lg"
                 >
                   <div className="flex-1">
-                    <p className="font-medium text-gray-900 dark:text-gray-100">{ticket.buyer_name}</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                    <p className="font-medium text-sc-ink dark:text-gray-100">{ticket.buyer_name}</p>
+                    <p className="text-sm text-sc-ink3 dark:text-gray-400">
                       Tickets: {ticket.number_of_tickets}
                     </p>
                   </div>
                   <span
-                    className="absolute top-2 right-2 px-2 py-1 text-xs font-medium rounded border bg-green-500 text-white border-green-600"
+                    className="absolute top-2 right-2 px-2 py-1 text-xs font-medium rounded border bg-green-500 text-white border-sc-green"
                   >
                     Checked In
                   </span>
@@ -356,6 +361,16 @@ const TicketManagement = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <QrScannerDialog
+        open={scanOpen}
+        onOpenChange={setScanOpen}
+        onCode={async (code) => {
+          setTicketInput(code);
+          await validateTicketCode(code);
+        }}
+        title="Scan spectator ticket"
+        hint="Point the camera at the QR code on the spectator's ticket"
+      />
     </div>
   );
 };

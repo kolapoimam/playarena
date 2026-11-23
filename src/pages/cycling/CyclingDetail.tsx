@@ -11,7 +11,9 @@ import {
   ArrowLeft, 
   ExternalLink, 
   Bike, 
-  Bell 
+  Bell,
+  Flag,
+  Route
 } from "lucide-react";
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import CyclingDetailsDialogue from "@/components/cycling/CyclingDetailsDialogue";
@@ -21,6 +23,8 @@ import { addHours, addMinutes } from "date-fns";
 import { DateTime } from "luxon";
 import { Seo } from "@/components/Seo";
 
+import { Avatar, BackButton, Bubble, IconButton, Pill, ScButton, SPORT, StickyFooter, formatNaira, initialsOf, Cover } from "@/components/sc/ui";
+import { DetailSkeleton } from "@/components/sc/skeletons";
 const META_KEYWORDS = "Football in Nigeria, Sports in Nigeria, Play Sports Near You, Football Fields Near Me, Livescore, Osimhen, Asisat Oshola, Nigeria Startup, Sportstech, Football venues in Lagos, Football venues in Ilorin, Sports Betting in Nigeria, Organize sports in Nigeria, Football Matches, Bicycle Training in Nigeria, Cycling in Nigeria, Nigerian football, Nigerian cycling, Nigerian sports, Play football in Lagos, Play football in Ilorin, Play football in Abuja, Play football in Nigeria, Play cycling in Nigeria, Play sports in Nigeria, Nigerian sports tech, Nigerian sports startup, Nigerian sports community, Football events Nigeria, Cycling events Nigeria, Sport Cliq, SportCliq, sportcliq.com.ng, sportcliq.ng, sportcliq, sport cliq, sportcliq app, sportcliq platform, sportcliq football, sportcliq cycling, sportcliq venues, sportcliq matches, sportcliq events, sportcliq sports, sportcliq nigeria, sportcliq lagos, sportcliq ilorin, sportcliq abuja, sportcliq startup, sportcliq tech, sportcliq community, sportcliq platform, sportcliq app, sportcliq website, sportcliq online, sportcliq booking, sportcliq organize, sportcliq join, sportcliq play, sportcliq find, sportcliq search, sportcliq discover, sportcliq connect, sportcliq join match, sportcliq join cycling, sportcliq join event, sportcliq join venue, sportcliq join football, sportcliq join sports, sportcliq join nigeria, sportcliq join lagos, sportcliq join ilorin, sportcliq join abuja, sportcliq join startup, sportcliq join tech, sportcliq join community, sportcliq join platform, sportcliq join app, sportcliq join website, sportcliq join online, sportcliq join booking, sportcliq join organize, sportcliq join play, sportcliq join find, sportcliq join search, sportcliq join discover, sportcliq join connect";
 
 type Landmark = {
@@ -268,18 +272,7 @@ const CyclingDetail = () => {
   };
 
   if (loading) {
-    return (
-      <div className="p-4">
-        <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4">
-          <ArrowLeft size={18} className="mr-2" />
-          Back
-        </Button>
-        <div className="text-center py-8">
-          <h2 className="text-xl font-semibold mb-2">Loading...</h2>
-          <p className="text-muted-foreground">Fetching event details...</p>
-        </div>
-      </div>
-    );
+    return <DetailSkeleton />;
   }
 
   if (!event) {
@@ -307,148 +300,163 @@ const CyclingDetail = () => {
         url={window.location.href}
         image={undefined}
         children={<meta name="keywords" content={META_KEYWORDS} />}
+        jsonLd={{
+          "@type": "SportsEvent",
+          name: event.title,
+          sport: "Cycling",
+          startDate: event.event_date,
+          eventStatus: "https://schema.org/EventScheduled",
+          eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+          location: { "@type": "Place", name: event.start_landmark?.name, address: { "@type": "PostalAddress", addressRegion: event.start_landmark?.state, addressCountry: "NG" } },
+          organizer: { "@type": "Person", name: event.host_name },
+          maximumAttendeeCapacity: event.max_attendees,
+          offers: { "@type": "Offer", price: event.is_free ? 0 : event.price ?? 0, priceCurrency: "NGN", url: window.location.href },
+          url: window.location.href,
+        }}
       />
-      <div className="min-h-screen pb-24">
-        <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg">
-          <div className="flex items-center justify-between">
-            <Button
-              variant="ghost"
-              onClick={() => navigate(-1)}
-              className="text-white hover:bg-green-600"
-            >
-              <ArrowLeft size={18} className="mr-2" />
-              Back
-            </Button>
-            <div className="text-center">
-              <h1 className="text-2xl font-bold">Event Details</h1>
-            </div>
-            <div className="w-10"></div>
+      <div className="min-h-screen pb-36 bg-sc-bg text-sc-ink font-sans">
+        <div className="relative h-[300px] overflow-hidden rounded-b-[36px]" style={{ background: SPORT.cycling.bg }}>
+          <Cover kind="cycling" />
+          <div className="absolute left-5 right-5 flex justify-between" style={{ top: "max(env(safe-area-inset-top), 1rem)" }}>
+            <BackButton className="mt-3" />
+            <IconButton icon={Bell} label="Add to calendar" onClick={addToCalendar} className="mt-3" />
           </div>
-        </header>
+          <span className="absolute left-[30px] bottom-4">
+            <Pill sport="ink" icon={Flag}>{event.start_landmark?.name}</Pill>
+          </span>
+          {event.end_landmark && (
+            <span className="absolute right-5 top-[150px]">
+              <Pill sport="ink" icon={MapPin}>{event.end_landmark.name}</Pill>
+            </span>
+          )}
+        </div>
 
-        <div className="p-4">
-          <h1 className="text-2xl font-bold mb-2">{event.title}</h1>
-          <div className="flex justify-between items-center mb-4">
-            <div className="flex items-center gap-2">
-              <p className="text-muted-foreground">Hosted by {event.host_name}</p>
-              <img 
-                src="/green-verified.png"
-                alt="Verified"
-                className="inline-block w-5 h-5"
-              />
-            </div>
+        <div className="px-5 pt-[18px] flex flex-col gap-3.5">
+          <div className="flex flex-col gap-1.5">
+            <span className="flex gap-1.5 flex-wrap">
+              <Pill sport="cycling" icon={Calendar}>{new Date(event.event_date).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}</Pill>
+              <Pill sport={event.is_free ? "football" : "tennis"}>{event.is_free ? "Free" : formatNaira(event.price)}</Pill>
+            </span>
+            <h1 className="m-0 text-[30px] leading-[34px] font-extrabold tracking-[-0.03em]">{event.title}</h1>
           </div>
 
           {isEnded ? (
-            <div className="bg-gray-100 border border-gray-200 text-gray-700 px-4 py-3 rounded mb-4">
-              This event has passed
-            </div>
+            <div className="rounded-2xl px-4 py-3 text-sm font-bold bg-sc-soft2 text-sc-ink2">This ride has passed</div>
           ) : isStarted ? (
-            <div className="bg-blue-100 border border-blue-200 text-blue-700 px-4 py-3 rounded mb-4">
-              This event has started!
-            </div>
+            <div className="rounded-2xl px-4 py-3 text-sm font-bold" style={{ background: SPORT.guide.bg, color: SPORT.guide.fg }}>This ride has started</div>
           ) : isFull ? (
-            <div className="bg-red-100 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
-              This event is completely filled up!
-            </div>
+            <div className="rounded-2xl px-4 py-3 text-sm font-bold" style={{ background: SPORT.red.bg, color: SPORT.red.fg }}>This ride is completely filled up</div>
           ) : status === "today" ? (
-            <div className="bg-green-100 border border-green-200 text-green-700 px-4 py-3 rounded mb-4">
-              This event is happening today!
-            </div>
+            <div className="rounded-2xl px-4 py-3 text-sm font-bold" style={{ background: SPORT.football.bg, color: SPORT.football.fg }}>This ride is happening today</div>
           ) : null}
 
-          <div className="space-y-4">
-            <div className="border rounded-lg p-4 bg-card shadow-md relative">
-              <div className="absolute top-4 right-4 m-0 p-0">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={addToCalendar}
-                  className="text-blue-600 p-2 border-blue-300 hover:bg-blue-50 m-0"
-                >
-                  <Bell size={16} className="m-0" />
-                </Button>
+          <div className="flex gap-2.5">
+            {[
+              { icon: Route, sport: "cycling" as const, label: event.duration_type === "distance" ? "Distance" : "Duration", value: `${event.duration_value} ${event.duration_type === "distance" ? "km" : event.duration_type}` },
+              { icon: Clock, sport: "guide" as const, label: "Starts", value: formatTime(event.start_time) },
+              { icon: Users, sport: "pink" as const, label: "Riders", value: `${attendees.length}/${event.max_attendees}` },
+            ].map((f) => (
+              <div key={f.label} className="flex-1 min-w-0 bg-white rounded-[20px] p-3.5 flex flex-col gap-1.5">
+                <Bubble icon={f.icon} sport={f.sport} size={32} />
+                <span className="text-xs text-sc-ink3 font-semibold">{f.label}</span>
+                <span className="text-[15px] font-extrabold truncate">{f.value}</span>
               </div>
-              <h2 className="font-semibold mb-3">Event Details</h2>
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <Calendar size={18} />
-                  <span>{formatDate(event.event_date)}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Clock size={18} />
-                  <span>{formatTime(event.start_time)}</span>
-                </div>
-                <div className="flex items-start gap-2 cursor-pointer" 
-                  onClick={() => navigate(`/landmark/${event.start_landmark.slug}`)}>
-                  <MapPin size={18} className="mt-0.5" />
-                  <div>
-                    <span className="text-green-600 hover:underline">
-                      {event.start_landmark.name}, {event.start_landmark.state}
-                    </span>
-                    {event.start_landmark.map_link && (
-                      <div className="mt-1">
-                        <a 
-                          href={event.start_landmark.map_link} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-xs flex items-center text-green-600 hover:underline"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <ExternalLink size={12} className="mr-1" />
-                          Link to Google Maps
-                        </a>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Clock size={18} />
-                  <span>
-                    Duration: {event.duration_value} {event.duration_type}
+            ))}
+          </div>
+
+          <AttendeesTable
+            event={event}
+            attendees={attendees}
+            navigate={navigate}
+            isEnded={isEnded}
+            isStarted={isStarted}
+            isFull={isFull}
+            totalAttendees={attendees.length}
+            hideActions
+          />
+
+          <div className="bg-white rounded-3xl p-[18px] flex flex-col gap-3">
+            <span className="text-base font-extrabold">Route</span>
+            <button type="button" onClick={() => navigate(`/landmark/${event.start_landmark.slug}`)} className="flex items-center gap-3 text-left">
+              <Bubble icon={Flag} sport="cycling" size={40} />
+              <span className="flex-1 min-w-0 flex flex-col">
+                <span className="text-xs text-sc-ink3 font-semibold">Start</span>
+                <span className="text-[15px] font-bold truncate">
+                  {event.start_landmark.name}, {event.start_landmark.state}
+                </span>
+              </span>
+              {event.start_landmark.map_link && (
+                <a
+                  href={event.start_landmark.map_link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Open in Google Maps"
+                  onClick={(e) => e.stopPropagation()}
+                  className="w-10 h-10 rounded-full bg-sc-soft flex items-center justify-center shrink-0"
+                >
+                  <ExternalLink size={18} />
+                </a>
+              )}
+            </button>
+            {event.end_landmark && (
+              <button type="button" onClick={() => navigate(`/landmark/${event.end_landmark?.slug}`)} className="flex items-center gap-3 text-left">
+                <Bubble icon={MapPin} sport="ink" size={40} />
+                <span className="flex-1 min-w-0 flex flex-col">
+                  <span className="text-xs text-sc-ink3 font-semibold">Finish</span>
+                  <span className="text-[15px] font-bold truncate">
+                    {event.end_landmark.name}, {event.end_landmark.state}
                   </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Users size={18} />
-                  <span>
-                    {attendees.length}/{event.max_attendees} spots filled
-                    {isFull && " (FULL)"}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Bike size={18} />
-                  <span>
-                    {event.is_own_bike && "Bring Your Own Bike"}
-                    {event.is_own_bike && event.is_rental_available && " | "}
-                    {event.is_rental_available && "Rentals Available"}
-                  </span>
-                </div>
-                <div className="font-semibold mt-2">
-                  Cost: {event.is_free ? "Free" : `₦${event.price?.toFixed(2)}`}
-                </div>
-                {event.notes && (
-                  <div className="mt-3">
-                    <h3 className="text-sm font-medium mb-1">Notes:</h3>
-                    <p className="text-sm bg-muted p-2 rounded">{event.notes}</p>
-                  </div>
-                )}
+                </span>
+              </button>
+            )}
+          </div>
+
+          {(event.is_own_bike || event.is_rental_available) && (
+            <div className="bg-white rounded-3xl p-[18px] flex flex-col gap-3">
+              <span className="text-base font-extrabold">Bike</span>
+              <div className="flex gap-1.5 flex-wrap">
+                {event.is_own_bike && <Pill sport="cycling" icon={Bike}>Bring your own bike</Pill>}
+                {event.is_rental_available && <Pill sport="football">Rentals available</Pill>}
               </div>
             </div>
+          )}
 
-            <AttendeesTable
-              event={event}
-              attendees={attendees}
-              navigate={navigate}
-              isEnded={isEnded}
-              isStarted={isStarted}
-              isFull={isFull}
-              totalAttendees={attendees.length}
-            />
-
-            <CyclingDetailsDialogue event={event} attendees={attendees} />
+          <div className="bg-white rounded-3xl p-[18px] flex items-center gap-3">
+            <Avatar seed={event.host_name} initials={initialsOf(event.host_name)} sport="cycling" size={48} />
+            <span className="flex-1 min-w-0 flex flex-col gap-0.5">
+              <span className="text-xs text-sc-ink3 font-semibold">Hosted by</span>
+              <span className="text-base font-extrabold flex items-center gap-1.5 truncate">
+                {event.host_name}
+                <img src="/green-verified.png" alt="Verified" className="w-4 h-4" />
+              </span>
+            </span>
           </div>
+
+          {event.notes && (
+            <div className="bg-white rounded-3xl p-[18px] flex flex-col gap-2">
+              <span className="text-base font-extrabold">Notes</span>
+              <p className="m-0 text-sm leading-[22px] text-sc-ink2 whitespace-pre-line">{event.notes}</p>
+            </div>
+          )}
+
+          <CyclingDetailsDialogue event={event} attendees={attendees} />
         </div>
-        <Navbar />
+
+        <StickyFooter>
+          <div className="flex items-center gap-3.5">
+            <div className="flex flex-col shrink-0">
+              <span className="text-xs text-sc-ink3 font-semibold">Entry</span>
+              <span className="text-[22px] font-extrabold tracking-[-0.02em]">{event.is_free ? "Free" : formatNaira(event.price)}</span>
+            </div>
+            {isEnded ? (
+              <ScButton onClick={() => navigate(`/feedback/cycling/${event.slug}`)}>Give feedback</ScButton>
+            ) : (
+              <ScButton kind="cycling" onClick={() => navigate(`/join-cycling/${event.slug}`)} disabled={isFull || isStarted}>
+                {isFull ? "Ride is full" : "Join ride"}
+              </ScButton>
+            )}
+          </div>
+        </StickyFooter>
       </div>
     </>
   );

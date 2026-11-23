@@ -235,7 +235,7 @@ if (walletError) {
   const getStatusStyles = (status: string) => {
     switch (status) {
       case "Successful":
-        return "bg-green-100 text-green-700 border-green-300";
+        return "bg-sc-green-bg text-sc-green-dark border-green-300";
       case "Failed":
         return "bg-red-100 text-red-700 border-red-300";
       case "Processed":
@@ -268,9 +268,9 @@ if (walletError) {
   if (!event) return null;
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700">
+    <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 dark:border-gray-700">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Cycling Event Details</h2>
+        <h2 className="text-xl font-semibold text-sc-ink dark:text-gray-100">Cycling Event Details</h2>
         <div className="flex items-center gap-2">
           {event.cancellation_status && (
             <span className="inline-block px-3 py-1 text-sm font-medium rounded border bg-red-100 text-red-700 border-red-300">
@@ -281,47 +281,47 @@ if (walletError) {
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
         <div className="flex items-center gap-3">
-          <Bike size={20} className="text-green-500" />
+          <Bike size={20} className="text-sc-green-dark" />
           <div>
-            <p className="font-medium text-gray-900 dark:text-gray-100">{event.title || "Untitled Event"}</p>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <p className="font-medium text-sc-ink dark:text-gray-100">{event.title || "Untitled Event"}</p>
+            <p className="text-sm text-sc-ink3 dark:text-gray-400">
               Hosted by {event.host_name || "Unknown Host"}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <MapPin size={20} className="text-green-500" />
-          <span className="text-gray-900 dark:text-gray-100">
+          <MapPin size={20} className="text-sc-green-dark" />
+          <span className="text-sc-ink dark:text-gray-100">
             {event.start_landmark_name || "Unknown Location"}
           </span>
         </div>
         <div className="flex items-center gap-3">
-          <Calendar size={20} className="text-green-500" />
-          <span className="text-gray-900 dark:text-gray-100">
+          <Calendar size={20} className="text-sc-green-dark" />
+          <span className="text-sc-ink dark:text-gray-100">
             {event.event_date ? formatDate(event.event_date) : "Date TBD"}
           </span>
         </div>
         <div className="flex items-center gap-3">
-          <Clock size={20} className="text-green-500" />
-          <span className="text-gray-900 dark:text-gray-100">
+          <Clock size={20} className="text-sc-green-dark" />
+          <span className="text-sc-ink dark:text-gray-100">
             {event.start_time ? formatTime(event.start_time) : "Time TBD"}
           </span>
         </div>
         <div className="flex items-center gap-3">
-          <Users size={20} className="text-green-500" />
-          <span className="text-gray-900 dark:text-gray-100">
+          <Users size={20} className="text-sc-green-dark" />
+          <span className="text-sc-ink dark:text-gray-100">
             {calculateTotalSlotsOccupied()}/{event.max_attendees || 0} slots
           </span>
         </div>
         <div className="flex items-center gap-3">
-          <DollarSign size={20} className="text-green-500" />
-          <span className="text-gray-900 dark:text-gray-100">
+          <DollarSign size={20} className="text-sc-green-dark" />
+          <span className="text-sc-ink dark:text-gray-100">
             {event.is_free ? "Free" : `₦${event.price?.toLocaleString() || "0"} per ticket`}
           </span>
         </div>
         <div className="flex items-center gap-3">
-          <Wallet size={20} className="text-green-500" />
-          <span className="text-gray-900 dark:text-gray-100">
+          <Wallet size={20} className="text-sc-green-dark" />
+          <span className="text-sc-ink dark:text-gray-100">
             Wallet: ₦{localWalletBalance.toLocaleString() || "0"}
           </span>
         </div>

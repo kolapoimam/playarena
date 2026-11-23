@@ -56,6 +56,9 @@ import HostCycling from "@/pages/cycling/HostCycling";
 import LandmarkDirectory from "@/pages/cycling/LandmarkDirectory";
 import LandmarkDetail from "@/pages/cycling/LandmarkDetail";
 import AuthCallback from "@/pages/AuthCallback";
+import Settings from "@/pages/profile/Settings";
+import Badges from "@/pages/profile/Badges";
+import Onboarding from "@/components/sc/Onboarding";
 
 const queryClient = new QueryClient();
 
@@ -140,6 +143,8 @@ const AppRoutes = () => {
       <Route path="/profile/my-venue" element={<MyVenue />} />
       <Route path="/profile/my-bookings" element={<MyBookings />} />
       <Route path="/profile/booking-code" element={<BookingCode />} />
+      <Route path="/profile/settings" element={<Settings />} />
+      <Route path="/profile/badges" element={<Badges />} />
       <Route path="/auth" element={<Auth />} />
       <Route path="/auth/callback" element={<AuthCallback />} />
       <Route path="/confirm" element={<Confirm />} />
@@ -219,6 +224,7 @@ const App = () => {
             <ScrollToTop />
             <MobileOnlyGuard>
               <AppRoutes />
+              <Onboarding />
               <InstallPrompt />
             </MobileOnlyGuard>
           </Router>
