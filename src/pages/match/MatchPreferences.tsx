@@ -1,3 +1,5 @@
+import { Bubble, ScButton } from "@/components/sc/ui";
+import { SlidersHorizontal, MapPin, Trophy, Users, Cake } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -148,150 +150,93 @@ const MatchPreferences = () => {
           </div>
         </header>
 
-      <div className="flex-grow overflow-y-auto">
-        <div className="container mx-auto px-4 py-6">
-          <Card className="bg-white dark:bg-gray-800 border-none shadow-card rounded-3xl">
-            <CardContent className="p-6">
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="state"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sc-ink2 dark:text-gray-300">State</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value} className="text-base">
-                          <FormControl>
-                            <SelectTrigger className="bg-white dark:bg-gray-700 border-sc-line dark:border-gray-600 text-sc-ink dark:text-gray-100 rounded-lg">
-                              <SelectValue placeholder="Select state" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {[
-                              "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", "Borno",
-                              "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu", "Gombe", "Imo", "Jigawa",
-                              "Kaduna", "Kano", "Katsina", "Kebbi", "Kogi", "Kwara", "Lagos", "Nasarawa", "Niger",
-                              "Ogun", "Ondo", "Osun", "Oyo", "Plateau", "Rivers", "Sokoto", "Taraba", "Yobe",
-                              "Zamfara", "FCT",
-                            ].map((state) => (
-                              <SelectItem
-                                key={state}
-                                value={state}
-                                className="text-base bg-white dark:bg-gray-700 text-sc-ink dark:text-gray-100"
-                              >
-                                {state}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="skill_level"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sc-ink2 dark:text-gray-300">Skill Level</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value} className="text-base">
-                          <FormControl>
-                            <SelectTrigger className="bg-white dark:bg-gray-700 border-sc-line dark:border-gray-600 text-sc-ink dark:text-gray-100 rounded-lg">
-                              <SelectValue placeholder="Select skill level" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {["Beginner", "Amateur", "Intermediate", "Advanced", "Professional"].map((level) => (
-                              <SelectItem
-                                key={level}
-                                value={level}
-                                className="text-base bg-white dark:bg-gray-700 text-sc-ink dark:text-gray-100"
-                              >
-                                {level}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="gender"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sc-ink2 dark:text-gray-300">Gender</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value} className="text-base">
-                          <FormControl>
-                            <SelectTrigger className="bg-white dark:bg-gray-700 border-sc-line dark:border-gray-600 text-sc-ink dark:text-gray-100 rounded-lg">
-                              <SelectValue placeholder="Select gender" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem
-                              value="male"
-                              className="text-base bg-white dark:bg-gray-700 text-sc-ink dark:text-gray-100"
-                            >
-                              Male
-                            </SelectItem>
-                            <SelectItem
-                              value="female"
-                              className="text-base bg-white dark:bg-gray-700 text-sc-ink dark:text-gray-100"
-                            >
-                              Female
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="date_of_birth"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sc-ink2 dark:text-gray-300">Date of Birth</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="date"
-                            {...field}
-                            disabled={!!profile?.date_of_birth}
-                            className="text-base bg-white dark:bg-gray-700 border-sc-line dark:border-gray-600 text-sc-ink dark:text-gray-100 rounded-lg"
-                          />
-                        </FormControl>
-                        {dateOfBirth && (
-                          <p className="text-sm text-sc-ink3 dark:text-gray-400 mt-1">
-                            Age: {calculateAge(dateOfBirth)} years
-                          </p>
-                        )}
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <Button
-                    type="submit"
-                    className="w-full bg-sc-green hover:brightness-95 text-sc-green-ink font-bold rounded-full px-4 py-2 text-sm flex items-center justify-center"
-                    disabled={loading}
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 size={16} className="mr-2 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle size={16} className="mr-2" />
-                        Save Preferences
-                      </>
-                    )}
-                  </Button>
-                </form>
-              </Form>
-            </CardContent>
-          </Card>
+      <div className="flex-grow overflow-y-auto px-5 pt-3 pb-6">
+        <div className="relative rounded-[28px] p-5 text-white overflow-hidden mb-4" style={{ background: "#16A34A" }}>
+          <SlidersHorizontal className="absolute opacity-20" size={120} style={{ right: -16, top: -16 }} aria-hidden="true" />
+          <span className="text-xs font-bold tracking-[0.12em] opacity-85">YOUR GAME</span>
+          <p className="m-0 mt-1 text-[22px] leading-7 font-extrabold tracking-[-0.02em] max-w-[260px]">Tell us how you play and we show the right matches first.</p>
         </div>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-3">
+            <div className="bg-white rounded-3xl p-[18px] flex flex-col gap-3">
+              <div className="flex items-center gap-3"><Bubble icon={MapPin} sport="football" size={40} radius={13} /><span className="text-base font-extrabold">Where you play</span></div>
+              <FormField
+                control={form.control}
+                name="state"
+                render={({ field }) => (
+                  <FormItem>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger aria-label="State" className="h-[52px] rounded-2xl text-base"><SelectValue placeholder="Choose your state" /></SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {["Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", "Borno", "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu", "Gombe", "Imo", "Jigawa", "Kaduna", "Kano", "Katsina", "Kebbi", "Kogi", "Kwara", "Lagos", "Nasarawa", "Niger", "Ogun", "Ondo", "Osun", "Oyo", "Plateau", "Rivers", "Sokoto", "Taraba", "Yobe", "Zamfara", "FCT"].map((st) => (
+                          <SelectItem key={st} value={st} className="text-base">{st}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="bg-white rounded-3xl p-[18px] flex flex-col gap-3">
+              <div className="flex items-center gap-3"><Bubble icon={Trophy} sport="tennis" size={40} radius={13} /><span className="text-base font-extrabold">Skill level</span></div>
+              <FormField
+                control={form.control}
+                name="skill_level"
+                render={({ field }) => (
+                  <FormItem>
+                    <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Skill level">
+                      {["Beginner", "Amateur", "Intermediate", "Advanced", "Professional"].map((lv) => (
+                        <button key={lv} type="button" role="radio" aria-checked={field.value === lv} onClick={() => field.onChange(lv)} className={`h-11 px-4 rounded-full text-sm font-bold ${field.value === lv ? "bg-sc-ink text-white" : "bg-sc-soft text-sc-ink"}`}>{lv}</button>
+                      ))}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="bg-white rounded-3xl p-[18px] flex flex-col gap-3">
+              <div className="flex items-center gap-3"><Bubble icon={Users} sport="guide" size={40} radius={13} /><span className="text-base font-extrabold">Gender</span></div>
+              <FormField
+                control={form.control}
+                name="gender"
+                render={({ field }) => (
+                  <FormItem>
+                    <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Gender">
+                      {[["male", "Male"], ["female", "Female"]].map(([v, l]) => (
+                        <button key={v} type="button" role="radio" aria-checked={field.value === v} onClick={() => field.onChange(v)} className={`h-12 rounded-2xl text-[15px] font-bold ${field.value === v ? "bg-sc-ink text-white" : "bg-sc-soft text-sc-ink"}`}>{l}</button>
+                      ))}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="bg-white rounded-3xl p-[18px] flex flex-col gap-3">
+              <div className="flex items-center gap-3"><Bubble icon={Cake} sport="pink" size={40} radius={13} /><span className="flex-1 text-base font-extrabold">Date of birth</span>{dateOfBirth && <span className="text-sm font-bold text-sc-ink3">{calculateAge(dateOfBirth)} years</span>}</div>
+              <FormField
+                control={form.control}
+                name="date_of_birth"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <Input type="date" aria-label="Date of birth" {...field} disabled={!!profile?.date_of_birth} className="text-base" />
+                    </FormControl>
+                    {profile?.date_of_birth && <p className="m-0 text-xs text-sc-ink3">Your date of birth is locked once saved.</p>}
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <ScButton type="submit" icon={CheckCircle} disabled={loading}>{loading ? "Saving..." : "Save preferences"}</ScButton>
+          </form>
+        </Form>
       </div>
 
       <div className="pb-28">

@@ -8,7 +8,7 @@ const OrganizerDetailsForm = () => {
   const form = useFormContext<FormValues>();
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 space-y-6">
+    <div className="bg-white dark:bg-gray-800 rounded-3xl p-[18px] space-y-6">
       <h2 className="text-xl font-semibold text-sc-ink dark:text-gray-200">Organizer Details</h2>
       <FormField
         control={form.control}

@@ -110,7 +110,7 @@ const OrganizerDetails = ({ userId }: { userId: string | null }) => {
 
   return (
     <div>
-      <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 space-y-6">
+      <div className="bg-white dark:bg-gray-800 rounded-3xl p-[18px] space-y-6">
         <h2 className="text-xl font-semibold text-sc-ink dark:text-gray-200">Organizer Details</h2>
 
         <FormField
@@ -180,7 +180,7 @@ const OrganizerDetails = ({ userId }: { userId: string | null }) => {
         />
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 space-y-6 mt-6">
+      <div className="bg-white dark:bg-gray-800 rounded-3xl p-[18px] space-y-6 mt-6">
         <h2 className="text-xl font-semibold text-sc-ink dark:text-gray-200">Match Privacy</h2>
 
         <FormField
@@ -241,7 +241,7 @@ const OrganizerDetails = ({ userId }: { userId: string | null }) => {
         )}
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 space-y-6 mt-6">
+      <div className="bg-white dark:bg-gray-800 rounded-3xl p-[18px] space-y-6 mt-6">
         <h2 className="text-xl font-semibold text-sc-ink dark:text-gray-200">Payment Details</h2>
 
         <FormField
@@ -314,7 +314,7 @@ const OrganizerDetails = ({ userId }: { userId: string | null }) => {
         />
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 space-y-6 mt-6">
+      <div className="bg-white dark:bg-gray-800 rounded-3xl p-[18px] space-y-6 mt-6">
         <h2 className="text-xl font-semibold text-sc-ink dark:text-gray-200">Ticket Sales</h2>
 
         <div className="flex flex-row items-center justify-between rounded-lg border p-4">

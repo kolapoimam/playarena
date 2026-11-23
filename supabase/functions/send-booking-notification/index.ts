@@ -307,7 +307,7 @@ serve(async (req: Request) => {
       </div>
       <p>The player’s got their confirmation, and you’re all set to make this match a great experience!.</p>
       <div class="support">
-        <p style="text-align: center;">Need to make changes? <br>Contact our team at <a href="mailto:support@sportcliq.com">support@sportcliq.com</a>.</p>
+        <p style="text-align: center;">Need to make changes? <br>Contact our team at <a href="mailto:sportcliqapp@gmail.com">sportcliqapp@gmail.com</a>.</p>
       </div>
     </div>
     <div class="footer">
@@ -328,6 +328,7 @@ serve(async (req: Request) => {
 
     const response = await resend.emails.send({
       from: "Kay from SportCliq <hello@sportcliq.com>",
+      reply_to: "sportcliqapp@gmail.com",
       to: venue_email,
       subject: `⚽ New Booking for ${venue_name}!`,
       html: emailHtml,

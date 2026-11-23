@@ -18,6 +18,7 @@ import { Seo } from "@/components/Seo";
 
 import { BackButton, SPORT } from "@/components/sc/ui";
 import { Map as MapIcon } from "lucide-react";
+import { Cover } from "@/components/sc/ui";
 import { EventListSkeleton } from "@/components/sc/skeletons";
 import { FunEmpty } from "@/components/sc/ui";
 import { Flag as FlagIcon } from "lucide-react";
@@ -353,38 +354,40 @@ const LandmarkDirectory = () => {
             <>
               <div className="space-y-4">
                 {currentLandmarks.map((landmark) => {
-                  const placeholderImage = "/placeholders/cycling.webp";
-
+                  const fav = favorites.has(landmark.id_uuid);
                   return (
                     <div
                       key={landmark.id_uuid}
-                      className="rounded-3xl overflow-hidden shadow-card bg-white dark:bg-gray-800 cursor-pointer relative"
+                      role="link"
+                      tabIndex={0}
+                      onKeyDown={(e) => e.key === "Enter" && navigate(`/landmark/${landmark.slug}`)}
+                      className="rounded-3xl overflow-hidden bg-white cursor-pointer active:scale-[0.99] transition-transform"
                       onClick={() => navigate(`/landmark/${landmark.slug}`)}
                     >
-                      <div className="w-full h-36 flex items-center justify-center" style={{ background: SPORT.guide.bg, color: SPORT.guide.fg }}>
-                        <MapIcon size={56} strokeWidth={1.3} />
+                      <div className="relative w-full h-40 overflow-hidden">
+                        <Cover src={(landmark as any).image_url || (landmark as any).image_urls?.[0]} kind="landmark" alt="" />
+                        <button
+                          type="button"
+                          aria-label={fav ? "Remove from favourites" : "Add to favourites"}
+                          aria-pressed={fav}
+                          className="absolute top-3 right-3 z-10 w-10 h-10 rounded-full bg-white/95 shadow-card flex items-center justify-center active:scale-90 transition-transform"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleFavorite(landmark.id_uuid);
+                          }}
+                        >
+                          <Heart size={20} color={fav ? "#DC2626" : "#0E1411"} fill={fav ? "#DC2626" : "none"} />
+                        </button>
+                        <span className="absolute left-3 bottom-3 h-8 px-3 rounded-full bg-white/95 text-sc-ink text-xs font-extrabold inline-flex items-center gap-1.5">
+                          <MapPin size={14} className="text-[#C2410C]" /> {landmark.state}
+                        </span>
                       </div>
-                      <Button
-                        variant="ghost"
-                        className="absolute top-3 right-3 w-9 h-9 p-0 rounded-full bg-white text-sport-red hover:bg-white"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleFavorite(landmark.id_uuid);
-                        }}
-                      >
-                        <Heart
-                          size={24}
-                          fill={favorites.has(landmark.id_uuid) ? "red" : "none"}
-                        />
-                      </Button>
-                      <div className="p-4">
-                        <h3 className="font-bold text-lg text-sc-ink dark:text-gray-200 mb-1">{landmark.name}</h3>
-                        <p className="text-sm text-sc-ink3 dark:text-gray-400 mb-1">{landmark.state}</p>
-                        <p className="text-sm text-sc-ink3 dark:text-gray-400 mb-1">{truncateDescription(landmark.description)}</p>
-                        <div className="flex items-center text-sm font-medium text-sc-green-dark dark:text-green-400">
-                          <MapPin className="h-4 w-4 mr-1" />
-                          <span>{`${landmark.event_count} Event${landmark.event_count !== 1 ? "s" : ""}`}</span>
-                        </div>
+                      <div className="p-[18px] flex flex-col gap-1.5">
+                        <h3 className="m-0 text-[18px] font-extrabold tracking-[-0.01em] text-sc-ink">{landmark.name}</h3>
+                        {landmark.description && <p className="m-0 text-sm text-sc-ink3 line-clamp-2">{truncateDescription(landmark.description)}</p>}
+                        <span className="self-start mt-1 h-7 px-3 rounded-full text-xs font-bold inline-flex items-center" style={{ background: SPORT.cycling.bg, color: SPORT.cycling.fg }}>
+                          {`${landmark.event_count} ride${landmark.event_count !== 1 ? "s" : ""}`}
+                        </span>
                       </div>
                     </div>
                   );

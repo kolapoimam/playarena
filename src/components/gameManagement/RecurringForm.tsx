@@ -21,7 +21,7 @@ const RecurringForm = ({ userId, defaultOpen = false }: RecurringFormProps & { d
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 space-y-6">
+    <div className="bg-white dark:bg-gray-800 rounded-3xl p-[18px] space-y-6">
       <div className="flex justify-between items-center cursor-pointer" onClick={() => setIsRecurringOpen(!isRecurringOpen)}>
         <h2 className="text-xl font-semibold text-sc-ink dark:text-gray-200">Recurring Match (Optional)</h2>
         <span>{isRecurringOpen ? '-' : '+'}</span>

@@ -248,7 +248,7 @@ const MatchReport = ({
       <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
         <Button
           onClick={exportReport}
-          className="bg-yellow-500 hover:bg-yellow-600 text-white text-xs sm:text-sm px-3 py-2 flex-1 sm:flex-none"
+          className="bg-sc-ink text-white rounded-full font-bold text-xs sm:text-sm px-3 py-2 flex-1 sm:flex-none"
           disabled={isExporting}
         >
           {isExporting ? "Exporting..." : <><Download size={16} className="mr-2" /> Export Report</>}
@@ -498,7 +498,7 @@ const MatchReport = ({
             </Button>
             <Button
               onClick={() => { setEventType("yellow_card"); setEventDialogOpen(true); }}
-              className="bg-yellow-500 hover:bg-yellow-600 text-white text-sm px-4 py-2 min-w-[80px]"
+              className="bg-sc-ink text-white rounded-full font-bold text-sm px-4 py-2 min-w-[80px]"
             >
               Yellow
             </Button>

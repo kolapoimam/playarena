@@ -32,4 +32,4 @@ SportCliq can use the device location to work out the user's state. The coordina
 
 ## Contact
 
-Email support@sportcliq.com. On X: @SportCliq.
+Email sportcliqapp@gmail.com. On X: @SportCliq.

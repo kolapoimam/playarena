@@ -124,7 +124,7 @@ const VenueBookingForm = () => {
   const [useAccessCode, setUseAccessCode] = useState(false);
   const [accessCode, setAccessCode] = useState("");
   const [accessCodeError, setAccessCodeError] = useState<string | null>(null);
-  const defaultEmail = "payments@sportcliq.com";
+  const defaultEmail = "sportcliqapp@gmail.com";
 
   const form = useForm<BookingFormValues>({
     resolver: zodResolver(bookingSchema),

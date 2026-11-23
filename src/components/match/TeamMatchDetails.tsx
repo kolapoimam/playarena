@@ -467,7 +467,7 @@ const TeamMatchDetails = ({
   return (
     <div className="space-y-4 sm:space-y-6">
       <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-4 sm:p-6 dark:border-gray-700">
-        <h2 className="text-lg sm:text-xl font-semibold mb-4 text-sc-ink dark:text-gray-100">{match.title}</h2>
+        <h2 className="text-lg sm:text-lg font-extrabold tracking-[-0.01em] mb-4 text-sc-ink dark:text-gray-100">{match.title}</h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="flex items-center gap-3">
             <Trophy size={16} className="text-sc-green-dark" />
@@ -514,7 +514,7 @@ const TeamMatchDetails = ({
           />
           <Button
             onClick={saveTeams}
-            className="bg-yellow-500 hover:bg-yellow-600 text-white text-xs sm:text-sm px-3 py-2 flex-1 sm:flex-none"
+            className="bg-sc-ink text-white rounded-full font-bold text-xs sm:text-sm px-3 py-2 flex-1 sm:flex-none"
           >
             Save Teams
           </Button>

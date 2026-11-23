@@ -145,7 +145,7 @@ const TermsAndPrivacy = () => {
                     <section>
                       <h2 className="text-xl font-semibold mb-2">10. Contact Information</h2>
                       <p>
-                        For questions or concerns about these Terms, contact us via Twitter at <a href="https://twitter.com/PiousGeek" className="text-sc-green-dark hover:underline" target="_blank" rel="noopener noreferrer">@PiousGeek</a> or email us at support@sportcliq.com.
+                        For questions or concerns about these Terms, contact us on X at <a href="https://x.com/SportCliq" className="text-sc-green-dark hover:underline" target="_blank" rel="noopener noreferrer">@SportCliq</a> or email us at sportcliqapp@gmail.com.
                       </p>
                     </section>
                   </div>
@@ -223,7 +223,7 @@ const TermsAndPrivacy = () => {
                         <li><strong>Data Portability:</strong> Receive your data in a structured, machine-readable format.</li>
                       </ul>
                       <p>
-                        To exercise these rights, contact us at support@sportcliq.com.
+                        To exercise these rights, contact us at sportcliqapp@gmail.com.
                       </p>
                     </section>
 
@@ -258,7 +258,7 @@ const TermsAndPrivacy = () => {
                     <section>
                       <h2 className="text-xl font-semibold mb-2">11. Contact Information</h2>
                       <p>
-                        For questions or concerns about this Privacy Policy, contact our Data Protection Officer at support@sportcliq.com or via Twitter at <a href="https://twitter.com/PiousGeek" className="text-sc-green-dark hover:underline" target="_blank" rel="noopener noreferrer">@PiousGeek</a>.
+                        For questions or concerns about this Privacy Policy, contact our Data Protection Officer at sportcliqapp@gmail.com or on X at <a href="https://x.com/SportCliq" className="text-sc-green-dark hover:underline" target="_blank" rel="noopener noreferrer">@SportCliq</a>.
                       </p>
                     </section>
                   </div>
@@ -276,7 +276,7 @@ const TermsAndPrivacy = () => {
                 asChild
                 className="bg-sc-green hover:brightness-95 text-sc-green-ink px-6 py-2 rounded-full transition-colors font-bold"
               >
-                <a href="https://twitter.com/PiousGeek" target="_blank" rel="noopener noreferrer">
+                <a href="https://x.com/SportCliq" target="_blank" rel="noopener noreferrer">
                   Contact Us
                 </a>
               </Button>

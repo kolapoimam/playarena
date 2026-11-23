@@ -103,7 +103,7 @@ const Home = () => {
             ].map((feature, index) => (
               <motion.div
                 key={index}
-                className="p-6 bg-sc-soft rounded-lg shadow-card"
+                className="p-6 bg-sc-soft rounded-3xl"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 * index, duration: 0.5 }}
@@ -206,7 +206,7 @@ const Home = () => {
             <p className="text-sm">X | Instagram | YouTube | LinkedIn</p>
             <p className="text-sm">LOCATIONS</p>
             <p className="text-sm">Lagos | Abuja | Port Harcourt</p>
-            <p className="text-sm mt-2">Get in touch at hello@sportcliq.com</p>
+            <p className="text-sm mt-2">Get in touch at sportcliqapp@gmail.com</p>
           </div>
           <p className="text-sm mt-4">© 2025 Sport Cliq. All rights reserved.</p>
         </div>

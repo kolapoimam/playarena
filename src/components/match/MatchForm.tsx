@@ -354,7 +354,7 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 space-y-6">
+        <div className="bg-white dark:bg-gray-800 rounded-3xl p-[18px] space-y-6">
           <h2 className="text-xl font-semibold text-sc-ink dark:text-gray-200">Match Details</h2>
           <FormField
             control={form.control}
@@ -521,7 +521,7 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
             )}
           />
         </div>
-        <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 space-y-6">
+        <div className="bg-white dark:bg-gray-800 rounded-3xl p-[18px] space-y-6">
           <div className="flex justify-between items-center cursor-pointer" onClick={() => setIsPreferencesOpen(!isPreferencesOpen)}>
             <h2 className="text-xl font-semibold text-sc-ink dark:text-gray-200">Preferences (Optional)</h2>
             <span>{isPreferencesOpen ? '-' : '+'}</span>
@@ -612,7 +612,7 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
             </>
           )}
         </div>
-        <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 space-y-6">
+        <div className="bg-white dark:bg-gray-800 rounded-3xl p-[18px] space-y-6">
           <div className="flex justify-between items-center cursor-pointer" onClick={() => setIsPaymentOpen(!isPaymentOpen)}>
             <h2 className="text-xl font-semibold text-sc-ink dark:text-gray-200">Payment & Privacy</h2>
             <span>{isPaymentOpen ? '-' : '+'}</span>
@@ -759,7 +759,7 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
             </>
           )}
         </div>
-        <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 space-y-6">
+        <div className="bg-white dark:bg-gray-800 rounded-3xl p-[18px] space-y-6">
           <div className="flex justify-between items-center cursor-pointer" onClick={() => setIsTicketSalesOpen(!isTicketSalesOpen)}>
             <h2 className="text-xl font-semibold text-sc-ink dark:text-gray-200">Ticket Sales</h2>
             <span>{isTicketSalesOpen ? '-' : '+'}</span>
@@ -852,7 +852,7 @@ const MatchForm = ({ userId, isPreFilled, preSelectedVenueSlug, accessCode, onSu
             </>
           )}
         </div>
-        <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 space-y-6">
+        <div className="bg-white dark:bg-gray-800 rounded-3xl p-[18px] space-y-6">
           <h2 className="text-xl font-semibold text-sc-ink dark:text-gray-200">Organizer Details</h2>
           <FormField
             control={form.control}

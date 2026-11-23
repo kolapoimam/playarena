@@ -123,7 +123,7 @@ const VenueBookings = () => {
         </header>
 
       <div className="p-6 max-w-5xl mx-auto">
-        <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-3xl p-[18px]">
           <h2 className="text-xl font-semibold text-sc-ink dark:text-gray-200 mb-4">
             Booking History
           </h2>

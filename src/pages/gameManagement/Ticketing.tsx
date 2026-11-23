@@ -69,7 +69,7 @@ const Ticketing = () => {
   const [submitting, setSubmitting] = useState(false);
   const [paystackLoaded, setPaystackLoaded] = useState(false);
   const [availableTickets, setAvailableTickets] = useState<number | null>(null);
-  const defaultEmail = "kolapoimam1@gmail.com";
+  const defaultEmail = "sportcliqapp@gmail.com";
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -417,7 +417,7 @@ const Ticketing = () => {
         </header>
 
               <div className="p-6 max-w-3xl mx-auto">
-                <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 mb-6">
+                <div className="bg-white dark:bg-gray-800 rounded-3xl p-[18px] mb-6">
                   <h2 className="text-xl font-semibold text-sc-ink dark:text-gray-200 mb-4">{match.title}</h2>
                   <div className="space-y-2 text-sm">
                     <div className="flex items-center">
@@ -447,7 +447,7 @@ const Ticketing = () => {
                 </div>
 
                 <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6">
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 bg-white dark:bg-gray-800 rounded-3xl p-[18px]">
                     <h2 className="text-xl font-semibold text-sc-ink dark:text-gray-200">Ticket Purchase</h2>
 
                     <FormField

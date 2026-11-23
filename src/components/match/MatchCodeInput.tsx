@@ -65,8 +65,8 @@ const MatchCodeInput = ({
   }, [userId, toast, setRecentSuperCodes]);
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 mb-6 dark:border-gray-700">
-      <h2 className="text-xl font-semibold mb-4 text-sc-ink dark:text-gray-100">Match Super Code</h2>
+    <div className="bg-white dark:bg-gray-800 rounded-3xl p-[18px] mb-6 dark:border-gray-700">
+      <h2 className="text-lg font-extrabold tracking-[-0.01em] mb-4 text-sc-ink dark:text-gray-100">Match Super Code</h2>
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="flex-1 relative">
           {userId && recentSuperCodes.length > 0 ? (
