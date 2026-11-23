@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Users } from "lucide-react";
 import { addHours } from "date-fns";
 
+import { Avatar, Pill, Progress, ScButton, SPORT, initialsOf, sportFor } from "@/components/sc/ui";
 type Attendee = {
   id_uuid: string;
   attendee_name: string;
@@ -47,6 +48,7 @@ type CyclingEvent = {
 };
 
 interface AttendeesTableProps {
+  hideActions?: boolean;
   event: CyclingEvent;
   attendees: Attendee[];
   navigate: (path: string) => void;
@@ -80,57 +82,48 @@ const getStatusStyles = (status: string) => {
   }
 };
 
-const AttendeesTable: React.FC<AttendeesTableProps> = ({ event, attendees, navigate, isEnded, isStarted, isFull, totalAttendees }) => {
+const AttendeesTable: React.FC<AttendeesTableProps> = ({ event, attendees, navigate, isEnded, isStarted, isFull, totalAttendees, hideActions }) => {
   const eventDateTime = new Date(`${event.event_date}T${event.start_time}`);
   
+  const pct = event.max_attendees ? Math.min(100, (totalAttendees * 100) / event.max_attendees) : 0;
   return (
-    <div className="border rounded-lg p-4 bg-card shadow-card">
-      <h2 className="font-semibold mb-3">Attendees ({totalAttendees}/{event.max_attendees})</h2>
-      
+    <div className="bg-white rounded-3xl p-[18px] flex flex-col gap-3.5">
+      <div className="flex justify-between items-baseline">
+        <span className="text-base font-extrabold">Riders</span>
+        <span className="text-sm font-bold text-sc-ink2">
+          {totalAttendees} of {event.max_attendees}
+        </span>
+      </div>
+      <Progress value={pct} height={10} color={SPORT.cycling.solid} />
       {attendees && attendees.length > 0 ? (
-        <div className="space-y-2">
-          {attendees.map((attendee, index) => (
-            <div key={attendee.id_uuid} className="flex items-center gap-2 p-2 bg-muted rounded-md justify-between">
-              <div className="flex items-center gap-2">
-                <span className="w-8 h-8 rounded-full bg-playarena-100 flex items-center justify-center">
-                  {attendee.attendee_name.charAt(0).toUpperCase()}
-                </span>
-                <span>
-                  {attendee.number_of_slots && attendee.number_of_slots > 1 
-                    ? `${attendee.attendee_name} (${attendee.number_of_slots})` 
-                    : attendee.attendee_name}
-                </span>
-              </div>
-              <Badge
-                className={`${getStatusStyles(attendee.status)} !hover:bg-transparent !hover:cursor-default`}
-              >
-                {formatStatus(attendee.status, eventDateTime)}
-              </Badge>
+        <div className="divide-y divide-sc-line">
+          {attendees.map((attendee) => (
+            <div key={attendee.id_uuid} className="flex items-center gap-3 py-2.5">
+              <Avatar initials={initialsOf(attendee.attendee_name)} sport={sportFor(attendee.attendee_name)} size={36} />
+              <span className="flex-1 min-w-0 text-[15px] font-bold truncate">
+                {attendee.attendee_name}
+                {attendee.number_of_slots && attendee.number_of_slots > 1 && (
+                  <span className="text-sc-ink3 font-semibold"> +{attendee.number_of_slots - 1}</span>
+                )}
+              </span>
+              <Pill sport="cycling">{formatStatus(attendee.status, eventDateTime)}</Pill>
             </div>
           ))}
         </div>
       ) : (
-        <p className="text-muted-foreground text-sm">No attendees have joined yet</p>
+        <p className="m-0 text-sc-ink3 text-sm">No riders have joined yet. Be the first.</p>
       )}
-      
-      <div className="mt-6">
-        {isEnded ? (
-          <Button 
-            className="w-full bg-sc-green hover:brightness-95 text-sc-green-ink font-bold"
-            onClick={() => navigate(`/feedback/cycling/${event.slug}`)}
-          >
-            Give Feedback
-          </Button>
-        ) : (
-          <Button 
-            className="w-full bg-sc-green hover:brightness-95 text-sc-green-ink font-bold"
-            onClick={() => navigate(`/join-cycling/${event.slug}`)}
-            disabled={isFull || isStarted}
-          >
-            {isFull ? "Event Full" : "Join This Event"}
-          </Button>
-        )}
-      </div>
+      {!hideActions && (
+        <div className="pt-1">
+          {isEnded ? (
+            <ScButton onClick={() => navigate(`/feedback/cycling/${event.slug}`)}>Give feedback</ScButton>
+          ) : (
+            <ScButton kind="cycling" onClick={() => navigate(`/join-cycling/${event.slug}`)} disabled={isFull || isStarted}>
+              {isFull ? "Ride is full" : "Join ride"}
+            </ScButton>
+          )}
+        </div>
+      )}
     </div>
   );
 };

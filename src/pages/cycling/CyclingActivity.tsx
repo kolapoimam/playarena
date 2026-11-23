@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Calendar, Clock, MapPin, Users, Filter, ChevronLeft, ChevronRight, ArrowLeft } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, Filter, ChevronLeft, ChevronRight, ArrowLeft, Flag, Plus, Bike } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import Navbar from "@/components/Navbar";
 import { DateTime } from "luxon";
 
-import { BackButton } from "@/components/sc/ui";
+import { BackButton, DateBox, Meta, Pill, Progress, SPORT, formatNaira } from "@/components/sc/ui";
 interface CyclingEvent {
   id_uuid: string;
   slug: string;
@@ -263,17 +263,27 @@ const CyclingActivity = () => {
       <header className="px-5 pt-[max(env(safe-area-inset-top),1rem)] flex flex-col gap-3.5">
           <div className="pt-3 flex items-center justify-between min-h-11">
             <BackButton />
-            <div className="flex gap-2"><Button
-            className="h-11 px-4 rounded-full bg-sc-ink text-white font-bold text-sm"
-            onClick={() => navigate("/host-cycling")}
-          >
-            Host Event
+            <div className="flex gap-2"><Button className="h-11 px-4 rounded-full bg-sport-cycling text-white font-bold text-sm hover:brightness-95" onClick={() => navigate("/host-cycling")}>
+            <Plus size={18} /> Host ride
           </Button></div>
           </div>
           <h1 className="m-0 text-[32px] leading-[38px] font-extrabold tracking-[-0.03em]">Cycling</h1>
         </header>
+      <div className="px-5 pt-4">
+        <button
+          type="button"
+          onClick={() => navigate("/landmarks")}
+          className="w-full relative overflow-hidden rounded-[28px] p-5 flex flex-col gap-2 text-left text-white"
+          style={{ background: SPORT.cycling.solid }}
+        >
+          <Bike aria-hidden="true" className="absolute opacity-25" size={170} strokeWidth={1.2} style={{ right: -30, bottom: -40 }} />
+          <span className="text-[13px] font-extrabold tracking-[0.06em]">START POINTS</span>
+          <span className="relative text-[22px] leading-7 font-extrabold tracking-[-0.02em] max-w-[230px]">Browse landmarks and routes</span>
+          <span className="relative self-start mt-1 h-10 px-4 rounded-full bg-white text-sport-cycling-fg text-sm font-extrabold flex items-center">Open landmarks</span>
+        </button>
+      </div>
 
-      <div className="mt-6 max-w-7xl mx-auto px-4">
+      <div className="mt-4 px-5">
         <Collapsible
           open={isFilterOpen}
           onOpenChange={setFilterOpen}
@@ -383,72 +393,53 @@ const CyclingActivity = () => {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sc-green"></div>
           </div>
         ) : filteredEvents.length > 0 ? (
-          <div className="space-y-4">
+          <div className="flex flex-col gap-3.5">
             {filteredEvents.map((event) => {
               const { statusLabel, statusClass } = getEventStatus(event);
               const isPast = event.status === "passed";
               const totalAttendeeSlots = event.cycling_attendees?.reduce((sum, attendee) => sum + (attendee.number_of_slots || 1), 0) || 0;
               return (
-                <div key={event.id_uuid} className="w-full rounded-3xl overflow-hidden shadow-card bg-white dark:bg-gray-800">
-                  <div className="p-4">
-                    <div className="flex justify-between items-center">
-                      <h3 className="font-bold text-lg text-sc-ink dark:text-gray-200">
-                        {event.title}
-                      </h3>
-                      <div className="flex flex-col gap-1">
-                        <Badge className={statusClass}>{statusLabel}</Badge>
-                        <Badge className={event.is_free ? "bg-green-600 text-white" : "bg-red-600 text-white dark:bg-red-600 dark:text-white"}>
-                          {event.is_free ? "FREE" : `₦${(event.price || 0).toFixed(2)}`}
-                        </Badge>
-                      </div>
-                    </div>
-                    <div className="mt-3 space-y-2 text-sm text-sc-ink3 dark:text-gray-400">
-                      <div className="flex items-center gap-2">
-                        <Calendar size={16} className="text-sc-ink3 dark:text-gray-400" />
-                        <span className="text-sm font-medium text-sc-ink2 dark:text-gray-200">
-                          {event.status === "today" ? "Today" : event.status === "tomorrow" ? "Tomorrow" : formatDate(event.event_date)}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Clock size={16} className="text-sc-ink3 dark:text-gray-400" />
-                        <span>{formatTime(event.start_time)}</span>
-                      </div>
-                      {event.start_landmark && (
-                        <div className="flex items-center gap-2">
-                          <MapPin size={16} className="text-sc-ink3 dark:text-gray-400" />
-                          <a
-                            href={`/landmark/${event.start_landmark.slug}`}
-                            className="text-primary hover:underline"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              navigate(`/landmark/${event.start_landmark.slug}`);
-                            }}
-                          >
-                            {event.start_landmark.name}, {event.start_landmark.state}
-                          </a>
-                        </div>
-                      )}
-                      <div className="flex items-center gap-2">
-                        <Users size={16} className="text-sc-ink3 dark:text-gray-400" />
-                        <span>
-                          {totalAttendeeSlots}/{event.max_attendees} spots filled
-                        </span>
-                      </div>
-                    </div>
-                    <div className="mt-4 flex justify-between items-center">
-                      <div>
-                        <span className="text-xs text-muted-foreground">Organized by:</span>
-                        <p className="font-medium text-sc-ink dark:text-gray-200">{event.host_name}</p>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => navigate(`/cycling/${event.slug}`)}
-                      >
-                        {isPast ? "View Details" : "View Details"}
-                      </Button>
+                <div key={event.id_uuid} className="bg-white rounded-3xl p-[18px] flex flex-col gap-3.5">
+                  <div className="flex gap-3.5 items-center">
+                    <DateBox date={event.event_date} sport="cycling" />
+                    <div className="flex-1 min-w-0 flex flex-col gap-1">
+                      <span className="text-[17px] font-extrabold tracking-[-0.02em] truncate">{event.title}</span>
+                      <span className="text-[13px] text-sc-ink3">
+                        {event.status === "today" ? "Today" : event.status === "tomorrow" ? "Tomorrow" : formatDate(event.event_date)} · {formatTime(event.start_time)}
+                      </span>
                     </div>
                   </div>
+                  {event.start_landmark && (
+                    <button type="button" className="text-left" onClick={() => navigate(`/landmark/${event.start_landmark.slug}`)}>
+                      <Meta icon={Flag}>
+                        {event.start_landmark.name}, {event.start_landmark.state}
+                      </Meta>
+                    </button>
+                  )}
+                  <div className="flex flex-col gap-2">
+                    <div className="flex justify-between text-[13px]">
+                      <span className="text-sc-ink3 font-semibold">Riders</span>
+                      <span className="font-extrabold">
+                        {totalAttendeeSlots}/{event.max_attendees}
+                      </span>
+                    </div>
+                    <Progress value={event.max_attendees ? (totalAttendeeSlots * 100) / event.max_attendees : 0} color={SPORT.cycling.solid} />
+                  </div>
+                  <div className="flex justify-between items-center gap-2">
+                    <span className="flex gap-1.5 flex-wrap">
+                      <Pill sport={statusLabel === "Passed" ? "gray" : statusLabel === "Today" ? "football" : "guide"}>{statusLabel}</Pill>
+                      <Pill sport={event.is_free ? "football" : "tennis"}>{event.is_free ? "Free" : formatNaira(event.price || 0)}</Pill>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/cycling/${event.slug}`)}
+                      className="h-10 px-4 rounded-full text-white text-sm font-extrabold flex items-center gap-1 shrink-0"
+                      style={{ background: SPORT.cycling.solid }}
+                    >
+                      View <ChevronRight size={16} />
+                    </button>
+                  </div>
+                  <span className="text-xs text-sc-ink3 font-semibold">Hosted by {event.host_name}</span>
                 </div>
               );
             })}

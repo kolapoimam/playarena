@@ -27,6 +27,7 @@ import HostCashout from "@/components/cyclingManagement/HostCashout";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Toggle } from "@/components/ui/toggle";
 
+import { BackButton } from "@/components/sc/ui";
 type Match = {
   id: string;
   slug: string;
@@ -582,20 +583,13 @@ const ConfirmCheckin = () => {
 
   return (
     <div className="min-h-screen bg-sc-bg dark:bg-gray-900">
-      <header className="sticky top-0 z-50 dark:bg-gray-50 bg-green-500 text-white">
-        <div className="p-4 flex items-center justify-between">
-          <Button
-            variant="ghost"
-            onClick={() => navigate(-1)}
-            className="text-white hover:text-gray-300"
-          >
-            <ArrowLeft size={18} className="mr-2" />
-            Back
-          </Button>
-          <h2 className="text-xl font-bold">Manage Events</h2>
-          <div className="w-10"></div>
-        </div>
-      </header>
+      <header className="sticky top-0 z-30 bg-sc-bg/95 backdrop-blur-xl px-5 pb-3 pt-[max(env(safe-area-inset-top),1rem)]">
+          <div className="pt-3 flex items-center justify-between gap-3">
+            <BackButton />
+            <h1 className="m-0 flex-1 text-center text-[17px] font-extrabold truncate">Manage and check in</h1>
+            <div className="min-w-11" />
+          </div>
+        </header>
 
       <div className="max-w-4xl mx-auto p-4 mt-4 pb-24">
         {superCode.length < 6 && (

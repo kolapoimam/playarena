@@ -11,6 +11,7 @@ import {
   Copy,
 } from "lucide-react";
 
+import { BackButton } from "@/components/sc/ui";
 type MatchHighlight = {
   match_id: string;
   title: string;
@@ -116,20 +117,13 @@ const MatchHighlights = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 pb-24">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-green-500 text-white shadow-card">
-        <div className="p-4 flex items-center justify-between">
-          <Button
-            variant="ghost"
-            onClick={() => navigate(-1)}
-            className="text-white hover:text-gray-200"
-          >
-            <ArrowLeft size={18} className="mr-2" />
-            Back
-          </Button>
-          <h1 className="text-xl sm:text-2xl font-bold">Match Highlights</h1>
-          <div className="w-10"></div>
-        </div>
-      </header>
+      <header className="sticky top-0 z-30 bg-sc-bg/95 backdrop-blur-xl px-5 pb-3 pt-[max(env(safe-area-inset-top),1rem)]">
+          <div className="pt-3 flex items-center justify-between gap-3">
+            <BackButton />
+            <h1 className="m-0 flex-1 text-center text-[17px] font-extrabold truncate">Highlights</h1>
+            <div className="min-w-11" />
+          </div>
+        </header>
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

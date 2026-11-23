@@ -16,6 +16,7 @@ import { lazy, Suspense } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import TimeInput from "@/components/TimeInput";
 
+import { BackButton } from "@/components/sc/ui";
 // Lazy load Navbar to avoid circular dependencies
 const Navbar = lazy(() => import("@/components/Navbar"));
 
@@ -620,20 +621,13 @@ const VenueBookingForm = () => {
 
   return (
     <div className="min-h-screen pb-20 bg-sc-bg dark:bg-gray-900">
-      <header className="sticky top-0 z-50 bg-green-500 text-white shadow-card">
-        <div className="p-4 flex items-center justify-between">
-          <Button
-            variant="ghost"
-            onClick={() => navigate(-1)}
-            className="text-white hover:text-gray-200"
-          >
-            <ArrowLeft size={18} className="mr-2" />
-            Back
-          </Button>
-          <h1 className="text-2xl font-bold">Book Venue</h1>
-          <div className="w-10"></div>
-        </div>
-      </header>
+      <header className="sticky top-0 z-30 bg-sc-bg/95 backdrop-blur-xl px-5 pb-3 pt-[max(env(safe-area-inset-top),1rem)]">
+          <div className="pt-3 flex items-center justify-between gap-3">
+            <BackButton />
+            <h1 className="m-0 flex-1 text-center text-[17px] font-extrabold truncate">Book venue</h1>
+            <div className="min-w-11" />
+          </div>
+        </header>
 
       <div className="p-6 max-w-3xl mx-auto">
         <Form {...form}>

@@ -9,6 +9,7 @@ import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import { Seo } from "@/components/Seo";
 
+import { BackButton } from "@/components/sc/ui";
 // Custom CSS to style ReactQuill for description
 const quillStyles = `
   .ql-container {
@@ -190,18 +191,11 @@ const LandmarkDetail = () => {
       />
       <div className="min-h-screen pb-20 bg-sc-bg dark:bg-gray-900">
         <style>{quillStyles}</style>
-        <header className="sticky top-0 z-50 bg-green-500 text-white shadow-card">
-          <div className="p-4 flex items-center justify-between">
-            <Button
-              variant="ghost"
-              onClick={() => navigate(-1)}
-              className="text-white hover:text-gray-200"
-            >
-              <ArrowLeft size={18} className="mr-2" />
-              Back
-            </Button>
-            <h1 className="text-2xl font-bold">Landmark Details</h1>
-            <div className="w-10"></div>
+        <header className="sticky top-0 z-30 bg-sc-bg/95 backdrop-blur-xl px-5 pb-3 pt-[max(env(safe-area-inset-top),1rem)]">
+          <div className="pt-3 flex items-center justify-between gap-3">
+            <BackButton />
+            <h1 className="m-0 flex-1 text-center text-[17px] font-extrabold truncate">Landmark</h1>
+            <div className="min-w-11" />
           </div>
         </header>
 
