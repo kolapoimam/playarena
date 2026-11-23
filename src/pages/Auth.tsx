@@ -229,7 +229,7 @@ const Auth = () => {
       />
       <div className="min-h-screen bg-sc-bg text-sc-ink font-sans pb-36">
         <div className="relative h-[250px] overflow-hidden rounded-b-[40px] bg-sc-green px-6 flex flex-col justify-end gap-[18px] pb-7" style={{ paddingTop: "max(env(safe-area-inset-top), 3rem)" }}>
-          <Trophy aria-hidden="true" className="absolute text-sc-green-ink/15" size={220} strokeWidth={1.1} style={{ right: -40, bottom: -60 }} />
+          <Trophy aria-hidden="true" className="absolute text-white/15" size={220} strokeWidth={1.1} style={{ right: -40, bottom: -60 }} />
           <BrandMark size={52} />
           <h1 className="relative m-0 text-[34px] leading-[38px] font-extrabold tracking-[-0.04em] text-sc-green-ink">
             {isSignUp ? (

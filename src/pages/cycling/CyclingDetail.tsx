@@ -426,7 +426,7 @@ const CyclingDetail = () => {
           )}
 
           <div className="bg-white rounded-3xl p-[18px] flex items-center gap-3">
-            <Avatar initials={initialsOf(event.host_name)} sport="cycling" size={48} />
+            <Avatar seed={event.host_name} initials={initialsOf(event.host_name)} sport="cycling" size={48} />
             <span className="flex-1 min-w-0 flex flex-col gap-0.5">
               <span className="text-xs text-sc-ink3 font-semibold">Hosted by</span>
               <span className="text-base font-extrabold flex items-center gap-1.5 truncate">

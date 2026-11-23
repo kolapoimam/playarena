@@ -82,7 +82,7 @@ const PlayersTable: React.FC<PlayersTableProps> = ({ match }) => {
             <div className="flex">
               {match.players.slice(0, 5).map((p, i) => (
                 <span key={i} className="rounded-full border-[3px] border-white" style={{ marginLeft: i === 0 ? 0 : -10 }}>
-                  <Avatar initials={initialsOf(p.player_name)} sport={sportFor(p.player_name)} size={34} />
+                  <Avatar seed={p.player_name} initials={initialsOf(p.player_name)} sport={sportFor(p.player_name)} size={34} />
                 </span>
               ))}
             </div>
@@ -93,7 +93,7 @@ const PlayersTable: React.FC<PlayersTableProps> = ({ match }) => {
           <div className="divide-y divide-sc-line">
             {match.players.map((player, index) => (
               <div key={index} className="flex items-center gap-3 py-2.5">
-                <Avatar initials={initialsOf(player.player_name)} sport={sportFor(player.player_name)} size={36} />
+                <Avatar seed={player.player_name} initials={initialsOf(player.player_name)} sport={sportFor(player.player_name)} size={36} />
                 <span className="flex-1 min-w-0 text-[15px] font-bold truncate">
                   {player.player_name}
                   {player.number_of_slots > 1 && <span className="text-sc-ink3 font-semibold"> +{player.number_of_slots - 1}</span>}

@@ -351,7 +351,7 @@ const MatchDetail = () => {
       />
       <div className="min-h-screen pb-36 bg-sc-bg text-sc-ink font-sans">
         <div className="relative h-[300px] overflow-hidden rounded-b-[36px] bg-sc-green">
-          <svg aria-hidden="true" className="absolute inset-0 w-full h-full" viewBox="0 0 390 300" preserveAspectRatio="xMidYMid slice" fill="none" stroke="rgba(5,46,22,0.18)" strokeWidth="2.5">
+          <svg aria-hidden="true" className="absolute inset-0 w-full h-full" viewBox="0 0 390 300" preserveAspectRatio="xMidYMid slice" fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="2.5">
             <rect x="-20" y="40" width="430" height="300" rx="6" />
             <path d="M195 40v300" />
             <circle cx="195" cy="190" r="56" />
@@ -430,7 +430,7 @@ const MatchDetail = () => {
           )}
 
           <div className="bg-white rounded-3xl p-[18px] flex items-center gap-3">
-            <Avatar initials={initialsOf(match.organizer_name)} sport="pink" size={48} />
+            <Avatar seed={match.organizer_name} initials={initialsOf(match.organizer_name)} sport="pink" size={48} />
             <span className="flex-1 min-w-0 flex flex-col gap-0.5">
               <span className="text-xs text-sc-ink3 font-semibold">Organiser</span>
               <span className="text-base font-extrabold flex items-center gap-1.5 truncate">

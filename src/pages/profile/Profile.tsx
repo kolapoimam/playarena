@@ -2,13 +2,12 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { User, LogOut, Trophy, Wallet, Volleyball, Settings, Calendar, Bike, BookOpen, Mail, Key, MapPin, ChevronRight, FileText, ArrowLeft, CircleUserRound, Bell } from "lucide-react";
 import Navbar from "@/components/Navbar";
 
-import { IconButton, ListRow, Sport, initialsOf } from "@/components/sc/ui";
+import { Avatar, IconButton, ListRow, Sport, initialsOf } from "@/components/sc/ui";
 const Profile = () => {
   const { toast } = useToast();
   const [profile, setProfile] = useState(null);
@@ -86,12 +85,6 @@ const Profile = () => {
     }
   };
 
-  const avatarUrl =
-    profile?.gender === "male"
-      ? "https://img.freepik.com/premium-psd/smiling-3d-cartoon-man-avatar_975163-789.jpg"
-      : profile?.gender === "female"
-      ? "https://img.freepik.com/free-vector/young-girl-with-pigtails_1308-176684.jpg"
-      : "https://img-new.cgtrader.com/items/4506145/4d6ab481d2/large/football-player-avatar-3d-icon-3d-model-4d6ab481d2.jpg";
 
   if (isLoading) {
     return (
@@ -120,14 +113,14 @@ const Profile = () => {
   return (
     <div className="min-h-screen bg-sc-bg text-sc-ink font-sans pb-32">
       <div className="relative overflow-hidden rounded-b-[40px] bg-sc-green px-5 pb-[26px] flex flex-col gap-[18px]" style={{ paddingTop: "max(env(safe-area-inset-top), 1rem)" }}>
-        <Trophy aria-hidden="true" className="absolute text-sc-green-ink/10" size={220} strokeWidth={1} style={{ right: -40, top: 40 }} />
+        <Trophy aria-hidden="true" className="absolute text-white/10" size={220} strokeWidth={1} style={{ right: -40, top: 40 }} />
         <div className="relative pt-3 flex justify-end gap-2">
           <IconButton icon={Bell} label="Notifications" onClick={() => navigate("/profile/notifications")} />
           <IconButton icon={Settings} label="Preferences" onClick={() => navigate("/profile/match-preferences")} />
         </div>
         <div className="relative flex items-center gap-4">
-          <span className="w-[84px] h-[84px] rounded-full bg-sc-ink text-sc-green flex items-center justify-center text-[30px] font-extrabold border-4 border-white shrink-0">
-            {initialsOf(name)}
+          <span className="rounded-full border-4 border-white shrink-0 bg-white">
+            <Avatar seed={profile?.nickname || profile?.email} initials={initialsOf(name)} size={80} />
           </span>
           <div className="flex flex-col gap-1 text-sc-green-ink min-w-0">
             <span className="text-2xl font-extrabold tracking-[-0.02em] truncate">{name}</span>

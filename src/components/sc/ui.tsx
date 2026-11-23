@@ -1,6 +1,6 @@
 // SportCliq light design kit.
 // Small, presentational building blocks shared by the redesigned screens.
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight, LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -19,7 +19,7 @@ export type Sport =
 
 // bg, fg (text safe), solid fill
 export const SPORT: Record<Sport, { bg: string; fg: string; solid: string; onSolid: string }> = {
-  football: { bg: "#DCFCE7", fg: "#15803D", solid: "#22C55E", onSolid: "#052E16" },
+  football: { bg: "#DCFCE7", fg: "#15803D", solid: "#16A34A", onSolid: "#FFFFFF" },
   cycling: { bg: "#FFEDD5", fg: "#C2410C", solid: "#FB923C", onSolid: "#FFFFFF" },
   venue: { bg: "#EDE9FE", fg: "#6D28D9", solid: "#8B5CF6", onSolid: "#FFFFFF" },
   tennis: { bg: "#FEF9C3", fg: "#854D0E", solid: "#FACC15", onSolid: "#0E1411" },
@@ -116,22 +116,46 @@ export function Pill({
   );
 }
 
+// Dicebear avatars. The style is picked from the seed, so each person keeps the same look everywhere.
+const DICEBEAR_STYLES = ["adventurer", "avataaars", "big-smile", "lorelei", "micah", "notionists", "personas", "fun-emoji"];
+const DICEBEAR_BG = ["dcfce7", "ffedd5", "ede9fe", "fef9c3", "dbeafe", "ccfbf1", "fce7f3"];
+export const dicebearUrl = (seed?: string | null) => {
+  const s = (seed || "sportcliq").trim().toLowerCase();
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 100003;
+  const style = DICEBEAR_STYLES[h % DICEBEAR_STYLES.length];
+  return `https://api.dicebear.com/9.x/${style}/svg?seed=${encodeURIComponent(s)}&backgroundColor=${DICEBEAR_BG.join(",")}&radius=50`;
+};
+
 export function Avatar({
   initials,
   sport = "football",
   size = 36,
   solid = true,
   src,
+  seed,
 }: {
   initials: string;
   sport?: Sport;
   size?: number;
   solid?: boolean;
   src?: string | null;
+  seed?: string | null;
 }) {
   const c = SPORT[sport];
-  if (src) {
-    return <img src={src} alt="" className="rounded-full object-cover shrink-0" style={{ width: size, height: size }} />;
+  const [failed, setFailed] = useState(false);
+  const url = src || (seed ? dicebearUrl(seed) : null);
+  if (url && !failed) {
+    return (
+      <img
+        src={url}
+        alt=""
+        loading="lazy"
+        onError={() => setFailed(true)}
+        className="rounded-full object-cover shrink-0 bg-sc-soft"
+        style={{ width: size, height: size }}
+      />
+    );
   }
   return (
     <span
@@ -184,7 +208,7 @@ export function DateBox({ date, sport = "football", size = 60 }: { date: string 
   );
 }
 
-export function Progress({ value, color = "#22C55E", height = 8, track = "#E6E9E3" }: { value: number; color?: string; height?: number; track?: string }) {
+export function Progress({ value, color = "#16A34A", height = 8, track = "#E6E9E3" }: { value: number; color?: string; height?: number; track?: string }) {
   const pct = Math.max(0, Math.min(100, value));
   return (
     <div className="overflow-hidden rounded-full" style={{ height, background: track }}>

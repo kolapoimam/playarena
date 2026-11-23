@@ -571,7 +571,7 @@ const Matches = () => {
                   <div className="h-px bg-sc-line" />
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <Avatar initials={initialsOf(match.organizer_name)} sport={sportFor(match.organizer_name)} size={34} />
+                      <Avatar seed={match.organizer_name} initials={initialsOf(match.organizer_name)} sport={sportFor(match.organizer_name)} size={34} />
                       <span className="flex flex-col min-w-0">
                         <span className="text-[11px] text-sc-ink3 font-semibold">Organised by</span>
                         <span className="text-sm font-bold flex items-center gap-1 truncate">

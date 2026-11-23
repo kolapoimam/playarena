@@ -99,7 +99,7 @@ const AttendeesTable: React.FC<AttendeesTableProps> = ({ event, attendees, navig
         <div className="divide-y divide-sc-line">
           {attendees.map((attendee) => (
             <div key={attendee.id_uuid} className="flex items-center gap-3 py-2.5">
-              <Avatar initials={initialsOf(attendee.attendee_name)} sport={sportFor(attendee.attendee_name)} size={36} />
+              <Avatar seed={attendee.attendee_name} initials={initialsOf(attendee.attendee_name)} sport={sportFor(attendee.attendee_name)} size={36} />
               <span className="flex-1 min-w-0 text-[15px] font-bold truncate">
                 {attendee.attendee_name}
                 {attendee.number_of_slots && attendee.number_of_slots > 1 && (

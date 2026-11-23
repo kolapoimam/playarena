@@ -83,9 +83,10 @@ export default {
           ink: "#0E1411",
           ink2: "#4A524D",
           ink3: "#646C67",
-          green: "#22C55E",
+          green: "#16A34A",
+          "green-bright": "#22C55E",
           "green-dark": "#15803D",
-          "green-ink": "#052E16",
+          "green-ink": "#FFFFFF",
           "green-bg": "#DCFCE7",
         },
         sport: {

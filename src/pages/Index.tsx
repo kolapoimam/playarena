@@ -332,7 +332,7 @@ const Index = () => {
         <header className="px-5 pt-[max(env(safe-area-inset-top),1rem)] flex flex-col gap-[18px]">
           <div className="pt-3 flex items-center justify-between">
             <div className="flex items-center gap-3 min-w-0">
-              {nickname ? <Avatar initials={initialsOf(nickname)} size={46} /> : <img src="/brand/sportcliq-mark.png" alt="SportCliq" className="w-[46px] h-[46px]" />}
+              {nickname ? <Avatar seed={nickname} initials={initialsOf(nickname)} size={46} /> : <img src="/brand/sportcliq-mark.png" alt="SportCliq" className="w-[46px] h-[46px]" />}
               <div className="flex flex-col gap-0.5 min-w-0">
                 <span className="text-[13px] text-sc-ink3 font-semibold">{greeting}</span>
                 <span className="text-lg font-extrabold tracking-[-0.02em] truncate">{nickname || "Welcome to SportCliq"}</span>
@@ -340,11 +340,6 @@ const Index = () => {
             </div>
             <IconButton icon={Bell} label="Notifications" onClick={() => navigate("/profile/notifications")} />
           </div>
-          <h1 className="m-0 text-[32px] leading-[38px] font-extrabold tracking-[-0.035em]">
-            What are we
-            <br />
-            playing today?
-          </h1>
           <button
             type="button"
             onClick={() => navigate("/search")}
