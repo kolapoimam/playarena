@@ -201,97 +201,33 @@ const Performance = ({ profile }: PerformanceProps) => {
   const totalBadgesCount = badges.length;
 
   return (
-    <Card className="bg-white dark:bg-gray-800 border-none shadow-card rounded-3xl">
-      <CardHeader>
-        <CardTitle className="text-xl font-semibold text-sc-green-dark dark:text-green-400 flex items-center">
-          <Trophy className="mr-2 h-6 w-6" />
-          Your Achievements
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-6">
-          <div>
-            <h3 className="text-lg font-semibold text-sc-ink dark:text-gray-100 mb-2">Summary</h3>
-            <p className="text-sm text-sc-ink3 dark:text-gray-400">
-              You've earned {earnedBadgesCount} out of {totalBadgesCount} badges. Keep joining matches, organizing events, and listing venues to unlock more achievements!
-            </p>
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold text-sc-ink dark:text-gray-100 mb-4">Your Badges</h3>
-            {badges.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                {badges.map((badge) => {
-                  const isEarned = !!badge.earned_at;
-                  return (
-                    <div
-                      key={badge.id}
-                      className={`p-4 ${getBadgeStyles(badge.name)} rounded-lg flex flex-col items-center gap-3 shadow-card ${
-                        isEarned ? "cursor-pointer" : "opacity-50 cursor-not-allowed"
-                      }`}
-                      onClick={isEarned ? () => setSelectedBadge(badge) : undefined}
-                    >
-                      {getBadgeIcon(badge.icon, isEarned)}
-                      <p className="text-sm font-medium text-sc-ink2 dark:text-gray-300 text-center">{badge.name}</p>
-                      <p className="text-xs text-sc-ink3 dark:text-gray-400">
-                        {isEarned
-                          ? `Earned: ${new Date(badge.earned_at!).toLocaleDateString()}`
-                          : "Not yet earned"}
-                      </p>
-                    </div>
-                  );
-                })}
+    <div className="flex flex-col gap-3">
+      <div className="relative rounded-[28px] p-5 text-white overflow-hidden" style={{ background: "#0E1411" }}>
+        <Trophy className="absolute opacity-15" size={130} style={{ right: -20, top: -20 }} aria-hidden="true" />
+        <span className="text-xs font-bold tracking-[0.12em] opacity-70">BADGES EARNED</span>
+        <div className="text-[40px] leading-[44px] font-extrabold tracking-[-0.03em] mt-1">{earnedBadgesCount}<span className="opacity-50"> / {totalBadgesCount}</span></div>
+        <div className="mt-3 h-2.5 rounded-full bg-white/15 overflow-hidden"><div className="h-full rounded-full bg-sc-green" style={{ width: `${totalBadgesCount ? (earnedBadgesCount * 100) / totalBadgesCount : 0}%` }} /></div>
+        <p className="m-0 mt-2.5 text-sm opacity-80">Join matches, organise games and list venues to unlock the rest.</p>
+      </div>
+      {badges.length > 0 && (
+        <div className="grid grid-cols-2 gap-2.5">
+          {badges.slice(0, 4).map((badge, i) => {
+            const got = !!badge.earned_at;
+            const c = ["#16A34A", "#2563EB", "#F97316", "#7C3AED"][i % 4];
+            return (
+              <div key={badge.id} className="rounded-[22px] p-4 flex flex-col gap-2" style={{ background: got ? c : "#FFFFFF", color: got ? "#FFFFFF" : "#0E1411" }}>
+                <span className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: got ? "rgba(255,255,255,0.22)" : "#EEF0EA", color: got ? "#FFFFFF" : "#9AA19C" }}><Award size={20} /></span>
+                <span className="text-sm font-extrabold leading-5">{badge.name}</span>
+                <span className="text-xs opacity-80">{got ? `Earned ${new Date(badge.earned_at!).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}` : "Locked"}</span>
               </div>
-            ) : (
-              <p className="text-sm text-sc-ink3 dark:text-gray-400">
-                No badges earned yet. Keep playing to unlock achievements!
-              </p>
-            )}
-          </div>
+            );
+          })}
         </div>
-      </CardContent>
-
-      <Dialog open={!!selectedBadge} onOpenChange={() => setSelectedBadge(null)}>
-        <DialogContent className="sm:max-w-[400px] rounded-2xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              {selectedBadge && getBadgeIcon(selectedBadge.icon, true)}
-              {selectedBadge?.name}
-            </DialogTitle>
-            <DialogDescription>{selectedBadge?.description}</DialogDescription>
-          </DialogHeader>
-          <div
-            ref={badgeRef}
-            className={`p-6 ${selectedBadge ? getBadgeStyles(selectedBadge.name) : ''} rounded-2xl flex flex-col items-center gap-3 border-4 w-[350px] h-[250px] relative shadow-lg`}
-          >
-            {selectedBadge && getBadgeIcon(selectedBadge.icon, true)}
-            <p className="text-lg font-bold text-sc-ink dark:text-gray-100">{	selectedBadge?.name}</p>
-            <p className="text-sm text-sc-ink2 dark:text-gray-300 text-center">{selectedBadge?.description}</p>
-            <p className="text-xs text-sc-ink3 dark:text-gray-400">
-              Earned: {selectedBadge?.earned_at ? new Date(selectedBadge.earned_at).toLocaleDateString() : "N/A"}
-            </p>
-            <img
-              src={document.documentElement.classList.contains("dark") ? "/playarenadark.png" : "/playarenalight.png"}
-              alt="PlayArena Logo"
-              className="absolute bottom-2 w-20 h-20 object-contain"
-            />
-          </div>
-          <div className="flex gap-2 justify-center">
-            <Button
-              className="bg-sc-green hover:brightness-95 text-sc-green-ink font-bold"
-              onClick={() => selectedBadge && handleShareBadge(selectedBadge)}
-            >
-              Share to Socials
-            </Button>
-            <Button
-              className="bg-sc-green hover:brightness-95 text-sc-green-ink font-bold"
-              onClick={handleDownloadBadge}
-            >
-              Download Badge
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </Card>
+      )}
+      <a href="/profile/badges" className="h-[52px] rounded-full bg-sc-green text-white font-bold inline-flex items-center justify-center gap-2">
+        <Trophy size={18} /> See all badges, save and share
+      </a>
+    </div>
   );
 };
 

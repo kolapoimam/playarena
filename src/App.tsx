@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate, useParams } from 'react-router-dom';
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -21,6 +21,8 @@ import Profile from "@/pages/profile/Profile";
 import Notifications from "@/pages/profile/Notifications";
 import ViewProfile from "@/pages/profile/ViewProfile";
 import NotFound from "@/pages/NotFound";
+import ResetPassword from "@/pages/ResetPassword";
+import AppErrorBoundary from "@/components/sc/AppErrorBoundary";
 import Organize from "@/pages/gameManagement/Organize";
 import MatchDetail from "@/pages/match/MatchDetail";
 import JoinMatch from "@/pages/match/JoinMatch";
@@ -122,6 +124,7 @@ const AppRoutes = () => {
   }, []);
 
   return (
+    <AppErrorBoundary key={location.pathname}>
     <Routes>
       <Route path="/" element={<Index />} />
       <Route path="/search" element={<Search />} />
@@ -170,10 +173,21 @@ const AppRoutes = () => {
       <Route path="/venuemanager/dashboard/:venueId" element={<VenueManagerDashboard />} />
       <Route path="/venues-bookings/:venueSlug" element={<VenueBookings />} />
       <Route path="/venue/:slug/book" element={<VenueBookingForm />} />
+      <Route path="/cycling-event/:slug" element={<CyclingDetail />} />
+      <Route path="/feedback/cycling/:slug" element={<LegacyRideFeedback />} />
+      <Route path="/login" element={<Navigate to="/auth" replace />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/not-found" element={<NotFound />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
+    </AppErrorBoundary>
   );
 };
+
+function LegacyRideFeedback() {
+  const { slug } = useParams();
+  return <Navigate to={`/cycling/${slug}`} replace />;
+}
 
 const App = () => {
   useGoogleAnalytics();

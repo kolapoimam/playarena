@@ -116,7 +116,7 @@ const AttendeesTable: React.FC<AttendeesTableProps> = ({ event, attendees, navig
       {!hideActions && (
         <div className="pt-1">
           {isEnded ? (
-            <ScButton onClick={() => navigate(`/feedback/cycling/${event.slug}`)}>Give feedback</ScButton>
+            <ScButton kind="soft" disabled>Ride completed</ScButton>
           ) : (
             <ScButton kind="cycling" onClick={() => navigate(`/join-cycling/${event.slug}`)} disabled={isFull || isStarted}>
               {isFull ? "Ride is full" : "Join ride"}

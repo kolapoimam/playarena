@@ -16,14 +16,15 @@ import {
   Route
 } from "lucide-react";
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import CyclingDetailsDialogue from "@/components/cycling/CyclingDetailsDialogue";
+import ActivityShare from "@/components/sc/ActivityShare";
+import { AddToCalendarSheet, CalEvent, DirectionsButton } from "@/components/sc/external";
 import Navbar from "@/components/Navbar";
 import AttendeesTable from "@/components/cycling/AttendeesTable";
 import { addHours, addMinutes } from "date-fns";
 import { DateTime } from "luxon";
 import { Seo } from "@/components/Seo";
 
-import { Avatar, BackButton, Bubble, IconButton, Pill, ScButton, SPORT, StickyFooter, formatNaira, initialsOf, Cover } from "@/components/sc/ui";
+import { Avatar, BackButton, Bubble, IconButton, Pill, ScButton, SPORT, StickyFooter, formatNaira, formatTime12, initialsOf, Cover } from "@/components/sc/ui";
 import { DetailSkeleton } from "@/components/sc/skeletons";
 const META_KEYWORDS = "Football in Nigeria, Sports in Nigeria, Play Sports Near You, Football Fields Near Me, Livescore, Osimhen, Asisat Oshola, Nigeria Startup, Sportstech, Football venues in Lagos, Football venues in Ilorin, Sports Betting in Nigeria, Organize sports in Nigeria, Football Matches, Bicycle Training in Nigeria, Cycling in Nigeria, Nigerian football, Nigerian cycling, Nigerian sports, Play football in Lagos, Play football in Ilorin, Play football in Abuja, Play football in Nigeria, Play cycling in Nigeria, Play sports in Nigeria, Nigerian sports tech, Nigerian sports startup, Nigerian sports community, Football events Nigeria, Cycling events Nigeria, Sport Cliq, SportCliq, sportcliq.com.ng, sportcliq.ng, sportcliq, sport cliq, sportcliq app, sportcliq platform, sportcliq football, sportcliq cycling, sportcliq venues, sportcliq matches, sportcliq events, sportcliq sports, sportcliq nigeria, sportcliq lagos, sportcliq ilorin, sportcliq abuja, sportcliq startup, sportcliq tech, sportcliq community, sportcliq platform, sportcliq app, sportcliq website, sportcliq online, sportcliq booking, sportcliq organize, sportcliq join, sportcliq play, sportcliq find, sportcliq search, sportcliq discover, sportcliq connect, sportcliq join match, sportcliq join cycling, sportcliq join event, sportcliq join venue, sportcliq join football, sportcliq join sports, sportcliq join nigeria, sportcliq join lagos, sportcliq join ilorin, sportcliq join abuja, sportcliq join startup, sportcliq join tech, sportcliq join community, sportcliq join platform, sportcliq join app, sportcliq join website, sportcliq join online, sportcliq join booking, sportcliq join organize, sportcliq join play, sportcliq join find, sportcliq join search, sportcliq join discover, sportcliq join connect";
 
@@ -199,7 +200,7 @@ const CyclingDetail = () => {
   };
 
   const handleShare = () => {
-    const url = `${window.location.origin}/cycling-event/${slug}`;
+    const url = `${window.location.origin}/cycling/${slug}`;
     if (navigator.share) {
       navigator
         .share({
@@ -219,42 +220,23 @@ const CyclingDetail = () => {
     }
   };
 
-  const addToCalendar = () => {
-    if (!event) return;
-
-    const eventDateTime = DateTime.fromISO(event.event_date, { zone: "utc" })
-      .setZone("Africa/Lagos")
-      .set({
-        hour: DateTime.fromFormat(event.start_time, "hh:mm a", { zone: "Africa/Lagos" }).hour,
-        minute: DateTime.fromFormat(event.start_time, "hh:mm a", { zone: "Africa/Lagos" }).minute,
-      });
-
-    const durationInMs = event.duration_type === "hours" 
-      ? event.duration_value * 60 * 60 * 1000 
-      : event.duration_value * 60 * 1000;
-    const endDateTime = eventDateTime.plus({ milliseconds: durationInMs });
-
-    const formatGoogleDate = (date: DateTime) => {
-      const pad = (num: number) => num.toString().padStart(2, "0");
-      return `${date.year}${pad(date.month)}${pad(date.day)}T${pad(date.hour)}${pad(date.minute)}${pad(date.second)}`;
+  const [calOpen, setCalOpen] = useState(false);
+  const calEvent: CalEvent | null = (() => {
+    if (!event) return null;
+    const t = DateTime.fromFormat(event.start_time, "hh:mm a", { zone: "Africa/Lagos" });
+    const day = DateTime.fromISO(event.event_date, { zone: "Africa/Lagos" });
+    const startDt = t.isValid ? day.set({ hour: t.hour, minute: t.minute }) : day.set({ hour: 6 });
+    const mins = event.duration_type === "hours" ? event.duration_value * 60 : event.duration_type === "minutes" ? event.duration_value : 120;
+    return {
+      title: `SportCliq ride: ${event.title}`,
+      start: startDt.toJSDate(),
+      end: startDt.plus({ minutes: mins || 120 }).toJSDate(),
+      location: `${event.start_landmark.name}, ${event.start_landmark.state}`,
+      details: `Group ride hosted by ${event.host_name}.\nStart: ${event.start_landmark.name}, ${event.start_landmark.state}${event.end_landmark ? `\nFinish: ${event.end_landmark.name}, ${event.end_landmark.state}` : ""}${event.notes ? `\n\n${event.notes}` : ""}`,
+      url: `https://app.sportcliq.com/cycling/${event.slug}`,
     };
-    const googleCalendarUrl = `https://www.google.com/calendar/render?action=TEMPLATE` +
-      `&text=${encodeURIComponent(`Sport Cliq: ${event.title}`)}` +
-      `&dates=${formatGoogleDate(eventDateTime)}/${formatGoogleDate(endDateTime)}` +
-      `&location=${encodeURIComponent(`${event.start_landmark.name}, ${event.start_landmark.state}`)}` +
-      `&details=${encodeURIComponent(
-        `Cycling Event hosted by ${event.host_name}.\n\n` +
-        `Event link: ${window.location.origin}/cycling-event/${event.slug}\n\n` +
-        `Start: ${event.start_landmark.name}, ${event.start_landmark.state}\n` +
-        `${event.end_landmark ? `End: ${event.end_landmark.name}, ${event.end_landmark.state}\n` : ""}` +
-        `Notes: ${event.notes || "No additional information provided"}\n\n` +
-        `Powered by @SportCliq`
-      )}` +
-      `&sf=true&output=xml`;
-
-    window.open(googleCalendarUrl, "_blank", "width=600,height=600");
-    setTimeout(() => navigate(`/cycling-event/${slug}`), 1000);
-  };
+  })();
+  const addToCalendar = () => setCalOpen(true);
 
   const formatDate = (dateString: string) => {
     const options: Intl.DateTimeFormatOptions = {
@@ -377,7 +359,8 @@ const CyclingDetail = () => {
 
           <div className="bg-white rounded-3xl p-[18px] flex flex-col gap-3">
             <span className="text-base font-extrabold">Route</span>
-            <button type="button" onClick={() => navigate(`/landmark/${event.start_landmark.slug}`)} className="flex items-center gap-3 text-left">
+            <div className="flex items-center gap-3">
+              <button type="button" onClick={() => navigate(`/landmark/${event.start_landmark.slug}`)} className="flex-1 min-w-0 flex items-center gap-3 text-left">
               <Bubble icon={Flag} sport="cycling" size={40} />
               <span className="flex-1 min-w-0 flex flex-col">
                 <span className="text-xs text-sc-ink3 font-semibold">Start</span>
@@ -385,19 +368,11 @@ const CyclingDetail = () => {
                   {event.start_landmark.name}, {event.start_landmark.state}
                 </span>
               </span>
-              {event.start_landmark.map_link && (
-                <a
-                  href={event.start_landmark.map_link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="Open in Google Maps"
-                  onClick={(e) => e.stopPropagation()}
-                  className="w-10 h-10 rounded-full bg-sc-soft flex items-center justify-center shrink-0"
-                >
-                  <ExternalLink size={18} />
-                </a>
-              )}
-            </button>
+              </button>
+              <DirectionsButton url={event.start_landmark.map_link} label="Directions in Google Maps" className="w-10 h-10 rounded-full bg-sc-soft flex items-center justify-center shrink-0">
+                <ExternalLink size={18} />
+              </DirectionsButton>
+            </div>
             {event.end_landmark && (
               <button type="button" onClick={() => navigate(`/landmark/${event.end_landmark?.slug}`)} className="flex items-center gap-3 text-left">
                 <Bubble icon={MapPin} sport="ink" size={40} />
@@ -415,7 +390,7 @@ const CyclingDetail = () => {
             <div className="bg-white rounded-3xl p-[18px] flex flex-col gap-3">
               <span className="text-base font-extrabold">Bike</span>
               <div className="flex gap-1.5 flex-wrap">
-                {event.is_own_bike && <Pill sport="cycling" icon={Bike}>Bring your own bike</Pill>}
+                {event.is_own_bike && <Pill sport="cycling" icon={Bike}>Bring your bike</Pill>}
                 {event.is_rental_available && <Pill sport="football">Rentals available</Pill>}
               </div>
             </div>
@@ -439,7 +414,24 @@ const CyclingDetail = () => {
             </div>
           )}
 
-          <CyclingDetailsDialogue event={event} attendees={attendees} />
+          {!isEnded && (
+            <ActivityShare
+              info={{
+                kind: "ride",
+                title: event.title,
+                dateLabel: new Date(event.event_date).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }),
+                timeLabel: formatTime12(event.start_time),
+                place: `${event.start_landmark.name}, ${event.start_landmark.state}`,
+                finish: event.end_landmark ? `${event.end_landmark.name}, ${event.end_landmark.state}` : undefined,
+                priceLabel: event.is_free ? "Free" : formatNaira(event.price),
+                taken: attendees.length,
+                total: event.max_attendees,
+                stat: event.duration_value ? { label: "Route", value: `${event.duration_value} ${event.duration_type === "distance" ? "km" : event.duration_type}` } : undefined,
+                chips: [event.is_own_bike ? "Bring your bike" : null, event.is_rental_available ? "Rentals available" : null].filter(Boolean) as string[],
+                url: `https://app.sportcliq.com/cycling/${event.slug}`,
+              }}
+            />
+          )}
         </div>
 
         <StickyFooter>
@@ -449,7 +441,7 @@ const CyclingDetail = () => {
               <span className="text-[22px] font-extrabold tracking-[-0.02em]">{event.is_free ? "Free" : formatNaira(event.price)}</span>
             </div>
             {isEnded ? (
-              <ScButton onClick={() => navigate(`/feedback/cycling/${event.slug}`)}>Give feedback</ScButton>
+              <ScButton kind="soft" disabled>Ride completed</ScButton>
             ) : (
               <ScButton kind="cycling" onClick={() => navigate(`/join-cycling/${event.slug}`)} disabled={isFull || isStarted}>
                 {isFull ? "Ride is full" : "Join ride"}
@@ -457,6 +449,7 @@ const CyclingDetail = () => {
             )}
           </div>
         </StickyFooter>
+        <AddToCalendarSheet open={calOpen} onOpenChange={setCalOpen} event={calEvent} />
       </div>
     </>
   );

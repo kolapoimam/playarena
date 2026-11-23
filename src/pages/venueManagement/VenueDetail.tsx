@@ -7,6 +7,7 @@ import { MapPin, ArrowLeft, ExternalLink, Calendar, Clock, MessageCircle, Calend
 import Navbar from "@/components/Navbar";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
+import { DirectionsButton } from "@/components/sc/external";
 import { Seo } from "@/components/Seo";
 
 import { BackButton, Bubble, DateBox, Meta, Pill, ScButton, SPORT, Spinner, StickyFooter, formatNaira, Cover } from "@/components/sc/ui";
@@ -249,16 +250,7 @@ const VenueDetail = () => {
           </div>
 
           <div className="flex gap-2.5">
-            {venue.map_link && (
-              <a
-                href={venue.map_link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 h-[46px] rounded-full bg-white border border-sc-line text-sc-ink text-[15px] font-bold flex items-center justify-center gap-2"
-              >
-                <ExternalLink size={18} /> Directions
-              </a>
-            )}
+            <DirectionsButton url={venue.map_link} className="flex-1 h-[46px] rounded-full bg-white border border-sc-line text-sc-ink text-[15px] font-bold flex items-center justify-center gap-2" />
             <button
               type="button"
               onClick={handleBookVenue}

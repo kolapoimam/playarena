@@ -1,3 +1,4 @@
+import { DirectionsButton } from "@/components/sc/external";
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,7 +10,7 @@ import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import { Seo } from "@/components/Seo";
 
-import { BackButton, SPORT } from "@/components/sc/ui";
+import { BackButton, SPORT, Cover } from "@/components/sc/ui";
 import { Map as MapIcon } from "lucide-react";
 import { RowsSkeleton, DetailSkeleton } from "@/components/sc/skeletons";
 // Custom CSS to style ReactQuill for description
@@ -198,8 +199,8 @@ const LandmarkDetail = () => {
         </header>
 
         <div className="px-5 pt-2 max-w-3xl mx-auto">
-          <div className="rounded-[28px] overflow-hidden mb-6 h-56 flex items-center justify-center" style={{ background: SPORT.guide.bg, color: SPORT.guide.fg }}>
-            <MapIcon size={110} strokeWidth={1} />
+          <div className="relative rounded-[28px] overflow-hidden mb-6 h-56">
+            <Cover src={(landmark as any).image_url || (landmark as any).image_urls?.[0]} kind="cycling" alt={landmark.name} />
           </div>
 
           <h1 className="text-3xl font-bold mb-2 text-sc-ink dark:text-gray-100">{landmark.name}</h1>
@@ -230,15 +231,7 @@ const LandmarkDetail = () => {
 
                 {landmark.map_link && (
                   <div className="pt-2">
-                    <a
-                      href={landmark.map_link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center text-sc-green-dark hover:text-green-600 text-sm font-medium"
-                    >
-                      <ExternalLink size={16} className="mr-2" />
-                      View on Google Maps
-                    </a>
+                    <DirectionsButton url={landmark.map_link} className="inline-flex items-center gap-2 text-sc-green-dark text-sm font-bold" label="View on Google Maps" />
                   </div>
                 )}
               </div>

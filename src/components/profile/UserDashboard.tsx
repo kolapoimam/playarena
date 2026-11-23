@@ -162,41 +162,31 @@ const UserDashboard = ({ profile }: UserDashboardProps) => {
         </Select>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div className="p-4 bg-sc-green-bg dark:bg-green-900/50 rounded-lg flex items-center gap-3 shadow-card">
-            <Trophy className="h-8 w-8 text-sc-green-dark" />
-            <div>
-              <p className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Matches Organized</p>
-              <p className="text-lg font-semibold text-sc-ink dark:text-gray-100">{analytics.total_organized}</p>
-            </div>
+        <div className="grid grid-cols-2 gap-2.5">
+          <div className="bg-sc-bg rounded-[22px] p-4 flex flex-col gap-2">
+            <span className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: "#DCFCE7", color: "#15803D" }}><Trophy size={20} /></span>
+            <span className="text-xs font-semibold text-sc-ink3">Matches Organized</span>
+            <span className="text-[22px] leading-7 font-extrabold tracking-[-0.02em]">{analytics.total_organized}</span>
           </div>
-          <div className="p-4 bg-sc-green-bg dark:bg-green-900/50 rounded-lg flex items-center gap-3 shadow-card">
-            <Medal className="h-8 w-8 text-sc-green-dark" />
-            <div>
-              <p className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Matches Joined</p>
-              <p className="text-lg font-semibold text-sc-ink dark:text-gray-100">{analytics.total_joined}</p>
-            </div>
+          <div className="bg-sc-bg rounded-[22px] p-4 flex flex-col gap-2">
+            <span className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: "#DBEAFE", color: "#1D4ED8" }}><Medal size={20} /></span>
+            <span className="text-xs font-semibold text-sc-ink3">Matches Joined</span>
+            <span className="text-[22px] leading-7 font-extrabold tracking-[-0.02em]">{analytics.total_joined}</span>
           </div>
-          <div className="p-4 bg-sc-green-bg dark:bg-green-900/50 rounded-lg flex items-center gap-3 shadow-card">
-            <Coins className="h-8 w-8 text-sc-green-dark" />
-            <div>
-              <p className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Total Spent</p>
-              <p className="text-lg font-semibold text-sc-ink dark:text-gray-100">₦{analytics.total_spent.toFixed(2)}</p>
-            </div>
+          <div className="bg-sc-bg rounded-[22px] p-4 flex flex-col gap-2">
+            <span className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: "#FFEDD5", color: "#C2410C" }}><Coins size={20} /></span>
+            <span className="text-xs font-semibold text-sc-ink3">Total Spent</span>
+            <span className="text-[22px] leading-7 font-extrabold tracking-[-0.02em]">₦{analytics.total_spent.toFixed(2)}</span>
           </div>
-          <div className="p-4 bg-sc-green-bg dark:bg-green-900/50 rounded-lg flex items-center gap-3 shadow-card">
-            <Wallet className="h-8 w-8 text-sc-green-dark" />
-            <div>
-              <p className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Total Cashout</p>
-              <p className="text-lg font-semibold text-sc-ink dark:text-gray-100">₦{analytics.total_cashout.toFixed(2)}</p>
-            </div>
+          <div className="bg-sc-bg rounded-[22px] p-4 flex flex-col gap-2">
+            <span className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: "#EDE9FE", color: "#6D28D9" }}><Wallet size={20} /></span>
+            <span className="text-xs font-semibold text-sc-ink3">Total Cashout</span>
+            <span className="text-[22px] leading-7 font-extrabold tracking-[-0.02em]">₦{analytics.total_cashout.toFixed(2)}</span>
           </div>
-          <div className="p-4 bg-sc-green-bg dark:bg-green-900/50 rounded-lg flex items-center gap-3 shadow-card">
-            <MapPin className="h-8 w-8 text-sc-green-dark" />
-            <div>
-              <p className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Venues Listed</p>
-              <p className="text-lg font-semibold text-sc-ink dark:text-gray-100">{analytics.total_venues}</p>
-            </div>
+          <div className="bg-sc-bg rounded-[22px] p-4 flex flex-col gap-2">
+            <span className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: "#FCE7F3", color: "#BE185D" }}><MapPin size={20} /></span>
+            <span className="text-xs font-semibold text-sc-ink3">Venues Listed</span>
+            <span className="text-[22px] leading-7 font-extrabold tracking-[-0.02em]">{analytics.total_venues}</span>
           </div>
         </div>
       </CardContent>

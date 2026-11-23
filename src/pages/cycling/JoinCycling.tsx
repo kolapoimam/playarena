@@ -16,12 +16,12 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { ArrowLeft, Calendar, Clock, MapPin, Users, Loader } from "lucide-react";
+import { ArrowLeft, Calendar, Clock, MapPin, Users, Loader, Bike, KeyRound, Wallet, CheckCircle2 } from "lucide-react";
 import CyclingSuccessDialog from "@/components/cycling/CyclingSuccessDialog";
 import Navbar from "@/components/Navbar";
 import { Seo } from "@/components/Seo";
 
-import { BackButton } from "@/components/sc/ui";
+import { BackButton, Bubble, Cover, FunEmpty, ScButton, SPORT, formatTime12 } from "@/components/sc/ui";
 import { RowsSkeleton, PageSkeleton } from "@/components/sc/skeletons";
 const META_KEYWORDS = "Football in Nigeria, Sports in Nigeria, Play Sports Near You, Football Fields Near Me, Livescore, Osimhen, Asisat Oshola, Nigeria Startup, Sportstech, Football venues in Lagos, Football venues in Ilorin, Sports Betting in Nigeria, Organize sports in Nigeria, Football Matches, Bicycle Training in Nigeria, Cycling in Nigeria, Nigerian football, Nigerian cycling, Nigerian sports, Play football in Lagos, Play football in Ilorin, Play football in Abuja, Play football in Nigeria, Play cycling in Nigeria, Play sports in Nigeria, Nigerian sports tech, Nigerian sports startup, Nigerian sports community, Football events Nigeria, Cycling events Nigeria, Sport Cliq, SportCliq, sportcliq.com.ng, sportcliq.ng, sportcliq, sport cliq, sportcliq app, sportcliq platform, sportcliq football, sportcliq cycling, sportcliq venues, sportcliq matches, sportcliq events, sportcliq sports, sportcliq nigeria, sportcliq lagos, sportcliq ilorin, sportcliq abuja, sportcliq startup, sportcliq tech, sportcliq community, sportcliq platform, sportcliq app, sportcliq website, sportcliq online, sportcliq booking, sportcliq organize, sportcliq join, sportcliq play, sportcliq find, sportcliq search, sportcliq discover, sportcliq connect, sportcliq join match, sportcliq join cycling, sportcliq join event, sportcliq join venue, sportcliq join football, sportcliq join sports, sportcliq join nigeria, sportcliq join lagos, sportcliq join ilorin, sportcliq join abuja, sportcliq join startup, sportcliq join tech, sportcliq join community, sportcliq join platform, sportcliq join app, sportcliq join website, sportcliq join online, sportcliq join booking, sportcliq join organize, sportcliq join play, sportcliq join find, sportcliq join search, sportcliq join discover, sportcliq join connect";
 
@@ -475,230 +475,121 @@ const JoinCycling = () => {
         image={undefined}
         children={<meta name="keywords" content={META_KEYWORDS} />}
       />
-      <div className="min-h-screen pb-32">
-        <header className="px-5 pt-[max(env(safe-area-inset-top),1rem)]">
-          <div className="pt-3 flex items-center justify-between gap-3">
-            <BackButton />
-            <h1 className="m-0 flex-1 text-center text-[17px] font-extrabold truncate">Join ride</h1>
-            <div className="min-w-11 flex justify-end"></div>
+      <div className="min-h-screen pb-36 bg-sc-bg">
+        <div className="relative h-[220px] overflow-hidden rounded-b-[36px]">
+          <Cover kind="cycling" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/10 to-black/20" />
+          <div className="absolute left-5 right-5 flex justify-between items-center" style={{ top: "max(env(safe-area-inset-top), 1rem)" }}>
+            <BackButton className="mt-3" />
+            <span className="mt-3 h-8 px-3 rounded-full bg-white/90 text-sc-ink text-xs font-extrabold inline-flex items-center">Join ride</span>
           </div>
-        </header>
+          <div className="absolute left-5 right-5 bottom-5 text-white">
+            <h1 className="m-0 text-[28px] leading-8 font-extrabold tracking-[-0.03em]">{event.title}</h1>
+            <span className="text-sm opacity-90">From {event.start_landmark.name}, {event.start_landmark.state}</span>
+          </div>
+        </div>
 
-        <div className="p-6">
-          <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 mb-6">
-            <h2 className="text-xl font-semibold mb-2">{event.title}</h2>
-            <div className="text-muted-foreground mb-4 space-y-1">
-              <div className="flex items-center gap-2">
-                <Calendar size={16} />
-                <span>{formatDate(event.event_date)}</span>
+        <div className="px-5 pt-[18px] flex flex-col gap-3.5">
+          <div className="grid grid-cols-3 gap-2.5">
+            {[
+              { icon: Calendar, sport: "cycling" as const, label: "Date", value: new Date(event.event_date).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) },
+              { icon: Clock, sport: "guide" as const, label: "Starts", value: formatTime12(event.start_time) },
+              { icon: Users, sport: "pink" as const, label: "Spots left", value: `${Math.max(event.max_attendees - attendees.length, 0)} of ${event.max_attendees}` },
+            ].map((f) => (
+              <div key={f.label} className="min-w-0 bg-white rounded-[20px] p-3.5 flex flex-col gap-1.5">
+                <Bubble icon={f.icon} sport={f.sport} size={32} />
+                <span className="text-xs text-sc-ink3 font-semibold">{f.label}</span>
+                <span className="text-[14px] font-extrabold truncate">{f.value}</span>
               </div>
-              <div className="flex items-center gap-2">
-                <Clock size={16} />
-                <span>{event.start_time}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <MapPin size={16} />
-                <span>{event.start_landmark.name}, {event.start_landmark.state}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Users size={16} />
-                <span>Spots available: {event.max_attendees - attendees.length} / {event.max_attendees}</span>
-              </div>
-              {!event.is_free && (
-                <div className="flex items-center gap-2 mt-2 font-medium text-sc-green-dark">
-                  <span>Price: {formatter.format(event.price || 0)}</span>
-                </div>
-              )}
-            </div>
-            {isPastEvent ? (
-              <div className="text-center py-4 bg-sc-soft dark:bg-gray-700 rounded-lg">
-                <h2 className="text-lg font-semibold text-sc-ink2 dark:text-gray-300">This event has already passed</h2>
-                <p className="text-muted-foreground mt-2">You cannot join this event anymore.</p>
-                <Button
-                  className="mt-4 bg-sc-green hover:brightness-95 text-sc-green-ink font-bold"
-                  onClick={() => navigate("/cycling-activities")}
-                >
-                  Browse Other Events
-                </Button>
-              </div>
-            ) : isFull ? (
-              <div className="text-center py-4 bg-sc-soft dark:bg-gray-700 rounded-lg">
-                <h2 className="text-lg font-semibold text-sc-ink2 dark:text-gray-300">This event is full</h2>
-                <p className="text-muted-foreground mt-2">All spots are taken.</p>
-                <Button
-                  className="mt-4 bg-sc-green hover:brightness-95 text-sc-green-ink font-bold"
-                  onClick={() => navigate(`/cycling/${event.slug}`)}
-                >
-                  View Event Details
-                </Button>
-              </div>
-            ) : (
-              <>
-                {(event.is_free || paymentStatus === "success") && (
-                  <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                      <FormField
-                        control={form.control}
-                        name="name"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-sc-ink2">Your Name</FormLabel>
-                            <FormControl>
-                              <Input
-                                placeholder="Enter your name"
-                                {...field}
-                                className="border-sc-line dark:border-gray-600 rounded-md focus:ring-green-500 focus:border-green-500"
-                              />
-                            </FormControl>
-                            <FormMessage className="text-red-500" />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="phone"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-sc-ink2">Phone Number</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="tel"
-                                inputMode="numeric"
-                                placeholder="Enter 11-digit phone number"
-                                {...field}
-                                className="border-sc-line dark:border-gray-600 rounded-md focus:ring-green-500 focus:border-green-500"
-                                onChange={(e) => {
-                                  const numericValue = e.target.value.replace(/\D/g, "").slice(0, 11);
-                                  field.onChange(numericValue);
-                                }}
-                              />
-                            </FormControl>
-                            <FormMessage className="text-red-500" />
-                          </FormItem>
-                        )}
-                      />
-                      {(event.is_own_bike || event.is_rental_available) && (
-                        <div className="space-y-2">
-                          {event.is_own_bike && (
-                            <FormField
-                              control={form.control}
-                              name="is_own_bike"
-                              render={({ field }) => (
-                                <FormItem className="flex items-center space-x-2">
-                                  <FormControl>
-                                    <Checkbox
-                                      checked={field.value}
-                                      onCheckedChange={(checked) => {
-                                        field.onChange(checked);
-                                        if (checked) {
-                                          form.setValue("is_rental_bike", false);
-                                        }
-                                      }}
-                                    />
-                                  </FormControl>
-                                  <FormLabel className="text-sm font-medium">Bring Own Bike</FormLabel>
-                                </FormItem>
-                              )}
-                            />
-                          )}
-                          {event.is_rental_available && (
-                            <FormField
-                              control={form.control}
-                              name="is_rental_bike"
-                              render={({ field }) => (
-                                <FormItem className="flex items-center space-x-2">
-                                  <FormControl>
-                                    <Checkbox
-                                      checked={field.value}
-                                      onCheckedChange={(checked) => {
-                                        field.onChange(checked);
-                                        if (checked) {
-                                          form.setValue("is_own_bike", false);
-                                        }
-                                      }}
-                                    />
-                                  </FormControl>
-                                  <FormLabel className="text-sm font-medium">Rent a Bike</FormLabel>
-                                </FormItem>
-                              )}
-                            />
-                          )}
-                          <FormMessage className="text-red-500" />
-                        </div>
-                      )}
-                      {event.is_free && (
-                        <Button
-                          type="submit"
-                          className="w-full bg-sc-green hover:brightness-95 text-sc-green-ink rounded-full font-bold"
-                          disabled={joining}
-                        >
-                          {joining ? (
-                            <>
-                              <Loader size={16} className="mr-2 animate-spin" />
-                              Joining...
-                            </>
-                          ) : (
-                            "Join Event"
-                          )}
-                        </Button>
-                      )}
-                      {paymentStatus === "success" && (
-                        <>
-                          <div className="bg-sc-green-bg p-4 rounded-md border border-green-200 text-sc-green-dark">
-                            <p className="font-medium">Payment Successful!</p>
-                            <p className="text-sm">Please complete your registration below.</p>
-                            {paymentReference && (
-                              <p className="text-sm mt-1">Reference: {paymentReference}</p>
-                            )}
-                          </div>
-                          <Button
-                            type="submit"
-                            className="w-full bg-sc-green hover:brightness-95 text-sc-green-ink rounded-full font-bold"
-                            disabled={joining}
-                          >
-                            {joining ? (
-                              <>
-                                <Loader size={16} className="mr-2 animate-spin" />
-                                Joining...
-                              </>
-                            ) : (
-                              "Join Event"
-                            )}
-                          </Button>
-                        </>
-                      )}
-                    </form>
-                  </Form>
-                )}
-                {!event.is_free && paymentStatus === "pending" && (
-                  <>
-                    <h3 className="text-lg font-semibold text-sc-ink dark:text-gray-200 mt-6">Payment Required</h3>
-                    <p className="text-muted-foreground">
-                      This is a paid event. Please complete the payment to join.
-                    </p>
-                    <div className="flex items-center gap-2 text-sm font-medium mt-2">
-                      <span>Total: {formatter.format(event.price || 0)}</span>
-                    </div>
-                    <Button
-                      type="button"
-                      className="w-full bg-sc-green hover:brightness-95 text-sc-green-ink py-2 transition-colors mt-4 rounded-full font-bold"
-                      onClick={handlePaymentInitiation}
-                      disabled={joining || !paystackLoaded}
-                    >
-                      {joining ? (
-                        <>
-                          <Loader size={16} className="mr-2 animate-spin" />
-                          Processing...
-                        </>
-                      ) : (
-                        `Pay Now (${formatter.format(event.price || 0)})`
-                      )}
-                    </Button>
-                  </>
-                )}
-              </>
-            )}
+            ))}
           </div>
+
+          {isPastEvent ? (
+            <FunEmpty icon={Bike} sport="cycling" title="This ride has rolled out" body="The crew has already finished this one. Catch the next ride from a landmark near you." primary={{ label: "Find another ride", onClick: () => navigate("/cycling-activities") }} />
+          ) : isFull ? (
+            <FunEmpty icon={Users} sport="red" title="The crew is full" body="Every spot on this ride is taken. Check the ride page in case one opens up." primary={{ label: "View ride", onClick: () => navigate(`/cycling/${event.slug}`) }} secondary={{ label: "Find another ride", onClick: () => navigate("/cycling-activities") }} />
+          ) : !event.is_free && paymentStatus === "pending" ? (
+            <div className="bg-white rounded-3xl p-[18px] flex flex-col gap-4">
+              <div className="flex items-center gap-3">
+                <Bubble icon={Wallet} sport="cycling" size={44} radius={14} />
+                <span className="flex flex-col">
+                  <span className="text-base font-extrabold">Pay to lock your spot</span>
+                  <span className="text-[13px] text-sc-ink3">Paid securely with Paystack</span>
+                </span>
+              </div>
+              <div className="flex justify-between items-baseline">
+                <span className="text-sm text-sc-ink3 font-semibold">Total</span>
+                <span className="text-[26px] font-extrabold tracking-[-0.02em]">{formatter.format(event.price || 0)}</span>
+              </div>
+              <ScButton kind="cycling" onClick={handlePaymentInitiation} disabled={joining || !paystackLoaded}>
+                {joining ? "Processing..." : !paystackLoaded ? "Getting payment ready..." : `Pay ${formatter.format(event.price || 0)}`}
+              </ScButton>
+            </div>
+          ) : (
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="bg-white rounded-3xl p-[18px] flex flex-col gap-4">
+                {paymentStatus === "success" && (
+                  <div className="rounded-2xl p-4 flex gap-3" style={{ background: SPORT.football.bg, color: SPORT.football.fg }}>
+                    <CheckCircle2 size={22} className="shrink-0" />
+                    <span className="flex flex-col text-sm"><b>Payment received</b><span>Finish your details to join.{paymentReference ? ` Ref ${paymentReference}` : ""}</span></span>
+                  </div>
+                )}
+                <span className="text-base font-extrabold">Your details</span>
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-bold text-sc-ink">Your name</FormLabel>
+                      <FormControl><Input placeholder="Full name" autoComplete="name" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-bold text-sc-ink">Phone number</FormLabel>
+                      <FormControl>
+                        <Input type="tel" inputMode="tel" autoComplete="tel" placeholder="11-digit phone number" {...field} onChange={(e) => field.onChange(e.target.value.replace(/\D/g, "").slice(0, 11))} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                {(event.is_own_bike || event.is_rental_available) && (
+                  <div className="flex flex-col gap-2">
+                    <span className="text-sm font-bold">Your bike</span>
+                    <div className="grid grid-cols-2 gap-2">
+                      {event.is_own_bike && (
+                        <button
+                          type="button"
+                          onClick={() => { form.setValue("is_own_bike", true); form.setValue("is_rental_bike", false); }}
+                          aria-pressed={!!form.watch("is_own_bike")}
+                          className={`h-[64px] rounded-2xl px-3 flex items-center gap-2.5 text-left text-sm font-bold border-2 ${form.watch("is_own_bike") ? "border-[#F97316] bg-[#FFF7ED]" : "border-sc-line bg-white"}`}
+                        >
+                          <Bike size={20} className="text-[#C2410C]" /> Bring your bike
+                        </button>
+                      )}
+                      {event.is_rental_available && (
+                        <button
+                          type="button"
+                          onClick={() => { form.setValue("is_rental_bike", true); form.setValue("is_own_bike", false); }}
+                          aria-pressed={!!form.watch("is_rental_bike")}
+                          className={`h-[64px] rounded-2xl px-3 flex items-center gap-2.5 text-left text-sm font-bold border-2 ${form.watch("is_rental_bike") ? "border-[#F97316] bg-[#FFF7ED]" : "border-sc-line bg-white"}`}
+                        >
+                          <KeyRound size={20} className="text-[#C2410C]" /> Rent a bike
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+                <ScButton type="submit" kind="cycling" disabled={joining}>{joining ? "Joining..." : "Join ride"}</ScButton>
+              </form>
+            </Form>
+          )}
         </div>
 
         {event && confirmationCode && (

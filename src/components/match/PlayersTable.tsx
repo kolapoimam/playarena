@@ -1,5 +1,7 @@
 import { Avatar, Pill, Progress, SPORT, Sport, initialsOf, sportFor } from "@/components/sc/ui";
 import { addHours } from "date-fns";
+import { useState } from "react";
+import { ChevronDown } from "lucide-react";
 
 type Player = {
   player_name: string;
@@ -67,18 +69,28 @@ const PlayersTable: React.FC<PlayersTableProps> = ({ match }) => {
     return k === "checked in" ? "football" : k === "absent" ? "red" : "tennis";
   };
 
+  const [open, setOpen] = useState(false);
+  const hasPlayers = !!match.players && match.players.length > 0;
+
   return (
     <div className="bg-white rounded-3xl p-[18px] flex flex-col gap-3.5">
-      <div className="flex justify-between items-baseline">
+      <button
+        type="button"
+        onClick={() => hasPlayers && setOpen((o) => !o)}
+        aria-expanded={open}
+        aria-controls="players-list"
+        className="flex flex-col gap-3.5 text-left w-full"
+        disabled={!hasPlayers}
+      >
+      <div className="flex justify-between items-baseline w-full">
         <span className="text-base font-extrabold">Players</span>
         <span className="text-sm font-bold" style={{ color: isFull ? SPORT.red.fg : undefined }}>
           {isEnded ? `${totalPlayerSlots} played` : isFull ? "Full" : `${left} spot${left === 1 ? "" : "s"} left`}
         </span>
       </div>
-      <Progress value={pct} height={10} />
-      {match.players && match.players.length > 0 ? (
-        <>
-          <div className="flex items-center">
+      <div className="w-full"><Progress value={pct} height={10} /></div>
+      {hasPlayers ? (
+          <div className="flex items-center w-full">
             <div className="flex">
               {match.players.slice(0, 5).map((p, i) => (
                 <span key={i} className="rounded-full border-[3px] border-white" style={{ marginLeft: i === 0 ? 0 : -10 }}>
@@ -86,11 +98,20 @@ const PlayersTable: React.FC<PlayersTableProps> = ({ match }) => {
                 </span>
               ))}
             </div>
-            <span className="ml-2.5 text-[13px] font-bold text-sc-ink2">
+            <span className="ml-2.5 flex-1 text-[13px] font-bold text-sc-ink2">
               {totalPlayerSlots} of {match.total_slots} joined
             </span>
+            <span className="h-8 pl-3 pr-2 rounded-full bg-sc-soft text-xs font-bold inline-flex items-center gap-1">
+              {open ? "Hide" : "See all"}
+              <ChevronDown size={16} className={`transition-transform ${open ? "rotate-180" : ""}`} />
+            </span>
           </div>
-          <div className="divide-y divide-sc-line">
+      ) : (
+        <p className="text-sc-ink3 text-sm m-0">{isEnded ? "Nobody joined this match." : "No players have joined yet. Be the first."}</p>
+      )}
+      </button>
+      {hasPlayers && open && (
+          <div id="players-list" className="divide-y divide-sc-line -mt-1">
             {match.players.map((player, index) => (
               <div key={index} className="flex items-center gap-3 py-2.5">
                 <Avatar seed={player.player_name} initials={initialsOf(player.player_name)} sport={sportFor(player.player_name)} size={36} />
@@ -102,9 +123,6 @@ const PlayersTable: React.FC<PlayersTableProps> = ({ match }) => {
               </div>
             ))}
           </div>
-        </>
-      ) : (
-        <p className="text-sc-ink3 text-sm m-0">No players have joined yet. Be the first.</p>
       )}
     </div>
   );

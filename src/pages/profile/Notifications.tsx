@@ -79,17 +79,18 @@ const Notifications = () => {
           <h1 className="m-0 text-[32px] leading-[38px] font-extrabold tracking-[-0.03em]">Notifications</h1>
         </header>
 
-      <div className="flex-grow overflow-y-auto">
-        <Card className="bg-white dark:bg-gray-800 border-none shadow-card rounded-3xl">
-          <CardContent className="p-6">
+      <div className="flex-grow overflow-y-auto px-5 pt-3">
+        <p className="m-0 mb-3 text-sm text-sc-ink2">Pick what you hear about and how. Push alerts also need to be on in Settings.</p>
+        <div>
+          <div>
             <UserNotifications
               profile={profile}
               setShowNotifications={() => navigate("/profile")}
               singleArrow={true} // Prop to indicate single arrow for dropdown
               isVenueOwner={isVenueOwner} // Pass venue owner status
             />
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
       <div className="pb-28">

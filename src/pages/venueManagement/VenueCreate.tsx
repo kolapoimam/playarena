@@ -23,7 +23,7 @@ const VenueCreate = () => {
           </div>
         </header>
 
-      <div className="p-6 max-w-3xl mx-auto px-4">
+      <div className="px-5 pt-2 pb-28 max-w-3xl mx-auto">
         <VenueForm onSuccess={handleSuccess} />
       </div>
 

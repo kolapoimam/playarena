@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2 } from "lucide-react";
+import { Trash2, Store, Phone, Sparkles, ImagePlus, LucideIcon } from "lucide-react";
+import { Bubble, Cover, ScButton } from "@/components/sc/ui";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 
@@ -65,28 +66,25 @@ interface CollapsibleSectionProps {
   sectionId: string;
 }
 
-const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({ title, children, defaultOpen = false, isOpen, setOpenSection, sectionId }) => {
-  const handleToggle = () => {
-    setOpenSection(isOpen ? "" : sectionId);
-  };
+const SECTION_META: Record<string, { icon: LucideIcon; sport: "venue" | "guide" | "tennis"; sub: string }> = {
+  "venue-details": { icon: Store, sport: "venue", sub: "Name and where to find it" },
+  "contact-location": { icon: Phone, sport: "guide", sub: "How players reach you and what it costs" },
+  "additional-info": { icon: Sparkles, sport: "tennis", sub: "Facilities, hours and a great photo" },
+};
 
+const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({ title, children, sectionId }) => {
+  const meta = SECTION_META[sectionId];
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 w-full max-w-none">
-      <div
-        className="flex justify-between items-center cursor-pointer"
-        onClick={handleToggle}
-      >
-        <h2 className="text-lg font-semibold text-sc-ink dark:text-gray-200">{title}</h2>
-        <span className="text-sc-ink dark:text-gray-200">{isOpen ? "-" : "+"}</span>
+    <section className="bg-white rounded-3xl p-[18px] w-full flex flex-col gap-4">
+      <div className="flex items-center gap-3">
+        {meta && <Bubble icon={meta.icon} sport={meta.sport} size={44} radius={14} />}
+        <div className="flex flex-col">
+          <h3 className="m-0 text-base font-extrabold text-sc-ink">{title}</h3>
+          {meta && <span className="text-[13px] text-sc-ink3">{meta.sub}</span>}
+        </div>
       </div>
-      <div
-        className={`transition-all duration-300 ease-in-out overflow-hidden ${
-          isOpen ? "max-h-screen py-2" : "max-h-0"
-        }`}
-      >
-        {children}
-      </div>
-    </div>
+      {children}
+    </section>
   );
 };
 
@@ -223,10 +221,17 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
   };
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-      <h2 className="text-2xl font-semibold text-sc-ink dark:text-gray-200 mb-6">New Venue</h2>
+    <div className="w-full max-w-3xl mx-auto">
+      <div className="relative h-[150px] rounded-[28px] overflow-hidden mb-4">
+        <Cover kind="venue" alt="" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/65 to-transparent" />
+        <div className="absolute left-5 bottom-4 right-5 text-white flex flex-col">
+          <span className="text-xs font-bold tracking-[0.12em] opacity-85">LIST A VENUE</span>
+          <span className="text-[24px] leading-7 font-extrabold tracking-[-0.02em]">Put your pitch on the map</span>
+        </div>
+      </div>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-3.5">
           {/* Venue Details Section */}
           <CollapsibleSection
             title="Venue Details"
@@ -245,7 +250,6 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
                     <FormControl>
                       <Input
                         {...field}
-                        className="w-full border-sc-line dark:border-gray-600 focus:ring-0 focus:shadow-md dark:bg-gray-700 dark:text-white rounded-md"
                       />
                     </FormControl>
                     <FormMessage className="text-red-500" />
@@ -261,7 +265,6 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
                     <FormControl>
                       <Input
                         {...field}
-                        className="w-full border-sc-line dark:border-gray-600 focus:ring-0 focus:shadow-md dark:bg-gray-700 dark:text-white rounded-md"
                       />
                     </FormControl>
                     <FormMessage className="text-red-500" />
@@ -277,7 +280,6 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
                     <FormControl>
                       <Input
                         {...field}
-                        className="w-full border-sc-line dark:border-gray-600 focus:ring-0 focus:shadow-md dark:bg-gray-700 dark:text-white rounded-md"
                       />
                     </FormControl>
                     <FormMessage className="text-red-500" />
@@ -292,7 +294,7 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
                     <FormLabel>State</FormLabel>
                     <FormControl>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <SelectTrigger className="w-full border-sc-line dark:border-gray-600 focus:ring-0 focus:shadow-md dark:bg-gray-700 dark:text-white rounded-md">
+                        <SelectTrigger>
                           <SelectValue placeholder="Select a state" />
                         </SelectTrigger>
                         <SelectContent>
@@ -333,7 +335,6 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
                           const numericValue = e.target.value.replace(/\D/g, "");
                           field.onChange(numericValue.slice(0, 11));
                         }}
-                        className="w-full border-sc-line dark:border-gray-600 focus:ring-0 focus:shadow-md dark:bg-gray-700 dark:text-white rounded-md"
                       />
                     </FormControl>
                     <FormDescription>Provide a valid phone number of the Venue owner or Manager (numbers only)</FormDescription>
@@ -350,7 +351,6 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
                     <FormControl>
                       <Input
                         {...field}
-                        className="w-full border-sc-line dark:border-gray-600 focus:ring-0 focus:shadow-md dark:bg-gray-700 dark:text-white rounded-md"
                       />
                     </FormControl>
                     <FormDescription>Add a Google Maps link to help players find the venue easily</FormDescription>
@@ -369,7 +369,6 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
                         type="number"
                         {...field}
                         onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
-                        className="w-full border-sc-line dark:border-gray-600 focus:ring-0 focus:shadow-md dark:bg-gray-700 dark:text-white rounded-md"
                       />
                     </FormControl>
                     <FormDescription>Enter the hourly booking fee in NGN (numbers only)</FormDescription>
@@ -436,7 +435,6 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
                     <FormControl>
                       <Input
                         {...field}
-                        className="w-full border-sc-line dark:border-gray-600 focus:ring-0 focus:shadow-md dark:bg-gray-700 dark:text-white rounded-md"
                       />
                     </FormControl>
                     <FormDescription>Specify the venue's operating hours</FormDescription>
@@ -448,8 +446,9 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
                 <FormLabel>Image (Optional)</FormLabel>
                 <FormControl>
                   {selectedFile ? (
-                    <div className="flex items-center space-x-2">
-                      <p>
+                    <div className="flex items-center gap-2 rounded-2xl bg-sc-bg px-4 py-3">
+                      <ImagePlus size={18} className="text-sc-green-dark shrink-0" />
+                      <p className="m-0 flex-1 text-sm font-semibold truncate">
                         {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)}MB)
                       </p>
                       <Button variant="ghost" size="icon" onClick={removeSelectedFile}>
@@ -457,13 +456,18 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
                       </Button>
                     </div>
                   ) : (
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleFileChange(e.target.files)}
-                      ref={fileInputRef}
-                      className="w-full border-sc-line dark:border-gray-600 focus:ring-0 focus:shadow-md dark:bg-gray-700 dark:text-white rounded-md"
-                    />
+<label className="flex flex-col items-center justify-center gap-2 h-[132px] rounded-3xl border-2 border-dashed border-sc-line bg-sc-bg text-center cursor-pointer active:scale-[0.99] transition-transform">
+                      <span className="w-11 h-11 rounded-2xl bg-white flex items-center justify-center text-sc-ink"><ImagePlus size={22} /></span>
+                      <span className="text-sm font-bold text-sc-ink">Add a photo of the pitch</span>
+                      <span className="text-xs text-sc-ink3">JPG or PNG, up to 5MB</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="sr-only"
+                        onChange={(e) => handleFileChange(e.target.files)}
+                        ref={fileInputRef}
+                      />
+                    </label>
                   )}
                 </FormControl>
                 <FormDescription>Upload 1 image (max 5MB) to showcase the venue</FormDescription>
@@ -472,24 +476,9 @@ const VenueForm: React.FC<VenueFormProps> = ({ onSuccess, onCancel }) => {
             </div>
           </CollapsibleSection>
 
-          <div className="flex flex-col items-center gap-4">
-            <Button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-sc-green hover:brightness-95 text-sc-green-ink font-bold rounded-full px-4 py-3 text-lg shadow-card transition-colors"
-            >
-              {loading ? "Creating..." : "Create Venue"}
-            </Button>
-            {onCancel && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onCancel}
-                className="w-full bg-sc-soft2 hover:bg-gray-300 text-sc-ink font-medium rounded-lg px-4 py-3 text-lg shadow-card transition-colors"
-              >
-                Cancel
-              </Button>
-            )}
+          <div className="flex flex-col gap-2.5 pt-1">
+            <ScButton type="submit" kind="venue" icon={Store} disabled={loading}>{loading ? "Listing your venue..." : "List venue"}</ScButton>
+            {onCancel && <ScButton kind="soft" onClick={onCancel}>Cancel</ScButton>}
           </div>
         </form>
       </Form>

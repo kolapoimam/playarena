@@ -27,10 +27,11 @@ import { addHours } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import PlayersTable from "@/components/match/PlayersTable";
-import MatchDetailsDialogue from "@/components/match/MatchDetailsDialogue";
+import ActivityShare from "@/components/sc/ActivityShare";
+import { AddToCalendarSheet, CalEvent, DirectionsButton } from "@/components/sc/external";
 import { Seo } from "@/components/Seo";
 
-import { Avatar, BackButton, Bubble, IconButton, Pill, ScButton, SPORT, StickyFooter, formatNaira, formatShortDate, initialsOf, Cover } from "@/components/sc/ui";
+import { Avatar, BackButton, Bubble, IconButton, Pill, ScButton, SPORT, StickyFooter, formatNaira, formatShortDate, formatTime12, initialsOf, Cover } from "@/components/sc/ui";
 import { RowsSkeleton, DetailSkeleton } from "@/components/sc/skeletons";
 const META_KEYWORDS = "Football in Nigeria, Sports in Nigeria, Play Sports Near You, Football Fields Near Me, Livescore, Osimhen, Asisat Oshola, Nigeria Startup, Sportstech, Football venues in Lagos, Football venues in Ilorin, Sports Betting in Nigeria, Organize sports in Nigeria, Football Matches, Bicycle Training in Nigeria, Cycling in Nigeria, Nigerian football, Nigerian cycling, Nigerian sports, Play football in Lagos, Play football in Ilorin, Play football in Abuja, Play football in Nigeria, Play cycling in Nigeria, Play sports in Nigeria, Nigerian sports tech, Nigerian sports startup, Nigerian sports community, Football events Nigeria, Cycling events Nigeria, Sport Cliq, SportCliq, sportcliq.com.ng, sportcliq.ng, sportcliq, sport cliq, sportcliq app, sportcliq platform, sportcliq football, sportcliq cycling, sportcliq venues, sportcliq matches, sportcliq events, sportcliq sports, sportcliq nigeria, sportcliq lagos, sportcliq ilorin, sportcliq abuja, sportcliq startup, sportcliq tech, sportcliq community, sportcliq platform, sportcliq app, sportcliq website, sportcliq online, sportcliq booking, sportcliq organize, sportcliq join, sportcliq play, sportcliq find, sportcliq search, sportcliq discover, sportcliq connect, sportcliq join match, sportcliq join cycling, sportcliq join event, sportcliq join venue, sportcliq join football, sportcliq join sports, sportcliq join nigeria, sportcliq join lagos, sportcliq join ilorin, sportcliq join abuja, sportcliq join startup, sportcliq join tech, sportcliq join community, sportcliq join platform, sportcliq join app, sportcliq join website, sportcliq join online, sportcliq join booking, sportcliq join organize, sportcliq join play, sportcliq join find, sportcliq join search, sportcliq join discover, sportcliq join connect";
 
@@ -238,7 +239,7 @@ const MatchDetail = () => {
     
     const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
     const matchEndTime = addHours(matchDateTime, 2); // Match duration is 2 hours
-    const now = new Date("2025-06-14T11:08:00+01:00"); // 11:08 AM WAT, June 14, 2025
+    const now = new Date();
     
     const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
     const isFull = totalPlayerSlots >= match.total_slots;
@@ -248,35 +249,21 @@ const MatchDetail = () => {
     return { isStarted, isEnded, isFull };
   };
 
-  const addToCalendar = () => {
-    if (!match) return;
-
-    const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
-    const endDateTime = new Date(matchDateTime.getTime() + 2 * 60 * 60 * 1000);
-
-    const formatGoogleDate = (date: Date) => {
-      const pad = (num: number) => num.toString().padStart(2, '0');
-      return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}T${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`;
-    };
-
-    const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE` +
-      `&text=${encodeURIComponent(`Sport Cliq: ${match.title}`)}` +
-      `&dates=${formatGoogleDate(matchDateTime)}/${formatGoogleDate(endDateTime)}` +
-      `&location=${encodeURIComponent(match.venue ? `${match.venue.name}, ${match.venue.city}` : 'Unknown Venue')}` +
-      `&details=${encodeURIComponent(
-        `Football Match organized by ${match.organizer_name}.\n\n` +
-        `Match Link: ${window.location.origin}/match/${match.slug}\n\n` +
-        `Venue: ${match.venue?.name || 'Unknown'}, ${match.venue?.city || ''}\n\n` +
-        `Additional Info: ${match.notes || 'No additional information provided'}\n\n` +
-        `${match.is_private ? `Access Password: ${match.access_password}\n\n` : ''}` +
-        `${userId && match.is_recurring ? `Repeats: ${match.recurring_frequency} for ${match.recurring_occurrences} times\n\n` : ''}` +
-        `Powered by @SportCliq`
-      )}` +
-      `&sf=true&output=xml`;
-
-    window.open(googleCalendarUrl, '_blank', 'width=600,height=600');
-    setTimeout(() => navigate(`/match/${slug}`), 1000);
-  };
+  const [calOpen, setCalOpen] = useState(false);
+  const calEvent: CalEvent | null = match
+    ? (() => {
+        const start = new Date(`${match.match_date}T${match.match_time}`);
+        return {
+          title: `SportCliq: ${match.title}`,
+          start,
+          end: new Date(start.getTime() + 2 * 60 * 60 * 1000),
+          location: match.venue ? `${match.venue.name}, ${match.venue.city}` : "",
+          details: `Football match organised by ${match.organizer_name}.${match.notes ? `\n\n${match.notes}` : ""}${match.is_private && match.access_password ? `\n\nAccess password: ${match.access_password}` : ""}`,
+          url: `https://app.sportcliq.com/match/${match.slug}`,
+        };
+      })()
+    : null;
+  const addToCalendar = () => setCalOpen(true);
 
   if (loading) {
     return <DetailSkeleton />;
@@ -422,17 +409,9 @@ const MatchDetail = () => {
                   <span className="text-[13px] text-sc-ink3 truncate">{match.venue.city}</span>
                 </span>
               </button>
-              {match.venue.map_link && (
-                <a
-                  href={match.venue.map_link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="Open in Google Maps"
-                  className="w-10 h-10 rounded-full bg-sc-soft text-sc-ink flex items-center justify-center shrink-0"
-                >
-                  <ExternalLink size={18} />
-                </a>
-              )}
+              <DirectionsButton url={match.venue.map_link} label="Directions in Google Maps" className="w-10 h-10 rounded-full bg-sc-soft text-sc-ink flex items-center justify-center shrink-0">
+                <ExternalLink size={18} />
+              </DirectionsButton>
             </div>
           )}
 
@@ -462,22 +441,37 @@ const MatchDetail = () => {
             </div>
           )}
 
-          <MatchDetailsDialogue
-            match={match}
-            formatDate={formatDate}
-            formatTime={formatTime}
-            totalPlayerSlots={totalPlayerSlots}
-          />
+          {!isEnded && (
+            <ActivityShare
+              info={{
+                kind: "match",
+                title: match.title,
+                dateLabel: new Date(match.match_date).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }),
+                timeLabel: formatTime12(match.match_time),
+                place: match.venue?.name || "Venue to be confirmed",
+                city: match.venue?.city,
+                priceLabel: match.is_paid ? formatNaira(match.price) : "Free",
+                taken: totalPlayerSlots,
+                total: match.total_slots,
+                chips: [(match as any).match_type, (match as any).skill_level, (match as any).gender].filter(Boolean),
+                url: `https://app.sportcliq.com/match/${match.slug}`,
+              }}
+            />
+          )}
         </div>
 
         <StickyFooter>
           <div className="flex items-center gap-3.5">
             <div className="flex flex-col shrink-0">
-              <span className="text-xs text-sc-ink3 font-semibold">Per player</span>
+              <span className="text-xs text-sc-ink3 font-semibold">{isEnded ? "Played" : "Per player"}</span>
               <span className="text-[22px] font-extrabold tracking-[-0.02em]">{match.is_paid ? formatNaira(match.price) : "Free"}</span>
             </div>
             {isEnded ? (
-              <ScButton onClick={() => navigate(`/feedback?matchSlug=${match.slug}`)}>Give feedback</ScButton>
+              match.players.length > 0 ? (
+                <ScButton onClick={() => navigate(`/feedback?matchSlug=${match.slug}`)}>Give feedback</ScButton>
+              ) : (
+                <ScButton kind="soft" disabled>Give feedback</ScButton>
+              )
             ) : isFull ? (
               <ScButton kind="soft" disabled>
                 Match is full
@@ -492,6 +486,7 @@ const MatchDetail = () => {
             </ScButton>
           )}
         </StickyFooter>
+        <AddToCalendarSheet open={calOpen} onOpenChange={setCalOpen} event={calEvent} />
       </div>
     </>
   );

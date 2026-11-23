@@ -87,7 +87,7 @@ const CyclingSuccessDialog = ({
 
   const handleShare = () => {
     const url = `${window.location.origin}/cycling/${eventSlug}`;
-    const shareText = `Join my cycling event: ${formValues.title} at ${selectedLandmark.name || 'unknown location'}, ${selectedLandmark.state || 'unknown state'} on ${formattedDate} at ${formValues.start_time}. ${supercode ? `Supercode: ${supercode}` : `Confirmation Code: ${confirmationCode}`}. Powered by SportCliq.`;
+    const shareText = `Ride with us: ${formValues.title} at ${selectedLandmark.name || 'unknown location'}, ${selectedLandmark.state || 'unknown state'} on ${formattedDate} at ${formValues.start_time}. Join the crew on SportCliq ${eventSlug ? `https://app.sportcliq.com/cycling/${eventSlug}` : 'https://app.sportcliq.com'}`;
     if (navigator.share) {
       navigator
         .share({
@@ -128,21 +128,21 @@ const CyclingSuccessDialog = ({
 
   const shareToWhatsApp = () => {
     const url = `${window.location.origin}/cycling/${eventSlug}`;
-    const shareText = `Join my cycling event: ${formValues.title} at ${selectedLandmark.name || 'unknown location'}, ${selectedLandmark.state || 'unknown state'} on ${formattedDate} at ${formValues.start_time}. ${supercode ? `Supercode: ${supercode}` : `Confirmation Code: ${confirmationCode}`}. Powered by SportCliq.`;
+    const shareText = `Ride with us: ${formValues.title} at ${selectedLandmark.name || 'unknown location'}, ${selectedLandmark.state || 'unknown state'} on ${formattedDate} at ${formValues.start_time}. Join the crew on SportCliq ${eventSlug ? `https://app.sportcliq.com/cycling/${eventSlug}` : 'https://app.sportcliq.com'}`;
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
     window.open(whatsappUrl, "_blank");
   };
 
   const shareToTwitter = () => {
     const url = `${window.location.origin}/cycling/${eventSlug}`;
-    const shareText = `Join my cycling event: ${formValues.title} at ${selectedLandmark.name || 'unknown location'}, ${selectedLandmark.state || 'unknown state'} on ${formattedDate} at ${formValues.start_time}. ${supercode ? `Supercode: ${supercode}` : `Confirmation Code: ${confirmationCode}`}. Powered by SportCliq.`;
+    const shareText = `Ride with us: ${formValues.title} at ${selectedLandmark.name || 'unknown location'}, ${selectedLandmark.state || 'unknown state'} on ${formattedDate} at ${formValues.start_time}. Join the crew on SportCliq ${eventSlug ? `https://app.sportcliq.com/cycling/${eventSlug}` : 'https://app.sportcliq.com'}`;
     const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
     window.open(twitterUrl, "_blank");
   };
 
   const shareToFacebook = () => {
     const url = `${window.location.origin}/cycling/${eventSlug}`;
-    const shareText = `Join my cycling event: ${formValues.title} at ${selectedLandmark.name || 'unknown location'}, ${selectedLandmark.state || 'unknown state'} on ${formattedDate} at ${formValues.start_time}. ${supercode ? `Supercode: ${supercode}` : `Confirmation Code: ${confirmationCode}`}. Powered by SportCliq.`;
+    const shareText = `Ride with us: ${formValues.title} at ${selectedLandmark.name || 'unknown location'}, ${selectedLandmark.state || 'unknown state'} on ${formattedDate} at ${formValues.start_time}. Join the crew on SportCliq ${eventSlug ? `https://app.sportcliq.com/cycling/${eventSlug}` : 'https://app.sportcliq.com'}`;
     const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(shareText)}`;
     window.open(facebookUrl, "_blank");
   };

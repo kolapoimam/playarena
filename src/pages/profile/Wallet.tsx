@@ -4,9 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
-import { ArrowLeft, User, Building, CreditCard } from "lucide-react";
+import { ArrowLeft, User, Building, CreditCard, Zap, ArrowDownToLine, ShieldCheck, Banknote } from "lucide-react";
 
-import { BackButton } from "@/components/sc/ui";
+import { BackButton, Bubble } from "@/components/sc/ui";
 import { PageSkeleton } from "@/components/sc/skeletons";
 const Wallet = () => {
   const navigate = useNavigate();
@@ -58,62 +58,52 @@ const Wallet = () => {
           <h1 className="m-0 text-[32px] leading-[38px] font-extrabold tracking-[-0.03em]">Wallet</h1>
         </header>
 
-      <div className="flex-grow overflow-y-auto">
-        <div className="container mx-auto px-4 py-6 flex flex-col items-center">
-          <div className="w-full max-w-md text-center mb-6">
-            <span className="text-2xl font-bold text-red-500 animate-blink">
-              Wallet feature is coming soon
-            </span>
+      <div className="flex-grow overflow-y-auto px-5 pt-3 pb-6 flex flex-col gap-4">
+        <div className="relative rounded-[28px] p-5 text-white overflow-hidden" style={{ background: "#0E1411" }}>
+          <span aria-hidden="true" className="absolute -right-12 -top-12 w-48 h-48 rounded-full border-[22px] border-white/10" />
+          <span aria-hidden="true" className="absolute right-16 -bottom-16 w-32 h-32 rounded-full bg-sc-green/40" />
+          <div className="relative flex items-center justify-between">
+            <img src="/brand/sportcliq-wordmark-white.png" alt="SportCliq" className="h-7 w-auto" />
+            <span className="h-7 px-3 rounded-full bg-[#BEF264] text-sc-ink text-[11px] font-extrabold tracking-[0.1em] inline-flex items-center">COMING SOON</span>
           </div>
-          <div className="relative w-full max-w-md rounded-3xl shadow-card bg-white p-6">
-            <div className="flex justify-between items-center mb-4">
-              <span className="text-sm text-sc-ink3">Available Balance</span>
-              <div className="flex space-x-2">
-                <button className="text-sc-ink3 hover:text-gray-700">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                  </svg>
-                </button>
-                <span className="text-sc-green-dark">
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/>
-                  </svg>
-                </span>
-              </div>
-            </div>
-            <div className="text-4xl font-bold text-sc-ink mb-6 flex items-center justify-center">
-              <span className="text-sc-green-dark mr-2">₦</span>
-              <span>15,584,834</span>
-            </div>
-            <div className="flex justify-between space-x-4">
-              <Button
-                className="flex-1 bg-sc-green hover:brightness-95 text-sc-green-ink font-bold rounded-full px-4 py-2 text-sm flex items-center justify-center"
-              >
-                Top-up
-              </Button>
-              <Button
-                className="flex-1 bg-sc-green hover:brightness-95 text-sc-green-ink font-bold rounded-full px-4 py-2 text-sm flex items-center justify-center"
-              >
-                Withdraw
-              </Button>
-            </div>
+          <div className="relative mt-8 flex flex-col">
+            <span className="text-xs font-bold tracking-[0.12em] opacity-60">SPORTCLIQ WALLET</span>
+            <span className="text-[34px] leading-10 font-extrabold tracking-[-0.03em] blur-[6px] select-none" aria-hidden="true">₦ 00,000.00</span>
           </div>
+          <div className="relative mt-4 flex items-center justify-between text-sm">
+            <span className="font-bold">{nickname || "Your name"}</span>
+            <span className="opacity-60 tracking-[0.2em]">•••• ••••</span>
+          </div>
+        </div>
 
-          <div className="mt-6 w-full max-w-md bg-white rounded-3xl shadow-card p-4 flex items-center justify-between">
-            <img src="/navlogo.png" alt="Logo" className="w-14 h-14" />
-<div className="text-right space-y-2">
-  <p className="text-lg font-semibold text-sc-ink flex items-center justify-end">
-    <CreditCard className="w-5 h-5 mr-2" /> 1234567890
-  </p>
-  <p className="text-sm text-sc-ink3 flex items-center justify-end">
-    <Building className="w-5 h-5 mr-2" /> Sport Cliq Bank
-  </p>
-  <p className="text-sm text-sc-ink3 flex items-center justify-end">
-    <User className="w-5 h-5 mr-2" /> {nickname}
-  </p>
-</div>
-          </div>
+        <div className="flex flex-col gap-1">
+          <h2 className="m-0 text-[22px] font-extrabold tracking-[-0.02em]">One wallet for every game</h2>
+          <p className="m-0 text-sm text-sc-ink2">We are building a wallet so you can pay for slots in one tap and get your earnings faster.</p>
+        </div>
+
+        <div className="bg-white rounded-3xl overflow-hidden">
+          {[
+            { icon: Zap, sport: "football" as const, title: "Pay in one tap", sub: "Top up once and join paid matches instantly" },
+            { icon: ArrowDownToLine, sport: "money" as const, title: "Faster cashouts", sub: "Organisers and hosts withdraw to their bank" },
+            { icon: ShieldCheck, sport: "guide" as const, title: "Refunds back to you", sub: "Cancelled games refund straight to your wallet" },
+          ].map((r, i) => (
+            <div key={r.title} className={`flex items-center gap-3 px-[18px] py-4 ${i ? "border-t border-sc-line" : ""}`}>
+              <Bubble icon={r.icon} sport={r.sport} size={42} radius={14} />
+              <span className="flex flex-col">
+                <span className="text-[15px] font-extrabold">{r.title}</span>
+                <span className="text-xs text-sc-ink3">{r.sub}</span>
+              </span>
+            </div>
+          ))}
+        </div>
+
+        <div className="rounded-3xl p-4 flex items-center gap-3" style={{ background: "#E3F5E9" }}>
+          <Bubble icon={Banknote} sport="football" size={42} radius={14} />
+          <span className="flex-1 flex flex-col">
+            <span className="text-sm font-extrabold text-sc-ink">Organised a paid match?</span>
+            <span className="text-xs text-sc-ink2">Cash out from the match in Manage with your super code.</span>
+          </span>
+          <button type="button" onClick={() => navigate("/confirm-checkin")} className="h-10 px-4 rounded-full bg-sc-ink text-white text-sm font-bold">Manage</button>
         </div>
       </div>
 
