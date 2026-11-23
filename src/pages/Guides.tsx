@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowRight, MessageCircle } from "lucide-react";
+import { PageHeader, SPORT } from "@/components/sc/ui";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Accordion,
@@ -26,68 +27,58 @@ const Guides = () => {
         image={undefined}
         children={null}
       />
-      <div className="min-h-screen flex flex-col bg-gray-100 dark:bg-gray-900">
-        <header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg">
-          <div className="flex items-center justify-between max-w-7xl mx-auto">
-            <Button
-              variant="ghost"
-              onClick={() => navigate(-1)}
-              className="text-white hover:bg-green-600"
-            >
-              <ArrowLeft size={18} className="mr-2" />
-              Back
-            </Button>
-            <div className="text-center">
-              <h1 className="text-2xl font-bold">Guides</h1>
-            </div>
-            <div className="w-10"></div>
-          </div>
-        </header>
+      <div className="min-h-screen flex flex-col bg-sc-bg text-sc-ink font-sans pb-32">
+        <PageHeader title="Guides" subtitle="How to play, organise and host on SportCliq" back />
 
-        <main className="flex-grow max-w-7xl mx-auto px-4 py-6">
-          <Card className="bg-gradient-to-b from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 shadow-lg rounded-xl border border-gray-200 dark:border-gray-700">
-            <CardHeader>
-              <CardTitle className="text-2xl text-center text-gray-900 dark:text-gray-100">
-                User Guides
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
+        <main className="flex-grow w-full px-5 pt-4 flex flex-col gap-4">
+          <button
+            type="button"
+            onClick={() => navigate("/organize")}
+            className="relative overflow-hidden rounded-[28px] p-5 h-[168px] flex flex-col justify-between text-left text-white"
+            style={{ background: SPORT.guide.solid }}
+          >
+            <span className="self-start h-6 px-2.5 rounded-full bg-sc-ink text-white text-xs font-bold flex items-center">Get started</span>
+            <span className="relative text-2xl leading-7 font-extrabold tracking-[-0.02em] max-w-[260px]">Organise your first match in a few taps</span>
+            <ArrowRight aria-hidden="true" className="absolute right-5 bottom-5" size={24} />
+          </button>
+          <Card className="bg-transparent border-0 shadow-none rounded-none">
+            <CardContent className="p-0">
               <Tabs
                 value={activeTab}
                 onValueChange={setActiveTab}
                 className="w-full"
               >
-                <TabsList className="grid w-full grid-cols-3 bg-gray-200 dark:bg-gray-700 rounded-lg p-1 mb-6">
+                <TabsList className="grid w-full grid-cols-3 h-[46px] rounded-[15px] bg-sc-soft2 p-1 mb-4">
                   <TabsTrigger
                     value="organiser"
-                    className="rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-gray-600 data-[state=active]:shadow-sm data-[state=active]:border-b-2 data-[state=active]:border-green-500 hover:bg-green-50 dark:hover:bg-gray-700 transition-all"
+                    className="h-full rounded-xl text-sm font-bold text-sc-ink2 data-[state=active]:bg-white data-[state=active]:text-sc-ink data-[state=active]:shadow-[0_1px_3px_rgba(14,20,17,0.12)]"
                   >
                     Organiser
                   </TabsTrigger>
                   <TabsTrigger
                     value="players"
-                    className="rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-gray-600 data-[state=active]:shadow-sm data-[state=active]:border-b-2 data-[state=active]:border-green-500 hover:bg-green-50 dark:hover:bg-gray-700 transition-all"
+                    className="h-full rounded-xl text-sm font-bold text-sc-ink2 data-[state=active]:bg-white data-[state=active]:text-sc-ink data-[state=active]:shadow-[0_1px_3px_rgba(14,20,17,0.12)]"
                   >
                     Players
                   </TabsTrigger>
                   <TabsTrigger
                     value="venueOwner"
-                    className="rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-gray-600 data-[state=active]:shadow-sm data-[state=active]:border-b-2 data-[state=active]:border-green-500 hover:bg-green-50 dark:hover:bg-gray-700 transition-all"
+                    className="h-full rounded-xl text-sm font-bold text-sc-ink2 data-[state=active]:bg-white data-[state=active]:text-sc-ink data-[state=active]:shadow-[0_1px_3px_rgba(14,20,17,0.12)]"
                   >
                     Venue Owner
                   </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="organiser">
-                  <Accordion type="single" collapsible className="w-full">
+                  <Accordion type="single" collapsible className="w-full flex flex-col gap-2.5">
                     <AccordionItem
                       value="createMatch"
-                      className="border-b border-gray-200 dark:border-gray-700"
+                      className="bg-white rounded-[22px] border-0 px-4"
                     >
-                      <AccordionTrigger className="text-base font-medium hover:bg-green-50 dark:hover:bg-gray-700 py-3 px-2 data-[state=open]:border-l-4 data-[state=open]:border-green-500">
+                      <AccordionTrigger className="text-[15px] font-extrabold text-left py-4 hover:no-underline">
                         Creating a Match
                       </AccordionTrigger>
-                      <AccordionContent className="text-sm text-gray-700 dark:text-gray-300 px-2 py-2">
+                      <AccordionContent className="text-sm leading-[22px] text-sc-ink2">
                         To create a match, navigate to the "Organize Match" section,
                         enter the match title, date, time, venue, and pricing details.
                         Save to publish a public match or retrieve a password for a
@@ -99,12 +90,12 @@ const Guides = () => {
                     </AccordionItem>
                     <AccordionItem
                       value="organiserCode"
-                      className="border-b border-gray-200 dark:border-gray-700"
+                      className="bg-white rounded-[22px] border-0 px-4"
                     >
-                      <AccordionTrigger className="text-base font-medium hover:bg-green-50 dark:hover:bg-gray-700 py-3 px-2 data-[state=open]:border-l-4 data-[state=open]:border-green-500">
+                      <AccordionTrigger className="text-[15px] font-extrabold text-left py-4 hover:no-underline">
                         Match Management
                       </AccordionTrigger>
-                      <AccordionContent className="text-sm text-gray-700 dark:text-gray-300 px-2 py-2">
+                      <AccordionContent className="text-sm leading-[22px] text-sc-ink2">
                         When you create a match, you'll receive a Super Code. This code
                         is essential as it allows you to:
                         <ul className="list-disc ml-5 mt-2 space-y-1">
@@ -120,12 +111,12 @@ const Guides = () => {
                     </AccordionItem>
                     <AccordionItem
                       value="privateMatch"
-                      className="border-b border-gray-200 dark:border-gray-700"
+                      className="bg-white rounded-[22px] border-0 px-4"
                     >
-                      <AccordionTrigger className="text-base font-medium hover:bg-green-50 dark:hover:bg-gray-700 py-3 px-2 data-[state=open]:border-l-4 data-[state=open]:border-green-500">
+                      <AccordionTrigger className="text-[15px] font-extrabold text-left py-4 hover:no-underline">
                         Creating a Private Match
                       </AccordionTrigger>
-                      <AccordionContent className="text-sm text-gray-700 dark:text-gray-300 px-2 py-2">
+                      <AccordionContent className="text-sm leading-[22px] text-sc-ink2">
                         For a private match, check the "Private Match" option during
                         creation, copy an access password, and share it with invited
                         players. Private matches won't appear in public search results,
@@ -134,12 +125,12 @@ const Guides = () => {
                     </AccordionItem>
                     <AccordionItem
                       value="publicMatch"
-                      className="border-b border-gray-200 dark:border-gray-700"
+                      className="bg-white rounded-[22px] border-0 px-4"
                     >
-                      <AccordionTrigger className="text-base font-medium hover:bg-green-50 dark:hover:bg-gray-700 py-3 px-2 data-[state=open]:border-l-4 data-[state=open]:border-green-500">
+                      <AccordionTrigger className="text-[15px] font-extrabold text-left py-4 hover:no-underline">
                         Creating a Public Match
                       </AccordionTrigger>
-                      <AccordionContent className="text-sm text-gray-700 dark:text-gray-300 px-2 py-2">
+                      <AccordionContent className="text-sm leading-[22px] text-sc-ink2">
                         Leave the "Private Match" option unchecked to create a public
                         match. It will be visible to all users for joining. Public matches
                         are ideal for finding new players or filling empty slots quickly.
@@ -147,12 +138,12 @@ const Guides = () => {
                     </AccordionItem>
                     <AccordionItem
                       value="bulkSlots"
-                      className="border-b border-gray-200 dark:border-gray-700"
+                      className="bg-white rounded-[22px] border-0 px-4"
                     >
-                      <AccordionTrigger className="text-base font-medium hover:bg-green-50 dark:hover:bg-gray-700 py-3 px-2 data-[state=open]:border-l-4 data-[state=open]:border-green-500">
+                      <AccordionTrigger className="text-[15px] font-extrabold text-left py-4 hover:no-underline">
                         Enabling Bulk Slot Booking
                       </AccordionTrigger>
-                      <AccordionContent className="text-sm text-gray-700 dark:text-gray-300 px-2 py-2">
+                      <AccordionContent className="text-sm leading-[22px] text-sc-ink2">
                         As an organizer, you can enable the "Allow Bulk Booking" option
                         when creating a paid match. This lets players book multiple slots
                         at once, which is useful for players bringing friends. When bulk
@@ -162,12 +153,12 @@ const Guides = () => {
                     </AccordionItem>
                     <AccordionItem
                       value="bulkPayment"
-                      className="border-b border-gray-200 dark:border-gray-700"
+                      className="bg-white rounded-[22px] border-0 px-4"
                     >
-                      <AccordionTrigger className="text-base font-medium hover:bg-green-50 dark:hover:bg-gray-700 py-3 px-2 data-[state=open]:border-l-4 data-[state=open]:border-green-500">
+                      <AccordionTrigger className="text-[15px] font-extrabold text-left py-4 hover:no-underline">
                         Bulk Payment on Paid Match
                       </AccordionTrigger>
-                      <AccordionContent className="text-sm text-gray-700 dark:text-gray-300 px-2 py-2">
+                      <AccordionContent className="text-sm leading-[22px] text-sc-ink2">
                         For paid matches, use the "Bulk Payment" feature to collect fees
                         from multiple players. Navigate to the match management page and
                         process payments securely. This is particularly useful for team
@@ -176,12 +167,12 @@ const Guides = () => {
                     </AccordionItem>
                     <AccordionItem
                       value="manageMatches"
-                      className="border-b border-gray-200 dark:border-gray-700"
+                      className="bg-white rounded-[22px] border-0 px-4"
                     >
-                      <AccordionTrigger className="text-base font-medium hover:bg-green-50 dark:hover:bg-gray-700 py-3 px-2 data-[state=open]:border-l-4 data-[state=open]:border-green-500">
+                      <AccordionTrigger className="text-[15px] font-extrabold text-left py-4 hover:no-underline">
                         Managing Matches
                       </AccordionTrigger>
-                      <AccordionContent className="text-sm text-gray-700 dark:text-gray-300 px-2 py-2">
+                      <AccordionContent className="text-sm leading-[22px] text-sc-ink2">
                         Access the "Manage Matches" section with your Super Code to edit
                         details, view players, and update statuses. The dashboard gives you
                         an overview of registered players, available slots, and payment
@@ -192,12 +183,12 @@ const Guides = () => {
                     </AccordionItem>
                     <AccordionItem
                       value="confirmAttendance"
-                      className="border-b border-gray-200 dark:border-gray-700"
+                      className="bg-white rounded-[22px] border-0 px-4"
                     >
-                      <AccordionTrigger className="text-base font-medium hover:bg-green-50 dark:hover:bg-gray-700 py-3 px-2 data-[state=open]:border-l-4 data-[state=open]:border-green-500">
+                      <AccordionTrigger className="text-[15px] font-extrabold text-left py-4 hover:no-underline">
                         Confirming Attendance
                       </AccordionTrigger>
-                      <AccordionContent className="text-sm text-gray-700 dark:text-gray-300 px-2 py-2">
+                      <AccordionContent className="text-sm leading-[22px] text-sc-ink2">
                         Confirm player attendance via the match management page using your
                         Super Code. Ask players for their individual codes during check-in
                         as proof of registration. You'll have access to player phone
@@ -206,12 +197,12 @@ const Guides = () => {
                     </AccordionItem>
                     <AccordionItem
                       value="cashout"
-                      className="border-b border-gray-200 dark:border-gray-700"
+                      className="bg-white rounded-[22px] border-0 px-4"
                     >
-                      <AccordionTrigger className="text-base font-medium hover:bg-green-50 dark:hover:bg-gray-700 py-3 px-2 data-[state=open]:border-l-4 data-[state=open]:border-green-500">
+                      <AccordionTrigger className="text-[15px] font-extrabold text-left py-4 hover:no-underline">
                         Cashout
                       </AccordionTrigger>
-                      <AccordionContent className="text-sm text-gray-700 dark:text-gray-300 px-2 py-2">
+                      <AccordionContent className="text-sm leading-[22px] text-sc-ink2">
                         Request a cashout from earned match fees via the "Manage" section
                         using your Super Code. A 2% platform fee applies after your first
                         5 free matches. For player protection, cashouts can only be
@@ -221,12 +212,12 @@ const Guides = () => {
                     </AccordionItem>
                     <AccordionItem
                       value="contactInfo"
-                      className="border-b border-gray-200 dark:border-gray-700"
+                      className="bg-white rounded-[22px] border-0 px-4"
                     >
-                      <AccordionTrigger className="text-base font-medium hover:bg-green-50 dark:hover:bg-gray-700 py-3 px-2 data-[state=open]:border-l-4 data-[state=open]:border-green-500">
+                      <AccordionTrigger className="text-[15px] font-extrabold text-left py-4 hover:no-underline">
                         Contact Information
                       </AccordionTrigger>
-                      <AccordionContent className="text-sm text-gray-700 dark:text-gray-300 px-2 py-2">
+                      <AccordionContent className="text-sm leading-[22px] text-sc-ink2">
                         You can choose to display your phone number on match details. This
                         is optional but recommended for easier communication with players.
                         Player phone numbers are hidden by default (NDPR compliance) but
@@ -237,15 +228,15 @@ const Guides = () => {
                 </TabsContent>
 
                 <TabsContent value="players">
-                  <Accordion type="single" collapsible className="w-full">
+                  <Accordion type="single" collapsible className="w-full flex flex-col gap-2.5">
                     <AccordionItem
                       value="joinMatch"
-                      className="border-b border-gray-200 dark:border-gray-700"
+                      className="bg-white rounded-[22px] border-0 px-4"
                     >
-                      <AccordionTrigger className="text-base font-medium hover:bg-green-50 dark:hover:bg-gray-700 py-3 px-2 data-[state=open]:border-l-4 data-[state=open]:border-green-500">
+                      <AccordionTrigger className="text-[15px] font-extrabold text-left py-4 hover:no-underline">
                         Joining a Match
                       </AccordionTrigger>
-                      <AccordionContent className="text-sm text-gray-700 dark:text-gray-300 px-2 py-2">
+                      <AccordionContent className="text-sm leading-[22px] text-sc-ink2">
                         Search for a match, view details, and click "Join" if slots are
                         available. Enter a password for private matches if required. After
                         booking, you'll receive a unique code - save it immediately as
@@ -254,12 +245,12 @@ const Guides = () => {
                     </AccordionItem>
                     <AccordionItem
                       value="playerCode"
-                      className="border-b border-gray-200 dark:border-gray-700"
+                      className="bg-white rounded-[22px] border-0 px-4"
                     >
-                      <AccordionTrigger className="text-base font-medium hover:bg-green-50 dark:hover:bg-gray-700 py-3 px-2 data-[state=open]:border-l-4 data-[state=open]:border-green-500">
+                      <AccordionTrigger className="text-[15px] font-extrabold text-left py-4 hover:no-underline">
                         Player Code Importance
                       </AccordionTrigger>
-                      <AccordionContent className="text-sm text-gray-700 dark:text-gray-300 px-2 py-2">
+                      <AccordionContent className="text-sm leading-[22px] text-sc-ink2">
                         When you book a match slot, you'll receive a unique player code.
                         This code is essential as it:
                         <ul className="list-disc ml-5 mt-2 space-y-1">
@@ -274,12 +265,12 @@ const Guides = () => {
                     </AccordionItem>
                     <AccordionItem
                       value="bulkBooking"
-                      className="border-b border-gray-200 dark:border-gray-700"
+                      className="bg-white rounded-[22px] border-0 px-4"
                     >
-                      <AccordionTrigger className="text-base font-medium hover:bg-green-50 dark:hover:bg-gray-700 py-3 px-2 data-[state=open]:border-l-4 data-[state=open]:border-green-500">
+                      <AccordionTrigger className="text-[15px] font-extrabold text-left py-4 hover:no-underline">
                         Booking Multiple Slots
                       </AccordionTrigger>
-                      <AccordionContent className="text-sm text-gray-700 dark:text-gray-300 px-2 py-2">
+                      <AccordionContent className="text-sm leading-[22px] text-sc-ink2">
                         If an organizer has enabled bulk booking for a paid match, you can
                         book multiple slots at once. This is useful when bringing friends.
                         All slots will be checked in together on match day using the same
@@ -288,12 +279,12 @@ const Guides = () => {
                     </AccordionItem>
                     <AccordionItem
                       value="refund"
-                      className="border-b border-gray-200 dark:border-gray-700"
+                      className="bg-white rounded-[22px] border-0 px-4"
                     >
-                      <AccordionTrigger className="text-base font-medium hover:bg-green-50 dark:hover:bg-gray-700 py-3 px-2 data-[state=open]:border-l-4 data-[state=open]:border-green-500">
+                      <AccordionTrigger className="text-[15px] font-extrabold text-left py-4 hover:no-underline">
                         Refund Policy
                       </AccordionTrigger>
-                      <AccordionContent className="text-sm text-gray-700 dark:text-gray-300 px-2 py-2">
+                      <AccordionContent className="text-sm leading-[22px] text-sc-ink2">
                         • Cancel your participation 1 hour before match start for a full
                         refund
                         <br />
@@ -306,12 +297,12 @@ const Guides = () => {
                     </AccordionItem>
                     <AccordionItem
                       value="noShow"
-                      className="border-b border-gray-200 dark:border-gray-700"
+                      className="bg-white rounded-[22px] border-0 px-4"
                     >
-                      <AccordionTrigger className="text-base font-medium hover:bg-green-50 dark:hover:bg-gray-700 py-3 px-2 data-[state=open]:border-l-4 data-[state=open]:border-green-500">
+                      <AccordionTrigger className="text-[15px] font-extrabold text-left py-4 hover:no-underline">
                         No Show Policy
                       </AccordionTrigger>
-                      <AccordionContent className="text-sm text-gray-700 dark:text-gray-300 px-2 py-2">
+                      <AccordionContent className="text-sm leading-[22px] text-sc-ink2">
                         Full refund for no-shows if the player is unconfirmed, but
                         organizers may ban repeat offenders. Check in on time to avoid
                         issues. For bulk bookings, if any player in your group doesn't
@@ -320,12 +311,12 @@ const Guides = () => {
                     </AccordionItem>
                     <AccordionItem
                       value="matchTypes"
-                      className="border-b border-gray-200 dark:border-gray-700"
+                      className="bg-white rounded-[22px] border-0 px-4"
                     >
-                      <AccordionTrigger className="text-base font-medium hover:bg-green-50 dark:hover:bg-gray-700 py-3 px-2 data-[state=open]:border-l-4 data-[state=open]:border-green-500">
+                      <AccordionTrigger className="text-[15px] font-extrabold text-left py-4 hover:no-underline">
                         Match Types
                       </AccordionTrigger>
-                      <AccordionContent className="text-sm text-gray-700 dark:text-gray-300 px-2 py-2">
+                      <AccordionContent className="text-sm leading-[22px] text-sc-ink2">
                         All types of football matches are supported, including 5-a-side,
                         7-a-side, 11-a-side, and other variations. Check the match
                         description for specific details about the format, skill level
@@ -334,12 +325,12 @@ const Guides = () => {
                     </AccordionItem>
                     <AccordionItem
                       value="privacy"
-                      className="border-b border-gray-200 dark:border-gray-700"
+                      className="bg-white rounded-[22px] border-0 px-4"
                     >
-                      <AccordionTrigger className="text-base font-medium hover:bg-green-50 dark:hover:bg-gray-700 py-3 px-2 data-[state=open]:border-l-4 data-[state=open]:border-green-500">
+                      <AccordionTrigger className="text-[15px] font-extrabold text-left py-4 hover:no-underline">
                         Privacy & Data Protection
                       </AccordionTrigger>
-                      <AccordionContent className="text-sm text-gray-700 dark:text-gray-300 px-2 py-2">
+                      <AccordionContent className="text-sm leading-[22px] text-sc-ink2">
                         In compliance with NDPR, your phone number is hidden from other
                         players by default. However, organizers will have access to your
                         contact information during check-in for verification purposes. This
@@ -350,15 +341,15 @@ const Guides = () => {
                 </TabsContent>
 
                 <TabsContent value="venueOwner">
-                  <Accordion type="single" collapsible className="w-full">
+                  <Accordion type="single" collapsible className="w-full flex flex-col gap-2.5">
                     <AccordionItem
                       value="createVenue"
-                      className="border-b border-gray-200 dark:border-gray-700"
+                      className="bg-white rounded-[22px] border-0 px-4"
                     >
-                      <AccordionTrigger className="text-base font-medium hover:bg-green-50 dark:hover:bg-gray-700 py-3 px-2 data-[state=open]:border-l-4 data-[state=open]:border-green-500">
+                      <AccordionTrigger className="text-[15px] font-extrabold text-left py-4 hover:no-underline">
                         Creating a Venue
                       </AccordionTrigger>
-                      <AccordionContent className="text-sm text-gray-700 dark:text-gray-300 px-2 py-2">
+                      <AccordionContent className="text-sm leading-[22px] text-sc-ink2">
                         Register your venue by providing name, location, and availability
                         details in the "Add Venue" section. Include your phone number and
                         an accurate address with a Google Maps link to help players find
@@ -367,12 +358,12 @@ const Guides = () => {
                     </AccordionItem>
                     <AccordionItem
                       value="venueDetails"
-                      className="border-b border-gray-200 dark:border-gray-700"
+                      className="bg-white rounded-[22px] border-0 px-4"
                     >
-                      <AccordionTrigger className="text-base font-medium hover:bg-green-50 dark:hover:bg-gray-700 py-3 px-2 data-[state=open]:border-l-4 data-[state=open]:border-green-500">
+                      <AccordionTrigger className="text-[15px] font-extrabold text-left py-4 hover:no-underline">
                         Required Venue Information
                       </AccordionTrigger>
-                      <AccordionContent className="text-sm text-gray-700 dark:text-gray-300 px-2 py-2">
+                      <AccordionContent className="text-sm leading-[22px] text-sc-ink2">
                         When registering your venue, please include:
                         <ul className="list-disc ml-5 mt-2 space-y-1">
                           <li>Venue name and type (indoor/outdoor)</li>
@@ -388,12 +379,12 @@ const Guides = () => {
                     </AccordionItem>
                     <AccordionItem
                       value="bookVenue"
-                      className="border-b border-gray-200 dark:border-gray-700"
+                      className="bg-white rounded-[22px] border-0 px-4"
                     >
-                      <AccordionTrigger className="text-base font-medium hover:bg-green-50 dark:hover:bg-gray-700 py-3 px-2 data-[state=open]:border-l-4 data-[state=open]:border-green-500">
+                      <AccordionTrigger className="text-[15px] font-extrabold text-left py-4 hover:no-underline">
                         Booking a Venue
                       </AccordionTrigger>
-                      <AccordionContent className="text-sm text-gray-700 dark:text-gray-300 px-2 py-2">
+                      <AccordionContent className="text-sm leading-[22px] text-sc-ink2">
                         Organizers can book your venue through the site. You'll be notified
                         and can confirm or decline. Providing quick responses to booking
                         requests increases your venue's attractiveness to organizers.
@@ -401,12 +392,12 @@ const Guides = () => {
                     </AccordionItem>
                     <AccordionItem
                       value="referralFee"
-                      className="border-b border-gray-200 dark:border-gray-700"
+                      className="bg-white rounded-[22px] border-0 px-4"
                     >
-                      <AccordionTrigger className="text-base font-medium hover:bg-green-50 dark:hover:bg-gray-700 py-3 px-2 data-[state=open]:border-l-4 data-[state=open]:border-green-500">
+                      <AccordionTrigger className="text-[15px] font-extrabold text-left py-4 hover:no-underline">
                         Venue Referral Fee
                       </AccordionTrigger>
-                      <AccordionContent className="text-sm text-gray-700 dark:text-gray-300 px-2 py-2">
+                      <AccordionContent className="text-sm leading-[22px] text-sc-ink2">
                         A 10% referral fee is deducted from your earnings when your venue is
                         booked through the site, payable by you. This fee helps maintain the
                         platform and bring more organizers to your venue, increasing your
@@ -415,12 +406,12 @@ const Guides = () => {
                     </AccordionItem>
                     <AccordionItem
                       value="venueAccounts"
-                      className="border-b border-gray-200 dark:border-gray-700"
+                      className="bg-white rounded-[22px] border-0 px-4"
                     >
-                      <AccordionTrigger className="text-base font-medium hover:bg-green-50 dark:hover:bg-gray-700 py-3 px-2 data-[state=open]:border-l-4 data-[state=open]:border-green-500">
+                      <AccordionTrigger className="text-[15px] font-extrabold text-left py-4 hover:no-underline">
                         Venue Accounts (Coming Soon)
                       </AccordionTrigger>
-                      <AccordionContent className="text-sm text-gray-700 dark:text-gray-300 px-2 py-2">
+                      <AccordionContent className="text-sm leading-[22px] text-sc-ink2">
                         Full profile and account features for venue owners are coming soon.
                         This will include a dashboard to track bookings, manage availability,
                         and view earnings reports. Stay tuned for updates on this feature.
@@ -432,30 +423,26 @@ const Guides = () => {
             </CardContent>
           </Card>
 
-          <Card className="mt-6 bg-gradient-to-b from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 shadow-lg rounded-xl border border-gray-200 dark:border-gray-700">
-            <CardContent className="p-4 text-center">
-              <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">
-                Need help? Reach out to us on Twitter!
-              </p>
-              <Button
-                asChild
-                className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-full transition-colors"
-              >
-                <a
-                  href="https://twitter.com/PiousGeek"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Contact Us
-                </a>
-              </Button>
-            </CardContent>
-          </Card>
+          <div className="bg-white rounded-3xl p-[18px] flex items-center gap-3">
+            <span className="w-11 h-11 rounded-full flex items-center justify-center shrink-0" style={{ background: SPORT.football.bg, color: SPORT.football.fg }}>
+              <MessageCircle size={22} />
+            </span>
+            <span className="flex-1 flex flex-col">
+              <span className="text-[15px] font-extrabold">Need help?</span>
+              <span className="text-[13px] text-sc-ink3">Reach out to us on X</span>
+            </span>
+            <a
+              href="https://twitter.com/PiousGeek"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="h-10 px-4 rounded-full bg-sc-ink text-white text-sm font-bold flex items-center"
+            >
+              Contact us
+            </a>
+          </div>
         </main>
 
-        <div className="pb-28">
-          <Navbar />
-        </div>
+        <Navbar />
       </div>
     </>
   );

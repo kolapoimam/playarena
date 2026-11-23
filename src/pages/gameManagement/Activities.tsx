@@ -1,125 +1,213 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import {
+  ArrowRight,
+  Bike,
+  BookOpen,
+  CalendarDays,
+  CircleDot,
+  Dribbble,
+  Footprints,
+  Plus,
+  Route,
+  Store,
+  Trophy,
+  Volleyball,
+  LucideIcon,
+} from "lucide-react";
 import Navbar from "@/components/Navbar";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
 import { Seo } from "@/components/Seo";
+import { supabase } from "@/integrations/supabase/client";
+import { Bubble, ListGroup, ListRow, PageHeader, Pill, Screen, SPORT, Sport, formatShortDate, formatTime12 } from "@/components/sc/ui";
 
 const META_KEYWORDS = "Football in Nigeria, Sports in Nigeria, Play Sports Near You, Football Fields Near Me, Livescore, Osimhen, Asisat Oshola, Nigeria Startup, Sportstech, Football venues in Lagos, Football venues in Ilorin, Sports Betting in Nigeria, Organize sports in Nigeria, Football Matches, Bicycle Training in Nigeria, Cycling in Nigeria, Nigerian football, Nigerian cycling, Nigerian sports, Play football in Lagos, Play football in Ilorin, Play football in Abuja, Play football in Nigeria, Play cycling in Nigeria, Play sports in Nigeria, Nigerian sports tech, Nigerian sports startup, Nigerian sports community, Football events Nigeria, Cycling events Nigeria, Sport Cliq, SportCliq, sportcliq.com.ng, sportcliq.ng, sportcliq, sport cliq, sportcliq app, sportcliq platform, sportcliq football, sportcliq cycling, sportcliq venues, sportcliq matches, sportcliq events, sportcliq sports, sportcliq nigeria, sportcliq lagos, sportcliq ilorin, sportcliq abuja, sportcliq startup, sportcliq tech, sportcliq community, sportcliq platform, sportcliq app, sportcliq website, sportcliq online, sportcliq booking, sportcliq organize, sportcliq join, sportcliq play, sportcliq find, sportcliq search, sportcliq discover, sportcliq connect, sportcliq join match, sportcliq join cycling, sportcliq join event, sportcliq join venue, sportcliq join football, sportcliq join sports, sportcliq join nigeria, sportcliq join lagos, sportcliq join ilorin, sportcliq join abuja, sportcliq join startup, sportcliq join tech, sportcliq join community, sportcliq join platform, sportcliq join app, sportcliq join website, sportcliq join online, sportcliq join booking, sportcliq join organize, sportcliq join play, sportcliq join find, sportcliq join search, sportcliq join discover, sportcliq join connect";
 
-const sports = [
-	{
-		name: "Football",
-		emoji: "⚽",
-		active: true,
-		route: "/matches",
-	},
-	{
-		name: "Cycling",
-		emoji: "🚴",
-		active: true,
-		route: "/cycling-activities",
-	},
-	{
-		name: "Basketball",
-		emoji: "🏀",
-		active: false,
-	},
-	{
-		name: "Volleyball",
-		emoji: "🏐",
-		active: false,
-	},
-	{
-		name: "Tennis",
-		emoji: "🎾",
-		active: false,
-	},
-	{
-		name: "Running",
-		emoji: "🏃",
-		active: false,
-	},
-	{
-		name: "Ping Pong",
-		emoji: "🏓",
-		active: false,
-	},
-	{
-		name: "Walking",
-		emoji: "🚶",
-		active: false,
-	},
+type SportItem = { name: string; icon: LucideIcon; sport: Sport; active: boolean; route?: string; sub?: string };
+
+const sports: SportItem[] = [
+  { name: "Football", icon: Trophy, sport: "football", active: true, route: "/matches", sub: "Matches near you" },
+  { name: "Cycling", icon: Bike, sport: "cycling", active: true, route: "/cycling-activities", sub: "Group rides" },
+  { name: "Tennis", icon: CircleDot, sport: "tennis", active: false },
+  { name: "Basketball", icon: Dribbble, sport: "cycling", active: false },
+  { name: "Volleyball", icon: Volleyball, sport: "guide", active: false },
+  { name: "Running", icon: Footprints, sport: "red", active: false },
+  { name: "Ping Pong", icon: CircleDot, sport: "venue", active: false },
+  { name: "Walking", icon: Footprints, sport: "money", active: false },
 ];
 
+type Upcoming = { key: string; kind: "organised" | "joined" | "hosted"; title: string; date: string; time?: string | null; to: string; tag?: string };
+
 const Activities = () => {
-	const navigate = useNavigate();
+  const navigate = useNavigate();
+  const [upcoming, setUpcoming] = useState<Upcoming[]>([]);
 
-	const handleCardClick = (sport: typeof sports[0]) => {
-		if (sport.active) {
-			navigate(sport.route);
-		}
-	};
+  useEffect(() => {
+    const load = async () => {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userId = sessionData.session?.user?.id;
+      if (!userId) return;
+      const today = new Date().toISOString().split("T")[0];
+      const items: Upcoming[] = [];
+      try {
+        const { data: org } = await supabase
+          .from("user_organized_matches")
+          .select("matches(id, title, slug, match_date, match_time, total_slots, total_registered_players)")
+          .eq("user_id", userId)
+          .limit(10);
+        (org || []).forEach((r: any) => {
+          const m = r.matches;
+          if (m && m.match_date >= today)
+            items.push({
+              key: "o" + m.id,
+              kind: "organised",
+              title: m.title,
+              date: m.match_date,
+              time: m.match_time,
+              to: `/match/${m.slug}`,
+              tag: m.total_slots ? `${m.total_registered_players ?? 0}/${m.total_slots}` : undefined,
+            });
+        });
+        const { data: joined } = await supabase
+          .from("user_joined_matches")
+          .select("matches(id, title, slug, match_date, match_time)")
+          .eq("user_id", userId)
+          .limit(10);
+        (joined || []).forEach((r: any) => {
+          const m = r.matches;
+          if (m && m.match_date >= today && !items.some((i) => i.key === "o" + m.id))
+            items.push({ key: "j" + m.id, kind: "joined", title: m.title, date: m.match_date, time: m.match_time, to: `/match/${m.slug}` });
+        });
+        const { data: hosted } = await supabase
+          .from("user_hosted_cycling")
+          .select("cycling_event:cycling_events(id_uuid, slug, title, event_date, start_time)")
+          .eq("user_id", userId);
+        (hosted || []).forEach((r: any) => {
+          const e = r.cycling_event;
+          if (e && e.event_date >= today)
+            items.push({ key: "h" + e.id_uuid, kind: "hosted", title: e.title, date: e.event_date, time: e.start_time, to: `/cycling/${e.slug}` });
+        });
+      } catch (err) {
+        console.error("Error loading activities:", err);
+      }
+      items.sort((a, b) => (a.date + (a.time || "")).localeCompare(b.date + (b.time || "")));
+      setUpcoming(items.slice(0, 5));
+    };
+    load();
+  }, []);
 
-	return (
-		<>
-			<Seo
-				title="Activities | Sport Cliq"
-				description="Explore and join a variety of sports activities including football, cycling, basketball, and more on Sport Cliq. Football in Nigeria, Play Sports Near You, Football Fields Near Me, Livescore, Osimhen, Asisat Oshola, Nigeria Startup, Sportstech."
-				url={window.location.href}
-				image={undefined}
-				children={<meta name="keywords" content={META_KEYWORDS} />}
-			/>
-			<div className="min-h-screen bg-background text-foreground">
-				<header className="p-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-b-2xl shadow-lg">
-					<div className="flex items-center justify-between">
-						<Button
-							variant="ghost"
-							onClick={() => navigate(-1)}
-							className="text-white hover:bg-green-600"
-						>
-							<ArrowLeft size={18} className="mr-2" />
-							Back
-						</Button>
-						<div className="text-center">
-							<h1 className="text-2xl font-bold">Activities</h1>
-						</div>
-						<div className="w-10"></div>
-					</div>
-				</header>
+  const create = [
+    { label: "Match", icon: Plus, sport: "football" as Sport, to: "/organize" },
+    { label: "Ride", icon: Route, sport: "cycling" as Sport, to: "/host-cycling" },
+    { label: "Venue", icon: Store, sport: "venue" as Sport, to: "/venue-create" },
+    { label: "Booking", icon: CalendarDays, sport: "guide" as Sport, to: "/venues" },
+  ];
 
-				<div className="px-4 py-4 pb-32">
-					<div className="grid grid-cols-2 gap-4">
-						{sports.map((sport, index) => (
-							<div
-								key={sport.name}
-								onClick={() => handleCardClick(sport)}
-								className={`
-                p-6 rounded-xl cursor-pointer transition-all duration-300
-                ${
-									sport.active
-										? "bg-green-500 hover:bg-green-600"
-										: "bg-gray-200 dark:bg-gray-700/90 hover:bg-gray-300 dark:hover:bg-gray-600/90"
-								}
-              `}
-							>
-								<div className="flex flex-col items-center text-center">
-									<div className="text-4xl mb-2">{sport.emoji}</div>
-									<h3 className="text-xl font-semibold">{sport.name}</h3>
-									{!sport.active && (
-										<div className="mt-2 text-sm text-gray-400 dark:text-gray-500">
-											Coming Soon
-										</div>
-									)}
-								</div>
-							</div>
-						))}
-					</div>
-				</div>
+  const kindLabel = { organised: "You organise", joined: "You joined", hosted: "You host" };
 
-				<Navbar />
-			</div>
-		</>
-	);
+  return (
+    <>
+      <Seo
+        title="Activities | Sport Cliq"
+        description="Explore and join a variety of sports activities including football, cycling, basketball, and more on Sport Cliq. Football in Nigeria, Play Sports Near You, Football Fields Near Me, Livescore, Osimhen, Asisat Oshola, Nigeria Startup, Sportstech."
+        url={window.location.href}
+        image={undefined}
+        children={<meta name="keywords" content={META_KEYWORDS} />}
+      />
+      <Screen>
+        <PageHeader title="Activities" subtitle="Everything you play, host and book" />
+
+        <main className="px-5 pt-[18px] flex flex-col gap-5">
+          <div className="flex flex-col gap-2.5">
+            <span className="text-[13px] font-bold text-sc-ink2">Quick create</span>
+            <div className="flex gap-2">
+              {create.map((c) => (
+                <button
+                  key={c.label}
+                  type="button"
+                  onClick={() => navigate(c.to)}
+                  className="flex-1 rounded-[20px] bg-white py-3.5 px-2 flex flex-col items-center gap-2 text-xs font-extrabold text-sc-ink active:scale-95 transition-transform"
+                >
+                  <Bubble icon={c.icon} sport={c.sport} size={42} />
+                  {c.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {upcoming.length > 0 && (
+            <ListGroup title="Your upcoming activities">
+              {upcoming.map((u) => (
+                <ListRow
+                  key={u.key}
+                  icon={u.kind === "hosted" ? Bike : Trophy}
+                  sport={u.kind === "hosted" ? "cycling" : "football"}
+                  title={u.title}
+                  subtitle={`${kindLabel[u.kind]} · ${formatShortDate(u.date)}${u.time ? `, ${formatTime12(u.time)}` : ""}`}
+                  right={u.tag ? <Pill sport="football">{u.tag}</Pill> : undefined}
+                  onClick={() => navigate(u.to)}
+                />
+              ))}
+            </ListGroup>
+          )}
+
+          <div className="flex flex-col gap-2.5">
+            <span className="text-[13px] font-bold text-sc-ink2">Sports</span>
+            <div className="grid grid-cols-2 gap-2.5">
+              {sports.map((s) => {
+                const c = SPORT[s.sport];
+                const Icon = s.icon;
+                if (s.active) {
+                  return (
+                    <button
+                      key={s.name}
+                      type="button"
+                      onClick={() => s.route && navigate(s.route)}
+                      className="relative overflow-hidden h-[150px] rounded-3xl p-3.5 flex flex-col justify-between items-start text-left active:scale-[0.98] transition-transform"
+                      style={{ background: c.solid, color: c.onSolid }}
+                    >
+                      <Icon aria-hidden="true" className="absolute opacity-25" size={110} strokeWidth={1.3} style={{ right: -20, bottom: -24 }} />
+                      <span className="w-11 h-11 rounded-full bg-white/30 flex items-center justify-center">
+                        <Icon size={24} />
+                      </span>
+                      <span className="relative flex flex-col">
+                        <span className="text-xl font-extrabold">{s.name}</span>
+                        <span className="text-xs font-bold opacity-85">{s.sub}</span>
+                      </span>
+                    </button>
+                  );
+                }
+                return (
+                  <div key={s.name} className="h-[84px] rounded-3xl bg-white p-3.5 flex items-center gap-2.5">
+                    <Bubble icon={Icon} sport={s.sport} size={40} />
+                    <span className="flex flex-col min-w-0">
+                      <span className="text-[15px] font-extrabold truncate">{s.name}</span>
+                      <span className="text-xs font-bold text-sc-ink3">Coming soon</span>
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => navigate("/guides")}
+            className="rounded-3xl p-[18px] flex items-center gap-3.5 text-left text-white active:scale-[0.99] transition-transform"
+            style={{ background: SPORT.guide.solid }}
+          >
+            <BookOpen size={28} />
+            <span className="flex-1 flex flex-col">
+              <span className="text-[17px] font-extrabold">Guides and rules</span>
+              <span className="text-[13px] font-semibold opacity-90">Learn to organise, host and play</span>
+            </span>
+            <ArrowRight size={22} />
+          </button>
+        </main>
+
+        <Navbar />
+      </Screen>
+    </>
+  );
 };
 
 export default Activities;

@@ -389,7 +389,7 @@ const Index = () => {
             <>
               <Section title="Upcoming matches" action="See all" onAction={() => navigate("/matches")} />
               {footballEvents.length > 0 ? (
-                <div className="flex gap-3 overflow-x-auto px-5 pb-1 snap-x [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <div className="flex gap-3 overflow-x-auto px-5 pb-1 snap-x scroll-px-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {footballEvents.map((m) => (
                     <button
                       key={m.id}
@@ -430,7 +430,7 @@ const Index = () => {
 
               <Section title="Featured venues" action="See all" onAction={() => navigate("/venues")} />
               {popularVenues.length > 0 ? (
-                <div className="flex gap-3 overflow-x-auto px-5 pb-1 snap-x [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <div className="flex gap-3 overflow-x-auto px-5 pb-1 snap-x scroll-px-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {popularVenues.map((venue) => {
                     const venueImage = venue.image_urls?.[0];
                     return (
@@ -500,9 +500,6 @@ const Index = () => {
                           </span>
                         </div>
                         <Pill sport={e.is_free ? "football" : "tennis"}>{e.is_free ? "Free" : "Paid"}</Pill>
-                        <span className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: SPORT.cycling.bg, color: SPORT.cycling.fg }}>
-                          <ChevronRight size={18} />
-                        </span>
                       </button>
                     );
                   })
