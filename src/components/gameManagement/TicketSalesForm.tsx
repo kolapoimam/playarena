@@ -10,7 +10,7 @@ const TicketSalesForm = ({ defaultOpen = false }: { defaultOpen?: boolean } = {}
   const [isTicketSalesOpen, setIsTicketSalesOpen] = useState(defaultOpen);
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 space-y-6">
+    <div className="bg-white dark:bg-gray-800 rounded-3xl p-[18px] space-y-6">
       <div className="flex justify-between items-center cursor-pointer" onClick={() => setIsTicketSalesOpen(!isTicketSalesOpen)}>
         <h2 className="text-xl font-semibold text-sc-ink dark:text-gray-200">Ticket Sales</h2>
         <span>{isTicketSalesOpen ? '-' : '+'}</span>

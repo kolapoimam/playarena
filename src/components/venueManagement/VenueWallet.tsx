@@ -201,7 +201,7 @@ const VenueWallet = ({ venueId, availableFunds, setAvailableFunds }: VenueWallet
       case "Review":
         return "bg-yellow-100 text-yellow-700 border-yellow-300";
       default:
-        return "bg-gray-500 text-white border-gray-600";
+        return "bg-sc-soft text-sc-ink2 border-transparent";
     }
   };
 

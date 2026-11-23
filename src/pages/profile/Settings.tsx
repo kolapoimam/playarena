@@ -151,7 +151,7 @@ const Settings = () => {
 
           <ListGroup title="About">
             <ListRow icon={BookOpen} sport="guide" title="Guides and rules" onClick={() => navigate("/guides")} />
-            <ListRow icon={Mail} title="Support" subtitle="support@sportcliq.com" onClick={() => (window.location.href = "mailto:support@sportcliq.com")} />
+            <ListRow icon={Mail} title="Support" subtitle="sportcliqapp@gmail.com" onClick={() => (window.location.href = "mailto:sportcliqapp@gmail.com")} />
             <ListRow icon={FileText} title="Terms and privacy" onClick={() => navigate("/terms-privacy")} />
             <ListRow icon={Info} title="App version" right={<span className="text-sm font-semibold text-sc-ink3">2.0</span>} chevron={false} />
           </ListGroup>

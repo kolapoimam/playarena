@@ -267,18 +267,18 @@ const MatchDetails = ({ match, cashout, handleCancelMatch, loading, isMatchPast 
   if (!match) return null;
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 dark:border-gray-700">
+    <div className="bg-white dark:bg-gray-800 rounded-3xl p-[18px] dark:border-gray-700">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-semibold text-sc-ink dark:text-gray-100">Match Details</h2>
         <div className="flex items-center gap-2">
           {match.cancellation_status && (
-            <span className="inline-block px-3 py-1 text-sm font-medium rounded border bg-red-100 text-red-700 border-red-300">
+            <span className="inline-block px-3 py-1 text-xs font-bold rounded-full border bg-red-100 text-red-700 border-red-300">
               Cancelled
             </span>
           )}
           {cashout && (
             <span
-              className={`inline-block px-3 py-1 text-sm font-medium rounded border ${getStatusStyles(
+              className={`inline-block px-3 py-1 text-xs font-bold rounded-full border ${getStatusStyles(
                 cashout.status
               )}`}
             >

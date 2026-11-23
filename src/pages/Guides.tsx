@@ -432,7 +432,7 @@ const Guides = () => {
               <span className="text-[13px] text-sc-ink3">Reach out to us on X</span>
             </span>
             <a
-              href="https://twitter.com/PiousGeek"
+              href="https://x.com/SportCliq"
               target="_blank"
               rel="noopener noreferrer"
               className="h-10 px-4 rounded-full bg-sc-ink text-white text-sm font-bold flex items-center"

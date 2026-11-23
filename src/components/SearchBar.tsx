@@ -19,7 +19,7 @@ export default function SearchBar() {
       <div className="relative flex items-center">
         <Input
           type="text"
-          className="pl-4 pr-24 py-5 w-full rounded-lg border border-sc-line focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+          className="pl-4 pr-24 py-5 w-full rounded-2xl border border-sc-line focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
           placeholder="Matches, Venues..."
           value={searchTerm}
           onChange={(e) => {

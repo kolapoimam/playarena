@@ -589,14 +589,14 @@ const PlayerManagement = ({
 
   const getStatusStyles = (status: string) => {
     switch (status) {
-      case 'Registered': return "bg-yellow-500 text-white border-yellow-600";
-      case 'Checked In': return "bg-green-500 text-white border-sc-green";
-      case 'Absent': return "bg-red-500 text-white border-red-600";
+      case 'Registered': return "bg-[#FEF9C3] text-[#A16207] border-transparent";
+      case 'Checked In': return "bg-[#DCFCE7] text-[#15803D] border-transparent";
+      case 'Absent': return "bg-[#FEE2E2] text-[#B91C1C] border-transparent";
       case "Successful": return "bg-sc-green-bg text-sc-green-dark border-green-300";
       case "Failed": return "bg-red-100 text-red-700 border-red-300";
       case "Processed": return "bg-blue-100 text-blue-700 border-blue-300";
       case "Review": return "bg-yellow-100 text-yellow-700 border-yellow-300";
-      default: return "bg-gray-500 text-white border-gray-600";
+      default: return "bg-sc-soft text-sc-ink2 border-transparent";
     }
   };
 
@@ -608,8 +608,8 @@ const PlayerManagement = ({
   if (!match) return null;
   
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 dark:border-gray-700">
-      <h2 className="text-xl font-semibold mb-4 text-sc-ink dark:text-gray-100">Manage Players</h2>
+    <div className="bg-white dark:bg-gray-800 rounded-3xl p-[18px] dark:border-gray-700">
+      <h2 className="text-lg font-extrabold tracking-[-0.01em] mb-4 text-sc-ink dark:text-gray-100">Manage Players</h2>
       
       <div className="flex gap-3 mb-4">
         <Button
@@ -777,7 +777,7 @@ const PlayerManagement = ({
                       </p>
                     </div>
                     <span
-                      className={`absolute top-2 right-2 px-2 py-1 text-xs font-medium rounded border bg-green-500 text-white border-sc-green`}
+                      className={`absolute top-2 right-2 px-2 py-1 text-xs font-medium rounded border bg-[#DCFCE7] text-[#15803D] border-transparent`}
                     >
                       Checked In
                     </span>

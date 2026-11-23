@@ -244,8 +244,8 @@ const TicketManagement = ({
   if (!match) return null;
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 dark:border-gray-700">
-      <h2 className="text-xl font-semibold mb-4 text-sc-ink dark:text-gray-100">Manage Tickets</h2>
+    <div className="bg-white dark:bg-gray-800 rounded-3xl p-[18px] dark:border-gray-700">
+      <h2 className="text-lg font-extrabold tracking-[-0.01em] mb-4 text-sc-ink dark:text-gray-100">Manage Tickets</h2>
       
       <div className="flex gap-3 mb-4">
         <Button
@@ -311,7 +311,7 @@ const TicketManagement = ({
                     </p>
                   </div>
                   <span
-                    className="absolute top-2 right-2 px-2 py-1 text-xs font-medium rounded border bg-green-500 text-white border-sc-green"
+                    className="absolute top-2 right-2 px-2 py-1 text-xs font-medium rounded border bg-[#DCFCE7] text-[#15803D] border-transparent"
                   >
                     Checked In
                   </span>

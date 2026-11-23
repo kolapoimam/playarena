@@ -414,7 +414,7 @@ const Auth = () => {
 
         {showForgotPassword && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 w-full max-w-xs">
+            <div className="bg-white dark:bg-gray-800 rounded-3xl p-[18px] w-full max-w-xs">
               <div className="text-center mb-5">
                 <h2 className="text-xl font-bold text-sc-ink dark:text-white">
                   Reset Password

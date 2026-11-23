@@ -134,7 +134,7 @@ const MatchHighlights = () => {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Match Details Card */}
-        <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 mb-6">
+        <div className="bg-white dark:bg-gray-800 rounded-3xl p-[18px] mb-6">
           <h2 className="text-xl font-semibold text-sc-ink dark:text-gray-200 mb-4">
             Match Details
           </h2>
@@ -285,7 +285,7 @@ const MatchHighlights = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Teams Section */}
-          <div className="md:col-span-2 bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6">
+          <div className="md:col-span-2 bg-white dark:bg-gray-800 rounded-3xl p-[18px]">
             <h2 className="text-xl font-semibold text-sc-ink dark:text-gray-200 mb-4">
               Teams
             </h2>
@@ -330,7 +330,7 @@ const MatchHighlights = () => {
           </div>
 
           {/* Share Section */}
-          <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 text-center">
+          <div className="bg-white dark:bg-gray-800 rounded-3xl p-[18px] text-center">
             <h2 className="text-xl font-semibold text-sc-ink dark:text-gray-200 mb-4">
               Spread the Word
             </h2>

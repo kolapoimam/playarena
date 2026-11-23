@@ -30,7 +30,7 @@ SportCliq is built for players, ride hosts, match organisers and venue owners in
 - Accounts: email and password, or Google sign in.
 - Cost: free to use. Organisers, hosts and venue owners set their own fees.
 - Install: Android browsers offer Install. On iPhone, open in Safari, tap Share, then Add to Home Screen.
-- Support: support@sportcliq.com and @SportCliq on X.
+- Support: sportcliqapp@gmail.com and @SportCliq on X.
 
 ## Optional
 

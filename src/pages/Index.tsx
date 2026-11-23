@@ -522,14 +522,6 @@ const Index = () => {
                 )}
               </div>
 
-              <div className="px-5">
-                <img
-                  src="/downolad now.jpg"
-                  alt="Organise football matches in 3 clicks. Download now on Google Play and the App Store."
-                  className="w-full h-auto object-cover rounded-[26px]"
-                />
-              </div>
-
               <button
                 type="button"
                 onClick={() => navigate("/activities")}

@@ -403,7 +403,7 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
       case "Review":
         return "bg-yellow-100 text-yellow-700 border-yellow-300";
       default:
-        return "bg-gray-500 text-white border-gray-600";
+        return "bg-sc-soft text-sc-ink2 border-transparent";
     }
   };
 
@@ -466,7 +466,7 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
               <select
                 value={bankName}
                 onChange={(e) => setBankName(e.target.value)}
-                className="mt-1 block w-full rounded-md border-sc-line shadow-card focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+                className="mt-1 block w-full rounded-2xl border-sc-line shadow-card focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
               >
                 <option value="">Select a bank</option>
                 {nigerianBanks.map((bank) => (

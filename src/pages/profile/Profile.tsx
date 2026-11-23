@@ -183,7 +183,7 @@ const Profile = () => {
         <span className="text-[13px] font-bold text-sc-ink3 uppercase tracking-[0.06em] px-1 pt-1">More</span>
         {rows([
           { to: "/guides", icon: BookOpen, sport: "guide", title: "Guides" },
-          { href: "mailto:support@sportcliq.com", icon: Mail, sport: "gray", title: "Support" },
+          { href: "mailto:sportcliqapp@gmail.com", icon: Mail, sport: "gray", title: "Support" },
           { to: "/terms-privacy", icon: FileText, sport: "gray", title: "Terms and privacy" },
         ])}
         <button

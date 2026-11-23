@@ -200,7 +200,7 @@ const LandmarkDetail = () => {
 
         <div className="px-5 pt-2 max-w-3xl mx-auto">
           <div className="relative rounded-[28px] overflow-hidden mb-6 h-56">
-            <Cover src={(landmark as any).image_url || (landmark as any).image_urls?.[0]} kind="cycling" alt={landmark.name} />
+            <Cover src={(landmark as any).image_url || (landmark as any).image_urls?.[0]} kind="landmark" alt={landmark.name} />
           </div>
 
           <h1 className="text-3xl font-bold mb-2 text-sc-ink dark:text-gray-100">{landmark.name}</h1>

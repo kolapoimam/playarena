@@ -14,7 +14,7 @@ const PaymentPrivacyForm = ({ defaultOpen = false }: { defaultOpen?: boolean } =
   const [isPaymentOpen, setIsPaymentOpen] = useState(defaultOpen);
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 space-y-6">
+    <div className="bg-white dark:bg-gray-800 rounded-3xl p-[18px] space-y-6">
       <div className="flex justify-between items-center cursor-pointer" onClick={() => setIsPaymentOpen(!isPaymentOpen)}>
         <h2 className="text-xl font-semibold text-sc-ink dark:text-gray-200">Payment & Privacy</h2>
         <span>{isPaymentOpen ? '-' : '+'}</span>

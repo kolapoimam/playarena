@@ -1,3 +1,4 @@
+import { Avatar, initialsOf } from "@/components/sc/ui";
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -230,9 +231,19 @@ const AccountDetails = ({ profile: initialProfile, setProfile: setInitialProfile
         </header>
 
       <div className="flex-grow overflow-y-auto">
-        <div className="container mx-auto px-4 py-6 max-w-md">
-          <Card className="bg-white dark:bg-gray-800 border-none shadow-card rounded-3xl">
-            <CardContent className="p-6">
+        <div className="px-5 pt-3 pb-6 max-w-md mx-auto w-full flex flex-col gap-4">
+          <div className="relative rounded-[28px] p-5 text-white overflow-hidden flex items-center gap-4" style={{ background: "#16A34A" }}>
+            <span aria-hidden="true" className="absolute -right-10 -top-10 w-36 h-36 rounded-full border-[18px] border-white/15" />
+            <span className="rounded-full border-4 border-white/70 shrink-0">
+              <Avatar seed={form.watch("nickname") || form.watch("first_name") || "SportCliq"} initials={initialsOf(`${form.watch("first_name") || ""} ${form.watch("last_name") || ""}`.trim() || "SC")} size={64} />
+            </span>
+            <span className="relative flex flex-col min-w-0">
+              <span className="text-[22px] leading-7 font-extrabold tracking-[-0.02em] truncate">{form.watch("nickname") || "Your profile"}</span>
+              <span className="text-sm opacity-85 truncate">{[form.watch("first_name"), form.watch("last_name")].filter(Boolean).join(" ") || "Add your name below"}</span>
+            </span>
+          </div>
+          <Card className="bg-white border-none shadow-none rounded-3xl">
+            <CardContent className="p-[18px]">
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

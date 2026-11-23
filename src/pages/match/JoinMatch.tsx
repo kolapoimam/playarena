@@ -76,7 +76,7 @@ const JoinMatch = () => {
   const [confirmationCode, setConfirmationCode] = useState<string | null>(null);
   const [selectedSlots, setSelectedSlots] = useState(1);
   const [userId, setUserId] = useState<string | null>(null);
-  const defaultEmail = "payments@sportcliq.com";
+  const defaultEmail = "sportcliqapp@gmail.com";
 
   // Check authentication status
   useEffect(() => {

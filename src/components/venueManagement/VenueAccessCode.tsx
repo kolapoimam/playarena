@@ -217,7 +217,7 @@ const VenueAccessCode = ({ venueId }: VenueAccessCodeProps) => {
       case "pending":
         return "bg-yellow-100 text-yellow-700 border-yellow-300";
       default:
-        return "bg-gray-500 text-white border-gray-600";
+        return "bg-sc-soft text-sc-ink2 border-transparent";
     }
   };
 
@@ -249,7 +249,7 @@ const VenueAccessCode = ({ venueId }: VenueAccessCodeProps) => {
               {accessCodes.map((code) => (
                 <div
                   key={code.id}
-                  className="p-4 bg-sc-soft dark:bg-gray-700 rounded-lg border border-sc-line dark:border-gray-600"
+                  className="p-4 bg-sc-bg rounded-2xl"
                 >
                   <div className="flex justify-between items-center">
                     <div>
@@ -297,7 +297,7 @@ const VenueAccessCode = ({ venueId }: VenueAccessCodeProps) => {
                       </p>
                     </div>
                     <span
-                      className={`inline-block px-3 py-1 text-sm font-medium rounded border ${getStatusStyles(code.status)}`}
+                      className={`inline-block px-3 py-1 text-xs font-bold rounded-full border ${getStatusStyles(code.status)}`}
                     >
                       {capitalizeStatus(code.status)}
                     </span>

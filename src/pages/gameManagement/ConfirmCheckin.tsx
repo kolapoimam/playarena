@@ -594,8 +594,8 @@ const ConfirmCheckin = () => {
 
       <div className="max-w-4xl mx-auto p-4 mt-4 pb-24">
         {superCode.length < 6 && (
-          <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 mb-6 dark:border-gray-700">
-            <h2 className="text-xl font-semibold mb-4 text-sc-ink dark:text-gray-100">
+          <div className="bg-white dark:bg-gray-800 rounded-3xl p-[18px] mb-6 dark:border-gray-700">
+            <h2 className="text-lg font-extrabold tracking-[-0.01em] mb-4 text-sc-ink dark:text-gray-100">
               Select Event Type
             </h2>
             <div className="flex gap-4">
@@ -674,7 +674,7 @@ const ConfirmCheckin = () => {
         )}
 
         {eventNotFound && !loading && !error && (
-          <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 mb-4">
+          <div className="bg-white dark:bg-gray-800 rounded-3xl p-[18px] mb-4">
             <AlertCircle
               size={36}
               className="text-red-400 dark:text-red-400 mx-auto"
@@ -691,7 +691,7 @@ const ConfirmCheckin = () => {
 
         {(match || cyclingEvent) && !error && (
           <Tabs defaultValue="details" className="w-full">
-            <div className="sticky top-16 z-10 bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 mb-6">
+            <div className="sticky top-16 z-10 bg-white dark:bg-gray-800 rounded-3xl p-[18px] mb-6">
               <TabsList className="w-full grid grid-cols-3 bg-sc-soft dark:bg-gray-700 rounded-lg h-12">
                 <TabsTrigger
                   value="details"

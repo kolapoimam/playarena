@@ -71,14 +71,14 @@ const formatStatus = (status: string, eventDateTime: Date) => {
 const getStatusStyles = (status: string) => {
   switch (status.toLowerCase()) {
     case "registered":
-      return "bg-yellow-500 text-white border-yellow-600";
+      return "bg-[#FEF9C3] text-[#A16207] border-transparent";
     case "checked_in":
-      return "bg-green-500 text-white border-sc-green";
+      return "bg-[#DCFCE7] text-[#15803D] border-transparent";
     case "absent":
     case "no_show":
-      return "bg-red-500 text-white border-red-600";
+      return "bg-[#FEE2E2] text-[#B91C1C] border-transparent";
     default:
-      return "bg-gray-500 text-white border-gray-600";
+      return "bg-sc-soft text-sc-ink2 border-transparent";
   }
 };
 

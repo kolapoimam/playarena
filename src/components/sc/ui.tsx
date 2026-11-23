@@ -614,6 +614,7 @@ export const PLACEHOLDER = {
   venue: "/placeholders/stadium.webp",
   football: "/placeholders/football.webp",
   cycling: "/placeholders/cycling.webp",
+  landmark: "/placeholders/landmark.webp",
 } as const;
 export type CoverKind = keyof typeof PLACEHOLDER;
 

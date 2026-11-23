@@ -108,7 +108,7 @@ const JoinCycling = () => {
     defaultValues: { name: "", phone: "", is_own_bike: false, is_rental_bike: false },
   });
 
-  const defaultEmail = "payments@sportcliq.com";
+  const defaultEmail = "sportcliqapp@gmail.com";
 
   useEffect(() => {
     const checkAuth = async () => {
