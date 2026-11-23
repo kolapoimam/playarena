@@ -1,6 +1,14 @@
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
+import { initAnalytics, instrumentSupabase } from '@/lib/analytics';
+import { supabase as supabaseApp } from '@/lib/supabase';
+import { supabase as supabaseGenerated } from '@/integrations/supabase/client';
+
+// Google Analytics, loaded once before the app renders
+initAnalytics();
+instrumentSupabase(supabaseApp);
+instrumentSupabase(supabaseGenerated);
 
 // The redesigned app is light mode only.
 document.documentElement.classList.remove('dark');

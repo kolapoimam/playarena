@@ -7,8 +7,7 @@ import { useState, useEffect } from 'react';
 import SplashScreen from "@/components/SplashScreen";
 import ScrollToTop from "@/components/ScrollToTop";
 import InstallPrompt from "@/components/InstallPrompt";
-import { useGoogleAnalytics } from "@/hooks/useGoogleAnalytics";
-import * as gtag from "@/lib/gtag";
+import { pageview } from "@/lib/analytics";
 import { supabase } from "@/integrations/supabase/client";
 import MobileOnlyGuard from "@/components/MobileOnlyGuard";
 
@@ -69,7 +68,7 @@ const AppRoutes = () => {
 
   useEffect(() => {
     console.log("Current path:", location.pathname);
-    gtag.pageview(location.pathname + location.search);
+    pageview(location.pathname + location.search);
   }, [location]);
 
   // OneSignal user tagging effect
@@ -190,7 +189,6 @@ function LegacyRideFeedback() {
 }
 
 const App = () => {
-  useGoogleAnalytics();
   const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
@@ -209,21 +207,6 @@ const App = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  useEffect(() => {
-    const handleAppInstalled = () => {
-      console.log("PWA was installed");
-      gtag.event("app_installed", {
-        event_category: "PWA",
-        event_label: "User installed the PWA",
-      });
-    };
-
-    window.addEventListener("appinstalled", handleAppInstalled);
-
-    return () => {
-      window.removeEventListener("appinstalled", handleAppInstalled);
-    };
-  }, []);
 
   if (showSplash) {
     return <SplashScreen />;
