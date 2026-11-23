@@ -5,9 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { FormValues } from "../MatchFormTypes";
 
-const TicketSalesForm = () => {
+const TicketSalesForm = ({ defaultOpen = false }: { defaultOpen?: boolean } = {}) => {
   const form = useFormContext<FormValues>();
-  const [isTicketSalesOpen, setIsTicketSalesOpen] = useState(false);
+  const [isTicketSalesOpen, setIsTicketSalesOpen] = useState(defaultOpen);
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 space-y-6">

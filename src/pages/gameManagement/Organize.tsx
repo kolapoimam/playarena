@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, AlertCircle } from "lucide-react";
+import { ArrowLeft, AlertCircle, ArrowRight, ChevronLeft, Zap } from "lucide-react";
 import { Form } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -28,6 +28,13 @@ type Venue = {
   city: string;
   verified_status: "True" | "False";
 };
+
+const STEPS = [
+  { label: "Basics", title: "Let's set up your match", fields: ["title", "venue_id", "match_date", "start_time", "end_time", "total_slots", "notes"] },
+  { label: "Players and price", title: "Who can join and what it costs", fields: ["skill_level", "match_type", "gender", "is_paid", "price", "allow_bulk_tickets", "is_private", "access_password", "player_number_required"] },
+  { label: "Extras", title: "Tickets and repeats", fields: ["sell_tickets", "ticket_price", "max_tickets", "is_recurring", "recurring_frequency", "recurring_occurrences"] },
+  { label: "Organiser and review", title: "Almost there", fields: ["organizer_name", "organizer_phone", "disclose_phone"] },
+];
 
 const convertTo24Hour = (time12: string): string => {
   const [time, period] = time12.split(' ');
@@ -55,6 +62,7 @@ const Organize = () => {
   const [formMethods, setFormMethods] = useState<{ setValue: (name: keyof FormValues, value: any) => void; watch: () => FormValues } | null>(null);
   const [codeTable, setCodeTable] = useState<"venue_access_codes" | "booking_access_codes" | null>(null);
   const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState(0);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -301,6 +309,24 @@ const Organize = () => {
     }
   };
 
+  const onInvalid = (errors: Record<string, unknown>) => {
+    const keys = Object.keys(errors);
+    const idx = STEPS.findIndex((st) => st.fields.some((f) => keys.includes(f)));
+    setStep(idx >= 0 ? idx : 0);
+    toast({ title: "Check your details", description: "Some fields need fixing before you can publish.", variant: "destructive" });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const goNext = async () => {
+    const ok = await form.trigger(STEPS[step].fields as any);
+    if (!ok) {
+      toast({ title: "Check this step", description: "Some details need fixing before you continue.", variant: "destructive" });
+      return;
+    }
+    setStep(step + 1);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   return (
     <>
       <Seo
@@ -318,7 +344,7 @@ const Organize = () => {
             <div className="min-w-11 flex justify-end"></div>
           </div>
         </header>
-        <div className="p-6 max-w-3xl mx-auto">
+        <div className="px-5 pt-2 max-w-3xl mx-auto">
           {isPreFilled && (
             <div className="mb-4 bg-sc-green-bg dark:bg-green-900 text-sc-green-dark dark:text-green-300 p-4 rounded-lg">
               <p className="font-medium">Venue Booking Pre-Filled</p>
@@ -334,49 +360,113 @@ const Organize = () => {
               <p className="text-sm">This is a verified venue. Please confirm your booking before proceeding to create a match.</p>
             </div>
           )}
+          <div className="mb-5 flex flex-col gap-2.5">
+            <div className="flex gap-1.5">
+              {STEPS.map((_, i) => (
+                <span key={i} className="flex-1 h-1.5 rounded-full transition-colors" style={{ background: i <= step ? "#16A34A" : "#E6E9E3" }} />
+              ))}
+            </div>
+            <span className="text-[13px] font-bold text-sc-ink3">
+              Step {step + 1} of {STEPS.length} · {STEPS[step].label}
+            </span>
+            <h2 className="m-0 text-[26px] leading-8 font-extrabold tracking-[-0.03em]">{STEPS[step].title}</h2>
+          </div>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-              <MatchDetailsForm
-                isPreFilled={isPreFilled}
-                preSelectedVenueSlug={preSelectedVenueSlug}
-                onPrefill={(values) => {
-                  if (formMethods) {
-                    formMethods.setValue("match_date", values.match_date);
-                    formMethods.setValue("start_time", values.start_time);
-                    formMethods.setValue("end_time", values.end_time);
-                    setHasValidBookingCode(true);
-                  }
-                }}
-                onVenueCreated={(venueId, venueSlug, venueName) => {
-                  form.setValue("venue_id", venueId);
-                  toast({
-                    title: "Venue created",
-                    description: `${venueName} has been added to venues.`,
-                  });
-                }}
-              />
-              <PreferencesForm />
-              <PaymentPrivacyForm />
-              <TicketSalesForm />
-              <RecurringForm userId={userId} />
-              <OrganizerDetailsForm />
-              <div className="flex gap-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full bg-sc-soft2 hover:bg-gray-300 text-sc-ink font-medium rounded-lg px-4 py-3 text-lg shadow-card transition-colors"
-                  onClick={() => setPreviewDialogOpen(true)}
-                  disabled={loading || !form.watch("title") || !form.watch("venue_id") || !form.watch("match_date") || !form.watch("start_time") || !form.watch("end_time") || !form.watch("total_slots") || !form.watch("organizer_name")}
-                >
-                  Preview Match
-                </Button>
-                <Button 
-                  type="submit" 
-                  className="w-full bg-sc-green hover:brightness-95 text-sc-green-ink font-bold rounded-full px-4 py-3 text-lg shadow-card transition-colors" 
-                  disabled={loading}
-                >
-                  {loading ? "Creating..." : "Create Match"}
-                </Button>
+            <form onSubmit={form.handleSubmit(onSubmit, onInvalid)} className="flex flex-col gap-5 pb-28">
+              <div className={step === 0 ? "contents" : "hidden"}>
+                <MatchDetailsForm
+                  isPreFilled={isPreFilled}
+                  preSelectedVenueSlug={preSelectedVenueSlug}
+                  onPrefill={(values) => {
+                    if (formMethods) {
+                      formMethods.setValue("match_date", values.match_date);
+                      formMethods.setValue("start_time", values.start_time);
+                      formMethods.setValue("end_time", values.end_time);
+                      setHasValidBookingCode(true);
+                    }
+                  }}
+                  onVenueCreated={(venueId, venueSlug, venueName) => {
+                    form.setValue("venue_id", venueId);
+                    toast({
+                      title: "Venue created",
+                      description: `${venueName} has been added to venues.`,
+                    });
+                  }}
+                />
+              </div>
+              <div className={step === 1 ? "contents" : "hidden"}>
+                <PreferencesForm defaultOpen />
+                <PaymentPrivacyForm defaultOpen />
+              </div>
+              <div className={step === 2 ? "contents" : "hidden"}>
+                <TicketSalesForm defaultOpen />
+                <RecurringForm userId={userId} defaultOpen />
+              </div>
+              <div className={step === 3 ? "contents" : "hidden"}>
+                <OrganizerDetailsForm />
+                <div className="bg-white rounded-3xl p-[18px] flex flex-col gap-2.5">
+                  <span className="text-base font-extrabold">Review</span>
+                  {[
+                    ["Match", form.watch("title") || "Not set"],
+                    ["Venue", selectedVenue ? `${selectedVenue.name}, ${selectedVenue.city}` : "Not set"],
+                    ["Date", form.watch("match_date") ? format(form.watch("match_date"), "EEE, d MMM yyyy") : "Not set"],
+                    ["Time", form.watch("start_time") && form.watch("end_time") ? `${form.watch("start_time")} to ${form.watch("end_time")}` : "Not set"],
+                    ["Players", `${form.watch("total_slots") || 0} slots`],
+                    ["Entry", form.watch("is_paid") ? `₦${Number(form.watch("price") || 0).toLocaleString()} per player` : "Free"],
+                    ...(form.watch("is_recurring") ? [["Repeats", `${form.watch("recurring_frequency") || ""} · ${form.watch("recurring_occurrences") || 0} times`]] : []),
+                  ].map(([k, v]) => (
+                    <div key={k as string} className="flex justify-between gap-4 text-sm">
+                      <span className="text-sc-ink3 shrink-0">{k}</span>
+                      <span className="font-bold text-right truncate">{v}</span>
+                    </div>
+                  ))}
+                  <button type="button" onClick={() => setStep(0)} className="self-start text-sm font-bold text-sc-green-dark">
+                    Edit details
+                  </button>
+                </div>
+              </div>
+
+              <div className="fixed left-0 right-0 bottom-0 z-30 px-5 pt-3.5 pb-[max(env(safe-area-inset-bottom),1.5rem)] bg-white/95 backdrop-blur-xl border-t border-sc-line flex gap-2.5">
+                {step > 0 && (
+                  <button
+                    type="button"
+                    aria-label="Previous step"
+                    onClick={() => {
+                      setStep(step - 1);
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }}
+                    className="w-[54px] h-[54px] rounded-full bg-sc-soft text-sc-ink flex items-center justify-center shrink-0"
+                  >
+                    <ChevronLeft size={22} />
+                  </button>
+                )}
+                {step < STEPS.length - 1 ? (
+                  <button
+                    type="button"
+                    onClick={goNext}
+                    className="flex-1 h-[54px] rounded-full bg-sc-green text-white text-base font-bold flex items-center justify-center gap-2"
+                  >
+                    Next <ArrowRight size={18} />
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setPreviewDialogOpen(true)}
+                      disabled={loading}
+                      className="h-[54px] px-5 rounded-full bg-white border border-sc-line text-sc-ink text-base font-bold shrink-0 disabled:opacity-50"
+                    >
+                      Preview
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="flex-1 h-[54px] rounded-full bg-sc-green text-white text-base font-bold flex items-center justify-center gap-2 disabled:opacity-60"
+                    >
+                      <Zap size={18} /> {loading ? "Creating..." : "Publish match"}
+                    </button>
+                  </>
+                )}
               </div>
             </form>
           </Form>
@@ -396,7 +486,6 @@ const Organize = () => {
             onNavigate={(slug) => navigate(`/match/${slug}`)}
           />
         </div>
-        <Navbar />
       </div>
     </>
   );

@@ -12,9 +12,9 @@ type RecurringFormProps = {
   userId: string | null;
 };
 
-const RecurringForm = ({ userId }: RecurringFormProps) => {
+const RecurringForm = ({ userId, defaultOpen = false }: RecurringFormProps & { defaultOpen?: boolean }) => {
   const form = useFormContext<FormValues>();
-  const [isRecurringOpen, setIsRecurringOpen] = useState(false);
+  const [isRecurringOpen, setIsRecurringOpen] = useState(defaultOpen);
 
   if (!userId) {
     return null;

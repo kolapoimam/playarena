@@ -8,10 +8,10 @@ import { Switch } from "@/components/ui/switch";
 import { Copy } from "lucide-react";
 import { FormValues } from "../MatchFormTypes";
 
-const PaymentPrivacyForm = () => {
+const PaymentPrivacyForm = ({ defaultOpen = false }: { defaultOpen?: boolean } = {}) => {
   const form = useFormContext<FormValues>();
   const { toast } = useToast();
-  const [isPaymentOpen, setIsPaymentOpen] = useState(false);
+  const [isPaymentOpen, setIsPaymentOpen] = useState(defaultOpen);
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 space-y-6">

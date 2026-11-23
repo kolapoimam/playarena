@@ -8,9 +8,9 @@ const skillLevels = ["Beginner", "Amateur", "Intermediate", "Advanced", "Profess
 const matchTypes = ["4-a-side", "5-a-side", "7-a-side", "11-a-side (Regular)", "Double", "Friendly", "All", "None"] as const;
 const genders = ["Male", "Female", "All", "None"] as const;
 
-const PreferencesForm = () => {
+const PreferencesForm = ({ defaultOpen = false }: { defaultOpen?: boolean } = {}) => {
   const form = useFormContext<FormValues>();
-  const [isPreferencesOpen, setIsPreferencesOpen] = useState(false);
+  const [isPreferencesOpen, setIsPreferencesOpen] = useState(defaultOpen);
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-6 space-y-6">
