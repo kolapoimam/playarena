@@ -14,6 +14,8 @@ import { DateTime } from "luxon";
 import { BackButton } from "@/components/sc/ui";
 import { PageSkeleton } from "@/components/sc/skeletons";
 import { ViewTicketButton } from "@/components/sc/TicketCard";
+import { FunEmpty } from "@/components/sc/ui";
+import { Route as RouteIcon, Bike as BikeIcon } from "lucide-react";
 type Landmark = {
   name: string;
   state: string;
@@ -326,9 +328,7 @@ const MyCycling = () => {
                       );
                     })
                   ) : (
-                    <p className="text-sm text-sc-ink3 dark:text-gray-400 p-4">
-                      No hosted cycling events found.
-                    </p>
+<FunEmpty icon={RouteIcon} sport="cycling" title="No rides hosted yet" body="Lead the pack. Pick a landmark, set the distance and invite your crew." primary={{ label: "Host a ride", onClick: () => navigate("/host-cycling") }} />
                   )}
                 </TabsContent>
                 <TabsContent value="cycling">
@@ -395,9 +395,7 @@ const MyCycling = () => {
                       );
                     })
                   ) : (
-                    <p className="text-sm text-sc-ink3 dark:text-gray-400 p-4">
-                      No joined cycling events found.
-                    </p>
+<FunEmpty icon={BikeIcon} sport="cycling" title="Your wheels are waiting" body="Rides you join appear here with your ticket. Find a group ride near you." primary={{ label: "Browse rides", onClick: () => navigate("/cycling-activities") }} />
                   )}
                 </TabsContent>
               </Tabs>

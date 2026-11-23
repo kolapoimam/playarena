@@ -179,8 +179,6 @@ const Profile = () => {
           { to: "/profile/settings", icon: Settings, sport: "gray", title: "Settings", sub: "Location, app and notifications" },
           { to: "/profile/view-profile", icon: Trophy, sport: "guide", title: "Stats and performance" },
           { to: "/profile/account-details", icon: CircleUserRound, sport: "gray", title: "Account details" },
-          { to: "/profile/match-preferences", icon: Settings, sport: "gray", title: "Match preferences" },
-          { to: "/profile/notifications", icon: Bell, sport: "gray", title: "Notifications" },
         ])}
         <span className="text-[13px] font-bold text-sc-ink3 uppercase tracking-[0.06em] px-1 pt-1">More</span>
         {rows([

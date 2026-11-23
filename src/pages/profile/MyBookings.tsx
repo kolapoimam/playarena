@@ -12,6 +12,8 @@ import Navbar from "@/components/Navbar";
 
 import { BackButton } from "@/components/sc/ui";
 import { EventListSkeleton } from "@/components/sc/skeletons";
+import { FunEmpty } from "@/components/sc/ui";
+import { CalendarCheck as CalendarCheckIcon } from "lucide-react";
 type Booking = { 
   id: string; 
   venue_id: string;
@@ -322,7 +324,7 @@ const MyBookings = () => {
                       })}
                     </div>
                   ) : (
-                    <p className="text-sm text-sc-ink3 dark:text-gray-400 p-4">No upcoming bookings found.</p>
+<FunEmpty icon={CalendarCheckIcon} sport="venue" title="Nothing booked ahead" body="Upcoming venue bookings and their access codes will show here." />
                   )}
                 </TabsContent>
                 <TabsContent value="past">
@@ -392,7 +394,7 @@ const MyBookings = () => {
                       })}
                     </div>
                   ) : (
-                    <p className="text-sm text-sc-ink3 dark:text-gray-400 p-4">No past bookings found.</p>
+<FunEmpty icon={CalendarCheckIcon} sport="gray" title="No past bookings" body="Your booking history builds up here over time." />
                   )}
                 </TabsContent>
               </Tabs>

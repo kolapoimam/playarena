@@ -18,6 +18,8 @@ import { cn } from "@/lib/utils";
 
 import { BackButton } from "@/components/sc/ui";
 import { EventListSkeleton } from "@/components/sc/skeletons";
+import { FunEmpty } from "@/components/sc/ui";
+import { CalendarCheck as CalendarCheckIcon } from "lucide-react";
 type Booking = {
   id: string;
   venue_id: string;
@@ -128,9 +130,7 @@ const VenueBookings = () => {
           {loading ? (
             <div className="w-full px-1"><EventListSkeleton /></div>
           ) : bookings.length === 0 ? (
-            <p className="text-sc-ink3 dark:text-gray-400 text-center">
-              No bookings found.
-            </p>
+<FunEmpty icon={CalendarCheckIcon} sport="venue" title="No bookings yet" body="When players book your venue, their slots and access codes show up here." />
           ) : (
             <div className="overflow-x-auto">
               <Table>

@@ -19,6 +19,8 @@ import { Seo } from "@/components/Seo";
 import { BackButton, SPORT } from "@/components/sc/ui";
 import { Map as MapIcon } from "lucide-react";
 import { EventListSkeleton } from "@/components/sc/skeletons";
+import { FunEmpty } from "@/components/sc/ui";
+import { Flag as FlagIcon } from "lucide-react";
 // Define the Landmark type
 type Landmark = {
   id_uuid: string;
@@ -414,9 +416,7 @@ const LandmarkDirectory = () => {
               </div>
             </>
           ) : (
-            <div className="flex items-center justify-center h-[50vh] flex-col gap-4">
-              <p className="text-sc-ink3 dark:text-gray-400 text-center p-4">No landmarks match your filters.</p>
-            </div>
+<FunEmpty icon={FlagIcon} sport="guide" title="No landmarks here yet" body="Add the roundabout, gate or park your crew always meets at, and rides can start from it." primary={{ label: "Host a ride", onClick: () => navigate("/host-cycling") }} />
           )}
         </div>
 

@@ -37,6 +37,9 @@ import UserMatches from "@/components/profile/UserMatches";
 import { BackButton } from "@/components/sc/ui";
 import { PageSkeleton } from "@/components/sc/skeletons";
 import { ViewTicketButton } from "@/components/sc/TicketCard";
+import { FunEmpty } from "@/components/sc/ui";
+import { Trophy as TrophyIcon } from "lucide-react";
+import { Megaphone as WhistleIcon } from "lucide-react";
 type Match = {
   id: string;
   title: string;
@@ -532,9 +535,7 @@ const MyMatches = () => {
                       );
                     })
                   ) : (
-                    <p className="text-sm text-sc-ink3 dark:text-gray-400 p-4">
-                      No organized matches found.
-                    </p>
+<FunEmpty icon={WhistleIcon} sport="football" title="You haven't blown a whistle yet" body="Organise your first match. Pick a venue, set the slots and share the link with your squad." primary={{ label: "Organise a match", onClick: () => navigate("/organize") }} />
                   )}
                 </TabsContent>
                 <TabsContent value="playing">
@@ -642,9 +643,7 @@ const MyMatches = () => {
                       );
                     })
                   ) : (
-                    <p className="text-sm text-sc-ink3 dark:text-gray-400 p-4">
-                      No joined matches found.
-                    </p>
+<FunEmpty icon={TrophyIcon} sport="football" title="Your boots are still clean" body="Matches you join show up here with your ticket. Find a game near you and grab a slot." primary={{ label: "Find a match", onClick: () => navigate("/matches") }} />
                   )}
                 </TabsContent>
               </Tabs>
