@@ -9,7 +9,8 @@ import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import { Seo } from "@/components/Seo";
 
-import { BackButton } from "@/components/sc/ui";
+import { BackButton, SPORT } from "@/components/sc/ui";
+import { Map as MapIcon } from "lucide-react";
 // Custom CSS to style ReactQuill for description
 const quillStyles = `
   .ql-container {
@@ -199,13 +200,9 @@ const LandmarkDetail = () => {
           </div>
         </header>
 
-        <div className="p-6 max-w-3xl mx-auto">
-          <div className="rounded-xl overflow-hidden mb-6 h-64 shadow-card">
-            <img
-              src={placeholderImage}
-              alt={landmark.name}
-              className="w-full h-full object-cover"
-            />
+        <div className="px-5 pt-2 max-w-3xl mx-auto">
+          <div className="rounded-[28px] overflow-hidden mb-6 h-56 flex items-center justify-center" style={{ background: SPORT.guide.bg, color: SPORT.guide.fg }}>
+            <MapIcon size={110} strokeWidth={1} />
           </div>
 
           <h1 className="text-3xl font-bold mb-2 text-sc-ink dark:text-gray-100">{landmark.name}</h1>

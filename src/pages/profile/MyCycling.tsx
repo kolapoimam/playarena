@@ -248,13 +248,13 @@ const MyCycling = () => {
                 <TabsList className="grid w-full grid-cols-2 bg-sc-soft dark:bg-gray-700 rounded-t-lg">
                   <TabsTrigger
                     value="hosting"
-                    className="data-[state=active]:bg-green-500 data-[state=active]:text-white"
+                    className="data-[state=active]:bg-white data-[state=active]:text-sc-ink data-[state=active]:shadow-[0_1px_3px_rgba(14,20,17,0.12)]"
                   >
                     Hosting
                   </TabsTrigger>
                   <TabsTrigger
                     value="cycling"
-                    className="data-[state=active]:bg-green-500 data-[state=active]:text-white"
+                    className="data-[state=active]:bg-white data-[state=active]:text-sc-ink data-[state=active]:shadow-[0_1px_3px_rgba(14,20,17,0.12)]"
                   >
                     Cycling
                   </TabsTrigger>

@@ -42,13 +42,13 @@ const TermsAndPrivacy = () => {
                 <TabsList className="grid w-full grid-cols-2 bg-sc-soft2 dark:bg-gray-700 rounded-lg p-1 mb-6">
                   <TabsTrigger
                     value="terms"
-                    className="rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-gray-600 data-[state=active]:shadow-sm data-[state=active]:border-b-2 data-[state=active]:border-green-500 hover:bg-green-50 dark:hover:bg-gray-700 transition-all"
+                    className="rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-gray-600 data-[state=active]:shadow-sm hover:bg-green-50 dark:hover:bg-gray-700 transition-all"
                   >
                     Terms of Service
                   </TabsTrigger>
                   <TabsTrigger
                     value="privacy"
-                    className="rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-gray-600 data-[state=active]:shadow-sm data-[state=active]:border-b-2 data-[state=active]:border-green-500 hover:bg-green-50 dark:hover:bg-gray-700 transition-all"
+                    className="rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-gray-600 data-[state=active]:shadow-sm hover:bg-green-50 dark:hover:bg-gray-700 transition-all"
                   >
                     Privacy Policy
                   </TabsTrigger>

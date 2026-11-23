@@ -145,14 +145,7 @@ const MatchPreferences = () => {
           <div className="pt-3 flex items-center justify-between gap-3">
             <BackButton to="/profile" />
             <h1 className="m-0 flex-1 text-center text-[17px] font-extrabold truncate">Match preferences</h1>
-            <div className="min-w-11 flex justify-end"><Button
-            variant="ghost"
-            onClick={() => navigate("/profile")}
-            className="h-11 px-4 rounded-full bg-sc-ink text-white font-bold text-sm"
-          >
-            <ChevronLeft className="w-5 h-5 mr-2" />
-            Back
-          </Button></div>
+            <div className="min-w-11 flex justify-end"></div>
           </div>
         </header>
 

@@ -16,7 +16,8 @@ import { Label } from "@/components/ui/label";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Seo } from "@/components/Seo";
 
-import { BackButton } from "@/components/sc/ui";
+import { BackButton, SPORT } from "@/components/sc/ui";
+import { Map as MapIcon } from "lucide-react";
 // Define the Landmark type
 type Landmark = {
   id_uuid: string;
@@ -359,14 +360,12 @@ const LandmarkDirectory = () => {
                       className="rounded-3xl overflow-hidden shadow-card bg-white dark:bg-gray-800 cursor-pointer relative"
                       onClick={() => navigate(`/landmark/${landmark.slug}`)}
                     >
-                      <img
-                        src={placeholderImage}
-                        alt={landmark.name}
-                        className="w-full h-36 object-cover"
-                      />
+                      <div className="w-full h-36 flex items-center justify-center" style={{ background: SPORT.guide.bg, color: SPORT.guide.fg }}>
+                        <MapIcon size={56} strokeWidth={1.3} />
+                      </div>
                       <Button
                         variant="ghost"
-                        className="absolute bottom-2 right-2 text-red-500 hover:text-red-700"
+                        className="absolute top-3 right-3 w-9 h-9 p-0 rounded-full bg-white text-sport-red hover:bg-white"
                         onClick={(e) => {
                           e.stopPropagation();
                           toggleFavorite(landmark.id_uuid);

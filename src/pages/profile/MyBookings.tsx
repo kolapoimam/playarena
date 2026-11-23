@@ -213,13 +213,7 @@ const MyBookings = () => {
       <header className="px-5 pt-[max(env(safe-area-inset-top),1rem)] flex flex-col gap-3.5">
           <div className="pt-3 flex items-center justify-between min-h-11">
             <BackButton to="/profile" />
-            <div className="flex gap-2"><Button
-            variant="ghost"
-            onClick={() => navigate("/profile")}
-            className="h-11 px-4 rounded-full bg-sc-ink text-white font-bold text-sm"
-          >
-            <ChevronLeft className="w-5 h-5 mr-2" /> Back
-          </Button></div>
+            <div className="flex gap-2"></div>
           </div>
           <h1 className="m-0 text-[32px] leading-[38px] font-extrabold tracking-[-0.03em]">My bookings</h1>
         </header>
@@ -251,13 +245,13 @@ const MyBookings = () => {
                 <TabsList className="w-full grid grid-cols-2 bg-sc-soft2 dark:bg-gray-700 rounded-t-lg">
                   <TabsTrigger
                     value="upcoming"
-                    className="data-[state=active]:bg-green-500 data-[state=active]:text-white"
+                    className="data-[state=active]:bg-white data-[state=active]:text-sc-ink data-[state=active]:shadow-[0_1px_3px_rgba(14,20,17,0.12)]"
                   >
                     Upcoming
                   </TabsTrigger>
                   <TabsTrigger
                     value="past"
-                    className="data-[state=active]:bg-green-500 data-[state=active]:text-white"
+                    className="data-[state=active]:bg-white data-[state=active]:text-sc-ink data-[state=active]:shadow-[0_1px_3px_rgba(14,20,17,0.12)]"
                   >
                     Past
                   </TabsTrigger>

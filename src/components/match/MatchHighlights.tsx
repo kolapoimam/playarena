@@ -98,7 +98,7 @@ const MatchHighlights = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-green-50">
+      <div className="min-h-screen flex items-center justify-center bg-sc-bg text-sc-ink font-sans">
         <div className="text-xl font-semibold text-sc-ink">Loading...</div>
       </div>
     );
@@ -106,7 +106,7 @@ const MatchHighlights = () => {
 
   if (!highlight) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-green-50">
+      <div className="min-h-screen flex items-center justify-center bg-sc-bg text-sc-ink font-sans">
         <div className="text-xl font-semibold text-sc-ink">
           No highlights available.
         </div>
@@ -115,7 +115,7 @@ const MatchHighlights = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 pb-24">
+    <div className="min-h-screen bg-sc-bg text-sc-ink font-sans pb-32">
       {/* Header */}
       <header className="sticky top-0 z-30 bg-sc-bg/95 backdrop-blur-xl px-5 pb-3 pt-[max(env(safe-area-inset-top),1rem)]">
           <div className="pt-3 flex items-center justify-between gap-3">

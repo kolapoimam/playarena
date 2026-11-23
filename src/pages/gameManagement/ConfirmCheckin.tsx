@@ -697,19 +697,19 @@ const ConfirmCheckin = () => {
               <TabsList className="w-full grid grid-cols-3 bg-sc-soft dark:bg-gray-700 rounded-lg h-12">
                 <TabsTrigger
                   value="details"
-                  className="data-[state=active]:bg-green-500 data-[state=active]:text-white py-2 text-sm font-semibold rounded-lg"
+                  className="data-[state=active]:bg-white data-[state=active]:text-sc-ink data-[state=active]:shadow-[0_1px_3px_rgba(14,20,17,0.12)] py-2 text-sm font-semibold rounded-lg"
                 >
                   Details
                 </TabsTrigger>
                 <TabsTrigger
                   value="manage"
-                  className="data-[state=active]:bg-green-500 data-[state=active]:text-white py-2 text-sm font-semibold rounded-lg"
+                  className="data-[state=active]:bg-white data-[state=active]:text-sc-ink data-[state=active]:shadow-[0_1px_3px_rgba(14,20,17,0.12)] py-2 text-sm font-semibold rounded-lg"
                 >
                   Manage
                 </TabsTrigger>
                 <TabsTrigger
                   value="cashout"
-                  className="data-[state=active]:bg-green-500 data-[state=active]:text-white py-2 text-sm"
+                  className="data-[state=active]:bg-white data-[state=active]:text-sc-ink data-[state=active]:shadow-[0_1px_3px_rgba(14,20,17,0.12)] py-2 text-sm"
                 >
                   Cashout
                 </TabsTrigger>

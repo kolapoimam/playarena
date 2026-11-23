@@ -312,14 +312,7 @@ const MyVenue = () => {
         <header className="px-5 pt-[max(env(safe-area-inset-top),1rem)] flex flex-col gap-3.5">
           <div className="pt-3 flex items-center justify-between min-h-11">
             <BackButton to="/profile" />
-            <div className="flex gap-2"><Button
-              variant="ghost"
-              onClick={() => navigate("/profile")}
-              className="h-11 px-4 rounded-full bg-sc-ink text-white font-bold text-sm"
-            >
-              <ChevronLeft className="w-5 h-5 mr-2" />
-              Back
-            </Button></div>
+            <div className="flex gap-2"></div>
           </div>
           <h1 className="m-0 text-[32px] leading-[38px] font-extrabold tracking-[-0.03em]">My venues</h1>
         </header>

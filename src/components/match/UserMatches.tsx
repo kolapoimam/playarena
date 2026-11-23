@@ -332,13 +332,13 @@ const UserMatches = ({ profile }: UserMatchesProps) => {
           <TabsList className="grid w-full grid-cols-2 bg-sc-soft dark:bg-gray-700 rounded-t-lg">
             <TabsTrigger
               value="organizing"
-              className="data-[state=active]:bg-green-500 data-[state=active]:text-white"
+              className="data-[state=active]:bg-white data-[state=active]:text-sc-ink data-[state=active]:shadow-[0_1px_3px_rgba(14,20,17,0.12)]"
             >
               Organizing
             </TabsTrigger>
             <TabsTrigger
               value="playing"
-              className="data-[state=active]:bg-green-500 data-[state=active]:text-white"
+              className="data-[state=active]:bg-white data-[state=active]:text-sc-ink data-[state=active]:shadow-[0_1px_3px_rgba(14,20,17,0.12)]"
             >
               Playing
             </TabsTrigger>

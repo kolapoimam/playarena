@@ -115,14 +115,7 @@ const VenueBookings = () => {
           <div className="pt-3 flex items-center justify-between gap-3">
             <BackButton />
             <h1 className="m-0 flex-1 text-center text-[17px] font-extrabold truncate">Bookings</h1>
-            <div className="min-w-11 flex justify-end"><Button
-            variant="ghost"
-            className="h-11 px-4 rounded-full bg-sc-ink text-white font-bold text-sm"
-            onClick={() => navigate(-1)}
-          >
-            <MapPin size={18} className="mr-2" />
-            Back
-          </Button></div>
+            <div className="min-w-11 flex justify-end"></div>
           </div>
         </header>
 
