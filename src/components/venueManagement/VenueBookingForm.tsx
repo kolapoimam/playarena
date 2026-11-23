@@ -17,6 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import TimeInput from "@/components/TimeInput";
 
 import { BackButton } from "@/components/sc/ui";
+import { RowsSkeleton } from "@/components/sc/skeletons";
 // Lazy load Navbar to avoid circular dependencies
 const Navbar = lazy(() => import("@/components/Navbar"));
 
@@ -594,9 +595,7 @@ const VenueBookingForm = () => {
 
   if (loading || verifyingPayment) {
     return (
-      <div className="flex justify-center items-center min-h-[50vh] bg-sc-soft dark:bg-gray-900">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sc-green"></div>
-      </div>
+      <div className="w-full"><RowsSkeleton /></div>
     );
   }
 

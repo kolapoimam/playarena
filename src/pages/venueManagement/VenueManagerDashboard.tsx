@@ -13,6 +13,7 @@ import Navbar from "@/components/Navbar";
 import ManagerBookingView from "@/components/venueManagement/ManagerBookingView";
 
 import { BackButton } from "@/components/sc/ui";
+import { RowsSkeleton } from "@/components/sc/skeletons";
 type Venue = { id: string; name: string; city: string; price_per_hour: number; is_verified: string };
 type Booking = { 
   id: string; 
@@ -225,9 +226,7 @@ const VenueManagerDashboard = () => {
 
         <main className="container mx-auto p-4 pb-24 space-y-8 flex-1">
           {loading ? (
-            <div className="flex justify-center items-center h-64">
-              <Loader2 className="w-8 h-8 animate-spin text-sc-green-dark" />
-            </div>
+            <div className="w-full"><RowsSkeleton /></div>
           ) : !venue ? (
             <p className="text-center text-sc-ink3 dark:text-gray-400">No venue data available.</p>
           ) : (

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Calendar, Clock, MapPin, Users, ChevronLeft, ChevronRight, Filter, Lock, ArrowLeft, Plus } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, ChevronLeft, ChevronRight, Filter, Lock, ArrowLeft, Plus, Trophy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -26,7 +26,10 @@ import TeamMatchDetails from "@/components/match/TeamMatchDetails";
 import UserMatches from "@/components/match/UserMatches";
 import { Seo } from "@/components/Seo";
 
-import { Avatar, BackButton, DateBox, Meta, Pill, Progress, formatNaira, initialsOf, sportFor } from "@/components/sc/ui";
+import { Avatar, BackButton, DateBox, FunEmpty, Meta, Pill, Progress, formatNaira, initialsOf, sportFor } from "@/components/sc/ui";
+import { StateScope, useUserState } from "@/components/sc/location";
+import { getSavedState } from "@/lib/location";
+import { EventListSkeleton } from "@/components/sc/skeletons";
 // Match type definition based on the existing Supabase schema
 interface Match {
   id: string;
@@ -86,7 +89,12 @@ const Matches = () => {
   const [durationFilter, setDurationFilter] = useState<string>("all");
   const [timeStart, setTimeStart] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
-  const [stateFilter, setStateFilter] = useState<string | null>(null);
+  const userState = useUserState();
+  const [stateFilter, setStateFilter] = useState<string | null>(getSavedState());
+  useEffect(() => {
+    setStateFilter(userState);
+    setCurrentPage(1);
+  }, [userState]);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -146,7 +154,7 @@ const Matches = () => {
         .select(
           `
           id, slug, title, match_date, match_time, start_time, end_time, total_slots, is_paid, price, notes, organizer_name, organizer_id, is_private, access_password,
-          venue:venues(slug, name, city, state),
+          venue:venues${stateFilter && stateFilter !== "all" ? "!inner" : ""}(slug, name, city, state),
           players(*),
           created_at
         `,
@@ -367,7 +375,16 @@ const Matches = () => {
           <h1 className="m-0 text-[32px] leading-[38px] font-extrabold tracking-[-0.03em]">Football matches</h1>
         </header>
 
-        <div className="mt-4 px-5">
+        <div className="px-5 pt-4">
+          <StateScope
+            nearMe={!!stateFilter && stateFilter === userState}
+            onChange={(v) => {
+              setStateFilter(v ? userState || getSavedState() : null);
+              setCurrentPage(1);
+            }}
+          />
+        </div>
+        <div className="mt-3 px-5">
           <Collapsible
             open={isFilterOpen}
             onOpenChange={setIsFilterOpen}
@@ -521,8 +538,8 @@ const Matches = () => {
         </div>
 
         {loading ? (
-          <div className="flex justify-center items-center h-[50vh]">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sc-green"></div>
+          <div className="px-5">
+            <EventListSkeleton label="Loading matches" />
           </div>
         ) : matches.length > 0 ? (
           <div className="px-5 flex flex-col gap-3.5">
@@ -615,13 +632,15 @@ const Matches = () => {
             </div>
           </div>
         ) : (
-          <div className="flex items-center justify-center h-[50vh] flex-col gap-4">
-            <p className="text-muted-foreground text-center p-4">
-              No matches found. Create or join a match to see it here.
-            </p>
-            <Button onClick={() => navigate("/organize")}>
-              Organize a Match
-            </Button>
+          <div className="px-5">
+            <FunEmpty
+              icon={Trophy}
+              sport="football"
+              title={stateFilter ? `No matches in ${stateFilter} yet` : "The pitch is empty"}
+              body={stateFilter ? "Nobody has blown the whistle here yet. Organise a match and the first players are usually in within a day." : "No matches fit these filters. Loosen them up or start your own game."}
+              primary={{ label: "Organise a match", onClick: () => navigate("/organize") }}
+              secondary={stateFilter ? { label: "See matches across Nigeria", onClick: () => { setStateFilter(null); setCurrentPage(1); } } : undefined}
+            />
           </div>
         )}
 

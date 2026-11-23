@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { BackButton } from "@/components/sc/ui";
+import { DetailSkeleton } from "@/components/sc/skeletons";
 type MatchHighlight = {
   match_id: string;
   title: string;
@@ -97,11 +98,7 @@ const MatchHighlights = () => {
   }, [slug, toast]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-sc-bg text-sc-ink font-sans">
-        <div className="text-xl font-semibold text-sc-ink">Loading...</div>
-      </div>
-    );
+    return <DetailSkeleton />;
   }
 
   if (!highlight) {

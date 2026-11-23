@@ -16,6 +16,7 @@ import Navbar from "@/components/Navbar";
 import { ArrowLeft } from "lucide-react";
 
 import { BackButton } from "@/components/sc/ui";
+import { PageSkeleton } from "@/components/sc/skeletons";
 const profileSchema = z.object({
   first_name: z
     .string()
@@ -214,9 +215,7 @@ const AccountDetails = ({ profile: initialProfile, setProfile: setInitialProfile
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-sc-bg dark:bg-gray-900">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sc-green"></div>
-      </div>
+      <PageSkeleton />
     );
   }
 

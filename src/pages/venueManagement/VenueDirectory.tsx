@@ -16,7 +16,10 @@ import { Label } from "@/components/ui/label";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Seo } from "@/components/Seo";
 
-import { BackButton, Meta, Pill, SPORT, formatNaira } from "@/components/sc/ui";
+import { BackButton, FunEmpty, Meta, Pill, SPORT, formatNaira } from "@/components/sc/ui";
+import { StateScope, useUserState } from "@/components/sc/location";
+import { getSavedState } from "@/lib/location";
+import { VenueListSkeleton } from "@/components/sc/skeletons";
 // Define the Venue type
 type Venue = {
   id: string;
@@ -56,7 +59,11 @@ const VenueDirectory = () => {
   const venuesPerPage = 4;
 
   // Filter states
-  const [stateFilter, setStateFilter] = useState<string>("All");
+  const userState = useUserState();
+  const [stateFilter, setStateFilter] = useState<string>(getSavedState() || "All");
+  useEffect(() => {
+    setStateFilter(userState || "All");
+  }, [userState]);
   const [activityFilter, setActivityFilter] = useState<string>("All");
   const [sortOrder, setSortOrder] = useState<string>("None");
 
@@ -259,7 +266,10 @@ const VenueDirectory = () => {
           <h1 className="m-0 text-[32px] leading-[38px] font-extrabold tracking-[-0.03em]">Venues</h1>
         </header>
 
-        <div className="mt-6 px-4">
+        <div className="px-5 pt-4">
+          <StateScope nearMe={stateFilter !== "All" && stateFilter === userState} onChange={(v) => { setStateFilter(v && userState ? userState : "All"); setCurrentPage(1); }} />
+        </div>
+        <div className="mt-3 px-5">
           <Collapsible
             open={isFilterOpen}
             onOpenChange={setIsFilterOpen}
@@ -345,11 +355,9 @@ const VenueDirectory = () => {
           </Collapsible>
         </div>
 
-        <div className="px-4 space-y-4">
+        <div className="px-5 flex flex-col gap-3.5">
           {loading ? (
-            <div className="flex justify-center items-center h-[50vh]">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sc-green"></div>
-            </div>
+            <VenueListSkeleton />
           ) : filteredVenues.length > 0 ? (
             <>
               <div className="flex flex-col gap-3.5">
@@ -440,9 +448,14 @@ const VenueDirectory = () => {
               </div>
             </>
           ) : (
-            <div className="flex items-center justify-center h-[50vh] flex-col gap-4">
-              <p className="text-sc-ink3 dark:text-gray-400 text-center p-4">No venues match your filters.</p>
-            </div>
+            <FunEmpty
+              icon={Store}
+              sport="venue"
+              title={stateFilter !== "All" ? `No venues listed in ${stateFilter} yet` : "No venues match that"}
+              body={stateFilter !== "All" ? "Own a pitch or court here? List it and be the first place players book." : "Try a different filter or list a venue yourself."}
+              primary={{ label: "List your venue", onClick: () => navigate("/venue-create") }}
+              secondary={stateFilter !== "All" ? { label: "See venues across Nigeria", onClick: () => setStateFilter("All") } : undefined}
+            />
           )}
         </div>
 

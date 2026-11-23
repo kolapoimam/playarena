@@ -10,6 +10,7 @@ import "react-quill/dist/quill.snow.css";
 import { Seo } from "@/components/Seo";
 
 import { BackButton, Bubble, DateBox, Meta, Pill, ScButton, SPORT, Spinner, StickyFooter, formatNaira } from "@/components/sc/ui";
+import { RowsSkeleton, DetailSkeleton } from "@/components/sc/skeletons";
 // Custom CSS to style ReactQuill for description and facilities
 const quillStyles = `
   .ql-container {
@@ -169,11 +170,7 @@ const VenueDetail = () => {
   };
 
   if (loading) {
-    return (
-      <div className="flex justify-center items-center min-h-[50vh] bg-sc-soft dark:bg-gray-900">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sc-green"></div>
-      </div>
-    );
+    return <DetailSkeleton />;
   }
 
   if (error || !venue) {

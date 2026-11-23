@@ -17,6 +17,7 @@ import VenueWallet from "@/components/venueManagement/VenueWallet";
 import Navbar from "@/components/Navbar";
 
 import { BackButton } from "@/components/sc/ui";
+import { EventListSkeleton } from "@/components/sc/skeletons";
 const pinSchema = z.object({
   access_code: z
     .string()
@@ -320,14 +321,10 @@ const MyVenue = () => {
         <div className="flex-grow overflow-y-auto">
           <div className="container mx-auto px-4 py-6">
             {loading ? (
-              <div className="flex justify-center items-center h-64">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sc-green"></div>
-              </div>
+              <div className="w-full px-1"><EventListSkeleton /></div>
             ) : isVenueLinked && venueId ? (
               statsLoading ? (
-                <div className="flex justify-center items-center h-64">
-                  <Loader2 className="w-8 h-8 animate-spin text-sc-green-dark" />
-                </div>
+                <div className="w-full px-1"><EventListSkeleton /></div>
               ) : !venueStats ? (
                 <p className="text-center text-sc-ink3 dark:text-gray-400">No venue data available.</p>
               ) : (

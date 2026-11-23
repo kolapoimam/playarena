@@ -23,6 +23,7 @@ import TicketReceipt from "@/components/gameManagement/TicketReceipt";
 import { Seo } from "@/components/Seo";
 
 import { BackButton } from "@/components/sc/ui";
+import { RowsSkeleton } from "@/components/sc/skeletons";
 type Match = {
   id: string;
   slug: string;
@@ -370,9 +371,7 @@ const Ticketing = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-[50vh]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sc-green"></div>
-      </div>
+      <div className="w-full"><RowsSkeleton /></div>
     );
   }
 

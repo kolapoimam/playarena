@@ -11,7 +11,10 @@ import { Badge } from "@/components/ui/badge";
 import Navbar from "@/components/Navbar";
 import { DateTime } from "luxon";
 
-import { BackButton, DateBox, Meta, Pill, Progress, SPORT, formatNaira } from "@/components/sc/ui";
+import { BackButton, DateBox, FunEmpty, Meta, Pill, Progress, SPORT, formatNaira } from "@/components/sc/ui";
+import { StateScope, useUserState } from "@/components/sc/location";
+import { sameState } from "@/lib/location";
+import { EventListSkeleton } from "@/components/sc/skeletons";
 interface CyclingEvent {
   id_uuid: string;
   slug: string;
@@ -52,10 +55,14 @@ const CyclingActivity = () => {
   const eventsPerPage = 4;
   const LAGOS_TIMEZONE = "Africa/Lagos";
 
+  const userState = useUserState();
+  const [stateOnly, setStateOnly] = useState(true);
+  const activeState = stateOnly ? userState : null;
+
   useEffect(() => {
     fetchLandmarks();
     fetchEvents();
-  }, [currentPage, isPaidFilter, landmarkFilter, durationFilter, statusFilter]);
+  }, [currentPage, isPaidFilter, landmarkFilter, durationFilter, statusFilter, activeState]);
 
   const fetchLandmarks = async () => {
     try {
@@ -197,13 +204,14 @@ const CyclingActivity = () => {
       });
 
       // Apply pagination client-side
+      const stateEvents = activeState ? sortedEvents.filter((e) => sameState(e.start_landmark?.state, activeState)) : sortedEvents;
       const start = (currentPage - 1) * eventsPerPage;
       const end = start + eventsPerPage;
-      const paginatedEvents = sortedEvents.slice(start, end);
+      const paginatedEvents = stateEvents.slice(start, end);
 
       setEvents(paginatedEvents);
       setFilteredEvents(paginatedEvents);
-      setTotalEvents(count || 0);
+      setTotalEvents(activeState ? stateEvents.length : count || 0);
     } catch (error: any) {
       console.error("Error fetching cycling events:", error);
       setEvents([]);
@@ -283,7 +291,10 @@ const CyclingActivity = () => {
         </button>
       </div>
 
-      <div className="mt-4 px-5">
+      <div className="px-5 pt-4">
+        <StateScope nearMe={stateOnly} onChange={(v) => { setStateOnly(v); setCurrentPage(1); }} />
+      </div>
+      <div className="mt-3 px-5">
         <Collapsible
           open={isFilterOpen}
           onOpenChange={setFilterOpen}
@@ -389,9 +400,7 @@ const CyclingActivity = () => {
         </Collapsible>
 
         {loading ? (
-          <div className="flex justify-center items-center h-[50vh]">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sc-green"></div>
-          </div>
+          <EventListSkeleton label="Loading rides" />
         ) : filteredEvents.length > 0 ? (
           <div className="flex flex-col gap-3.5">
             {filteredEvents.map((event) => {
@@ -466,14 +475,14 @@ const CyclingActivity = () => {
             </div>
           </div>
         ) : (
-          <div className="flex items-center justify-center h-[50vh] flex-col gap-4">
-            <p className="text-muted-foreground text-center p-4">
-              No events found. Host an event to see it here.
-            </p>
-            <Button onClick={() => navigate("/host-cycling")}>
-              Host an Event
-            </Button>
-          </div>
+          <FunEmpty
+            icon={Bike}
+            sport="cycling"
+            title={activeState ? `No rides in ${activeState} yet` : "The road is quiet"}
+            body={activeState ? "Be the one who gets the wheels turning. Host a ride and your crew will find you." : "No rides match your filters right now. Host one and set the pace."}
+            primary={{ label: "Host a ride", onClick: () => navigate("/host-cycling") }}
+            secondary={activeState ? { label: "See rides across Nigeria", onClick: () => setStateOnly(false) } : undefined}
+          />
         )}
         <Navbar />
       </div>

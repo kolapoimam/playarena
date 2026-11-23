@@ -9,6 +9,7 @@ import Navbar from "@/components/Navbar";
 import VenueAccessCode from "@/components/venueManagement/VenueAccessCode";
 
 import { BackButton } from "@/components/sc/ui";
+import { RowsSkeleton } from "@/components/sc/skeletons";
 const BookingCode = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -63,9 +64,7 @@ const BookingCode = () => {
 
 <main className="flex-grow max-w-7xl mx-auto px-4 py-6 w-full">
   {loading ? (
-    <div className="flex justify-center items-center h-64">
-      <Loader2 className="w-8 h-8 animate-spin text-sc-green-dark" />
-    </div>
+    <div className="w-full"><RowsSkeleton /></div>
   ) : venueId ? (
     <VenueAccessCode venueId={venueId} />
   ) : (

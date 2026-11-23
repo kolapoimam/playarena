@@ -558,3 +558,52 @@ export const formatShortDate = (d?: string | null) => {
   if (isNaN(date.getTime())) return d;
   return date.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
 };
+
+/** Illustrated empty state with a friendly line and up to two actions. */
+export function FunEmpty({
+  icon: Icon,
+  sport = "football",
+  title,
+  body,
+  primary,
+  secondary,
+}: {
+  icon: LucideIcon;
+  sport?: Sport;
+  title: ReactNode;
+  body?: ReactNode;
+  primary?: { label: string; onClick: () => void };
+  secondary?: { label: string; onClick: () => void };
+}) {
+  const c = SPORT[sport];
+  return (
+    <div className="bg-white rounded-[28px] px-6 pt-8 pb-6 flex flex-col items-center text-center gap-3">
+      <div className="relative w-[132px] h-[132px] flex items-center justify-center" aria-hidden="true">
+        <span className="absolute inset-0 rounded-full" style={{ background: c.bg }} />
+        <span className="absolute inset-[18px] rounded-full border-2 border-dashed" style={{ borderColor: c.solid, opacity: 0.45 }} />
+        <span className="absolute w-3 h-3 rounded-full top-2 right-5" style={{ background: SPORT.tennis.solid }} />
+        <span className="absolute w-2 h-2 rounded-full bottom-5 left-2" style={{ background: SPORT.pink.solid }} />
+        <span className="absolute w-2.5 h-2.5 rounded-[3px] rotate-12 bottom-2 right-8" style={{ background: SPORT.guide.solid }} />
+        <span className="relative w-[64px] h-[64px] rounded-[22px] flex items-center justify-center rotate-[-6deg] shadow-float" style={{ background: c.solid, color: c.onSolid }}>
+          <Icon size={30} />
+        </span>
+      </div>
+      <span className="text-[19px] font-extrabold tracking-[-0.02em] mt-1">{title}</span>
+      {body && <span className="text-sm leading-[21px] text-sc-ink2 max-w-[280px]">{body}</span>}
+      {(primary || secondary) && (
+        <div className="w-full flex flex-col gap-2 pt-2">
+          {primary && (
+            <button type="button" onClick={primary.onClick} className="h-[50px] rounded-full font-bold text-[15px]" style={{ background: c.solid, color: c.onSolid }}>
+              {primary.label}
+            </button>
+          )}
+          {secondary && (
+            <button type="button" onClick={secondary.onClick} className="h-[46px] rounded-full font-bold text-[15px] bg-sc-soft text-sc-ink">
+              {secondary.label}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}

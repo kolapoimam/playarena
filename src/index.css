@@ -113,3 +113,17 @@
   padding: 0;
   text-align: left;
 }
+
+/* Skeleton shimmer */
+@keyframes sc-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.sc-skel {
+  background: linear-gradient(90deg, #E6E9E3 0%, #F1F3EE 40%, #E6E9E3 80%);
+  background-size: 200% 100%;
+  animation: sc-shimmer 1.4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sc-skel { animation: none; }
+}

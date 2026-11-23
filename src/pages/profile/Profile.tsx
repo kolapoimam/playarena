@@ -4,10 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { User, LogOut, Trophy, Wallet, Volleyball, Settings, Calendar, Bike, BookOpen, Mail, Key, MapPin, ChevronRight, FileText, ArrowLeft, CircleUserRound, Bell } from "lucide-react";
+import { User, LogOut, Trophy, Wallet, Volleyball, Settings, Calendar, Bike, BookOpen, Mail, Key, MapPin, ChevronRight, FileText, Medal, ArrowLeft, CircleUserRound, Bell } from "lucide-react";
 import Navbar from "@/components/Navbar";
 
 import { Avatar, IconButton, ListRow, Sport, initialsOf } from "@/components/sc/ui";
+import { PageSkeleton } from "@/components/sc/skeletons";
 const Profile = () => {
   const { toast } = useToast();
   const [profile, setProfile] = useState(null);
@@ -88,9 +89,7 @@ const Profile = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-sc-bg dark:bg-gray-900">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sc-green"></div>
-      </div>
+      <PageSkeleton />
     );
   }
 
@@ -116,7 +115,7 @@ const Profile = () => {
         <Trophy aria-hidden="true" className="absolute text-white/10" size={220} strokeWidth={1} style={{ right: -40, top: 40 }} />
         <div className="relative pt-3 flex justify-end gap-2">
           <IconButton icon={Bell} label="Notifications" onClick={() => navigate("/profile/notifications")} />
-          <IconButton icon={Settings} label="Preferences" onClick={() => navigate("/profile/match-preferences")} />
+          <IconButton icon={Settings} label="Settings" onClick={() => navigate("/profile/settings")} />
         </div>
         <div className="relative flex items-center gap-4">
           <span className="rounded-full border-4 border-white shrink-0 bg-white">
@@ -137,6 +136,29 @@ const Profile = () => {
       </div>
 
       <main className="px-5 pt-[18px] flex flex-col gap-3.5">
+        <button
+          type="button"
+          onClick={() => navigate("/profile/badges")}
+          className="bg-white rounded-[22px] p-4 flex items-center gap-3 text-left"
+        >
+          <span className="flex">
+            {([
+              ["#FACC15", Medal],
+              ["#16A34A", Trophy],
+              ["#FB923C", Bike],
+              ["#8B5CF6", MapPin],
+            ] as const).map(([bg, I], k) => (
+              <span key={k} className="w-[38px] h-[38px] rounded-full border-[3px] border-white flex items-center justify-center text-white" style={{ background: bg, marginLeft: k ? -8 : 0 }}>
+                <I size={16} />
+              </span>
+            ))}
+          </span>
+          <span className="flex-1 flex flex-col">
+            <span className="text-[15px] font-extrabold">Badges</span>
+            <span className="text-xs text-sc-ink3">See what you've unlocked</span>
+          </span>
+          <ChevronRight size={18} className="text-[#9AA19C]" />
+        </button>
         {rows([
           { to: "/profile/my-matches", icon: Trophy, sport: "football", title: "My matches", sub: "Upcoming and past" },
           { to: "/profile/my-cycling", icon: Bike, sport: "cycling", title: "My cycling", sub: "Rides you joined and host" },
@@ -154,6 +176,8 @@ const Profile = () => {
         ])}
         <span className="text-[13px] font-bold text-sc-ink3 uppercase tracking-[0.06em] px-1 pt-1">Account</span>
         {rows([
+          { to: "/profile/settings", icon: Settings, sport: "gray", title: "Settings", sub: "Location, app and notifications" },
+          { to: "/profile/view-profile", icon: Trophy, sport: "guide", title: "Stats and performance" },
           { to: "/profile/account-details", icon: CircleUserRound, sport: "gray", title: "Account details" },
           { to: "/profile/match-preferences", icon: Settings, sport: "gray", title: "Match preferences" },
           { to: "/profile/notifications", icon: Bell, sport: "gray", title: "Notifications" },

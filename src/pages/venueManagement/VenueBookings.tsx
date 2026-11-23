@@ -17,6 +17,7 @@ import Navbar from "@/components/Navbar";
 import { cn } from "@/lib/utils";
 
 import { BackButton } from "@/components/sc/ui";
+import { EventListSkeleton } from "@/components/sc/skeletons";
 type Booking = {
   id: string;
   venue_id: string;
@@ -125,9 +126,7 @@ const VenueBookings = () => {
             Booking History
           </h2>
           {loading ? (
-            <div className="flex justify-center items-center h-32">
-              <Loader2 className="h-8 w-8 animate-spin text-sc-green-dark" />
-            </div>
+            <div className="w-full px-1"><EventListSkeleton /></div>
           ) : bookings.length === 0 ? (
             <p className="text-sc-ink3 dark:text-gray-400 text-center">
               No bookings found.

@@ -18,6 +18,7 @@ import { Seo } from "@/components/Seo";
 
 import { BackButton, SPORT } from "@/components/sc/ui";
 import { Map as MapIcon } from "lucide-react";
+import { EventListSkeleton } from "@/components/sc/skeletons";
 // Define the Landmark type
 type Landmark = {
   id_uuid: string;
@@ -345,9 +346,7 @@ const LandmarkDirectory = () => {
 
         <div className="px-4 space-y-4">
           {loading ? (
-            <div className="flex justify-center items-center h-[50vh]">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sc-green"></div>
-            </div>
+            <div className="w-full px-1"><EventListSkeleton /></div>
           ) : filteredLandmarks.length > 0 ? (
             <>
               <div className="space-y-4">

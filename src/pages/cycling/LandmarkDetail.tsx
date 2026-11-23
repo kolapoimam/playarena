@@ -11,6 +11,7 @@ import { Seo } from "@/components/Seo";
 
 import { BackButton, SPORT } from "@/components/sc/ui";
 import { Map as MapIcon } from "lucide-react";
+import { RowsSkeleton, DetailSkeleton } from "@/components/sc/skeletons";
 // Custom CSS to style ReactQuill for description
 const quillStyles = `
   .ql-container {
@@ -149,11 +150,7 @@ const LandmarkDetail = () => {
   };
 
   if (loading) {
-    return (
-      <div className="flex justify-center items-center min-h-[50vh] bg-sc-soft dark:bg-gray-900">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sc-green"></div>
-      </div>
-    );
+    return <DetailSkeleton />;
   }
 
   if (error || !landmark) {
@@ -251,9 +248,7 @@ const LandmarkDetail = () => {
               <h2 className="font-semibold text-lg mb-4 text-sc-ink dark:text-gray-100">Recent Events</h2>
 
               {eventsLoading ? (
-                <div className="flex justify-center py-4">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-sc-green"></div>
-                </div>
+                <div className="w-full"><RowsSkeleton /></div>
               ) : events.length > 0 ? (
                 <div className="space-y-4">
                   {events.map((event) => (

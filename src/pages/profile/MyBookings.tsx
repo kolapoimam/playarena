@@ -11,6 +11,7 @@ import { format, differenceInHours } from "date-fns";
 import Navbar from "@/components/Navbar";
 
 import { BackButton } from "@/components/sc/ui";
+import { EventListSkeleton } from "@/components/sc/skeletons";
 type Booking = { 
   id: string; 
   venue_id: string;
@@ -220,9 +221,7 @@ const MyBookings = () => {
 
       <main className="flex-grow max-w-7xl mx-auto px-4 py-6 w-full">
         {loading ? (
-          <div className="flex justify-center items-center h-64">
-            <Loader2 className="w-8 h-8 animate-spin text-sc-green-dark" />
-          </div>
+          <div className="w-full px-1"><EventListSkeleton /></div>
         ) : !venueId ? (
           <Card className="w-full bg-gradient-to-b from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 shadow-lg rounded-xl border border-sc-line dark:border-gray-700">
             <CardContent className="text-center py-6">

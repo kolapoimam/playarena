@@ -28,6 +28,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Toggle } from "@/components/ui/toggle";
 
 import { BackButton } from "@/components/sc/ui";
+import { RowsSkeleton } from "@/components/sc/skeletons";
 type Match = {
   id: string;
   slug: string;
@@ -656,10 +657,7 @@ const ConfirmCheckin = () => {
         )}
 
         {loading && (
-          <div className="flex items-center py-4">
-            <Loader2 className="animate-spin text-sc-green-dark" size={24} />
-            <span className="ml-3 text-sc-ink2">Loading...</span>
-          </div>
+          <div className="py-2"><RowsSkeleton rows={3} /></div>
         )}
 
         {error && !loading && (
