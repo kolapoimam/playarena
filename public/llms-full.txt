@@ -1,0 +1,35 @@
+# SportCliq, full description
+
+SportCliq (https://app.sportcliq.com) is a sports community app for Nigeria. It is a progressive web app designed for phones. It brings together four groups of people: players who want a game, organisers who run matches, cycling hosts who lead group rides, and venue owners who rent out pitches and courts.
+
+## Football matches
+
+Players browse upcoming matches near them. Each match shows the date, time, venue, entry price, how many slots are filled, match type (4-a-side, 5-a-side, 7-a-side, 11-a-side, Double or Friendly), skill level (Beginner, Amateur, Intermediate, Advanced, Professional) and gender. Joining a paid match goes through Paystack. After joining, the player receives a ticket with a QR code and a 6 digit confirmation code. The ticket can be saved as a high quality image and viewed again from My matches.
+
+Organisers create a match in four steps:
+1. Basics: title (3 to 100 characters), a verified venue, date (at least 10 minutes ahead), start and end time, number of player slots (2 to 100) and optional notes.
+2. Players and price: skill level, match type, gender, free or paid entry (₦0 to ₦100,000 per player), bulk slot booking, jersey number requirement, and private matches protected by a password.
+3. Extras: spectator ticket sales (₦200 to ₦100,000 per ticket, up to 5,000 tickets) and recurring matches (daily, weekly, bi-weekly, monthly, bi-monthly, quarterly or yearly, up to 52 times).
+4. Organiser and review: organiser name and an optional 11 digit Nigerian phone number that can be shown to players.
+
+Each match gets a private supercode for the organiser. With it the organiser can see players, check them in by scanning their QR code, split them into Team A and Team B, validate spectator tickets, submit a match report with player ratings and highlights, and request a cashout of match revenue (pending, approved, processed).
+
+## Cycling
+
+Hosts create rides with a title, date, start time, duration by hours, minutes or distance, a starting landmark and optional finish landmark, maximum riders (1 to 100), free or paid entry (₦1,000 to ₦100,000), bike requirements (own bike, rentals available), a registration deadline and notes. Riders join, pay if needed, and receive a ticket with a QR code. Hosts check riders in by scanning and can cash out earnings.
+
+## Venues
+
+Venue owners list a venue with name, address, city, state, phone, description, Google Maps link, opening hours, hourly booking fee, facilities and a cover photo. Listings are verified before going live. Players book by choosing a date and a 1 to 12 hour slot; the total is hours multiplied by the hourly fee. A paid booking returns an access code to present at the venue. Owners have a dashboard with revenue, upcoming bookings, access code check-in and a wallet for cashouts.
+
+## Profile
+
+Each user has a profile with a nickname, avatar, match history, performance stats, badges for milestones, wallet history, notification preferences, location (state) and settings.
+
+## Location
+
+SportCliq can use the device location to work out the user's state. The coordinates stay on the device; only the state name is kept. Lists then show activities in that state first, with a switch to see all of Nigeria.
+
+## Contact
+
+Email support@sportcliq.com. On X: @SportCliq.

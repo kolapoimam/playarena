@@ -300,6 +300,19 @@ const CyclingDetail = () => {
         url={window.location.href}
         image={undefined}
         children={<meta name="keywords" content={META_KEYWORDS} />}
+        jsonLd={{
+          "@type": "SportsEvent",
+          name: event.title,
+          sport: "Cycling",
+          startDate: event.event_date,
+          eventStatus: "https://schema.org/EventScheduled",
+          eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+          location: { "@type": "Place", name: event.start_landmark?.name, address: { "@type": "PostalAddress", addressRegion: event.start_landmark?.state, addressCountry: "NG" } },
+          organizer: { "@type": "Person", name: event.host_name },
+          maximumAttendeeCapacity: event.max_attendees,
+          offers: { "@type": "Offer", price: event.is_free ? 0 : event.price ?? 0, priceCurrency: "NGN", url: window.location.href },
+          url: window.location.href,
+        }}
       />
       <div className="min-h-screen pb-36 bg-sc-bg text-sc-ink font-sans">
         <div className="relative h-[300px] overflow-hidden rounded-b-[36px]" style={{ background: SPORT.cycling.bg }}>

@@ -1,7 +1,114 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en-NG">
 <head>
-  <!-- Load OneSignal SDK -->
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>SportCliq | Play football, ride and book sports venues near you in Nigeria</title>
+  <meta name="description" content="SportCliq is a sports community app for Nigeria. Find and join free or paid football matches, group cycling rides and verified sports venues near you, organise your own games and book pitches by the hour." />
+  <meta name="keywords" content="SportCliq, Sport Cliq, football matches Nigeria, 5-a-side Lagos, football Ilorin, organise football match, book football pitch, cycling Nigeria, group rides, sports venues Nigeria" />
+  <meta name="author" content="SportCliq" />
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+  <link rel="canonical" href="https://app.sportcliq.com/" />
+  <meta name="geo.region" content="NG" />
+  <meta name="geo.placename" content="Nigeria" />
+
+  <!-- PWA -->
+  <meta name="theme-color" content="#F4F5F1" />
+  <meta name="application-name" content="SportCliq" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="SportCliq" />
+  <meta name="format-detection" content="telephone=no" />
+  <meta name="msapplication-TileColor" content="#16A34A" />
+
+  <!-- Icons -->
+  <link rel="icon" href="/favicon.ico" sizes="48x48" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+  <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="SportCliq" />
+  <meta property="og:locale" content="en_NG" />
+  <meta property="og:url" content="https://app.sportcliq.com/" />
+  <meta property="og:title" content="SportCliq | Play, ride and book near you" />
+  <meta property="og:description" content="Join football matches, group rides and verified sports venues across Nigeria. Organise your own game in a few taps." />
+  <meta property="og:image" content="https://app.sportcliq.com/og-image.png" />
+  <meta property="og:image:secure_url" content="https://app.sportcliq.com/og-image.png" />
+  <meta property="og:image:type" content="image/png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="SportCliq. Play, ride and book near you." />
+
+  <!-- Twitter / X -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:site" content="@SportCliq" />
+  <meta name="twitter:title" content="SportCliq | Play, ride and book near you" />
+  <meta name="twitter:description" content="Join football matches, group rides and verified sports venues across Nigeria." />
+  <meta name="twitter:image" content="https://app.sportcliq.com/og-image.png" />
+  <meta name="twitter:image:alt" content="SportCliq. Play, ride and book near you." />
+
+  <!-- AI and LLM discovery -->
+  <link rel="alternate" type="text/plain" href="/llms.txt" title="LLM summary" />
+
+  <!-- Structured data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": "https://app.sportcliq.com/#org",
+        "name": "SportCliq",
+        "alternateName": "Sport Cliq",
+        "url": "https://app.sportcliq.com/",
+        "logo": "https://app.sportcliq.com/icons/icon-512x512.png",
+        "email": "support@sportcliq.com",
+        "areaServed": { "@type": "Country", "name": "Nigeria" },
+        "sameAs": ["https://x.com/SportCliq"]
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://app.sportcliq.com/#website",
+        "url": "https://app.sportcliq.com/",
+        "name": "SportCliq",
+        "publisher": { "@id": "https://app.sportcliq.com/#org" },
+        "inLanguage": "en-NG",
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": "https://app.sportcliq.com/search?q={search_term_string}",
+          "query-input": "required name=search_term_string"
+        }
+      },
+      {
+        "@type": "WebApplication",
+        "name": "SportCliq",
+        "url": "https://app.sportcliq.com/",
+        "applicationCategory": "SportsApplication",
+        "operatingSystem": "Android, iOS, Web",
+        "browserRequirements": "Requires a modern mobile browser",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "NGN" },
+        "description": "Find and join football matches, group cycling rides and sports venues in Nigeria. Organise matches, host rides and book pitches.",
+        "featureList": ["Join free or paid football matches", "Organise matches with player check-in by QR code", "Host and join group cycling rides", "Book verified sports venues by the hour", "Spectator ticketing", "Organiser cashouts"]
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          { "@type": "Question", "name": "What is SportCliq?", "acceptedAnswer": { "@type": "Answer", "text": "SportCliq is a mobile web app for organising and joining football matches, cycling rides and venue bookings across Nigeria." } },
+          { "@type": "Question", "name": "How do I join a football match?", "acceptedAnswer": { "@type": "Answer", "text": "Open a match, tap Join match, pay if the match is paid, and save the ticket. The organiser scans your QR code at check-in." } },
+          { "@type": "Question", "name": "Can I organise a paid match?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Set a price per player when organising. Payments are processed by Paystack and organisers can request a cashout." } },
+          { "@type": "Question", "name": "Is SportCliq free?", "acceptedAnswer": { "@type": "Answer", "text": "Using SportCliq is free. Some matches, rides and venue bookings have fees set by organisers, hosts and venue owners." } },
+          { "@type": "Question", "name": "Can I install SportCliq on my phone?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. SportCliq is a progressive web app. On Android tap Install, and on iPhone use Share then Add to Home Screen." } }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <!-- OneSignal push. It shares the app service worker (sw.js) so there is only one worker at the root scope. -->
   <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
   <script>
     window.OneSignalDeferred = window.OneSignalDeferred || [];
@@ -9,58 +116,21 @@
       await OneSignal.init({
         appId: "18fa7638-29ab-4dd5-9dca-0bdd150f647c",
         safari_web_id: "web.onesignal.auto.38b1a4de-a361-440e-ae28-b71c05790af2",
+        serviceWorkerPath: "sw.js",
+        serviceWorkerParam: { scope: "/" },
         notifyButton: {
-          enable: true,
+          enable: false,
         },
-        debug: true // Enable debug mode for OneSignal
       });
     });
   </script>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <!-- Updated PWA meta tag -->
-  <meta name="mobile-web-app-capable" content="yes" />
-  <!-- Kept for backward compatibility (remove after testing) -->
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <meta name="apple-mobile-web-app-title" content="Sport Cliq" />
-  <!-- Brand Theme -->
-  <meta name="theme-color" content="#F4F5F1" />
-  <meta name="description" content="Discover or organize football matches around you in Nigeria. Host or join free or paid football matches, create venues and register without accounts." />
-  <meta name="author" content="Sport Cliq" />
-  <meta name="robots" content="index, follow" />
-  <!-- Social Meta -->
-  <meta property="og:title" content="Sport Cliq - Discover & Organize Football Matches" />
-  <meta property="og:description" content="Discover or organize football matches around you in Nigeria." />
-  <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://www.sportcliq.com" />
-  <meta property="og:site_name" content="Sport Cliq" />
-  <meta property="og:locale" content="en_US" />
-  <meta property="og:image" content="https://www.sportcliq.com/Sportcliq_Stadium_Banner.png" />
-  <meta property="og:image:secure_url" content="https://www.sportcliq.com/Sportcliq_Stadium_Banner.png" />
-  <meta property="og:image:type" content="image/png" />
-  <meta property="og:image:width" content="1200" />
-  <meta property="og:image:height" content="630" />
-  <meta property="og:image:alt" content="Sport Cliq - Football Match Organization Platform" />
-  <meta property="article:author" content="Sport Cliq" />
-  <!-- Twitter Meta -->
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:site" content="@SportCliq" />
-  <meta name="twitter:title" content="Sport Cliq - Discover & Organize Football Matches" />
-  <meta name="twitter:description" content="Discover or organize football matches around you in Nigeria." />
-  <meta name="twitter:image" content="https://www.sportcliq.com/Sportcliq_Stadium_Banner.png" />
-  <meta name="twitter:image:alt" content="Sport Cliq - Football Match Organization Platform" />
-  <!-- Icons -->
-  <link rel="apple-touch-icon" href="/icons/apple-icon-180.png" />
-  <link rel="manifest" href="/manifest.webmanifest" />
-  <title>Sport Cliq - Discover & Organize Football Matches</title>
 </head>
-<body style="margin: 0;">
+<body style="margin: 0; background: #F4F5F1;">
+  <noscript>SportCliq needs JavaScript to run. Find football matches, cycling rides and sports venues in Nigeria at app.sportcliq.com.</noscript>
   <!-- Status bar background fix for iOS PWA -->
   <div class="status-bar-bg"></div>
   <div id="root"></div>
   <!-- Scripts -->
-  <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
   <script type="module" src="/src/main.tsx"></script>
   <script>
     // Enhanced error handling for debugging

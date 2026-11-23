@@ -207,6 +207,18 @@ const VenueDetail = () => {
         url={window.location.href}
         image={venue && venue.image_urls && venue.image_urls[0] ? venue.image_urls[0] : undefined}
         children={<meta name="keywords" content={META_KEYWORDS} />}
+        jsonLd={{
+          "@type": "SportsActivityLocation",
+          name: venue.name,
+          image: venue.image_urls?.[0],
+          telephone: venue.venue_phone || undefined,
+          address: { "@type": "PostalAddress", streetAddress: venue.address, addressLocality: venue.city, addressRegion: venue.state, addressCountry: "NG" },
+          hasMap: venue.map_link || undefined,
+          openingHours: venue.opening_hours || undefined,
+          priceRange: venue.booking_fee ? `₦${venue.booking_fee} per hour` : undefined,
+          aggregateRating: venue.aggregated_rating ? { "@type": "AggregateRating", ratingValue: venue.aggregated_rating, bestRating: 5 } : undefined,
+          url: window.location.href,
+        }}
       />
       <div className="min-h-screen pb-36 bg-sc-bg text-sc-ink font-sans">
         <style>{quillStyles}</style>

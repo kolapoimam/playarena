@@ -36,6 +36,24 @@ const Settings = () => {
   const installed = isStandalone();
   const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
 
+  const [pushState, setPushState] = useState<string>(typeof Notification !== "undefined" ? Notification.permission : "unsupported");
+
+  const enablePush = async () => {
+    const w = window as unknown as { OneSignalDeferred?: Array<(os: any) => void> };
+    if (typeof Notification === "undefined") {
+      toast({ title: "Not supported", description: isIOS ? "Install SportCliq to your home screen first, then turn on alerts." : "This browser can't show notifications." });
+      return;
+    }
+    w.OneSignalDeferred = w.OneSignalDeferred || [];
+    w.OneSignalDeferred.push(async (OneSignal) => {
+      try {
+        await OneSignal.Notifications.requestPermission();
+      } finally {
+        setPushState(Notification.permission);
+      }
+    });
+  };
+
   const signOut = async () => {
     await supabase.auth.signOut();
     toast({ title: "Signed out", description: "See you on the pitch." });
@@ -63,7 +81,16 @@ const Settings = () => {
           <ListGroup title="Account">
             <ListRow icon={CircleUserRound} title="Account details" subtitle="Name, email, phone and password" onClick={() => navigate("/profile/account-details")} />
             <ListRow icon={SlidersHorizontal} title="Match preferences" subtitle="Skill level, match type and gender" onClick={() => navigate("/profile/match-preferences")} />
-            <ListRow icon={Bell} title="Notifications" subtitle="Match reminders and ride alerts" onClick={() => navigate("/profile/notifications")} />
+            <ListRow
+              icon={Bell}
+              sport="tennis"
+              title="Push alerts"
+              subtitle={pushState === "granted" ? "On for this device" : pushState === "denied" ? "Blocked. Allow notifications in your browser settings" : "Match reminders and payment updates"}
+              chevron={false}
+              onClick={pushState === "granted" || pushState === "denied" ? undefined : enablePush}
+              right={pushState === "granted" ? <Pill sport="football">On</Pill> : pushState === "denied" ? <Pill sport="red">Blocked</Pill> : <Pill sport="tennis">Turn on</Pill>}
+            />
+            <ListRow icon={Bell} title="Notification preferences" subtitle="Choose which reminders you get" onClick={() => navigate("/profile/notifications")} />
           </ListGroup>
 
           <ListGroup title="App">

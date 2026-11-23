@@ -26,39 +26,8 @@ if (!rootElement) {
 const root = createRoot(rootElement);
 root.render(<App />);
 
-// Register service worker with enhanced error handling
-const registerServiceWorker = async () => {
-  if ('serviceWorker' in navigator) {
-    try {
-      const registration = await navigator.serviceWorker.register('/service-worker.js', {
-        scope: '/', // Explicitly set scope
-      });
-      console.log('ServiceWorker registration successful with scope:', registration.scope);
-
-      // Listen for service worker messages for debugging
-      navigator.serviceWorker.addEventListener('message', (event) => {
-        console.log('ServiceWorker message received:', event.data);
-      });
-
-      // Handle controller changes
-      registration.addEventListener('updatefound', () => {
-        const newWorker = registration.installing;
-        console.log('ServiceWorker update found:', newWorker?.state);
-      });
-    } catch (err) {
-      console.error('ServiceWorker registration failed:', err);
-    }
-  } else {
-    console.warn('ServiceWorker not supported in this browser');
-  }
-};
-
-// Register service worker after critical resources load
-if (document.readyState === 'complete') {
-  registerServiceWorker();
-} else {
-  window.addEventListener('load', registerServiceWorker);
-}
+// The service worker (sw.js) is generated and registered by vite-plugin-pwa (see vite.config.ts).
+// Registering it at the root scope replaces the older hand-written worker automatically.
 
 // Debug: Catch unhandled promise rejections
 window.addEventListener('unhandledrejection', (event) => {

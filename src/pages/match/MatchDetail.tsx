@@ -345,6 +345,21 @@ const MatchDetail = () => {
         url={window.location.href}
         image={undefined}
         children={<meta name="keywords" content={META_KEYWORDS} />}
+        jsonLd={{
+          "@type": "SportsEvent",
+          name: match.title,
+          sport: "Football",
+          startDate: `${match.match_date}T${(match.match_time || "00:00").slice(0, 5)}:00+01:00`,
+          eventStatus: "https://schema.org/EventScheduled",
+          eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+          location: match.venue
+            ? { "@type": "SportsActivityLocation", name: match.venue.name, address: { "@type": "PostalAddress", addressLocality: match.venue.city, addressCountry: "NG" } }
+            : undefined,
+          organizer: { "@type": "Organization", name: match.organizer_name },
+          maximumAttendeeCapacity: match.total_slots,
+          offers: { "@type": "Offer", price: match.is_paid ? match.price ?? 0 : 0, priceCurrency: "NGN", availability: isFull ? "https://schema.org/SoldOut" : "https://schema.org/InStock", url: window.location.href },
+          url: window.location.href,
+        }}
       />
       <div className="min-h-screen pb-36 bg-sc-bg text-sc-ink font-sans">
         <div className="relative h-[300px] overflow-hidden rounded-b-[36px] bg-sc-green">
