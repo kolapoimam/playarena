@@ -18,6 +18,7 @@ import {
 import Navbar from "@/components/Navbar";
 import { Seo } from "@/components/Seo";
 import { supabase } from "@/integrations/supabase/client";
+import { HorseIcon, PadelIcon } from "@/components/sc/sportIcons";
 import { Bubble, ListGroup, ListRow, PageHeader, Pill, Screen, SPORT, Sport, formatShortDate, formatTime12 } from "@/components/sc/ui";
 
 const META_KEYWORDS = "Football in Nigeria, Sports in Nigeria, Play Sports Near You, Football Fields Near Me, Livescore, Osimhen, Asisat Oshola, Nigeria Startup, Sportstech, Football venues in Lagos, Football venues in Ilorin, Sports Betting in Nigeria, Organize sports in Nigeria, Football Matches, Bicycle Training in Nigeria, Cycling in Nigeria, Nigerian football, Nigerian cycling, Nigerian sports, Play football in Lagos, Play football in Ilorin, Play football in Abuja, Play football in Nigeria, Play cycling in Nigeria, Play sports in Nigeria, Nigerian sports tech, Nigerian sports startup, Nigerian sports community, Football events Nigeria, Cycling events Nigeria, Sport Cliq, SportCliq, sportcliq.com.ng, sportcliq.ng, sportcliq, sport cliq, sportcliq app, sportcliq platform, sportcliq football, sportcliq cycling, sportcliq venues, sportcliq matches, sportcliq events, sportcliq sports, sportcliq nigeria, sportcliq lagos, sportcliq ilorin, sportcliq abuja, sportcliq startup, sportcliq tech, sportcliq community, sportcliq platform, sportcliq app, sportcliq website, sportcliq online, sportcliq booking, sportcliq organize, sportcliq join, sportcliq play, sportcliq find, sportcliq search, sportcliq discover, sportcliq connect, sportcliq join match, sportcliq join cycling, sportcliq join event, sportcliq join venue, sportcliq join football, sportcliq join sports, sportcliq join nigeria, sportcliq join lagos, sportcliq join ilorin, sportcliq join abuja, sportcliq join startup, sportcliq join tech, sportcliq join community, sportcliq join platform, sportcliq join app, sportcliq join website, sportcliq join online, sportcliq join booking, sportcliq join organize, sportcliq join play, sportcliq join find, sportcliq join search, sportcliq join discover, sportcliq join connect";
@@ -33,6 +34,8 @@ const sports: SportItem[] = [
   { name: "Running", icon: Footprints, sport: "red", active: false },
   { name: "Ping Pong", icon: CircleDot, sport: "venue", active: false },
   { name: "Walking", icon: Footprints, sport: "money", active: false },
+  { name: "Horse Riding", icon: HorseIcon, sport: "pink", active: false },
+  { name: "Padel", icon: PadelIcon, sport: "tennis", active: false },
 ];
 
 type Upcoming = { key: string; kind: "organised" | "joined" | "hosted"; title: string; date: string; time?: string | null; to: string; tag?: string };
@@ -142,7 +145,7 @@ const Activities = () => {
                   <div key={s.name} className="h-[84px] rounded-3xl bg-white p-3.5 flex items-center gap-2.5">
                     <Bubble icon={Icon} sport={s.sport} size={40} />
                     <span className="flex flex-col min-w-0">
-                      <span className="text-[15px] font-extrabold truncate">{s.name}</span>
+                      <span className="text-[15px] font-extrabold leading-tight line-clamp-2">{s.name}</span>
                       <span className="text-xs font-bold text-sc-ink3">Coming soon</span>
                     </span>
                   </div>

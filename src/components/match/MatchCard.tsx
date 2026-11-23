@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { DateTime } from "luxon";
+import { formatNaira } from "@/components/sc/ui";
 
 interface MatchCardProps {
   title: string;
@@ -77,7 +78,7 @@ export default function MatchCard({
               is_paid ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"
             }`}
           >
-            {is_paid ? `₦${price?.toFixed(2)}` : "FREE"}
+            {is_paid ? formatNaira(price) : "FREE"}
           </span>
         </div>
       </div>
@@ -90,7 +91,7 @@ export default function MatchCard({
         <div className="mt-2">
           {is_paid ? (
             <span className="text-sm font-medium text-red-500">
-              Paid: ₦{price?.toFixed(2)}
+              Paid {formatNaira(price)}
             </span>
           ) : (
             <span className="text-sm font-medium text-sc-green-dark">

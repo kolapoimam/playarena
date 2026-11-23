@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, Trophy, LandPlot, Bike, Coins, Wallet, MapPin } from "lucide-react";
+import { Bike, MapPin } from "lucide-react";
+import StatsPanel, { type StatsFilter } from "@/components/profile/StatsPanel";
 
 type Analytics = {
   total_organized: number;
@@ -30,7 +29,7 @@ const CyclerDashboard = ({ profile }: CyclerDashboardProps) => {
     total_cashout: 0,
     total_landmarks: 0,
   });
-  const [analyticsFilter, setAnalyticsFilter] = useState<"all" | "this_month" | "last_month" | "this_week" | "last_week">("all");
+  const [analyticsFilter, setAnalyticsFilter] = useState<StatsFilter>("all");
 
   useEffect(() => {
     if (profile) {
@@ -174,68 +173,18 @@ const attendeesData = joinedData
   };
 
   return (
-    <Card className="bg-white dark:bg-gray-800 border-none shadow-card rounded-3xl">
-      <CardHeader>
-        <CardTitle className="text-xl font-semibold text-sc-green-dark dark:text-green-400">
-          Cycling Stats
-        </CardTitle>
-        <Select
-          value={analyticsFilter}
-          onValueChange={(value) => setAnalyticsFilter(value as "all" | "this_month" | "last_month" | "this_week" | "last_week")}
-          className="w-[180px]"
-        >
-          <SelectTrigger className="bg-white dark:bg-gray-700 border-sc-line dark:border-gray-600 text-sc-ink dark:text-gray-100">
-            <SelectValue placeholder="Select filter" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all" className="text-base bg-white dark:bg-gray-700 text-sc-ink dark:text-gray-100">
-              All Time
-            </SelectItem>
-            <SelectItem value="this_month" className="text-base bg-white dark:bg-gray-700 text-sc-ink dark:text-gray-100">
-              This Month
-            </SelectItem>
-            <SelectItem value="last_month" className="text-base bg-white dark:bg-gray-700 text-sc-ink dark:text-gray-100">
-              Last Month
-            </SelectItem>
-            <SelectItem value="this_week" className="text-base bg-white dark:bg-gray-700 text-sc-ink dark:text-gray-100">
-              This Week
-            </SelectItem>
-            <SelectItem value="last_week" className="text-base bg-white dark:bg-gray-700 text-sc-ink dark:text-gray-100">
-              Last Week
-            </SelectItem>
-          </SelectContent>
-        </Select>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-2 gap-2.5">
-          <div className="bg-sc-bg rounded-[22px] p-4 flex flex-col gap-2">
-            <span className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: "#DCFCE7", color: "#15803D" }}><LandPlot size={20} /></span>
-            <span className="text-xs font-semibold text-sc-ink3">Events Organized</span>
-            <span className="text-[22px] leading-7 font-extrabold tracking-[-0.02em]">{analytics.total_organized}</span>
-          </div>
-          <div className="bg-sc-bg rounded-[22px] p-4 flex flex-col gap-2">
-            <span className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: "#DBEAFE", color: "#1D4ED8" }}><Bike size={20} /></span>
-            <span className="text-xs font-semibold text-sc-ink3">Events Joined</span>
-            <span className="text-[22px] leading-7 font-extrabold tracking-[-0.02em]">{analytics.total_joined}</span>
-          </div>
-          <div className="bg-sc-bg rounded-[22px] p-4 flex flex-col gap-2">
-            <span className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: "#FFEDD5", color: "#C2410C" }}><Coins size={20} /></span>
-            <span className="text-xs font-semibold text-sc-ink3">Total Spent</span>
-            <span className="text-[22px] leading-7 font-extrabold tracking-[-0.02em]">₦{analytics.total_spent.toFixed(2)}</span>
-          </div>
-          <div className="bg-sc-bg rounded-[22px] p-4 flex flex-col gap-2">
-            <span className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: "#EDE9FE", color: "#6D28D9" }}><Wallet size={20} /></span>
-            <span className="text-xs font-semibold text-sc-ink3">Total Cashout</span>
-            <span className="text-[22px] leading-7 font-extrabold tracking-[-0.02em]">₦{analytics.total_cashout.toFixed(2)}</span>
-          </div>
-          <div className="bg-sc-bg rounded-[22px] p-4 flex flex-col gap-2">
-            <span className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: "#FCE7F3", color: "#BE185D" }}><MapPin size={20} /></span>
-            <span className="text-xs font-semibold text-sc-ink3">Landmarks Used</span>
-            <span className="text-[22px] leading-7 font-extrabold tracking-[-0.02em]">{analytics.total_landmarks}</span>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+    <StatsPanel
+      sport="cycling"
+      filter={analyticsFilter}
+      onFilter={setAnalyticsFilter}
+      heroLabel="Rides"
+      heroIcon={Bike}
+      organised={{ label: "Hosted", value: analytics.total_organized }}
+      joined={{ label: "Joined", value: analytics.total_joined }}
+      spent={analytics.total_spent}
+      cashout={analytics.total_cashout}
+      extra={{ label: "Landmarks used", value: analytics.total_landmarks, icon: MapPin, sport: "pink" }}
+    />
   );
 };
 

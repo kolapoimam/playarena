@@ -5,9 +5,7 @@ import {
   Bell,
   Bike,
   Calendar,
-  ChevronRight,
   Heart,
-  LayoutGrid,
   MapPin,
   Plus,
   Route,
@@ -521,19 +519,6 @@ const Index = () => {
                   </div>
                 )}
               </div>
-
-              <button
-                type="button"
-                onClick={() => navigate("/activities")}
-                className="mx-5 rounded-3xl bg-white p-4 flex items-center gap-3 text-left"
-              >
-                <Bubble icon={LayoutGrid} sport="guide" />
-                <span className="flex-1 flex flex-col">
-                  <span className="text-[15px] font-extrabold">All activities</span>
-                  <span className="text-[13px] text-sc-ink3">Matches, rides, bookings and guides</span>
-                </span>
-                <ChevronRight size={18} className="text-[#9AA19C]" />
-              </button>
             </>
           )}
         </div>

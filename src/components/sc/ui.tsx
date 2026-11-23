@@ -541,7 +541,32 @@ export function Spinner({ className }: { className?: string }) {
   );
 }
 
-export const formatNaira = (n?: number | null) =>
+/** Short number for tight spaces. 950 → 950, 1,000 → 1k, 1,550 → 1.6k, 25,400 → 25.4k, 150,000 → 150k, 1,250,000 → 1.25M. */
+export const formatCompact = (n?: number | null) => {
+  if (n == null || isNaN(Number(n))) return "0";
+  const v = Number(n);
+  const sign = v < 0 ? "-" : "";
+  const a = Math.abs(v);
+  const trim = (x: number, d: number) => x.toFixed(d).replace(/\.0+$/, "").replace(/(\.\d*?)0+$/, "$1");
+  if (a < 1000) return sign + (Number.isInteger(a) ? String(a) : trim(a, 2));
+  if (a < 1e6) {
+    const k = a / 1000;
+    if (k >= 999.95) return `${sign}1M`;
+    return `${sign}${trim(k, k < 100 ? 1 : 0)}k`;
+  }
+  if (a < 1e9) {
+    const m = a / 1e6;
+    if (m >= 999.995) return `${sign}1B`;
+    return `${sign}${trim(m, m < 10 ? 2 : m < 100 ? 1 : 0)}M`;
+  }
+  return `${sign}${trim(a / 1e9, 2)}B`;
+};
+
+/** Naira for display. Short from ₦1,000 up so figures never run out of their frames: ₦1.5k, ₦25k, ₦1.2M. */
+export const formatNaira = (n?: number | null) => (n == null ? "" : `₦${formatCompact(Math.round(Number(n)))}`);
+
+/** Full naira amount, for payment buttons, totals and receipts where the exact figure matters. */
+export const formatNairaExact = (n?: number | null) =>
   n == null ? "" : `₦${Number(n).toLocaleString("en-NG", { maximumFractionDigits: 0 })}`;
 
 export const formatTime12 = (t?: string | null) => {

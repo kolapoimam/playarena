@@ -10,7 +10,7 @@ import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import { Seo } from "@/components/Seo";
 
-import { BackButton, SPORT, Cover } from "@/components/sc/ui";
+import { BackButton, SPORT, Cover, formatNaira } from "@/components/sc/ui";
 import { Map as MapIcon } from "lucide-react";
 import { RowsSkeleton, DetailSkeleton } from "@/components/sc/skeletons";
 // Custom CSS to style ReactQuill for description
@@ -258,7 +258,7 @@ const LandmarkDetail = () => {
                         <span>{formatTime(event.start_time)}</span>
                       </div>
                       <div className="mt-1 text-sm font-medium text-sc-green-dark dark:text-green-400">
-                        {event.is_free ? "Free" : `₦${event.price?.toFixed(2)}`}
+                        {event.is_free ? "Free" : formatNaira(event.price)}
                       </div>
                     </div>
                   ))}

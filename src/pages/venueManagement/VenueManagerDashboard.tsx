@@ -1,4 +1,4 @@
-import { Bubble, Cover, FunEmpty } from "@/components/sc/ui";
+import { Bubble, Cover, FunEmpty, formatCompact, formatNaira } from "@/components/sc/ui";
 import { Store } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
@@ -246,8 +246,8 @@ const VenueManagerDashboard = () => {
               </div>
               <div className="grid grid-cols-3 gap-2.5">
                 {[
-                  { icon: Users, sport: "venue" as const, label: "Events", value: String(totalEvents) },
-                  { icon: Trophy, sport: "money" as const, label: "Earned", value: `₦${Math.round(totalFunds).toLocaleString()}` },
+                  { icon: Users, sport: "venue" as const, label: "Events", value: formatCompact(totalEvents) },
+                  { icon: Trophy, sport: "money" as const, label: "Earned", value: formatNaira(totalFunds) },
                   { icon: CheckCircle, sport: "football" as const, label: "Verified", value: verifiedSince ? format(new Date(verifiedSince), "MMM yyyy") : "Not yet" },
                 ].map((f) => (
                   <div key={f.label} className="min-w-0 bg-white rounded-[20px] p-3.5 flex flex-col gap-1.5">

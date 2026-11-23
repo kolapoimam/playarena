@@ -16,7 +16,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import VenueWallet from "@/components/venueManagement/VenueWallet";
 import Navbar from "@/components/Navbar";
 
-import { BackButton } from "@/components/sc/ui";
+import { BackButton, formatNaira } from "@/components/sc/ui";
 import { EventListSkeleton } from "@/components/sc/skeletons";
 const pinSchema = z.object({
   access_code: z
@@ -341,7 +341,7 @@ const MyVenue = () => {
                       <Trophy className="h-8 w-8 text-sc-green-dark" />
                       <div>
                         <p className="text-sm font-medium text-sc-ink2 dark:text-gray-300">Total Funds</p>
-                        <p className="text-lg font-semibold text-sc-ink dark:text-gray-100">₦{totalFunds.toFixed(2)}</p>
+                        <p className="text-lg font-semibold text-sc-ink dark:text-gray-100">{formatNaira(totalFunds)}</p>
                       </div>
                     </div>
                     <div className="p-4 bg-sc-green-bg dark:bg-green-900/50 rounded-lg flex items-center gap-3 shadow-card">

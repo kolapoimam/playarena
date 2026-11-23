@@ -4,7 +4,9 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Trophy, Users, MapPin, Star, Award, DollarSign, UserPlus, Map } from "lucide-react";
+import { Trophy, Users, MapPin, Star, Award, DollarSign, UserPlus, Map, Lock } from "lucide-react";
+import { Link } from "react-router-dom";
+import { formatCompact } from "@/components/sc/ui";
 import html2canvas from "html2canvas";
 
 type Badge = {
@@ -200,33 +202,58 @@ const Performance = ({ profile }: PerformanceProps) => {
   const earnedBadgesCount = badges.filter((badge) => badge.earned_at).length;
   const totalBadgesCount = badges.length;
 
+  const pct = totalBadgesCount ? Math.round((earnedBadgesCount * 100) / totalBadgesCount) : 0;
+  const nextUp = badges.find((b) => !b.earned_at);
+  const ring = 2 * Math.PI * 34;
+  const colors = ["#16A34A", "#2563EB", "#F97316", "#7C3AED", "#EC4899", "#14B8A6", "#EAB308", "#EF4444"];
+  const sorted = [...badges].sort((x, y) => Number(!!y.earned_at) - Number(!!x.earned_at));
+
   return (
     <div className="flex flex-col gap-3">
-      <div className="relative rounded-[28px] p-5 text-white overflow-hidden" style={{ background: "#0E1411" }}>
-        <Trophy className="absolute opacity-15" size={130} style={{ right: -20, top: -20 }} aria-hidden="true" />
-        <span className="text-xs font-bold tracking-[0.12em] opacity-70">BADGES EARNED</span>
-        <div className="text-[40px] leading-[44px] font-extrabold tracking-[-0.03em] mt-1">{earnedBadgesCount}<span className="opacity-50"> / {totalBadgesCount}</span></div>
-        <div className="mt-3 h-2.5 rounded-full bg-white/15 overflow-hidden"><div className="h-full rounded-full bg-sc-green" style={{ width: `${totalBadgesCount ? (earnedBadgesCount * 100) / totalBadgesCount : 0}%` }} /></div>
-        <p className="m-0 mt-2.5 text-sm opacity-80">Join matches, organise games and list venues to unlock the rest.</p>
+      <div className="relative overflow-hidden rounded-[28px] p-5 text-white flex items-center gap-4" style={{ background: "#0E1411" }}>
+        <svg width="84" height="84" viewBox="0 0 84 84" className="shrink-0" aria-hidden="true">
+          <circle cx="42" cy="42" r="34" fill="none" stroke="rgba(255,255,255,0.14)" strokeWidth="10" />
+          <circle cx="42" cy="42" r="34" fill="none" stroke="#BEF264" strokeWidth="10" strokeLinecap="round" strokeDasharray={`${(ring * pct) / 100} ${ring}`} transform="rotate(-90 42 42)" />
+          <text x="42" y="47" textAnchor="middle" fill="#FFFFFF" fontSize="17" fontWeight="800">{pct}%</text>
+        </svg>
+        <div className="min-w-0">
+          <span className="text-xs font-bold tracking-[0.12em] opacity-70">BADGES EARNED</span>
+          <div className="text-[34px] leading-[40px] font-extrabold tracking-[-0.03em]">
+            {formatCompact(earnedBadgesCount)}
+            <span className="opacity-50"> / {formatCompact(totalBadgesCount)}</span>
+          </div>
+          <p className="m-0 text-[13px] opacity-80 leading-snug">
+            {nextUp ? <>Next up, <b className="text-[#BEF264]">{nextUp.name}</b>. {nextUp.description}</> : "You have unlocked every badge. Legend."}
+          </p>
+        </div>
       </div>
-      {badges.length > 0 && (
-        <div className="grid grid-cols-2 gap-2.5">
-          {badges.slice(0, 4).map((badge, i) => {
+
+      {sorted.length > 0 && (
+        <div className="rounded-[24px] bg-white p-2 flex flex-col">
+          {sorted.map((badge, i) => {
             const got = !!badge.earned_at;
-            const c = ["#16A34A", "#2563EB", "#F97316", "#7C3AED"][i % 4];
+            const c = colors[i % colors.length];
             return (
-              <div key={badge.id} className="rounded-[22px] p-4 flex flex-col gap-2" style={{ background: got ? c : "#FFFFFF", color: got ? "#FFFFFF" : "#0E1411" }}>
-                <span className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: got ? "rgba(255,255,255,0.22)" : "#EEF0EA", color: got ? "#FFFFFF" : "#9AA19C" }}><Award size={20} /></span>
-                <span className="text-sm font-extrabold leading-5">{badge.name}</span>
-                <span className="text-xs opacity-80">{got ? `Earned ${new Date(badge.earned_at!).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}` : "Locked"}</span>
+              <div key={badge.id} className="flex items-center gap-3 p-2.5">
+                <span className="w-12 h-12 rounded-[16px] flex items-center justify-center shrink-0" style={{ background: got ? c : "#EEF0EA", color: got ? "#FFFFFF" : "#9AA19C" }}>
+                  {got ? <Award size={22} /> : <Lock size={20} />}
+                </span>
+                <span className="flex-1 min-w-0">
+                  <span className="block text-[15px] font-extrabold truncate">{badge.name}</span>
+                  <span className="block text-[13px] text-sc-ink3 truncate">{badge.description}</span>
+                </span>
+                <span className={`text-xs font-bold shrink-0 px-2.5 py-1 rounded-full ${got ? "bg-[#DCFCE7] text-[#15803D]" : "bg-[#EEF0EA] text-[#4A524D]"}`}>
+                  {got ? new Date(badge.earned_at!).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "Locked"}
+                </span>
               </div>
             );
           })}
         </div>
       )}
-      <a href="/profile/badges" className="h-[52px] rounded-full bg-sc-green text-white font-bold inline-flex items-center justify-center gap-2">
-        <Trophy size={18} /> See all badges, save and share
-      </a>
+
+      <Link to="/profile/badges" className="h-[52px] rounded-full bg-sc-green text-white font-bold inline-flex items-center justify-center gap-2">
+        <Trophy size={18} /> See badges, save and share
+      </Link>
     </div>
   );
 };
