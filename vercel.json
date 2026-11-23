@@ -1,6 +1,21 @@
 {
   "rewrites": [
-    { "source": "/(.*)", "destination": "/" }
+    {
+      "source": "/match/:slug",
+      "destination": "/api/share?k=match&slug=:slug"
+    },
+    {
+      "source": "/cycling/:slug",
+      "destination": "/api/share?k=ride&slug=:slug"
+    },
+    {
+      "source": "/cycling-event/:slug",
+      "destination": "/api/share?k=ride&slug=:slug"
+    },
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/"
+    }
   ],
   "headers": [
     {

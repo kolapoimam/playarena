@@ -208,7 +208,7 @@ const AccountDetails = ({ profile: initialProfile, setProfile: setInitialProfile
   const canChangeEmail = () => {
     if (!profile?.last_email_change) return true;
     const lastChange = new Date(profile.last_email_change);
-    const now = new Date("2025-05-24T16:21:00+01:00"); // Current date and time
+    const now = new Date();
     const diffDays = (now.getTime() - lastChange.getTime()) / (1000 * 60 * 60 * 24);
     return diffDays >= 30;
   };

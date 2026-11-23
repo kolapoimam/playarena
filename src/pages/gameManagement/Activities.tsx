@@ -95,12 +95,6 @@ const Activities = () => {
     load();
   }, []);
 
-  const create = [
-    { label: "Match", icon: Plus, sport: "football" as Sport, to: "/organize" },
-    { label: "Ride", icon: Route, sport: "cycling" as Sport, to: "/host-cycling" },
-    { label: "Venue", icon: Store, sport: "venue" as Sport, to: "/venue-create" },
-    { label: "Booking", icon: CalendarDays, sport: "guide" as Sport, to: "/venues" },
-  ];
 
   const kindLabel = { organised: "You organise", joined: "You joined", hosted: "You host" };
 
@@ -117,38 +111,6 @@ const Activities = () => {
         <PageHeader title="Activities" subtitle="Everything you play, host and book" />
 
         <main className="px-5 pt-[18px] flex flex-col gap-5">
-          <div className="flex flex-col gap-2.5">
-            <span className="text-[13px] font-bold text-sc-ink2">Quick create</span>
-            <div className="flex gap-2">
-              {create.map((c) => (
-                <button
-                  key={c.label}
-                  type="button"
-                  onClick={() => navigate(c.to)}
-                  className="flex-1 rounded-[20px] bg-white py-3.5 px-2 flex flex-col items-center gap-2 text-xs font-extrabold text-sc-ink active:scale-95 transition-transform"
-                >
-                  <Bubble icon={c.icon} sport={c.sport} size={42} />
-                  {c.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {upcoming.length > 0 && (
-            <ListGroup title="Your upcoming activities">
-              {upcoming.map((u) => (
-                <ListRow
-                  key={u.key}
-                  icon={u.kind === "hosted" ? Bike : Trophy}
-                  sport={u.kind === "hosted" ? "cycling" : "football"}
-                  title={u.title}
-                  subtitle={`${kindLabel[u.kind]} · ${formatShortDate(u.date)}${u.time ? `, ${formatTime12(u.time)}` : ""}`}
-                  right={u.tag ? <Pill sport="football">{u.tag}</Pill> : undefined}
-                  onClick={() => navigate(u.to)}
-                />
-              ))}
-            </ListGroup>
-          )}
 
           <div className="flex flex-col gap-2.5">
             <span className="text-[13px] font-bold text-sc-ink2">Sports</span>
@@ -188,6 +150,22 @@ const Activities = () => {
               })}
             </div>
           </div>
+
+          {upcoming.length > 0 && (
+            <ListGroup title="Your upcoming activities">
+              {upcoming.map((u) => (
+                <ListRow
+                  key={u.key}
+                  icon={u.kind === "hosted" ? Bike : Trophy}
+                  sport={u.kind === "hosted" ? "cycling" : "football"}
+                  title={u.title}
+                  subtitle={`${kindLabel[u.kind]} · ${formatShortDate(u.date)}${u.time ? `, ${formatTime12(u.time)}` : ""}`}
+                  right={u.tag ? <Pill sport="football">{u.tag}</Pill> : undefined}
+                  onClick={() => navigate(u.to)}
+                />
+              ))}
+            </ListGroup>
+          )}
 
           <button
             type="button"

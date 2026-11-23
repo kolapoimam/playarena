@@ -1,3 +1,4 @@
+import { DirectionsButton } from "@/components/sc/external";
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -230,15 +231,7 @@ const LandmarkDetail = () => {
 
                 {landmark.map_link && (
                   <div className="pt-2">
-                    <a
-                      href={landmark.map_link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center text-sc-green-dark hover:text-green-600 text-sm font-medium"
-                    >
-                      <ExternalLink size={16} className="mr-2" />
-                      View on Google Maps
-                    </a>
+                    <DirectionsButton url={landmark.map_link} className="inline-flex items-center gap-2 text-sc-green-dark text-sm font-bold" label="View on Google Maps" />
                   </div>
                 )}
               </div>

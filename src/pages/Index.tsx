@@ -11,9 +11,7 @@ import {
   MapPin,
   Plus,
   Route,
-  Search as SearchIcon,
   ShieldCheck,
-  SlidersHorizontal,
   Store,
   Trophy,
   Users,
@@ -92,6 +90,7 @@ const Index = () => {
   const [upcomingMatches, setUpcomingMatches] = useState<(Match | CyclingEvent)[]>([]);
   const [popularVenues, setPopularVenues] = useState<Venue[]>([]);
   const [loading, setLoading] = useState(true);
+  const [recentRides, setRecentRides] = useState<CyclingEvent[]>([]);
   const [nickname, setNickname] = useState<string | null>(null);
   const [isOrganizeDialogOpen, setIsOrganizeDialogOpen] = useState(false);
 
@@ -244,6 +243,14 @@ const Index = () => {
         }));
 
         setUpcomingMatches(combinedEvents);
+
+        const { data: pastRides } = await supabase
+          .from("cycling_events")
+          .select(`id, slug, title, event_date, start_time, is_free, start_landmark:landmarks!start_landmark_id(name, state)`)
+          .lt("event_date", currentDate)
+          .order("event_date", { ascending: false })
+          .limit(6);
+        setRecentRides(((pastRides as any[]) || []).map((e) => ({ ...e, type: "cycling" as const })));
         setPopularVenues(venuesWithMatchCount as Venue[]);
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -289,7 +296,9 @@ const Index = () => {
   const footballAll = upcomingMatches.filter((e): e is Match => e.type === "football");
   const cyclingAll = upcomingMatches.filter((e): e is CyclingEvent => e.type === "cycling");
   const footballEvents = scoped ? footballAll.filter((m) => sameState(m.venue?.state, userState)) : footballAll;
-  const cyclingEvents = scoped ? cyclingAll.filter((e) => sameState(e.start_landmark?.state, userState)) : cyclingAll;
+  const cyclingEvents = (scoped ? cyclingAll.filter((e) => sameState(e.start_landmark?.state, userState)) : cyclingAll).filter((e) => e.event_date >= new Date().toISOString().slice(0, 10));
+  const recentScoped = scoped ? recentRides.filter((e) => sameState(e.start_landmark?.state, userState)) : recentRides;
+  const ridesToShow = cyclingEvents.length > 0 ? cyclingEvents : (recentScoped.length > 0 ? recentScoped : recentRides).slice(0, 3);
   const venuesShown = scoped ? popularVenues.filter((v) => sameState(v.state, userState)) : popularVenues;
 
   const quickActions = [
@@ -355,17 +364,6 @@ const Index = () => {
               <IconButton icon={Bell} label="Notifications" onClick={() => navigate("/profile/notifications")} />
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => navigate("/search")}
-            className="h-[54px] rounded-[18px] bg-white flex items-center gap-2.5 pl-4 pr-2 text-sc-ink3 text-base shadow-card text-left"
-          >
-            <SearchIcon size={20} />
-            <span className="flex-1">Matches, venues, rides</span>
-            <span className="w-10 h-10 rounded-[14px] bg-sc-ink text-white flex items-center justify-center">
-              <SlidersHorizontal size={18} />
-            </span>
-          </button>
         </header>
 
         <div className="flex flex-col gap-[22px] pt-5">
@@ -484,10 +482,10 @@ const Index = () => {
                 </div>
               )}
 
-              <Section title="Rides this week" action="See all" onAction={() => navigate("/cycling-activities")} />
+              <Section title={cyclingEvents.length > 0 ? "Rides this week" : "Recent rides"} action="See all" onAction={() => navigate("/cycling-activities")} />
               <div className="px-5 flex flex-col gap-3">
-                {cyclingEvents.length > 0 ? (
-                  cyclingEvents.map((e) => {
+                {ridesToShow.length > 0 ? (
+                  ridesToShow.map((e) => {
                     const d = new Date(e.event_date);
                     return (
                       <button
@@ -509,7 +507,7 @@ const Index = () => {
                             {e.start_landmark ? ` · ${e.start_landmark.name}` : ""}
                           </span>
                         </div>
-                        <Pill sport={e.is_free ? "football" : "tennis"}>{e.is_free ? "Free" : "Paid"}</Pill>
+                        {cyclingEvents.length === 0 ? <Pill sport="gray">Past</Pill> : <Pill sport={e.is_free ? "football" : "tennis"}>{e.is_free ? "Free" : "Paid"}</Pill>}
                       </button>
                     );
                   })

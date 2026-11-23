@@ -135,7 +135,7 @@ const formSchema = z.object({
 ).refine(
   (data) => data.is_own_bike || data.is_rental_available,
   {
-    message: "You must select at least one option: 'Bring Your Own Bike' or 'Rentals Available'.",
+    message: "You must select at least one option: 'Bring your bike' or 'Rentals Available'.",
     path: ["is_rental_available"],
   }
 );
@@ -826,7 +826,7 @@ const HostCycling = () => {
                                 onCheckedChange={field.onChange}
                               />
                             </FormControl>
-                            <FormLabel className="text-sm font-medium">Bring Your Own Bike</FormLabel>
+                            <FormLabel className="text-sm font-medium">Bring your bike</FormLabel>
                           </FormItem>
                         )}
                       />
