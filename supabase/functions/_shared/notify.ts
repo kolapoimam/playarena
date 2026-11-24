@@ -78,18 +78,93 @@ export async function sendPush(externalIds: string[], title: string, message: st
 
 // ---------- email ----------
 
-export function emailShell(title: string, bodyHtml: string, cta?: { label: string; path: string }) {
-  return `<!doctype html><html><body style="margin:0;background:#F4F5F1;font-family:Arial,Helvetica,sans-serif;color:#0E1411">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F4F5F1;padding:24px 12px"><tr><td align="center">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #E5E7EB">
-<tr><td style="background:#16A34A;padding:22px 28px"><img src="${APP_URL}/icons/icon-192x192.png" width="40" height="40" alt="SportCliq" style="vertical-align:middle;border-radius:10px"> <span style="color:#fff;font-size:20px;font-weight:bold;vertical-align:middle;margin-left:8px">SportCliq</span></td></tr>
-<tr><td style="padding:28px">
-<h1 style="margin:0 0 14px;font-size:22px;line-height:1.25">${esc(title)}</h1>
-<div style="font-size:15px;line-height:1.6;color:#374151">${bodyHtml}</div>
-${cta ? `<p style="margin:24px 0 0"><a href="${APP_URL}${cta.path}" style="display:inline-block;background:#16A34A;color:#fff;text-decoration:none;font-weight:bold;padding:12px 22px;border-radius:999px">${esc(cta.label)}</a></p>` : ""}
+// Email layout shared by every SportCliq email. Works in light and dark mode:
+// text never sits on a green fill except white button text, the logo mark reads on both
+// backgrounds, and dark mode clients get matching dark colours through the style block.
+function emailLayout(o: {
+  brandUrl: string
+  title: string
+  bodyHtml: string
+  preheader?: string
+  cta?: { label: string; url: string }
+  details?: [string, string][]
+  footerHtml: string
+}) {
+  const details = o.details?.length
+    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="panel" style="margin:22px 0 0;background:#F4F7F5;border-radius:14px">
+${o.details.map(([k, v], i) => `<tr><td class="muted" style="padding:${i ? '0' : '14px'} 18px 10px;font-size:13px;color:#5B6660">${esc(k)}</td><td class="text" align="right" style="padding:${i ? '0' : '14px'} 18px 10px;font-size:14px;font-weight:700;color:#0E1411">${esc(v)}</td></tr>`).join('')}
+<tr><td colspan="2" style="height:4px;line-height:4px;font-size:4px">&nbsp;</td></tr></table>`
+    : ''
+  const cta = o.cta
+    ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:26px 0 4px"><tr><td class="btn" bgcolor="#15803D" style="border-radius:999px;background:#15803D">
+<a href="${o.cta.url}" class="btn-a" style="display:inline-block;padding:14px 28px;font-size:15px;font-weight:700;color:#FFFFFF;text-decoration:none;border-radius:999px;-webkit-text-fill-color:#FFFFFF">${esc(o.cta.label)}&nbsp;&rarr;</a></td></tr></table>`
+    : ''
+  return `<!doctype html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="supported-color-schemes" content="light dark">
+<title>${esc(o.title)}</title>
+<style>
+  :root { color-scheme: light dark; supported-color-schemes: light dark; }
+  body { margin:0; padding:0; }
+  a { color:#15803D; }
+  @media (max-width:600px) { .card-pad { padding:26px 22px !important; } .h1 { font-size:22px !important; } }
+  @media (prefers-color-scheme: dark) {
+    .bg { background:#0B100D !important; }
+    .card { background:#141B17 !important; border-color:#243029 !important; }
+    .panel { background:#1B2520 !important; }
+    .text, .h1, .brand { color:#F2F5F3 !important; }
+    .muted { color:#A3AEA7 !important; }
+    .rule { border-color:#243029 !important; }
+    .foot { background:#101612 !important; border-top-color:#243029 !important; }
+    a.link { color:#4ADE80 !important; }
+  }
+  [data-ogsc] .bg { background:#0B100D !important; }
+  [data-ogsc] .card { background:#141B17 !important; border-color:#243029 !important; }
+  [data-ogsc] .panel { background:#1B2520 !important; }
+  [data-ogsc] .text, [data-ogsc] .h1, [data-ogsc] .brand { color:#F2F5F3 !important; }
+  [data-ogsc] .muted { color:#A3AEA7 !important; }
+  [data-ogsc] .foot { background:#101612 !important; border-top-color:#243029 !important; }
+  [data-ogsc] .btn-a { color:#FFFFFF !important; }
+</style>
+</head>
+<body class="bg" style="margin:0;padding:0;background:#F3F5F2;font-family:'Plus Jakarta Sans',Segoe UI,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;mso-hide:all">${esc(o.preheader || o.title)}&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="bg" style="background:#F3F5F2"><tr><td align="center" style="padding:32px 14px">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px">
+<tr><td style="padding:0 6px 18px">
+  <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+    <td style="vertical-align:middle"><img src="${o.brandUrl}/brand/sportcliq-mark.png" width="36" height="36" alt="" style="display:block;width:36px;height:36px;border-radius:10px;border:0"></td>
+    <td class="brand" style="vertical-align:middle;padding-left:10px;font-size:19px;font-weight:800;letter-spacing:-0.3px;color:#0E1411">SportCliq</td>
+  </tr></table>
 </td></tr>
-<tr><td style="padding:18px 28px;background:#F9FAFB;font-size:12px;color:#6B7280">You can change your notification settings in the SportCliq app under Profile, Settings. Questions? Reply to this email or write to ${REPLY_TO}.</td></tr>
-</table></td></tr></table></body></html>`;
+<tr><td class="card" style="background:#FFFFFF;border:1px solid #E4E8E5;border-radius:22px;overflow:hidden">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+  <tr><td style="height:5px;line-height:5px;font-size:5px;background:#35B551">&nbsp;</td></tr>
+  <tr><td class="card-pad" style="padding:34px 34px 30px">
+    <h1 class="h1" style="margin:0 0 14px;font-size:24px;line-height:1.25;font-weight:800;letter-spacing:-0.4px;color:#0E1411">${esc(o.title)}</h1>
+    <div class="text" style="font-size:15px;line-height:1.65;color:#2B3530">${o.bodyHtml}</div>
+    ${details}
+    ${cta}
+  </td></tr>
+  <tr><td class="foot muted" style="padding:18px 34px 22px;background:#F8FAF8;border-top:1px solid #EDF0EE;font-size:12px;line-height:1.6;color:#69746D">${o.footerHtml}</td></tr>
+  </table>
+</td></tr>
+<tr><td class="muted" align="center" style="padding:18px 6px 0;font-size:11px;line-height:1.6;color:#8A948E">SportCliq &middot; Play, organise and book sports near you</td></tr>
+</table>
+</td></tr></table>
+</body></html>`
+}
+
+export function emailShell(title: string, bodyHtml: string, cta?: { label: string; path: string }, extra?: { preheader?: string; details?: [string, string][] }) {
+  return emailLayout({
+    brandUrl: APP_URL, title, bodyHtml, preheader: extra?.preheader, details: extra?.details,
+    cta: cta ? { label: cta.label, url: `${APP_URL}${cta.path}` } : undefined,
+    footerHtml: `You can change which emails you get in the SportCliq app under Profile, Settings, Notifications. Questions? Reply to this email or write to <a class="link" href="mailto:${REPLY_TO}" style="color:#15803D">${REPLY_TO}</a>.`,
+  });
 }
 
 export async function sendEmail(to: string, subject: string, html: string, idempotencyKey?: string) {
@@ -156,7 +231,7 @@ export async function notifyUsers(
   for (const id of email) {
     const { data } = await db.auth.admin.getUserById(id);
     const to = data?.user?.email;
-    if (to) results.push(await sendEmail(to, title, emailShell(title, `<p>${esc(message)}</p>`, { label: "Open SportCliq", path }), onceKey ? `${onceKey}:email:${id}` : undefined));
+    if (to) results.push(await sendEmail(to, title, emailShell(title, `<p style="margin:0">${esc(message)}</p>`, { label: "Open SportCliq", path }, { preheader: message }), onceKey ? `${onceKey}:email:${id}` : undefined));
   }
   return { push: push.length, email: email.length, results };
 }

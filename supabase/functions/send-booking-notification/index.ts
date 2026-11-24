@@ -42,9 +42,6 @@ serve(async (req) => {
       ...(bookerEmail ? [["Contact", bookerEmail] as [string, string]] : []),
       ...(code?.code ? [["Access code", code.code] as [string, string]] : []),
     ];
-    const table = `<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:8px 0 4px;border-collapse:collapse">${rows
-      .map(([k, val]) => `<tr><td style="padding:10px 0;border-bottom:1px solid #E5E7EB;color:#6B7280;width:40%">${esc(k)}</td><td style="padding:10px 0;border-bottom:1px solid #E5E7EB;font-weight:bold;color:#0E1411;text-align:right">${esc(val)}</td></tr>`)
-      .join("")}</table>`;
 
     const out: Record<string, unknown> = {};
     if (v.email) {
@@ -53,8 +50,9 @@ serve(async (req) => {
         `New booking at ${v.name}`,
         emailShell(
           `New booking at ${v.name}`,
-          `<p>Good news. Your venue has a new booking through SportCliq.</p>${table}<p>The organiser will share the access code with you when they arrive.</p>`,
+          `<p style="margin:0 0 12px">Good news. Your venue has a new booking through SportCliq.</p><p style="margin:0">The organiser will share the access code with you when they arrive.</p>`,
           { label: "See your bookings", path: `/profile/my-bookings` },
+          { preheader: `${b.title || "A match"} on ${b.match_date}`, details: rows.map(([k, val]) => [String(k), String(val)] as [string, string]) },
         ),
         `booking-email:${b.id}`,
       );
