@@ -84,7 +84,7 @@ serve(async (req) => {
       if (!inWindow(start)) continue;
       const { data: joined } = await db.from("user_joined_cycling").select("user_id").eq("cycling_event_id", r.id_uuid);
       const ids = [...(joined ?? []).map((j) => j.user_id), r.host_id];
-      await notifyUsers(db, ids, "match_playing_time",
+      await notifyUsers(db, ids, "ride_reminder",
         `${r.title} rolls out soon`,
         `Starts at ${clock(start!)}. Bring your helmet and water, and get there 10 minutes early.`,
         `/cycling/${r.slug}`, `reminder:ride:${r.id_uuid}`);

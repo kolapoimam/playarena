@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { CalendarDays, CheckCircle2, Clock, ExternalLink, Store, TrendingUp, Wallet } from "lucide-react";
+import { CalendarDays, CheckCircle2, Clock, ExternalLink, Power, Store, TrendingUp, Wallet } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/Navbar";
@@ -9,7 +9,7 @@ import VenueAccessCode from "@/components/venueManagement/VenueAccessCode";
 import VenueCalendar, { BookingRow, type VenueBooking } from "@/components/venueManagement/VenueCalendar";
 import { BackButton, Bubble, Cover, FunEmpty, IconButton, Segmented, formatNaira, formatNairaExact } from "@/components/sc/ui";
 import { RowsSkeleton } from "@/components/sc/skeletons";
-import { canManageVenue } from "@/lib/myVenues";
+import { canManageVenue, venueIsActive } from "@/lib/myVenues";
 
 type Tab = "overview" | "bookings" | "payouts" | "codes";
 type Venue = { id: string; name: string; slug: string; city: string | null; state: string | null; image_urls: string[] | null; is_verified: boolean | null };
@@ -41,6 +41,22 @@ const VenueManagerDashboard = () => {
   const [availableFunds, setAvailableFunds] = useState(0);
   const [verifiedSince, setVerifiedSince] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [active, setActive] = useState(true);
+  const [savingActive, setSavingActive] = useState(false);
+
+  const toggleActive = async () => {
+    if (!venue || savingActive) return;
+    const next = !active;
+    setSavingActive(true);
+    const { error } = await supabase.from("venues").update({ is_active: next, updated_at: new Date().toISOString() } as any).eq("id", venue.id);
+    setSavingActive(false);
+    if (error) {
+      toast({ title: "Not saved", description: /is_active/.test(error.message) ? "The venue status setting is not switched on yet. Ask SportCliq support." : error.message, variant: "destructive" });
+      return;
+    }
+    setActive(next);
+    toast({ title: next ? "Venue is active" : "Venue is inactive", description: next ? "Players can book your venue on SportCliq." : "New bookings are paused. Organisers will see that your venue is not taking bookings." });
+  };
 
   useEffect(() => {
     (async () => {
@@ -54,7 +70,7 @@ const VenueManagerDashboard = () => {
           toast({ title: "Not your venue", description: "Link this venue with its access code first.", variant: "destructive" });
           return navigate("/profile/my-venue", { replace: true });
         }
-        const [v, b, c, pin] = await Promise.all([
+        const [v, b, c, pin, holds] = await Promise.all([
           supabase.from("venues").select("id, name, slug, city, state, image_urls, is_verified").eq("id", venueId).limit(1),
           supabase
             .from("bookings")
@@ -64,10 +80,12 @@ const VenueManagerDashboard = () => {
             .limit(500),
           supabase.from("venue_booking_cashout").select("amount, status").eq("venue_id", venueId).in("status", ["Review", "Processed", "Successful"]),
           supabase.from("access_pins").select("created_at, updated_at").eq("venue_id", venueId).eq("verified", "true").limit(1),
+          supabase.from("booking_access_codes").select("id, code, match_date, start_time, end_time").eq("venue_id", venueId).is("booking_id", null).in("status", ["pending", "active"]),
         ]);
         const venueRow = ((v.data as any[]) || [])[0];
         if (v.error || !venueRow) throw new Error("We could not load this venue.");
         setVenue(venueRow as Venue);
+        venueIsActive(venueRow.id).then(setActive);
         const rows: VenueBooking[] = ((b.data as any[]) || []).map((r) => ({
           ...r,
           slug: r.matches?.slug ?? null,
@@ -75,11 +93,17 @@ const VenueManagerDashboard = () => {
           recurring_frequency: r.matches?.recurring_frequency ?? null,
           recurring_occurrences: r.matches?.recurring_occurrences ?? null,
         }));
-        setBookings(rows);
+        // Times held with a booking code show on the calendar too
+        const held: VenueBooking[] = ((holds.data as any[]) || []).map((h) => ({
+          id: `hold-${h.id}`, match_id: null, title: `Held with code ${h.code}`, match_date: h.match_date, start_time: h.start_time, end_time: h.end_time,
+          organizer_name: null, amount: null, payment_status: "held", slug: null,
+        }));
+        setBookings([...rows, ...held]);
         const earned = rows.filter((r) => (r.payment_status || "").toLowerCase() === "paid").reduce((s2, r) => s2 + (Number(r.amount) || 0), 0);
         const out = ((c.data as any[]) || []).reduce((s2, r) => s2 + (Number(r.amount) || 0), 0);
         setPaidOut(out);
-        setAvailableFunds(Math.max(0, earned - out));
+        // the wallet works out the exact amount after the referral fee when it opens
+        setAvailableFunds(Math.max(0, Math.floor(earned * 0.9) - out));
         const p = ((pin.data as any[]) || [])[0];
         setVerifiedSince(p?.updated_at || p?.created_at || null);
       } catch (e: any) {
@@ -168,8 +192,8 @@ const VenueManagerDashboard = () => {
               <>
                 <div className="grid grid-cols-2 gap-2.5">
                   {[
-                    { icon: Wallet, sport: "money" as const, label: "Earned in total", value: formatNairaExact(stats.earned) },
-                    { icon: TrendingUp, sport: "football" as const, label: "Earned this month", value: formatNairaExact(stats.thisMonth) },
+                    { icon: Wallet, sport: "money" as const, label: "Collected in total", value: formatNairaExact(stats.earned) },
+                    { icon: TrendingUp, sport: "football" as const, label: "Collected this month", value: formatNairaExact(stats.thisMonth) },
                     { icon: CalendarDays, sport: "venue" as const, label: "Bookings", value: stats.count.toLocaleString() },
                     { icon: Clock, sport: "guide" as const, label: "Hours booked", value: stats.hours.toLocaleString() },
                   ].map((f) => (
@@ -226,7 +250,29 @@ const VenueManagerDashboard = () => {
               </>
             )}
 
-            {tab === "bookings" && <VenueCalendar bookings={bookings} />}
+            {tab === "bookings" && (
+              <>
+                <button
+                  type="button"
+                  onClick={toggleActive}
+                  disabled={savingActive}
+                  aria-pressed={active}
+                  className="w-full bg-white rounded-[24px] p-4 flex items-center gap-3 text-left"
+                >
+                  <span className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${active ? "bg-sc-green/10 text-sc-green" : "bg-black/[0.05] text-sc-ink3"}`}>
+                    <Power size={20} />
+                  </span>
+                  <span className="flex-1 min-w-0 flex flex-col">
+                    <span className="text-[16px] font-extrabold">{active ? "Active" : "Inactive"}</span>
+                    <span className="text-[13px] leading-[18px] text-sc-ink3">{active ? "Players can book your venue on SportCliq." : "Bookings are paused. Organisers are told to confirm with you first."}</span>
+                  </span>
+                  <span className={`w-12 h-7 rounded-full p-0.5 transition-colors shrink-0 ${active ? "bg-sc-green" : "bg-black/15"}`}>
+                    <span className={`block w-6 h-6 rounded-full bg-white shadow transition-transform ${active ? "translate-x-5" : ""}`} />
+                  </span>
+                </button>
+                <VenueCalendar bookings={bookings} />
+              </>
+            )}
 
             {tab === "payouts" && (
               <>
@@ -235,7 +281,7 @@ const VenueManagerDashboard = () => {
               </>
             )}
 
-            {tab === "codes" && <VenueAccessCode venueId={venue.id} />}
+            {tab === "codes" && <VenueAccessCode venueId={venue.id} venueName={venue.name} venueSlug={venue.slug} />}
           </>
         )}
       </main>

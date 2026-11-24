@@ -1,4 +1,8 @@
 import { useState, useEffect, useRef } from "react";
+import { venueIsActive } from "@/lib/myVenues";
+import ConfirmModal from "@/components/sc/ConfirmModal";
+import { Store } from "lucide-react";
+import { toMinutes } from "@/lib/venueSlots";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -148,8 +152,13 @@ const Organize = () => {
     }
   }, [form]);
 
-  const to12 = (t: string) => {
-    const [h, m] = t.split(":").map(Number);
+  // Codes can hold "16:00", "16:00:00" or "04:00 PM"; turn any of them into "HH:MM"
+  const hhmm = (t: string) => {
+    const mins = toMinutes(t);
+    return mins == null ? String(t).slice(0, 5) : `${String(Math.floor(mins / 60)).padStart(2, "0")}:${String(mins % 60).padStart(2, "0")}`;
+  };
+  const to12 = (raw: string) => {
+    const [h, m] = hhmm(raw).split(":").map(Number);
     return new Date(0, 0, 0, h, m).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
   };
 
@@ -199,8 +208,8 @@ const Organize = () => {
         setLockedBooking({
           venueId: venue.id,
           matchDate: String(row.match_date).slice(0, 10),
-          start: String(row.start_time).slice(0, 5),
-          end: String(row.end_time).slice(0, 5),
+          start: hhmm(String(row.start_time)),
+          end: hhmm(String(row.end_time)),
           bookingId: row.booking_id ?? null,
         });
         form.setValue("venue_id", venue.id, { shouldValidate: true });
@@ -229,6 +238,20 @@ const Organize = () => {
   }, [watchedVenueId]);
 
   const selectedVenue = venues.find((venue) => venue.id === selectedVenueId);
+
+  // A venue marked inactive is not taking bookings. Warn the organiser once per venue.
+  const [inactiveVenue, setInactiveVenue] = useState<string | null>(null);
+  const warnedVenues = useRef(new Set<string>());
+  const inactiveOk = useRef(false);
+  useEffect(() => {
+    if (!watchedVenueId || warnedVenues.current.has(watchedVenueId)) return;
+    venueIsActive(watchedVenueId).then((active) => {
+      if (!active) {
+        warnedVenues.current.add(watchedVenueId);
+        setInactiveVenue(watchedVenueId);
+      }
+    });
+  }, [watchedVenueId]);
 
   const onSubmit = async (data: FormValues) => {
     if (submitLock.current) return;
@@ -517,6 +540,25 @@ const Organize = () => {
               </div>
             </form>
           </Form>
+          <ConfirmModal
+            open={!!inactiveVenue}
+            onOpenChange={(v) => {
+              if (v) return;
+              // Pick another venue clears the choice, unless a booking code locked it
+              if (!inactiveOk.current && !isPreFilled) {
+                if (inactiveVenue) warnedVenues.current.delete(inactiveVenue);
+                form.setValue("venue_id", "" as any);
+              }
+              inactiveOk.current = false;
+              setInactiveVenue(null);
+            }}
+            icon={Store}
+            title="This venue is marked inactive"
+            description="It is not taking bookings on SportCliq right now. Only continue if the venue has confirmed your date and time with you."
+            confirmLabel="I have confirmation"
+            cancelLabel="Pick another venue"
+            onConfirm={() => { inactiveOk.current = true; }}
+          />
           <MatchPreviewDialog
             open={previewDialogOpen}
             onOpenChange={setPreviewDialogOpen}

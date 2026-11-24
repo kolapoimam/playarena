@@ -1,4 +1,5 @@
 import { format, differenceInMinutes } from "date-fns";
+import { hostRate, payout } from "@/lib/fees";
 import { Bike, MapPin, Calendar, Clock, Users, Wallet, Banknote, Flag, XCircle } from "lucide-react";
 import { ListGroup, ListRow, Pill, Progress, ScButton, StatCard, formatNairaExact, type Sport } from "@/components/sc/ui";
 import { Button } from "@/components/ui/button";
@@ -155,22 +156,16 @@ const fetchEventDetails = async () => {
           );
         }
 
-        // Fetch wallet balance
-const { data: walletData, error: walletError } = await supabase
-  .from("cycling_wallets")
-  .select("balance")
-  .eq("host_id", event.host_id)
-  .maybeSingle();
-
-if (walletError) {
-  console.error("Wallet fetch error:", walletError);
-  balance = defaultBalance; // Use calculated balance
-} else if (walletData?.balance !== undefined) {
-  balance = walletData.balance;
-} else {
-  balance = defaultBalance; // No wallet found
-}
-
+        // Same rule as the cashout screen, after the platform fee and earlier cashouts
+        const [{ data: outs }, rateInfo, { data: walletRows }] = await Promise.all([
+          supabase.from("cycling_cashouts").select("total_amount_paid").eq("cycling_event_id_uuid", event.id_uuid).in("status", ["Review", "Processed", "Successful"]),
+          hostRate(event.id_uuid, event.host_id),
+          supabase.from("cycling_wallets").select("balance").eq("host_id", event.host_id).limit(1),
+        ]);
+        const requested = ((outs as any[]) || []).reduce((s, r) => s + (Number(r.total_amount_paid) || 0), 0);
+        balance = payout(balance, rateInfo.rate, requested, rateInfo.note).available;
+        const wallet = ((walletRows as any[]) || [])[0]?.balance;
+        if (typeof wallet === "number") balance = Math.min(balance, Math.max(0, Math.floor(wallet)));
         if (balance < 0) balance = 0;
         setLocalWalletBalance(balance);
       } catch (error) {
@@ -300,7 +295,7 @@ if (walletError) {
       </div>
 
       <div className="flex gap-2.5">
-        <StatCard value={formatNairaExact(localWalletBalance || 0)} label="In your wallet" icon={Wallet} sport="money" />
+        <StatCard value={formatNairaExact(localWalletBalance || 0)} label="Ready to cash out" icon={Wallet} sport="money" />
         <StatCard value={event.is_free ? "Free" : formatNairaExact(event.price || 0)} label={event.is_free ? "Entry" : "Per rider"} icon={Banknote} sport="tennis" />
       </div>
 

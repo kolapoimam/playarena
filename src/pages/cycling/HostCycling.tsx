@@ -1,3 +1,4 @@
+import { notify } from '@/lib/notify';
 import RidePreviewDialog from '@/components/cycling/RidePreviewDialog';
 import { useState, useEffect, useRef, Component, ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
@@ -399,6 +400,9 @@ const HostCycling = () => {
         console.error('Supabase insert error:', eventError);
         throw new Error(`Failed to create event: ${eventError?.message || 'No event data'}`);
       }
+
+      // Tell riders who saved the start landmark. The server checks everything itself.
+      notify("ride_created", { event_id: eventData.id_uuid });
 
       // Only insert into user_hosted_cycling if user is logged in
       if (userId) {

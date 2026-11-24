@@ -80,3 +80,12 @@ export async function linkVenueWithPin(userId: string, raw: string): Promise<Lin
   const { user_id: _omit, ...clean } = venue as any;
   return { ok: true, venue: { ...clean, pin: pin.pin }, already: pinMine || venueMine };
 }
+
+/**
+ * Whether a venue is taking bookings on SportCliq. Reads every column so it still
+ * works before the is_active column exists, and treats a missing value as active.
+ */
+export async function venueIsActive(venueId: string): Promise<boolean> {
+  const { data } = await supabase.from("venues").select("*").eq("id", venueId).limit(1);
+  return ((data as any[]) || [])[0]?.is_active !== false;
+}

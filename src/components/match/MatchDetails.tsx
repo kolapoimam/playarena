@@ -1,4 +1,5 @@
 import { format, differenceInMinutes } from "date-fns";
+import { organiserRate, payout } from "@/lib/fees";
 import { MapPin, Calendar, Clock, Users, Wallet, Banknote, Ticket, XCircle } from "lucide-react";
 import { Bubble, ListGroup, ListRow, Pill, Progress, ScButton, StatCard, formatNairaExact, type Sport } from "@/components/sc/ui";
 import { supabase } from "@/integrations/supabase/client";
@@ -112,12 +113,10 @@ const MatchDetails = ({ match, cashout, handleCancelMatch, handleCancel: openCan
 
         if (cashoutError) throw cashoutError;
 
-        if (cashoutData) {
-          const cashoutTotal = cashoutData.reduce((sum, request) => sum + (request.amount || 0), 0);
-          balance -= cashoutTotal;
-        }
-
-        setWalletBalance(balance < 0 ? 0 : balance);
+        // Same rule as the cashout screen, after the platform fee and earlier cashouts
+        const requested = (cashoutData || []).reduce((sum, request) => sum + (request.amount || 0), 0);
+        const { rate, note } = await organiserRate(match.id);
+        setWalletBalance(payout(balance, rate, requested, note).available);
       } catch (error) {
         console.error("Error fetching wallet balance:", error);
         toast({
@@ -274,7 +273,7 @@ const MatchDetails = ({ match, cashout, handleCancelMatch, handleCancel: openCan
       </div>
 
       <div className="flex gap-2.5">
-        <StatCard value={formatNairaExact(walletBalance)} label="In your wallet" icon={Wallet} sport="money" />
+        <StatCard value={formatNairaExact(walletBalance)} label="Ready to cash out" icon={Wallet} sport="money" />
         <StatCard value={match.is_paid ? formatNairaExact(match.price || 0) : "Free"} label={match.is_paid ? "Per player" : "Entry"} icon={Banknote} sport="tennis" />
       </div>
 

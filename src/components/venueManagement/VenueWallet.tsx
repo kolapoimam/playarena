@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Loader2, RefreshCw } from "lucide-react";
 import { z } from "zod";
+import { venuePayout, type Payout } from "@/lib/fees";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 const bankAccountSchema = z.string().regex(/^\d{10}$/, { message: "Bank account number must be exactly 10 digits" });
@@ -86,21 +87,20 @@ const VenueWallet = ({ venueId, availableFunds, setAvailableFunds }: VenueWallet
     }
   }, [venueId, toast]);
 
-  // Work out what is left to cash out, the same way the venue page does
+  // What is left to cash out after the referral fee and earlier cashouts
+  const [breakdown, setBreakdown] = useState<Payout | null>(null);
   const refreshFunds = useCallback(async () => {
     if (!venueId) return;
-    const [paid, out] = await Promise.all([
-      supabase.from("bookings").select("amount").eq("venue_id", venueId).eq("payment_status", "paid"),
-      supabase.from("venue_booking_cashout").select("amount, status").eq("venue_id", venueId).in("status", ["Review", "Processed", "Successful"]),
-    ]);
-    if (paid.error || out.error) {
+    const p = await venuePayout(venueId);
+    if (!p) {
       toast({ title: "Balance not updated", description: "Please try again.", variant: "destructive" });
       return;
     }
-    const total = (paid.data || []).reduce((sum: number, b: any) => sum + (b.amount || 0), 0);
-    const taken = (out.data || []).reduce((sum: number, r: any) => sum + (r.amount || 0), 0);
-    setAvailableFunds(Math.max(0, total - taken));
+    setBreakdown(p);
+    setAvailableFunds(p.available);
   }, [venueId, setAvailableFunds, toast]);
+
+  useEffect(() => { refreshFunds(); }, [refreshFunds]);
 
   useEffect(() => {
     fetchCashoutRequests();
@@ -186,7 +186,7 @@ const VenueWallet = ({ venueId, availableFunds, setAvailableFunds }: VenueWallet
       }
 
       await fetchCashoutRequests();
-      setAvailableFunds(Math.max(0, availableFunds - Number(cashoutAmount)));
+      await refreshFunds();
       setCashoutDialogOpen(false);
       setBankAccountNumber("");
       setBankName("");
@@ -223,7 +223,7 @@ const VenueWallet = ({ venueId, availableFunds, setAvailableFunds }: VenueWallet
 
   return (
     <div className="flex flex-col gap-3.5">
-      <BalanceHero accent="#7C3AED" label="Venue wallet" balance={availableFunds} onRefresh={() => Promise.all([refreshFunds(), fetchCashoutRequests()])} onRequest={() => setCashoutDialogOpen(true)} disabled={loading} note="From bookings at your venue" />
+      <BalanceHero accent="#7C3AED" label="Venue wallet" balance={availableFunds} onRefresh={() => Promise.all([refreshFunds(), fetchCashoutRequests()])} onRequest={() => setCashoutDialogOpen(true)} disabled={loading} note="From bookings at your venue" breakdown={breakdown} />
       <CashoutList rows={cashoutRequests.map((r: any) => ({ id: r.id, amount: r.amount, created_at: r.created_at, status: r.status, name: r.account_holder_name, bank: r.bank_name, account: r.account_number }))} />
       <CashoutDialog
         open={cashoutDialogOpen}

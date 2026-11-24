@@ -14,40 +14,29 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent } from "@/components/ui/card";
-import { CheckCircle, Loader2, ChevronDown, ChevronUp, Clock, UserPlus, Users, CalendarCheck, Store, Heart, LucideIcon } from "lucide-react";
+import { Bike, MapPin, Trophy, CheckCircle, Loader2, ChevronDown, ChevronUp, Clock, UserPlus, Users, CalendarCheck, Store, Heart, LucideIcon } from "lucide-react";
 import { Bubble, ScButton, Sport } from "@/components/sc/ui";
 
+const setting = z.object({
+  enabled: z.boolean(),
+  type: z.enum(["push", "email", "both"]),
+  frequency: z.enum(["immediate", "daily", "weekly"]),
+});
+
+// Ride settings are newer, so older saved data may not have them yet
+export const RIDE_EVENTS = ["ride_reminder", "landmark_favourite_ride", "ride_new_rider", "ride_full"] as const;
+
 const notificationSchema = z.object({
-  match_playing_time: z.object({
-    enabled: z.boolean(),
-    type: z.enum(["push", "email", "both"]),
-    frequency: z.enum(["immediate", "daily", "weekly"]),
-  }),
-  match_organizing_registration: z.object({
-    enabled: z.boolean(),
-    type: z.enum(["push", "email", "both"]),
-    frequency: z.enum(["immediate", "daily", "weekly"]),
-  }),
-  match_organizing_slot_filled: z.object({
-    enabled: z.boolean(),
-    type: z.enum(["push", "email", "both"]),
-    frequency: z.enum(["immediate", "daily", "weekly"]),
-  }),
-  booking_confirmation: z.object({
-    enabled: z.boolean(),
-    type: z.enum(["push", "email", "both"]),
-    frequency: z.enum(["immediate", "daily", "weekly"]),
-  }),
-  venue_match_created: z.object({
-    enabled: z.boolean(),
-    type: z.enum(["push", "email", "both"]),
-    frequency: z.enum(["immediate", "daily", "weekly"]),
-  }),
-  venue_favourite_match: z.object({
-    enabled: z.boolean(),
-    type: z.enum(["push", "email", "both"]),
-    frequency: z.enum(["immediate", "daily", "weekly"]),
-  }),
+  match_playing_time: setting,
+  match_organizing_registration: setting,
+  match_organizing_slot_filled: setting,
+  booking_confirmation: setting,
+  venue_match_created: setting,
+  venue_favourite_match: setting,
+  ride_reminder: setting,
+  landmark_favourite_ride: setting,
+  ride_new_rider: setting,
+  ride_full: setting,
 });
 
 type NotificationSettings = z.infer<typeof notificationSchema>;
@@ -58,7 +47,7 @@ const UserNotifications = ({ profile, setShowNotifications }) => {
   const [subscriptionId, setSubscriptionId] = useState<string | null>(null);
   const navigate = useNavigate();
   // Which settings apply to this user. Reminders and favourite venues apply to everyone.
-  const [roles, setRoles] = useState<{ organiser: boolean; venue: boolean; favourites: number } | null>(null);
+  const [roles, setRoles] = useState<{ organiser: boolean; host: boolean; venue: boolean; favourites: number; landmarks: number } | null>(null);
   const [openCard, setOpenCard] = useState<string | null>(null);
   const [askFavourite, setAskFavourite] = useState(false);
   const toVenues = useRef(false);
@@ -66,16 +55,19 @@ const UserNotifications = ({ profile, setShowNotifications }) => {
   useEffect(() => {
     if (!profile?.id) return;
     (async () => {
-      const [org, rides, fav, venues] = await Promise.all([
+      const [org, rides, fav, lfav, venues] = await Promise.all([
         supabase.from("user_organized_matches").select("match_id").eq("user_id", profile.id).limit(1),
         supabase.from("user_hosted_cycling").select("user_id").eq("user_id", profile.id).limit(1),
         supabase.from("user_venue_favourites").select("venue_id").eq("user_id", profile.id),
+        supabase.from("user_landmark_favourites").select("landmark_id").eq("user_id", profile.id),
         getMyVenues(profile.id).catch(() => []),
       ]);
       setRoles({
-        organiser: ((org.data as any[]) || []).length > 0 || ((rides.data as any[]) || []).length > 0,
+        organiser: ((org.data as any[]) || []).length > 0,
+        host: ((rides.data as any[]) || []).length > 0,
         venue: venues.length > 0,
         favourites: ((fav.data as any[]) || []).length,
+        landmarks: ((lfav.data as any[]) || []).length,
       });
     })();
   }, [profile?.id]);
@@ -89,6 +81,10 @@ const UserNotifications = ({ profile, setShowNotifications }) => {
       booking_confirmation: { enabled: true, type: "push", frequency: "immediate" },
       venue_match_created: { enabled: true, type: "push", frequency: "immediate" },
       venue_favourite_match: { enabled: true, type: "push", frequency: "immediate" },
+      ride_reminder: { enabled: true, type: "push", frequency: "immediate" },
+      landmark_favourite_ride: { enabled: true, type: "push", frequency: "immediate" },
+      ride_new_rider: { enabled: true, type: "push", frequency: "immediate" },
+      ride_full: { enabled: true, type: "push", frequency: "immediate" },
     },
   });
 
@@ -161,7 +157,19 @@ const UserNotifications = ({ profile, setShowNotifications }) => {
         ...(inserts.length ? [(supabase.from("user_notifications") as any).insert(inserts)] : []),
       ]);
       const failed = results.find((r) => r.error);
-      if (failed?.error) throw failed.error;
+      if (failed?.error) {
+        // Before the ride settings are added to the database, save everything else
+        const rideOnly = (r: any) => (RIDE_EVENTS as readonly string[]).includes(r.event_type);
+        if (/invalid input value for enum/i.test(failed.error.message || "")) {
+          const retry = await Promise.all([
+            ...updates.filter((r) => !rideOnly(r)).map((r) => (supabase.from("user_notifications") as any).update(r).eq("id", idByEvent.get(r.event_type)!)),
+            ...(inserts.filter((r) => !rideOnly(r)).length ? [(supabase.from("user_notifications") as any).insert(inserts.filter((r) => !rideOnly(r)))] : []),
+          ]);
+          const again = retry.find((r) => r.error);
+          if (again?.error) throw again.error;
+          console.warn("Ride notification settings are not in the database yet");
+        } else throw failed.error;
+      }
 
       // Push needs this device to be allowed and linked to the account
       const wantsPush = rows.some((r) => r.is_enabled && (r.notification_type === "push" || r.notification_type === "both"));
@@ -187,13 +195,39 @@ const UserNotifications = ({ profile, setShowNotifications }) => {
     }
   };
 
-  const EVENTS: { event: string; label: string; sub: string; icon: LucideIcon; sport: Sport; show: boolean }[] = [
-    { event: "match_playing_time", label: "Match reminders", sub: "Before a match you joined kicks off", icon: Clock, sport: "football", show: true },
-    { event: "venue_favourite_match", label: "Favourite venues", sub: "New matches at venues you love", icon: Heart, sport: "red", show: true },
-    { event: "match_organizing_registration", label: "New players", sub: "When someone joins your match", icon: UserPlus, sport: "guide", show: !!roles?.organiser },
-    { event: "match_organizing_slot_filled", label: "Match full", sub: "When every slot in your match is taken", icon: Users, sport: "tennis", show: !!roles?.organiser },
-    { event: "booking_confirmation", label: "Venue bookings", sub: "When someone books a slot at your venue", icon: CalendarCheck, sport: "venue", show: !!roles?.venue },
-    { event: "venue_match_created", label: "Matches at my venue", sub: "New matches set up at your venue", icon: Store, sport: "pink", show: !!roles?.venue },
+  type Ev = { event: string; label: string; sub: string; icon: LucideIcon; sport: Sport; show: boolean };
+  const SECTIONS: { title: string; icon: LucideIcon; sport: Sport; events: Ev[] }[] = [
+    {
+      title: "Football",
+      icon: Trophy,
+      sport: "football",
+      events: [
+        { event: "match_playing_time", label: "Match reminders", sub: "Before a match you joined kicks off", icon: Clock, sport: "football", show: true },
+        { event: "venue_favourite_match", label: "Favourite venues", sub: "New matches at venues you love", icon: Heart, sport: "red", show: true },
+        { event: "match_organizing_registration", label: "New players", sub: "When someone joins your match", icon: UserPlus, sport: "guide", show: !!roles?.organiser },
+        { event: "match_organizing_slot_filled", label: "Match full", sub: "When every slot in your match is taken", icon: Users, sport: "tennis", show: !!roles?.organiser },
+      ],
+    },
+    {
+      title: "Cycling",
+      icon: Bike,
+      sport: "cycling",
+      events: [
+        { event: "ride_reminder", label: "Ride reminders", sub: "Before a ride you joined rolls out", icon: Clock, sport: "cycling", show: true },
+        { event: "landmark_favourite_ride", label: "Favourite landmarks", sub: "New rides from landmarks you saved", icon: MapPin, sport: "red", show: true },
+        { event: "ride_new_rider", label: "New riders", sub: "When someone joins your ride", icon: UserPlus, sport: "guide", show: !!roles?.host },
+        { event: "ride_full", label: "Ride full", sub: "When every spot on your ride is taken", icon: Users, sport: "tennis", show: !!roles?.host },
+      ],
+    },
+    {
+      title: "Your venue",
+      icon: Store,
+      sport: "venue",
+      events: [
+        { event: "booking_confirmation", label: "Venue bookings", sub: "When someone books a slot at your venue", icon: CalendarCheck, sport: "venue", show: !!roles?.venue },
+        { event: "venue_match_created", label: "Matches at my venue", sub: "New matches set up at your venue", icon: Store, sport: "pink", show: !!roles?.venue },
+      ],
+    },
   ];
   const chip = (on: boolean) => `h-9 px-3.5 rounded-full text-[13px] font-bold capitalize ${on ? "bg-sc-ink text-white" : "bg-sc-soft text-sc-ink"}`;
   const typeLabel: Record<string, string> = { push: "Push", email: "Email", both: "Push and email" };
@@ -201,13 +235,19 @@ const UserNotifications = ({ profile, setShowNotifications }) => {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-3">
-        {EVENTS.filter((e) => e.show).map(({ event, label, sub, icon, sport }) => {
+        {SECTIONS.map((sec) => ({ ...sec, events: sec.events.filter((e) => e.show) })).filter((sec) => sec.events.length).map((sec) => (
+        <div key={sec.title} className="flex flex-col gap-2">
+          <span className="px-1 pt-1 text-[13px] font-bold text-sc-ink3 uppercase tracking-[0.06em] inline-flex items-center gap-1.5">
+            <sec.icon size={14} /> {sec.title}
+          </span>
+          <div className="bg-white rounded-3xl px-4 divide-y divide-sc-line">
+        {sec.events.map(({ event, label, sub, icon, sport }) => {
           const enabled = form.watch(`${event}.enabled` as any);
           const type = form.watch(`${event}.type` as any);
           const freq = form.watch(`${event}.frequency` as any);
           const isOpen = openCard === event && enabled;
           return (
-            <div key={event} className="bg-white rounded-3xl px-4 py-3.5 flex flex-col gap-3">
+            <div key={event} className="py-3.5 flex flex-col gap-3">
               <div className="flex items-center gap-3">
                 <button
                   type="button"
@@ -271,8 +311,11 @@ const UserNotifications = ({ profile, setShowNotifications }) => {
             </div>
           );
         })}
-        {roles && !roles.organiser && !roles.venue && (
-          <p className={cn("m-0 px-1 text-[12.5px] text-sc-ink3")}>More settings show up once you organise a match or manage a venue.</p>
+          </div>
+        </div>
+        ))}
+        {roles && !roles.organiser && !roles.host && !roles.venue && (
+          <p className={cn("m-0 px-1 text-[12.5px] text-sc-ink3")}>More settings show up once you organise a match, host a ride or manage a venue.</p>
         )}
         <ScButton type="submit" icon={CheckCircle} disabled={loading}>{loading ? "Saving..." : "Save settings"}</ScButton>
       </form>

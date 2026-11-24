@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Loader2, RefreshCw } from "lucide-react";
 import { z } from "zod";
+import { organiserRate, payout, type Payout } from "@/lib/fees";
 import { v4 as uuidv4 } from "uuid";
 
 type Match = {
@@ -71,6 +72,7 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
   const { toast } = useToast();
   const [cashoutRequests, setCashoutRequests] = useState<CashoutRequest[]>([]);
   const [walletBalance, setWalletBalance] = useState<number>(0);
+  const [breakdown, setBreakdown] = useState<Payout | null>(null);
   const [cashoutDialogOpen, setCashoutDialogOpen] = useState(false);
   const [bankAccountNumber, setBankAccountNumber] = useState("");
   const [bankName, setBankName] = useState("");
@@ -145,12 +147,12 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
 
       if (cashoutError) throw cashoutError;
 
-      if (cashoutData) {
-        const cashoutTotal = cashoutData.reduce((sum, request) => sum + (request.amount || 0), 0);
-        balance -= cashoutTotal;
-      }
-
-      setWalletBalance(balance < 0 ? 0 : balance);
+      // What is left after the platform fee and earlier cashouts
+      const requested = (cashoutData || []).reduce((sum, request) => sum + (request.amount || 0), 0);
+      const { rate, note } = await organiserRate(match.id);
+      const p = payout(balance, rate, requested, note);
+      setBreakdown(p);
+      setWalletBalance(p.available);
     } catch (error) {
       console.error("Error fetching data for wallet balance:", error);
       toast({
@@ -338,7 +340,7 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
       }
 
       await fetchCashoutRequests();
-      setWalletBalance(prev => prev - Number(cashoutAmount) < 0 ? 0 : prev - Number(cashoutAmount));
+      await fetchWalletData();
 
       setCashoutDialogOpen(false);
       setBankAccountNumber("");
@@ -378,7 +380,7 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
 
   return (
     <div className="flex flex-col gap-3.5">
-      <BalanceHero balance={walletBalance} onRefresh={handleRefresh} onRequest={handleCashoutMode} disabled={!localTempIdentifier || !!match.cancellation_status} note="From paid slots in this match" />
+      <BalanceHero balance={walletBalance} onRefresh={handleRefresh} onRequest={handleCashoutMode} disabled={!localTempIdentifier || !!match.cancellation_status} note="From paid slots in this match" breakdown={breakdown} />
       <CashoutList rows={cashoutRequests.map((r: any) => ({ id: r.id, amount: r.amount, created_at: r.created_at, status: r.status, name: r.account_details?.account_name, bank: r.account_details?.bank_name, account: r.account_details?.bank_account_number }))} />
       <CashoutDialog
         open={cashoutDialogOpen}

@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { z } from 'zod';
+import { hostRate, payout, type Payout } from '@/lib/fees';
 import { v4 as uuidv4 } from 'uuid';
 
 type CyclingEvent = {
@@ -78,6 +79,7 @@ interface FormErrors {
 const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
   const { toast } = useToast();
   const [cashoutRequests, setCashoutRequests] = useState<Cashout[]>([]);
+  const [breakdown, setBreakdown] = useState<Payout | null>(null);
   const [walletBalance, setWalletBalance] = useState<number>(0);
   const [cashoutDialogOpen, setCashoutDialogOpen] = useState(false);
   const [bankAccountNumber, setBankAccountNumber] = useState('');
@@ -101,58 +103,37 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
     }
   }, [tempIdentifier]);
 
+  // Ride earnings less the platform fee and cashouts already requested for this ride.
+  // When the host's wallet holds less than that, the wallet wins, so we never pay out more than was collected.
   const fetchWalletBalance = async () => {
     if (!event) {
       setWalletBalance(0);
       return;
     }
-
     try {
-      // Prioritize cycling_wallets.balance
-      const { data: walletData, error: walletError } = await supabase
-        .from('cycling_wallets')
-        .select('balance')
-        .eq('host_id', event.host_id)
-        .maybeSingle();
+      const [attendeesRes, cashoutsRes, walletRes, rateInfo] = await Promise.all([
+        supabase.from('cycling_attendees').select('status, number_of_slots').eq('cycling_event_id_uuid', event.id_uuid),
+        supabase.from('cycling_cashouts').select('total_amount_paid, status').eq('cycling_event_id_uuid', event.id_uuid).in('status', ['Review', 'Processed', 'Successful']),
+        supabase.from('cycling_wallets').select('balance').eq('host_id', event.host_id).limit(1),
+        hostRate(event.id_uuid, event.host_id),
+      ]);
+      if (attendeesRes.error) throw attendeesRes.error;
 
-      if (walletError) {
-        console.error("Wallet fetch error:", walletError);
-        throw walletError;
-      }
-
-      if (walletData?.balance !== undefined) {
-        setWalletBalance(walletData.balance);
-        return;
-      }
-
-      // Fallback to attendee-based calculation
-      const { data: attendeesData, error: attendeesError } = await supabase
-        .from('cycling_attendees')
-        .select('status, number_of_slots')
-        .eq('cycling_event_id_uuid', event.id_uuid);
-
-      if (attendeesError) {
-        console.error("Attendees fetch error:", attendeesError);
-        throw attendeesError;
-      }
-
-      let calculatedBalance = 0;
+      let gross = 0;
       if (!event.is_free && event.price) {
-        const checkedInAttendees = attendeesData?.filter((a) => a.status === "checked_in") || [];
-        calculatedBalance = checkedInAttendees.reduce(
-          (sum, attendee) => sum + ((Number(attendee.number_of_slots) || 1) * (event.price || 0)),
-          0
-        );
+        gross = (attendeesRes.data || [])
+          .filter((a: any) => a.status === 'checked_in')
+          .reduce((sum: number, a: any) => sum + (Number(a.number_of_slots) || 1) * (event.price || 0), 0);
       }
-
-      setWalletBalance(calculatedBalance);
+      const requested = ((cashoutsRes.data as any[]) || []).reduce((sum, r) => sum + (Number(r.total_amount_paid) || 0), 0);
+      const p = payout(gross, rateInfo.rate, requested, rateInfo.note);
+      const wallet = ((walletRes.data as any[]) || [])[0]?.balance;
+      const available = typeof wallet === 'number' ? Math.min(p.available, Math.max(0, Math.floor(wallet))) : p.available;
+      setBreakdown(p);
+      setWalletBalance(available);
     } catch (error: any) {
       console.error('Error fetching wallet balance:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load wallet balance. Please try again.",
-        variant: "destructive",
-      });
+      toast({ title: "Balance not loaded", description: "Please refresh to try again.", variant: "destructive" });
       setWalletBalance(0);
     }
   };
@@ -372,8 +353,7 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
         throw cashoutError;
       }
 
-      // Optimistic UI update
-      setWalletBalance(prev => prev - amount < 0 ? 0 : prev - amount);
+      await fetchWalletBalance();
 
       await fetchCashoutRequests();
       setCashoutDialogOpen(false);
@@ -418,7 +398,7 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
 
   return (
     <div className="flex flex-col gap-3.5">
-      <BalanceHero accent="#F97316" balance={walletBalance} onRefresh={() => Promise.all([fetchWalletBalance(), fetchCashoutRequests()])} onRequest={() => setCashoutDialogOpen(true)} disabled={event.cancellation_status || loading || walletBalance <= 0} note="From paid spots on this ride" />
+      <BalanceHero accent="#F97316" balance={walletBalance} onRefresh={() => Promise.all([fetchWalletBalance(), fetchCashoutRequests()])} onRequest={() => setCashoutDialogOpen(true)} disabled={event.cancellation_status || loading || walletBalance <= 0} note="From paid spots on this ride" breakdown={breakdown} />
       <CashoutList rows={cashoutRequests.map((r: any) => ({ id: r.id, amount: r.total_amount_paid, created_at: r.created_at, status: r.status, name: r.account_name, bank: r.bank_name, account: r.bank_account_number }))} />
       <CashoutDialog
         open={cashoutDialogOpen}

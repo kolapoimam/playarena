@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from "react";
+import { venueIsActive } from "@/lib/myVenues";
+import { busySlots, overlaps, toMinutes } from "@/lib/venueSlots";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -210,6 +212,9 @@ const VenueBookingForm = () => {
         if (venueData.verified_status !== "True") {
           throw new Error("This venue is not verified for booking.");
         }
+        if (!(await venueIsActive(venueData.id))) {
+          throw new Error("This venue is not taking bookings on SportCliq right now. Contact the venue directly.");
+        }
 
         setVenue(venueData);
 
@@ -347,36 +352,15 @@ const VenueBookingForm = () => {
 
         const checkAvailability = async () => {
           const day = format(value.match_date, "yyyy-MM-dd");
-          const [vac, bac] = await Promise.all([
-            supabase.from("venue_access_codes").select("match_date, start_time, end_time, status")
-              .eq("venue_id", venue.id).eq("match_date", day).in("status", ["pending", "active"]),
-            supabase.from("booking_access_codes").select("match_date, start_time, end_time, status")
-              .eq("venue_id", venue.id).eq("match_date", day).in("status", ["pending", "active"]),
-          ]);
-          const error = vac.error && bac.error ? vac.error : null;
-          const data = [...(vac.data || []), ...(bac.data || [])];
-
-          if (error) {
-            console.error("Error checking availability:", error);
+          const busy = await busySlots(venue.id, day);
+          if (!busy) {
+            console.error("Could not check availability");
             setIsSlotAvailable(false);
             return;
           }
-
-          const isConflict = data.some((booking) => {
-            const bookingStart = new Date(booking.match_date);
-            const [bookingStartH, bookingStartM] = booking.start_time.split(":").map(Number);
-            bookingStart.setHours(bookingStartH, bookingStartM, 0, 0);
-
-            const bookingEnd = new Date(booking.match_date);
-            const [bookingEndH, bookingEndM] = booking.end_time.split(":").map(Number);
-            bookingEnd.setHours(bookingEndH, bookingEndM, 0, 0);
-
-            return (
-              (startDateTime < bookingEnd && endDateTime > bookingStart)
-            );
-          });
-
-          setIsSlotAvailable(!isConflict);
+          const s = toMinutes(value.start_time);
+          const e = toMinutes(value.end_time);
+          setIsSlotAvailable(s == null || e == null ? true : !overlaps(busy, s, e));
         };
 
         checkAvailability();

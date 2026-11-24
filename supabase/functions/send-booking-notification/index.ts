@@ -54,7 +54,7 @@ serve(async (req) => {
         emailShell(
           `New booking at ${v.name}`,
           `<p>Good news. Your venue has a new booking through SportCliq.</p>${table}<p>The organiser will share the access code with you when they arrive.</p>`,
-          { label: "See your bookings", path: `/venues-bookings/${v.slug}` },
+          { label: "See your bookings", path: `/profile/my-bookings` },
         ),
         `booking-email:${b.id}`,
       );
@@ -65,7 +65,7 @@ serve(async (req) => {
     out.push = await notifyUsers(db, [v.user_id], "booking_confirmation",
       `New booking at ${v.name}`,
       `${b.title || "A match"} on ${b.match_date}, ${time(b.start_time)} to ${time(b.end_time)}.`,
-      `/venues-bookings/${v.slug}`, `booking:${b.id}`);
+      `/profile/my-bookings`, `booking:${b.id}`);
 
     return json(req, out);
   } catch (e) {

@@ -50,17 +50,40 @@ serve(async (req) => {
         return json(req, out);
       }
 
-      // A rider joined a ride. Tell the host.
+      // A rider joined a ride. Tell the host, and again when the ride is full.
       case "ride_joined": {
         const { data: ev } = await db.from("cycling_events").select("id_uuid, title, slug, host_id, max_attendees").eq("id_uuid", body.event_id).maybeSingle();
         const { data: a } = await db.from("cycling_attendees").select("id_uuid, attendee_name, created_at").eq("id_uuid", body.attendee_id).eq("cycling_event_id_uuid", body.event_id).maybeSingle();
         if (!ev || !a) return json(req, { error: "Ride or rider not found" }, 404);
         if (!recent(a.created_at)) return json(req, { skipped: "not a new join" });
         const { count } = await db.from("cycling_attendees").select("id_uuid", { count: "exact", head: true }).eq("cycling_event_id_uuid", ev.id_uuid);
-        const r = await notifyUsers(db, [ev.host_id], "match_organizing_registration",
+        const path = `/cycling/${ev.slug}`;
+        const out: Record<string, unknown> = {};
+        out.rider = await notifyUsers(db, [ev.host_id], "ride_new_rider",
           `New rider for ${ev.title}`,
           `${a.attendee_name || "A rider"} just joined your ride.${ev.max_attendees ? ` ${count ?? 0} of ${ev.max_attendees} riders so far.` : ""}`,
-          `/cycling/${ev.slug}`);
+          path);
+        if (ev.max_attendees && (count ?? 0) >= ev.max_attendees) {
+          out.full = await notifyUsers(db, [ev.host_id], "ride_full",
+            `${ev.title} is full`, `All ${ev.max_attendees} spots are taken. Time to roll.`, path, `ride-full:${ev.id_uuid}`);
+        }
+        return json(req, out);
+      }
+
+      // A ride was created. Tell people who saved its start landmark.
+      case "ride_created": {
+        const { data: ev } = await db.from("cycling_events").select("id_uuid, title, slug, host_id, event_date, start_landmark_id, created_at").eq("id_uuid", body.event_id).maybeSingle();
+        if (!ev) return json(req, { error: "Ride not found" }, 404);
+        if (!recent(ev.created_at)) return json(req, { skipped: "not a new ride" });
+        if (!ev.start_landmark_id) return json(req, { skipped: "no landmark" });
+        const { data: lm } = await db.from("landmarks").select("name").eq("id_uuid", ev.start_landmark_id).maybeSingle();
+        const { data: favs } = await db.from("user_landmark_favourites").select("user_id").eq("landmark_id", ev.start_landmark_id).limit(500);
+        const ids = (favs ?? []).map((f) => f.user_id).filter((id) => id !== ev.host_id);
+        const when = fmtDate(ev.event_date);
+        const r = await notifyUsers(db, ids, "landmark_favourite_ride",
+          `New ride from ${lm?.name || "a landmark you saved"}`,
+          `${ev.title}${when ? ` on ${when}` : ""} is open. Grab a spot before it fills up.`,
+          `/cycling/${ev.slug}`, `ride-created:${ev.id_uuid}`);
         return json(req, r);
       }
 
@@ -98,7 +121,7 @@ serve(async (req) => {
         const r = await notifyUsers(db, [v.user_id], "booking_confirmation",
           `New booking at ${v.name}`,
           `${b.title || "A match"} on ${fmtDate(b.match_date)}, ${String(b.start_time || "").slice(0, 5)} to ${String(b.end_time || "").slice(0, 5)}.`,
-          `/venues-bookings/${v.slug}`);
+          `/profile/my-bookings`);
         return json(req, r);
       }
 

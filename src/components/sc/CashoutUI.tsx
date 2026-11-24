@@ -9,7 +9,7 @@ export type CashoutRow = { id: string; amount: number; created_at: string; statu
 
 const naira = (n: number) => formatNairaExact(Math.max(0, Number(n) || 0));
 
-export function BalanceHero({ label = "Available to cash out", balance, onRefresh, onRequest, disabled, note, accent = "#16A34A" }: { label?: string; balance: number; onRefresh?: () => unknown; onRequest: () => void; disabled?: boolean; note?: string; accent?: string }) {
+export function BalanceHero({ label = "Available to cash out", balance, onRefresh, onRequest, disabled, note, accent = "#16A34A", breakdown }: { label?: string; balance: number; onRefresh?: () => unknown; onRequest: () => void; disabled?: boolean; note?: string; accent?: string; breakdown?: { gross: number; fee: number; rate: number; requested: number; note: string } | null }) {
   const [spinning, setSpinning] = useState(false);
   const [updated, setUpdated] = useState(false);
   const empty = !(Number(balance) > 0);
@@ -43,6 +43,17 @@ export function BalanceHero({ label = "Available to cash out", balance, onRefres
       </div>
       <div className={cn("relative mt-2 text-[40px] leading-[46px] font-extrabold tracking-[-0.03em] transition-opacity", spinning && "opacity-50")}>{naira(balance)}</div>
       {note && <p className="relative m-0 mt-1 text-[13px] opacity-70">{note}</p>}
+      {breakdown && breakdown.gross > 0 && (
+        <div className="relative mt-3 rounded-2xl bg-white/[0.07] px-3.5 py-2.5 flex flex-col gap-1.5 text-[13px]">
+          <div className="flex justify-between gap-3"><span className="opacity-70">Collected</span><span className="font-bold">{naira(breakdown.gross)}</span></div>
+          <div className="flex justify-between gap-3">
+            <span className="opacity-70">{breakdown.rate > 0 ? `Platform fee ${Math.round(breakdown.rate * 100)}%` : "Platform fee"}</span>
+            <span className="font-bold">{breakdown.fee > 0 ? `− ${naira(breakdown.fee)}` : "Free"}</span>
+          </div>
+          {breakdown.requested > 0 && <div className="flex justify-between gap-3"><span className="opacity-70">Already requested</span><span className="font-bold">− {naira(breakdown.requested)}</span></div>}
+          {breakdown.rate === 0 && <span className="text-[12px] opacity-60">{breakdown.note}</span>}
+        </div>
+      )}
       <button
         type="button"
         onClick={onRequest}

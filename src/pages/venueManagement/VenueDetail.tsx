@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { venueIsActive } from "@/lib/myVenues";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -103,7 +104,8 @@ const VenueDetail = () => {
           .single();
 
         if (error) throw new Error(error.message || "Failed to fetch venue.");
-        setVenue(data as Venue);
+        const active = await venueIsActive((data as any).id);
+        setVenue({ ...(data as any), is_active: active } as Venue);
         return data;
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred.";
@@ -336,8 +338,8 @@ const VenueDetail = () => {
               </span>
             </div>
           )}
-          <ScButton kind="venue" icon={CalendarCheck} onClick={() => navigate(`/venue/${venue.slug}/book`)}>
-            Book venue
+          <ScButton kind="venue" icon={CalendarCheck} disabled={(venue as any).is_active === false} onClick={() => navigate(`/venue/${venue.slug}/book`)}>
+            {(venue as any).is_active === false ? "Not taking bookings" : "Book venue"}
           </ScButton>
         </div>
       </StickyFooter>

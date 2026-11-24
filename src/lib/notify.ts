@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
  * for something that just happened. Never blocks or breaks the user's flow.
  */
 export function notify(
-  event: "match_joined" | "ride_joined" | "match_created",
+  event: "match_joined" | "ride_joined" | "match_created" | "ride_created",
   ids: Record<string, string | number | undefined | null>,
 ) {
   supabase.functions

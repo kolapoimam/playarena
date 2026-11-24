@@ -26,6 +26,7 @@ const WEEK = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
 export function BookingRow({ b }: { b: VenueBooking }) {
   const navigate = useNavigate();
   const paid = (b.payment_status || "").toLowerCase() === "paid";
+  const held = b.payment_status === "held";
   const date = b.match_date ? new Date(`${b.match_date}T00:00:00`) : null;
   return (
     <button
@@ -49,8 +50,8 @@ export function BookingRow({ b }: { b: VenueBooking }) {
         )}
       </span>
       <span className="flex flex-col items-end gap-1 shrink-0">
-        <span className={cn("h-6 px-2 rounded-full text-[11px] font-bold inline-flex items-center", paid ? "bg-sc-green/10 text-sc-green" : "bg-black/[0.05] text-sc-ink2")}>
-          {paid ? "Paid" : Number(b.amount) > 0 ? "Unpaid" : "Free"}
+        <span className={cn("h-6 px-2 rounded-full text-[11px] font-bold inline-flex items-center", held ? "bg-sport-venue-bg text-sport-venue-fg" : paid ? "bg-sc-green/10 text-sc-green" : "bg-black/[0.05] text-sc-ink2")}>
+          {held ? "Held" : paid ? "Paid" : Number(b.amount) > 0 ? "Unpaid" : "No charge"}
         </span>
         {Number(b.amount) > 0 && <span className="text-[12px] font-bold text-sc-ink2">{formatNairaExact(b.amount)}</span>}
       </span>
