@@ -1,11 +1,12 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { NavigateFunction } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { ChevronDown, ChevronUp, Loader2 } from "lucide-react";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { AlertCircle, Check, CheckCircle2, Clock, Loader2, QrCode, ScanLine, Shirt, Ticket, Users } from "lucide-react";
+import { Avatar, Bubble, EmptyState, Pill, ScButton, Segmented, StatCard, formatNairaExact, initialsOf, type Sport } from "@/components/sc/ui";
 import { z } from "zod";
 import { differenceInMinutes, isPast, addHours } from "date-fns";
 
@@ -39,6 +40,18 @@ type Match = {
   }[] | null;
   sell_tickets: boolean;
   ticket_price?: number;
+};
+
+
+/** When the match ends. Handles a full timestamp or a plain time, and falls back to kick off plus 2 hours. */
+const matchEndOf = (m: { match_date: string; match_time: string; match_end_time?: string | null }): Date | null => {
+  const day = String(m.match_date || "").slice(0, 10);
+  const end = m.match_end_time ? String(m.match_end_time) : "";
+  let d: Date | null = null;
+  if (/^\d{4}-\d{2}-\d{2}T/.test(end)) d = new Date(end);
+  else if (/^\d{1,2}:\d{2}/.test(end) && day) d = new Date(`${day}T${end.length === 5 ? end + ":00" : end}`);
+  if (!d || isNaN(d.getTime())) d = addHours(new Date(`${day}T${m.match_time}`), 2);
+  return isNaN(d.getTime()) ? null : d;
 };
 
 const codeSchema = z.string().regex(/^\d{6}$/, { message: "Code must be exactly 6 digits" });
@@ -90,6 +103,7 @@ const PlayerManagement = ({
   const [checkinDialogOpen, setCheckinDialogOpen] = useState(false);
   const [checkinPlayer, setCheckinPlayer] = useState<{ name: string; slots: number } | null>(null);
   const [isPlayersOpen, setIsPlayersOpen] = useState(false);
+  const absentMarkedFor = useRef<string | null>(null);
   const [checkingInPlayers, setCheckingInPlayers] = useState<{ [key: string]: boolean }>({});
   const [ticketDialogOpen, setTicketDialogOpen] = useState(false);
   const [ticketInput, setTicketInput] = useState("");
@@ -206,21 +220,11 @@ const PlayerManagement = ({
 
       // Check if match has ended and update players to Absent if necessary
       const now = new Date();
-      let matchEndTime: Date;
-      try {
-        if (match.match_end_time) {
-          matchEndTime = new Date(match.match_end_time);
-        } else {
-          matchEndTime = addHours(new Date(`${match.match_date}T${match.match_time}`), 2);
-        }
-        if (isNaN(matchEndTime.getTime())) {
-          matchEndTime = new Date("2025-05-17T15:00:00+01:00");
-        }
-      } catch (error) {
-        matchEndTime = new Date("2025-05-17T15:00:00+01:00");
-      }
+      const matchEndTime = matchEndOf(match);
 
-      if (isPast(matchEndTime) && playersData.length > 0) {
+      // Mark no-shows once per match, never in a loop
+      if (matchEndTime && isPast(matchEndTime) && playersData.length > 0 && absentMarkedFor.current !== match.id) {
+        absentMarkedFor.current = match.id;
         const registeredPlayers = playersData.filter(p => p.player_status === 'Registered');
         if (registeredPlayers.length > 0) {
           try {
@@ -276,42 +280,16 @@ const PlayerManagement = ({
   const canCheckin = () => {
     if (!match || match.cancellation_status || !match.players?.length) return false;
     const now = new Date();
-    let matchEndTime: Date;
-    try {
-      if (match.match_end_time) {
-        matchEndTime = new Date(match.match_end_time);
-      } else {
-        matchEndTime = addHours(new Date(`${match.match_date}T${match.match_time}`), 2);
-      }
-      if (isNaN(matchEndTime.getTime())) {
-        matchEndTime = new Date("2025-05-17T15:00:00+01:00");
-      }
-    } catch (error) {
-      matchEndTime = new Date("2025-05-17T15:00:00+01:00");
-      console.error("Error parsing match end time:", error);
-    }
-    const isEndTimeFuture = !isPast(matchEndTime);
+    const matchEndTime = matchEndOf(match);
+    const isEndTimeFuture = !!matchEndTime && !isPast(matchEndTime);
     return match.players.length > 0 && isEndTimeFuture;
   };
 
   const canManageTickets = () => {
     if (!match || !match.sell_tickets || match.cancellation_status) return false;
     const now = new Date();
-    let matchEndTime: Date;
-    try {
-      if (match.match_end_time) {
-        matchEndTime = new Date(match.match_end_time);
-      } else {
-        matchEndTime = addHours(new Date(`${match.match_date}T${match.match_time}`), 2);
-      }
-      if (isNaN(matchEndTime.getTime())) {
-        matchEndTime = new Date("2025-05-17T15:00:00+01:00");
-      }
-    } catch (error) {
-      matchEndTime = new Date("2025-05-17T15:00:00+01:00");
-      console.error("Error parsing match end time:", error);
-    }
-    const isEndTimeFuture = !isPast(matchEndTime);
+    const matchEndTime = matchEndOf(match);
+    const isEndTimeFuture = !!matchEndTime && !isPast(matchEndTime);
     return isEndTimeFuture;
   };
 
@@ -605,222 +583,197 @@ const PlayerManagement = ({
     return confirmedTickets.reduce((sum, ticket) => sum + ticket.number_of_tickets * match.ticket_price, 0);
   };
 
-  if (!match) return null;
-  
-  return (
-    <div className="bg-white dark:bg-gray-800 rounded-3xl p-[18px] dark:border-gray-700">
-      <h2 className="text-lg font-extrabold tracking-[-0.01em] mb-4 text-sc-ink dark:text-gray-100">Manage Players</h2>
-      
-      <div className="flex gap-3 mb-4">
-        <Button
-          onClick={handleCheckinMode}
-          className="bg-blue-500 hover:bg-blue-600 text-white flex-1"
-          disabled={!canCheckin() || match.cancellation_status}
-        >
-          Check-in Players
-        </Button>
-        <Button
-          onClick={() => navigate(`/match/${match.slug}/team-management`, { state: { isVerified: true } })}
-          className="bg-sc-green hover:brightness-95 text-sc-green-ink flex-1 font-bold"
-          disabled={match.cancellation_status}
-        >
-          Manage Teams
-        </Button>
-        {match.sell_tickets && (
-          <Button
-            onClick={handleTicketMode}
-            className="bg-purple-500 hover:bg-purple-600 text-white flex-1"
-            disabled={!canManageTickets() || match.cancellation_status}
-          >
-            Manage Tickets
-          </Button>
-        )}
-      </div>
-      
-      <div className="max-h-[400px] overflow-y-auto">
-        <button
-          onClick={() => setIsPlayersOpen(!isPlayersOpen)}
-          className="flex items-center gap-2 w-full text-left text-lg font-semibold text-sc-ink dark:text-gray-100 mb-4"
-        >
-          Players
-          {isPlayersOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-        </button>
-        {mode === "checkin" && (
-          <div className="mb-4">
-            <QrScanButton label="Scan player QR code" onClick={() => setScanFor("player")} />
-          </div>
-        )}
-        {isPlayersOpen && (
-          <div className="space-y-4">
-            {(match.players || []).length === 0 ? (
-              <p className="text-sc-ink3 dark:text-gray-400">No players registered for this match.</p>
-            ) : (
-              match.players?.map((player) => {
-                const playerStatusEntry = playerStatuses.find(p => p.id === player.id);
-                const displayStatus = playerStatusEntry?.status || player.player_status || 'Registered';
+  const [filter, setFilter] = useState<"all" | "waiting" | "in">("all");
 
-                return (
-                  <div
-                    key={player.id}
-                    className="relative flex flex-col sm:flex-row gap-4 items-start sm:items-center p-4 bg-sc-soft dark:bg-gray-700 rounded-lg"
-                  >
-                    <div className="flex-1">
-                      <p className="font-medium text-sc-ink dark:text-gray-100">{player.player_name}</p>
-                      <p className="text-sm text-sc-ink3 dark:text-gray-400">
-                        Phone: {player.details?.phone || "Not provided"}
-                      </p>
-                      {displayStatus === 'Checked In' && (
-                        <p className="text-sm text-sc-ink3 dark:text-gray-400">
-                          Slots: {player.number_of_slots || 1}
-                        </p>
-                      )}
-                    </div>
-                    <span
-                      className={`absolute top-2 right-2 px-2 py-1 text-xs font-medium rounded border ${getStatusStyles(displayStatus)}`}
-                    >
-                      {displayStatus}
+  if (!match) return null;
+
+  const players = match.players || [];
+  const KNOWN = ["Registered", "Checked In", "Absent"];
+  const statusOf = (pl: NonNullable<Match["players"]>[number]) => {
+    const fromState = playerStatuses.find((p) => p.id === pl.id)?.status;
+    if (fromState && KNOWN.includes(fromState)) return fromState;
+    return pl.player_status && KNOWN.includes(pl.player_status) ? pl.player_status : "Registered";
+  };
+  const checkedIn = players.filter((pl) => statusOf(pl) === "Checked In");
+  const slotsTaken = players.reduce((n, pl) => n + (pl.number_of_slots || 1), 0);
+  const shown = players.filter((pl) =>
+    filter === "all" ? true : filter === "in" ? statusOf(pl) === "Checked In" : statusOf(pl) !== "Checked In"
+  );
+  const statusSport = (st: string): Sport => (st === "Checked In" ? "football" : st === "Absent" ? "red" : "tennis");
+
+  const tools = [
+    { key: "checkin", icon: QrCode, sport: "football" as Sport, title: "Check in", sub: "Scan or type codes", onClick: handleCheckinMode, active: mode === "checkin" },
+    { key: "teams", icon: Shirt, sport: "venue" as Sport, title: "Teams", sub: "Split, score, report", onClick: () => {
+        if (match.cancellation_status) { toast({ title: "Match cancelled", description: "Teams are closed for a cancelled match.", variant: "destructive" }); return; }
+        navigate(`/match/${match.slug}/team-management`, { state: { isVerified: true } });
+      }, active: false },
+    ...(match.sell_tickets ? [{ key: "tickets", icon: Ticket, sport: "tennis" as Sport, title: "Tickets", sub: "Spectator entry", onClick: handleTicketMode, active: mode === "ticket" }] : []),
+  ];
+
+  return (
+    <div className="flex flex-col gap-4">
+      {match.cancellation_status && (
+        <div className="bg-sport-red-bg text-sport-red-fg rounded-3xl p-4 flex gap-3 items-center">
+          <AlertCircle size={20} className="shrink-0" />
+          <span className="text-sm font-bold">This match was cancelled. Check in and teams are closed.</span>
+        </div>
+      )}
+
+      <div className="flex gap-2.5">
+        <StatCard value={`${slotsTaken}/${match.total_slots}`} label="Slots filled" icon={Users} sport="football" />
+        <StatCard value={checkedIn.length} label="Checked in" icon={CheckCircle2} sport="money" />
+        <StatCard value={players.length - checkedIn.length} label="Waiting" icon={Clock} sport="tennis" />
+      </div>
+
+      <div className={`grid gap-2.5 ${tools.length === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
+        {tools.map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            onClick={t.onClick}
+            className={`bg-white rounded-3xl p-3.5 flex flex-col items-start gap-2.5 text-left transition-transform active:scale-[0.98] ${t.active ? "ring-2 ring-sc-green" : ""}`}
+          >
+            <Bubble icon={t.icon} sport={t.sport} size={40} />
+            <span className="flex flex-col">
+              <span className="text-[15px] font-extrabold">{t.title}</span>
+              <span className="text-xs text-sc-ink3 leading-4">{t.sub}</span>
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {mode === "checkin" && (
+        <div className="bg-sc-ink text-white rounded-3xl p-4 flex flex-col gap-3">
+          <div className="flex items-center justify-between gap-3">
+            <span className="flex flex-col">
+              <span className="text-[11px] font-bold tracking-[0.12em] text-[#BEF264]">CHECK IN IS ON</span>
+              <span className="text-sm text-white/80">Scan a player's QR ticket, or type their 6 digit code below.</span>
+            </span>
+          </div>
+          <div className="flex gap-2">
+            <ScButton kind="primary" size="md" icon={ScanLine} onClick={() => setScanFor("player")}>Scan QR</ScButton>
+            <ScButton kind="white" size="md" full={false} onClick={() => setMode(null)} className="px-6">Done</ScButton>
+          </div>
+        </div>
+      )}
+
+      <div className="bg-white rounded-3xl p-[18px] flex flex-col gap-3.5">
+        <div className="flex items-center justify-between">
+          <span className="text-lg font-extrabold tracking-[-0.01em]">Players</span>
+          <span className="text-sm font-bold text-sc-ink3">{players.length} registered</span>
+        </div>
+        {players.length > 0 && (
+          <Segmented
+            value={filter}
+            onChange={(v) => setFilter(v as "all" | "waiting" | "in")}
+            options={[
+              { value: "all", label: `All ${players.length}` },
+              { value: "waiting", label: `Waiting ${players.length - checkedIn.length}` },
+              { value: "in", label: `In ${checkedIn.length}` },
+            ]}
+          />
+        )}
+        {players.length === 0 ? (
+          <EmptyState icon={Users} sport="football" title="No players yet" subtitle="Share the match link. Players show up here as soon as they join." />
+        ) : shown.length === 0 ? (
+          <EmptyState icon={filter === "in" ? CheckCircle2 : Clock} sport="gray" title={filter === "in" ? "Nobody checked in yet" : "Everyone is in"} subtitle={filter === "in" ? "Turn on check in and scan tickets as players arrive." : "All registered players have checked in."} />
+        ) : (
+          <div className="flex flex-col divide-y divide-sc-line">
+            {shown.map((player) => {
+              const st = statusOf(player);
+              const busy = !!checkingInPlayers[player.id];
+              return (
+                <div key={player.id} className="py-3 flex flex-col gap-2.5">
+                  <div className="flex items-center gap-3">
+                    <Avatar initials={initialsOf(player.player_name)} seed={player.player_name} size={42} />
+                    <span className="flex-1 min-w-0 flex flex-col">
+                      <span className="text-[15px] font-bold truncate">{player.player_name}</span>
+                      <span className="text-[13px] text-sc-ink3 truncate">
+                        {(player.number_of_slots || 1) > 1 ? `${player.number_of_slots} slots · ` : ""}{player.details?.phone || "No phone"}
+                      </span>
                     </span>
-                    {mode === "checkin" && displayStatus !== 'Checked In' && (
-                      <div className="flex gap-2 w-full sm:w-auto">
-                        <Input
-                          placeholder="Enter check-in code"
-                          value={checkinCodes[player.id] || ""}
-                          onChange={(e) => handleCheckinCodeChange(player.id, e.target.value)}
-                          inputMode="numeric"
-                          pattern="[0-9]*"
-                          maxLength={6}
-                          className="w-full sm:w-[150px]"
-                          disabled={checkingInPlayers[player.id]}
-                        />
-                        <Button
-                          onClick={() => validateCheckinCode(player.id)}
-                          className="bg-blue-500 hover:bg-blue-600 text-white"
-                          disabled={
-                            !checkinCodes[player.id] ||
-                            checkinCodes[player.id].length !== 6 ||
-                            checkingInPlayers[player.id]
-                          }
-                        >
-                          {checkingInPlayers[player.id] ? (
-                            <Loader2 size={16} className="mr-2 animate-spin" />
-                          ) : (
-                            "Verify"
-                          )}
-                        </Button>
-                      </div>
-                    )}
-                    {checkinCodeErrors[player.id] && (
-                      <p className="text-sm text-red-600 mt-1">{checkinCodeErrors[player.id]}</p>
-                    )}
+                    <Pill sport={statusSport(st)}>{st === "Registered" ? "Waiting" : st}</Pill>
                   </div>
-                );
-              })
-            )}
+                  {mode === "checkin" && st !== "Checked In" && (
+                    <div className="flex gap-2 pl-[54px]">
+                      <Input
+                        placeholder="6 digit code"
+                        value={checkinCodes[player.id] || ""}
+                        onChange={(e) => handleCheckinCodeChange(player.id, e.target.value)}
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        maxLength={6}
+                        className="h-11 flex-1 tracking-[0.3em] font-bold placeholder:tracking-normal placeholder:font-semibold"
+                        disabled={busy}
+                      />
+                      <ScButton
+                        size="sm"
+                        full={false}
+                        className="h-11 px-5"
+                        onClick={() => validateCheckinCode(player.id)}
+                        disabled={!checkinCodes[player.id] || checkinCodes[player.id].length !== 6 || busy}
+                      >
+                        {busy ? <Loader2 size={16} className="animate-spin" /> : "Verify"}
+                      </ScButton>
+                    </div>
+                  )}
+                  {checkinCodeErrors[player.id] && <p className="m-0 pl-[54px] text-xs font-bold text-sport-red-fg">{checkinCodeErrors[player.id]}</p>}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
 
       {match.sell_tickets && (
-        <div className="max-h-[400px] overflow-y-auto mt-6">
-          <button
-            onClick={() => setIsTicketsOpen(!isTicketsOpen)}
-            className="flex items-center gap-2 w-full text-left text-lg font-semibold text-sc-ink dark:text-gray-100 mb-4"
-          >
-            Tickets - Total: ₦{calculateTotalAmount().toLocaleString()}
-            {isTicketsOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-          </button>
-          {isTicketsOpen && (
-            <div className="space-y-4">
-              {mode === "ticket" && (
-                <QrScanButton label="Scan ticket QR code" onClick={() => setScanFor("ticket")} />
-              )}
-              {mode === "ticket" && (
-                <div className="flex gap-2 w-full">
-                  <Input
-                    placeholder="Enter ticket code"
-                    value={ticketInput}
-                    onChange={(e) => handleTicketCodeChange(e.target.value)}
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    maxLength={6}
-                    className="w-full sm:w-[150px]"
-                    disabled={verifyingTicket}
-                  />
-                  <Button
-                    onClick={validateTicketCode}
-                    className="bg-purple-500 hover:bg-purple-600 text-white"
-                    disabled={!ticketInput || ticketInput.length !== 6 || verifyingTicket}
-                  >
-                    {verifyingTicket ? (
-                      <Loader2 size={16} className="mr-2 animate-spin" />
-                    ) : (
-                      "Verify"
-                    )}
-                  </Button>
+        <div className="bg-white rounded-3xl p-[18px] flex flex-col gap-3.5">
+          <div className="flex items-center justify-between">
+            <span className="text-lg font-extrabold tracking-[-0.01em]">Spectator tickets</span>
+            <span className="text-sm font-extrabold text-sport-money-fg">{formatNairaExact(calculateTotalAmount())}</span>
+          </div>
+          {mode === "ticket" ? (
+            <div className="flex flex-col gap-2.5">
+              <div className="flex gap-2">
+                <Input
+                  placeholder="6 digit ticket code"
+                  value={ticketInput}
+                  onChange={(e) => handleTicketCodeChange(e.target.value)}
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={6}
+                  className="h-11 flex-1 tracking-[0.3em] font-bold placeholder:tracking-normal placeholder:font-semibold"
+                  disabled={verifyingTicket}
+                />
+                <ScButton size="sm" full={false} className="h-11 px-5" kind="dark" onClick={() => validateTicketCode()} disabled={!ticketInput || ticketInput.length !== 6 || verifyingTicket}>
+                  {verifyingTicket ? <Loader2 size={16} className="animate-spin" /> : "Verify"}
+                </ScButton>
+              </div>
+              {ticketError && <p className="m-0 text-xs font-bold text-sport-red-fg">{ticketError}</p>}
+              <div className="flex gap-2">
+                <ScButton kind="soft" size="md" icon={ScanLine} onClick={() => setScanFor("ticket")}>Scan ticket</ScButton>
+                <ScButton kind="white" size="md" full={false} className="px-6" onClick={() => setMode(null)}>Done</ScButton>
+              </div>
+            </div>
+          ) : (
+            <ScButton kind="soft" size="md" icon={Ticket} onClick={handleTicketMode}>Check in tickets</ScButton>
+          )}
+          {confirmedTickets.length === 0 ? (
+            <EmptyState icon={Ticket} sport="tennis" title="No tickets checked in" subtitle="Checked in spectator tickets appear here with the amount collected." />
+          ) : (
+            <div className="flex flex-col divide-y divide-sc-line">
+              {confirmedTickets.map((ticket) => (
+                <div key={ticket.id} className="py-3 flex items-center gap-3">
+                  <Bubble icon={Ticket} sport="tennis" size={40} />
+                  <span className="flex-1 min-w-0 flex flex-col">
+                    <span className="text-[15px] font-bold truncate">{ticket.buyer_name}</span>
+                    <span className="text-[13px] text-sc-ink3">{ticket.number_of_tickets} ticket{ticket.number_of_tickets !== 1 ? "s" : ""}</span>
+                  </span>
+                  <Pill sport="football">Checked in</Pill>
                 </div>
-              )}
-              {ticketError && (
-                <p className="text-sm text-red-600 mt-1">{ticketError}</p>
-              )}
-              {confirmedTickets.length === 0 ? (
-                <p className="text-sc-ink3 dark:text-gray-400">No tickets confirmed for this match.</p>
-              ) : (
-                confirmedTickets.map((ticket) => (
-                  <div
-                    key={ticket.id}
-                    className="relative flex flex-col sm:flex-row gap-4 items-start sm:items-center p-4 bg-sc-soft dark:bg-gray-700 rounded-lg"
-                  >
-                    <div className="flex-1">
-                      <p className="font-medium text-sc-ink dark:text-gray-100">{ticket.buyer_name}</p>
-                      <p className="text-sm text-sc-ink3 dark:text-gray-400">
-                        Tickets: {ticket.number_of_tickets}
-                      </p>
-                    </div>
-                    <span
-                      className={`absolute top-2 right-2 px-2 py-1 text-xs font-medium rounded border bg-[#DCFCE7] text-[#15803D] border-transparent`}
-                    >
-                      Checked In
-                    </span>
-                  </div>
-                ))
-              )}
+              ))}
             </div>
           )}
         </div>
-      )}
-
-      {mode === "checkin" && (
-        <Button
-          onClick={() => setMode(null)}
-          className="mt-4 bg-sc-green hover:brightness-95 text-sc-green-ink font-bold"
-          disabled={loading}
-        >
-          {loading ? (
-            <>
-              <Loader2 size={16} className="mr-2 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            "Done"
-          )}
-        </Button>
-      )}
-
-      {mode === "ticket" && (
-        <Button
-          onClick={() => setMode(null)}
-          className="mt-4 bg-purple-500 hover:bg-purple-600 text-white"
-          disabled={verifyingTicket}
-        >
-          {verifyingTicket ? (
-            <>
-              <Loader2 size={16} className="mr-2 animate-spin" />
-              Verifying...
-            </>
-          ) : (
-            "Done"
-          )}
-        </Button>
       )}
 
       <QrScannerDialog
@@ -832,48 +785,24 @@ const PlayerManagement = ({
       />
 
       <Dialog open={checkinDialogOpen} onOpenChange={setCheckinDialogOpen}>
-        <DialogContent className="max-w-md rounded-lg">
-          <DialogHeader>
-            <DialogTitle>Check-in Successful</DialogTitle>
-            <DialogDescription>
-              {checkinPlayer && (
-                <>
-                  Successfully checked in {checkinPlayer.name} with {checkinPlayer.slots} slot{checkinPlayer.slots !== 1 ? 's' : ''}.
-                </>
-              )}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              onClick={() => setCheckinDialogOpen(false)}
-              className="bg-sc-green hover:brightness-95 text-sc-green-ink font-bold"
-            >
-              Close
-            </Button>
-          </DialogFooter>
+        <DialogContent className="w-full max-w-[calc(100%-1.5rem)] sm:max-w-[380px] rounded-[28px] bg-white p-6 flex flex-col items-center text-center gap-3">
+          <span className="w-14 h-14 rounded-full bg-sc-green text-white flex items-center justify-center"><Check size={28} strokeWidth={3} /></span>
+          <DialogTitle className="text-xl font-extrabold">Checked in</DialogTitle>
+          <DialogDescription className="text-sm text-sc-ink2">
+            {checkinPlayer && <>{checkinPlayer.name} is in with {checkinPlayer.slots} slot{checkinPlayer.slots !== 1 ? "s" : ""}.</>}
+          </DialogDescription>
+          <ScButton onClick={() => setCheckinDialogOpen(false)}>Next player</ScButton>
         </DialogContent>
       </Dialog>
 
       <Dialog open={ticketDialogOpen} onOpenChange={setTicketDialogOpen}>
-        <DialogContent className="max-w-md rounded-lg">
-          <DialogHeader>
-            <DialogTitle>Ticket Check-in Successful</DialogTitle>
-            <DialogDescription>
-              {verifiedTicket && (
-                <>
-                  Successfully checked in ticket for {verifiedTicket.buyer_name} with {verifiedTicket.number_of_tickets} ticket{verifiedTicket.number_of_tickets !== 1 ? 's' : ''}.
-                </>
-              )}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              onClick={() => setTicketDialogOpen(false)}
-              className="bg-purple-500 hover:bg-purple-600 text-white"
-            >
-              Close
-            </Button>
-          </DialogFooter>
+        <DialogContent className="w-full max-w-[calc(100%-1.5rem)] sm:max-w-[380px] rounded-[28px] bg-white p-6 flex flex-col items-center text-center gap-3">
+          <span className="w-14 h-14 rounded-full bg-sport-tennis text-sc-ink flex items-center justify-center"><Ticket size={26} /></span>
+          <DialogTitle className="text-xl font-extrabold">Ticket checked in</DialogTitle>
+          <DialogDescription className="text-sm text-sc-ink2">
+            {verifiedTicket && <>{verifiedTicket.buyer_name} is in with {verifiedTicket.number_of_tickets} ticket{verifiedTicket.number_of_tickets !== 1 ? "s" : ""}.</>}
+          </DialogDescription>
+          <ScButton kind="dark" onClick={() => setTicketDialogOpen(false)}>Next ticket</ScButton>
         </DialogContent>
       </Dialog>
     </div>

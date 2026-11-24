@@ -1,13 +1,12 @@
-import { useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Trophy, Clock, MapPin, Shirt } from "lucide-react";
+import { ArrowRightLeft, BookOpen, Calendar, Check, Clock, Eye, Loader2, MapPin, Minus, Plus, Redo2, Save, Shuffle, Undo2, Users } from "lucide-react";
 import { isPast, format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useDrag, useDrop } from "react-dnd";
+import { Avatar, Bubble, EmptyState, Pill, ScButton, Segmented, initialsOf } from "@/components/sc/ui";
 
 // Types
 type Player = { id: string; player_name: string };
@@ -19,308 +18,129 @@ type Team = {
 };
 type Match = { id: string; slug: string; super_code: string; title: string; match_date: string; match_time: string; venue: string };
 
-// Utility function for getting team colors
-const getTeamColorScheme = (teamName: string) => {
-  const colorSchemes = {
-    'Team 1': {
-      jersey: 'text-blue-600 dark:text-blue-300',
-      background: 'bg-blue-50 dark:bg-blue-900/30',
-      border: 'border-blue-300 dark:border-blue-500',
-      hover: 'hover:bg-blue-100 dark:hover:bg-blue-800/40'
-    },
-    'Team 2': {
-      jersey: 'text-red-600 dark:text-red-300',
-      background: 'bg-red-50 dark:bg-red-900/30',
-      border: 'border-red-300 dark:border-red-500',
-      hover: 'hover:bg-red-100 dark:hover:bg-red-800/40'
-    },
-    'Team 3': {
-      jersey: 'text-sc-green-dark dark:text-green-300',
-      background: 'bg-sc-green-bg dark:bg-green-900/30',
-      border: 'border-green-300 dark:border-green-500',
-      hover: 'hover:bg-green-100 dark:hover:bg-green-800/40'
-    },
-    'Team 4': {
-      jersey: 'text-yellow-600 dark:text-yellow-300',
-      background: 'bg-yellow-50 dark:bg-yellow-900/30',
-      border: 'border-yellow-300 dark:border-yellow-500',
-      hover: 'hover:bg-yellow-100 dark:hover:bg-yellow-800/40'
-    },
-    'Team 5': {
-      jersey: 'text-purple-600 dark:text-purple-300',
-      background: 'bg-purple-50 dark:bg-purple-900/30',
-      border: 'border-purple-300 dark:border-purple-500',
-      hover: 'hover:bg-purple-100 dark:hover:bg-purple-800/40'
-    },
-    'Team 6': {
-      jersey: 'text-pink-600 dark:text-pink-300',
-      background: 'bg-pink-50 dark:bg-pink-900/30',
-      border: 'border-pink-300 dark:border-pink-500',
-      hover: 'hover:bg-pink-100 dark:hover:bg-pink-800/40'
-    },
-    'Team 7': {
-      jersey: 'text-orange-600 dark:text-orange-300',
-      background: 'bg-orange-50 dark:bg-orange-900/30',
-      border: 'border-orange-300 dark:border-orange-500',
-      hover: 'hover:bg-orange-100 dark:hover:bg-orange-800/40'
-    },
-    'Team 8': {
-      jersey: 'text-cyan-600 dark:text-cyan-300',
-      background: 'bg-cyan-50 dark:bg-cyan-900/30',
-      border: 'border-cyan-300 dark:border-cyan-500',
-      hover: 'hover:bg-cyan-100 dark:hover:bg-cyan-800/40'
-    },
-    'Team 9': {
-      jersey: 'text-amber-600 dark:text-amber-300',
-      background: 'bg-amber-50 dark:bg-amber-900/30',
-      border: 'border-amber-300 dark:border-amber-500',
-      hover: 'hover:bg-amber-100 dark:hover:bg-amber-800/40'
-    },
-    'Team 10': {
-      jersey: 'text-lime-600 dark:text-lime-300',
-      background: 'bg-lime-50 dark:bg-lime-900/30',
-      border: 'border-lime-300 dark:border-lime-500',
-      hover: 'hover:bg-lime-100 dark:hover:bg-lime-800/40'
-    }
-  };
+import { teamColor } from "@/lib/teamColors";
 
-  // Generate colors for additional teams
-  const generateColor = (index: number) => {
-    const hue = (index * 36) % 360; // 36 degree spacing for distinct colors
-    const saturation = 75;
-    const lightness = 50;
-    const hsl = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
-    return {
-      jersey: `text-[${hsl}] dark:text-[${hsl}]`,
-      background: `bg-[${hsl}]/10 dark:bg-[${hsl}]/50`,
-      border: `border-[${hsl}]/20 dark:border-[${hsl}]/70`,
-      hover: `hover:bg-[${hsl}]/20 dark:hover:bg-[${hsl}]/70`
-    };
-  };
+const blankTeam = (i: number): Team => ({
+  name: `Team ${i + 1}`,
+  players: [],
+  score: 0,
+  analytics: { possession: 50, shots: 0, fouls: 0, yellow_cards: 0, red_cards: 0 },
+});
 
-  // Extract team number from name (e.g., Team 11 -> 11)
-  const teamNumber = parseInt(teamName.replace(/[^\d]/g, ''));
-  if (teamNumber > 10) {
-    return generateColor(teamNumber);
-  }
+export const RULE_TEMPLATES: { name: string; text: string }[] = [
+  { name: "5 a side casual", text: "5 players per side, two 15 minute halves, no offside, rolling substitutions, no slide tackles." },
+  { name: "7 a side", text: "7 players per side, two 25 minute halves, no offside, rolling substitutions, kick ins instead of throw ins." },
+  { name: "10 a side", text: "10 players per side, two 30 minute halves, standard fouls, offside applies in the final third." },
+  { name: "11 a side standard", text: "11 players per side, two 45 minute halves, standard fouls and offside, 3 substitutions." },
+  { name: "Winner stays on", text: "Short games of 10 minutes or first to 2 goals. The winning team stays on, the next team comes in." },
+];
 
-  // Default to gray for unknown teams
-  return colorSchemes[teamName] || {
-    jersey: 'text-sc-ink3 dark:text-gray-400',
-    background: 'bg-sc-soft dark:bg-gray-900/50',
-    border: 'border-sc-line dark:border-gray-700',
-    hover: 'hover:bg-gray-100 dark:hover:bg-gray-800/50'
-  };
-};
-
-// Player Card Component
-const PlayerCard = ({ playerId, teamName, players }: { playerId: string; teamName: string; players: Player[] }) => {
-  const player = players.find((p) => p.id === playerId) || { id: playerId, player_name: "Unknown Player" };
+const PlayerRow = ({
+  player,
+  teamName,
+  color,
+  manual,
+  onMove,
+}: {
+  player: Player;
+  teamName: string;
+  color: string;
+  manual: boolean;
+  onMove: () => void;
+}) => {
   const [{ isDragging }, drag] = useDrag(() => ({
     type: "PLAYER",
-    item: { playerId, teamName },
+    item: { playerId: player.id, teamName },
     collect: (monitor) => ({ isDragging: monitor.isDragging() }),
-  }));
+  }), [player.id, teamName]);
 
   return (
-    <div
-      ref={drag}
-      className={`p-3 mb-2 rounded-lg flex items-center space-x-3 shadow-card transition-opacity ${isDragging ? "opacity-50" : "opacity-100"}`}
-    >
-      <Shirt className={`w-6 h-6 ${getTeamColorScheme(teamName).jersey}`} />
-      <div className="flex-1">
-        <p className="text-xs sm:text-sm font-medium">{player.player_name}</p>
-      </div>
-    </div>
-  );
-};
-
-// Team Column Component
-const TeamColumn = ({
-  team,
-  setTeams,
-  players,
-}: {
-  team: Team;
-  setTeams: (teams: Team[]) => void;
-  players: Player[];
-}) => {
-  const [, drop] = useDrop(() => ({
-    accept: "PLAYER",
-    drop: (item: { playerId: string; teamName: string }) => {
-      setTeams((prev) => {
-        if (item.teamName === team.name) return prev;
-        const allPlayers = prev.flatMap((t) => t.players);
-        if (allPlayers.includes(item.playerId)) return prev;
-        return prev.map((t) => {
-          if (t.name === team.name) return { ...t, players: [...t.players, item.playerId] };
-          if (t.name === item.teamName) return { ...t, players: t.players.filter((id) => id !== item.playerId) };
-          return t;
-        });
-      });
-    },
-  }));
-
-  return (
-    <div ref={drop} className="flex-1 p-3 sm:p-4 bg-white dark:bg-gray-800 rounded-3xl shadow-card">
-      <h3 className="text-base sm:text-lg font-semibold text-sc-ink dark:text-gray-200 mb-4">{team.name}</h3>
-      {team.players.length === 0 ? (
-        <p className="text-xs sm:text-sm text-sc-ink3 dark:text-gray-400">No players assigned</p>
-      ) : (
-        team.players.map((playerId) => (
-          <PlayerCard key={playerId} playerId={playerId} teamName={team.name} players={players} />
-        ))
+    <div ref={drag} className={`flex items-center gap-3 py-2.5 transition-opacity ${isDragging ? "opacity-40" : ""}`}>
+      <span className="relative">
+        <Avatar initials={initialsOf(player.player_name)} seed={player.player_name} size={36} />
+        <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white" style={{ background: color }} />
+      </span>
+      <span className="flex-1 min-w-0 text-[15px] font-bold truncate">{player.player_name}</span>
+      {manual && (
+        <button type="button" onClick={onMove} aria-label={`Move ${player.player_name}`} className="h-9 px-3 rounded-full bg-sc-soft text-sc-ink text-xs font-bold inline-flex items-center gap-1.5">
+          <ArrowRightLeft size={14} /> Move
+        </button>
       )}
     </div>
   );
 };
 
-// Team Selection Dialog Component
-const TeamSelectionDialog = ({
+const TeamCard = ({
+  team,
+  index,
   players,
-  teams,
-  setTeams,
-  isOpen,
-  onClose,
-  matchDate,
-  matchTime,
+  manual,
+  nameValue,
+  onNameChange,
+  onNameCommit,
+  onDropPlayer,
+  onMovePlayer,
 }: {
+  team: Team;
+  index: number;
   players: Player[];
-  teams: Team[];
-  setTeams: (teams: Team[]) => void;
-  isOpen: boolean;
-  onClose: () => void;
-  matchDate: string;
-  matchTime: string;
+  manual: boolean;
+  nameValue: string;
+  onNameChange: (v: string) => void;
+  onNameCommit: () => void;
+  onDropPlayer: (playerId: string, fromTeam: string) => void;
+  onMovePlayer: (playerId: string) => void;
 }) => {
-  const { toast } = useToast();
-  const [numTeams, setNumTeams] = useState(teams.length || 2);
-  const [playersPerTeam, setPlayersPerTeam] = useState(Math.floor(players.length / (teams.length || 2)) || 5);
-  const now = new Date();
-  const matchDateTime = new Date(`${matchDate}T${matchTime}`);
-  const isMatchPast = isPast(matchDateTime);
-
-  const generateTeams = () => {
-    if (isMatchPast) {
-      toast({ title: "Action Not Available", description: "Cannot manage teams for a past match.", variant: "destructive" });
-      return;
-    }
-    if (numTeams < 2 || numTeams > 10) {
-      toast({ title: "Invalid Input", description: "Number of teams must be between 2 and 10.", variant: "destructive" });
-      return;
-    }
-    const shuffled = [...players].sort(() => Math.random() - 0.5);
-    const totalPlayers = Math.min(playersPerTeam * numTeams, shuffled.length);
-    const newTeams: Team[] = Array.from({ length: numTeams }, (_, i) => ({
-      name: `Team ${i + 1}`,
-      players: [],
-      score: 0,
-      analytics: { possession: 50, shots: 0, fouls: 0, yellow_cards: 0, red_cards: 0 },
-    }));
-
-    for (let i = 0; i < totalPlayers; i++) {
-      newTeams[i % numTeams].players.push(shuffled[i].id);
-    }
-
-    setTeams(newTeams);
-    onClose();
-    toast({ title: "Teams Generated", description: `${numTeams} teams have been randomly assigned.` });
-  };
+  const [{ isOver }, drop] = useDrop(() => ({
+    accept: "PLAYER",
+    drop: (item: { playerId: string; teamName: string }) => {
+      if (item.teamName !== team.name) onDropPlayer(item.playerId, item.teamName);
+    },
+    collect: (m) => ({ isOver: m.isOver() }),
+  }), [team.name, onDropPlayer]);
+  const color = teamColor(index);
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="rounded-xl max-w-md">
-        <DialogTitle>Generate Teams</DialogTitle>
-        <DialogDescription>
-          <p className="mb-4 text-xs sm:text-sm">Set the number of teams and players per team.</p>
-          <div className="mb-4">
-            <label className="block text-xs sm:text-sm font-medium text-sc-ink2 dark:text-gray-300">Number of Teams (2-10)</label>
-            <Input
-              type="number"
-              value={numTeams}
-              onChange={(e) => setNumTeams(Math.max(2, Math.min(10, parseInt(e.target.value) || 2)))}
-              min="2"
-              max="10"
-              className="mt-1 text-xs sm:text-sm"
-            />
-          </div>
-          <div className="mb-4">
-            <label className="block text-xs sm:text-sm font-medium text-sc-ink2 dark:text-gray-300">Players per Team</label>
-            <Input
-              type="number"
-              value={playersPerTeam}
-              onChange={(e) => setPlayersPerTeam(Math.max(1, Math.min(20, parseInt(e.target.value) || 5)))}
-              min="1"
-              max="20"
-              className="mt-1 text-xs sm:text-sm"
-            />
-          </div>
-          <Button
-            onClick={generateTeams}
-            className="w-full bg-sc-green hover:brightness-95 text-sc-green-ink text-xs sm:text-sm font-bold"
-            disabled={isMatchPast}
-          >
-            Generate Teams
-          </Button>
-        </DialogDescription>
-      </DialogContent>
-    </Dialog>
+    <div ref={drop} className={`bg-white rounded-3xl p-4 flex flex-col gap-2 transition-shadow ${isOver ? "ring-2 ring-sc-green" : ""}`}>
+      <div className="flex items-center gap-2.5">
+        <span className="w-3 h-8 rounded-full shrink-0" style={{ background: color }} />
+        <input
+          value={nameValue}
+          onChange={(e) => onNameChange(e.target.value)}
+          onBlur={onNameCommit}
+          onKeyDown={(e) => e.key === "Enter" && (e.currentTarget as HTMLInputElement).blur()}
+          aria-label="Team name"
+          maxLength={24}
+          className="flex-1 min-w-0 bg-transparent text-lg font-extrabold tracking-[-0.01em] outline-none border-b border-transparent focus:border-sc-line"
+        />
+        <Pill sport="gray">{team.players.length}</Pill>
+      </div>
+      {team.players.length === 0 ? (
+        <p className="m-0 py-3 text-sm text-sc-ink3 text-center bg-sc-soft rounded-2xl">{manual ? "Move players here" : "No players in this team"}</p>
+      ) : (
+        <div className="flex flex-col divide-y divide-sc-line">
+          {team.players.map((id) => {
+            const p = players.find((x) => x.id === id) || { id, player_name: "Player left" };
+            return <PlayerRow key={id} player={p} teamName={team.name} color={color} manual={manual} onMove={() => onMovePlayer(id)} />;
+          })}
+        </div>
+      )}
+    </div>
   );
 };
 
-// Rules Template Dialog Component
-const RulesTemplateDialog = ({ isOpen, onClose, matchId }: { isOpen: boolean; onClose: () => void; matchId: string }) => {
-  const { toast } = useToast();
-  const [selectedRule, setSelectedRule] = useState("");
-  const ruleTemplates = {
-    "Standard 11v11": "11 players per side, 90-minute match, standard fouls and offsides apply.",
-    "5v5 Casual": "5 players per side, 30-minute match, no offsides.",
-    "7v7 Youth": "7 players per side, 60-minute match, modified fouls.",
-    "10v10 Tournament": "10 players per side, 60-minute match, standard rules.",
-  };
+const Stepper = ({ label, value, min, max, onChange }: { label: string; value: number; min: number; max: number; onChange: (v: number) => void }) => (
+  <div className="flex items-center justify-between bg-sc-soft rounded-2xl px-4 py-3">
+    <span className="text-sm font-bold">{label}</span>
+    <span className="flex items-center gap-3">
+      <button type="button" aria-label={`Less ${label}`} onClick={() => onChange(Math.max(min, value - 1))} disabled={value <= min} className="w-9 h-9 rounded-full bg-white flex items-center justify-center disabled:opacity-40"><Minus size={16} /></button>
+      <span className="w-6 text-center text-lg font-extrabold">{value}</span>
+      <button type="button" aria-label={`More ${label}`} onClick={() => onChange(Math.min(max, value + 1))} disabled={value >= max} className="w-9 h-9 rounded-full bg-white flex items-center justify-center disabled:opacity-40"><Plus size={16} /></button>
+    </span>
+  </div>
+);
 
-  const applyRule = async () => {
-    if (!selectedRule) {
-      toast({ title: "Error", description: "Please select a rule template.", variant: "destructive" });
-      return;
-    }
-    try {
-      const { error } = await supabase
-        .from("matches")
-        .update({ rules: ruleTemplates[selectedRule as keyof typeof ruleTemplates] })
-        .eq("id", matchId);
-      if (error) throw error;
-      toast({ title: "Success", description: "Rule template applied." });
-      onClose();
-    } catch (error) {
-      console.error("Error applying rule:", error);
-      toast({ title: "Error", description: "Failed to apply rule template.", variant: "destructive" });
-    }
-  };
-
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent>
-        <DialogTitle>Apply Match Rules</DialogTitle>
-        <DialogDescription>
-          <select
-            value={selectedRule}
-            onChange={(e) => setSelectedRule(e.target.value)}
-            className="w-full p-2 mb-4 border rounded text-xs sm:text-sm"
-          >
-            <option value="">Select a rule template</option>
-            {Object.keys(ruleTemplates).map((rule) => (
-              <option key={rule} value={rule}>{rule}</option>
-            ))}
-          </select>
-          <Button onClick={applyRule} className="w-full bg-sc-green hover:brightness-95 text-sc-green-ink text-xs sm:text-sm font-bold">
-            Apply Rule
-          </Button>
-        </DialogDescription>
-      </DialogContent>
-    </Dialog>
-  );
-};
+const sheet = "w-full max-w-[calc(100%-1.5rem)] sm:max-w-[420px] rounded-[28px] bg-sc-bg p-5 gap-4 max-h-[92vh] overflow-y-auto";
 
 const TeamMatchDetails = ({
   match,
@@ -350,226 +170,313 @@ const TeamMatchDetails = ({
   setHistoryIndex: (index: number) => void;
 }) => {
   const { toast } = useToast();
-  const [teamSelectionOpen, setTeamSelectionOpen] = useState(false);
-  const [rulesTemplateOpen, setRulesTemplateOpen] = useState(false);
-  const [teamNames, setTeamNames] = useState(teams.map((t) => t.name));
-  const [inputValues, setInputValues] = useState(teams.map((t) => t.name));
+  const [names, setNames] = useState(teams.map((t) => t.name));
+  const [genOpen, setGenOpen] = useState(false);
+  const [numTeams, setNumTeams] = useState(Math.max(2, teams.length || 2));
+  const [perTeam, setPerTeam] = useState(Math.max(1, Math.floor(players.length / Math.max(2, teams.length || 2)) || 5));
+  const [rulesOpen, setRulesOpen] = useState(false);
+  const [rule, setRule] = useState<string>("");
+  const [appliedRule, setAppliedRule] = useState<{ name: string; text: string } | null>(null);
+  const [applying, setApplying] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [moving, setMoving] = useState<string | null>(null);
+  const teamsRef = useRef(teams);
+  teamsRef.current = teams;
 
-  const handleRenameTeam = (index: number, newName: string) => {
-    if (!newName.trim()) {
-      toast({ title: "Error", description: "Team name cannot be empty.", variant: "destructive" });
+  useEffect(() => setNames(teams.map((t) => t.name)), [teams]);
+
+  // Show the rules already applied to this match
+  useEffect(() => {
+    supabase.from("matches").select("analytics").eq("id", match.id).maybeSingle().then(({ data }) => {
+      const r = (data?.analytics as any)?.rules;
+      if (r?.name) setAppliedRule({ name: r.name, text: r.text });
+    });
+  }, [match.id]);
+
+  const matchStart = new Date(`${match.match_date}T${match.match_time}`);
+  const started = !isNaN(matchStart.getTime()) && isPast(matchStart);
+  const assigned = new Set(teams.flatMap((t) => t.players));
+  const bench = players.filter((p) => !assigned.has(p.id));
+
+  const commit = (next: Team[]) => {
+    setTeams(next);
+    addToHistory(next);
+  };
+
+  const movePlayer = (playerId: string, toTeam: string | null) => {
+    const next = teamsRef.current.map((t) => {
+      const without = t.players.filter((id) => id !== playerId);
+      return t.name === toTeam ? { ...t, players: [...without, playerId] } : { ...t, players: without };
+    });
+    commit(next);
+    setMoving(null);
+  };
+
+  const generate = () => {
+    if (players.length === 0) {
+      toast({ title: "No players yet", description: "Teams can be made once players join.", variant: "destructive" });
       return;
     }
-    const newTeamNames = [...teamNames];
-    newTeamNames[index] = newName.trim();
-    setTeamNames(newTeamNames);
-    setInputValues((prev) => {
-      const newValues = [...prev];
-      newValues[index] = newName.trim();
-      return newValues;
-    });
-
-    const updatedTeams = teams.map((t, i) => (i === index ? { ...t, name: newName.trim() } : t));
-    setTeams(updatedTeams);
-    addToHistory(updatedTeams);
+    const shuffled = [...players].sort(() => Math.random() - 0.5);
+    const take = Math.min(perTeam * numTeams, shuffled.length);
+    const next: Team[] = Array.from({ length: numTeams }, (_, i) => ({ ...blankTeam(i), name: teams[i]?.name || `Team ${i + 1}` }));
+    for (let i = 0; i < take; i++) next[i % numTeams].players.push(shuffled[i].id);
+    commit(next);
+    setGenOpen(false);
+    toast({ title: "Teams shuffled", description: `${numTeams} teams made from ${take} players.${take < players.length ? ` ${players.length - take} on the bench.` : ""}` });
   };
 
-  const handleInputChange = (index: number, value: string) => {
-    setInputValues((prev) => {
-      const newValues = [...prev];
-      newValues[index] = value;
-      return newValues;
-    });
-  };
-
-  const handleInputBlur = (index: number) => {
-    handleRenameTeam(index, inputValues[index]);
-  };
-
-  const handleInputKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      handleRenameTeam(index, inputValues[index]);
+  const renameTeam = (i: number) => {
+    const name = names[i]?.trim();
+    if (!name) {
+      setNames(teams.map((t) => t.name));
+      toast({ title: "Name needed", description: "A team name cannot be empty.", variant: "destructive" });
+      return;
     }
-  };
-
-  const togglePrivacy = async () => {
-    setIsPublic((prev) => !prev);
-    try {
-      const { data: existingAssignment, error: fetchError } = await supabase
-        .from("team_assignments")
-        .select("id")
-        .eq("match_id", match.id)
-        .maybeSingle();
-
-      if (fetchError && fetchError.code !== "PGRST116") throw fetchError;
-
-      const { error } = existingAssignment
-        ? await supabase.from("team_assignments").update({ is_public: !isPublic }).eq("id", existingAssignment.id)
-        : await supabase.from("team_assignments").insert({ is_public: !isPublic, match_id: match.id, super_code: match.super_code, teams });
-
-      if (error) throw error;
-      toast({ title: "Success", description: `Match is now ${!isPublic ? "public" : "private"}.` });
-    } catch (error) {
-      console.error("Error updating privacy:", error);
-      toast({ title: "Error", description: "Failed to update match privacy.", variant: "destructive" });
+    if (name === teams[i].name) return;
+    if (teams.some((t, j) => j !== i && t.name.toLowerCase() === name.toLowerCase())) {
+      setNames(teams.map((t) => t.name));
+      toast({ title: "Name taken", description: "Two teams cannot share a name.", variant: "destructive" });
+      return;
     }
-  };
-
-  const handleUndo = () => {
-    if (historyIndex > 0) {
-      setHistoryIndex((prev) => prev - 1);
-      setTeams(history[historyIndex - 1]);
-      setTeamNames(history[historyIndex - 1].map((t) => t.name));
-      setInputValues(history[historyIndex - 1].map((t) => t.name));
-    }
-  };
-
-  const handleRedo = () => {
-    if (historyIndex < history.length - 1) {
-      setHistoryIndex((prev) => prev + 1);
-      setTeams(history[historyIndex + 1]);
-      setTeamNames(history[historyIndex + 1].map((t) => t.name));
-      setInputValues(history[historyIndex + 1].map((t) => t.name));
-    }
+    commit(teams.map((t, j) => (j === i ? { ...t, name } : t)));
   };
 
   const saveTeams = async () => {
-    const allPlayers = teams.flatMap((t) => t.players);
-    if (new Set(allPlayers).size !== allPlayers.length) {
-      toast({ title: "Error", description: "A player cannot be assigned to multiple teams.", variant: "destructive" });
+    const all = teams.flatMap((t) => t.players);
+    if (new Set(all).size !== all.length) {
+      toast({ title: "Check the teams", description: "A player cannot be in two teams.", variant: "destructive" });
       return;
     }
-
+    setSaving(true);
     try {
-      const { data: existingAssignment, error: fetchError } = await supabase
-        .from("team_assignments")
-        .select("id")
-        .eq("match_id", match.id)
-        .maybeSingle();
-
+      const { data: existing, error: fetchError } = await supabase.from("team_assignments").select("id").eq("match_id", match.id).maybeSingle();
       if (fetchError && fetchError.code !== "PGRST116") throw fetchError;
-
-      const teamAssignmentData = { match_id: match.id, super_code: match.super_code, teams, is_public: isPublic };
-      const { error } = existingAssignment
-        ? await supabase.from("team_assignments").update(teamAssignmentData).eq("id", existingAssignment.id)
-        : await supabase.from("team_assignments").insert(teamAssignmentData);
-
+      const row = { match_id: match.id, super_code: match.super_code, teams, is_public: isPublic };
+      const { error } = existing
+        ? await supabase.from("team_assignments").update(row).eq("id", existing.id)
+        : await supabase.from("team_assignments").insert(row);
       if (error) throw error;
-      toast({ title: "Teams Saved", description: "Team assignments and analytics have been updated." });
-    } catch (error) {
-      console.error("Error saving teams:", error);
-      toast({ title: "Error", description: "Failed to save teams.", variant: "destructive" });
+      toast({ title: "Teams saved", description: "Everyone sees the latest line ups." });
+    } catch (e) {
+      console.error("Error saving teams:", e);
+      toast({ title: "Not saved", description: "Check your connection and try again.", variant: "destructive" });
+    } finally {
+      setSaving(false);
     }
   };
 
-  const formattedTime = format(new Date(`1970-01-01T${match.match_time}`), "h:mm a");
+  const togglePublic = async (next: boolean) => {
+    setIsPublic(next);
+    try {
+      const { data: existing, error: fetchError } = await supabase.from("team_assignments").select("id").eq("match_id", match.id).maybeSingle();
+      if (fetchError && fetchError.code !== "PGRST116") throw fetchError;
+      const { error } = existing
+        ? await supabase.from("team_assignments").update({ is_public: next }).eq("id", existing.id)
+        : await supabase.from("team_assignments").insert({ is_public: next, match_id: match.id, super_code: match.super_code, teams });
+      if (error) throw error;
+      toast({ title: next ? "Highlights are public" : "Highlights are private", description: next ? "Anyone with the link can see teams and the score." : "Only you can see teams and the score." });
+    } catch (e) {
+      console.error("Error updating privacy:", e);
+      setIsPublic(!next);
+      toast({ title: "Not changed", description: "Could not update who can see this match.", variant: "destructive" });
+    }
+  };
+
+  const undo = () => {
+    if (historyIndex <= 0) return;
+    setHistoryIndex(historyIndex - 1);
+    setTeams(history[historyIndex - 1]);
+  };
+  const redo = () => {
+    if (historyIndex >= history.length - 1) return;
+    setHistoryIndex(historyIndex + 1);
+    setTeams(history[historyIndex + 1]);
+  };
+
+  const applyRule = async () => {
+    const tpl = RULE_TEMPLATES.find((r) => r.name === rule);
+    if (!tpl) {
+      toast({ title: "Pick a rule set", description: "Choose one of the templates first.", variant: "destructive" });
+      return;
+    }
+    setApplying(true);
+    try {
+      const { data, error: readError } = await supabase.from("matches").select("analytics").eq("id", match.id).maybeSingle();
+      if (readError) throw readError;
+      const current = (data?.analytics && typeof data.analytics === "object" ? data.analytics : {}) as Record<string, unknown>;
+      const { error } = await supabase
+        .from("matches")
+        .update({ analytics: { ...current, rules: { name: tpl.name, text: tpl.text, applied_at: new Date().toISOString() } } })
+        .eq("id", match.id);
+      if (error) throw error;
+      setAppliedRule(tpl);
+      setRulesOpen(false);
+      toast({ title: "Rules applied", description: `${tpl.name} rules are set for this match.` });
+    } catch (e) {
+      console.error("Error applying rule:", e);
+      toast({ title: "Rules not applied", description: "Please try again.", variant: "destructive" });
+    } finally {
+      setApplying(false);
+    }
+  };
+
+  const when = !isNaN(matchStart.getTime()) ? format(matchStart, "EEE d MMM, h:mm a") : match.match_date;
+  const movingPlayer = players.find((p) => p.id === moving);
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-4 sm:p-6 dark:border-gray-700">
-        <h2 className="text-lg sm:text-lg font-extrabold tracking-[-0.01em] mb-4 text-sc-ink dark:text-gray-100">{match.title}</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="flex items-center gap-3">
-            <Trophy size={16} className="text-sc-green-dark" />
-            <span className="text-xs sm:text-sm text-sc-ink dark:text-gray-100">Teams: {teams.length}</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <Clock size={16} className="text-sc-green-dark" />
-            <span className="text-xs sm:text-sm text-sc-ink dark:text-gray-100">{match.match_date} {formattedTime}</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <MapPin size={16} className="text-sc-green-dark" />
-            <span className="text-xs sm:text-sm text-sc-ink dark:text-gray-100">{match.venue || "Venue TBD"}</span>
-          </div>
+    <div className="flex flex-col gap-4">
+      <div className="bg-white rounded-3xl p-[18px] flex flex-col gap-3">
+        <span className="text-xl font-extrabold tracking-[-0.02em] line-clamp-2">{match.title}</span>
+        <div className="flex flex-col gap-1.5 text-sm text-sc-ink2">
+          <span className="flex items-center gap-2"><Calendar size={15} /> {when}</span>
+          <span className="flex items-center gap-2"><MapPin size={15} /> {match.venue || "Venue not set"}</span>
+          <span className="flex items-center gap-2"><Users size={15} /> {players.length} players · {teams.length} teams</span>
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-        <div className="flex flex-wrap gap-2 sm:gap-3 w-full sm:w-auto">
-          <Button
-            onClick={() => setMode(mode === "automatic" ? "manual" : "automatic")}
-            className="bg-blue-500 hover:bg-blue-600 text-white text-xs sm:text-sm px-3 py-2 flex-1 sm:flex-none"
-          >
-            {mode === "automatic" ? "Manual Mode" : "Automatic Mode"}
-          </Button>
-          <Button
-            onClick={() => setTeamSelectionOpen(true)}
-            className="bg-sc-green hover:brightness-95 text-sc-green-ink text-xs sm:text-sm px-3 py-2 flex-1 sm:flex-none font-bold"
-          >
-            Regenerate Teams
-          </Button>
-          <TeamSelectionDialog
-            players={players}
-            teams={teams}
-            setTeams={(newTeams) => {
-              setTeams(newTeams);
-              setTeamNames(newTeams.map((t) => t.name));
-              setInputValues(newTeams.map((t) => t.name));
-              addToHistory(newTeams);
-            }}
-            isOpen={teamSelectionOpen}
-            onClose={() => setTeamSelectionOpen(false)}
-            matchDate={match.match_date}
-            matchTime={match.match_time}
-          />
-          <Button
-            onClick={saveTeams}
-            className="bg-sc-ink text-white rounded-full font-bold text-xs sm:text-sm px-3 py-2 flex-1 sm:flex-none"
-          >
-            Save Teams
-          </Button>
-          <Button
-            onClick={() => setRulesTemplateOpen(true)}
-            className="bg-blue-500 hover:bg-blue-600 text-white text-xs sm:text-sm px-3 py-2 flex-1 sm:flex-none"
-          >
-            Apply Rules
-          </Button>
-          <RulesTemplateDialog
-            isOpen={rulesTemplateOpen}
-            onClose={() => setRulesTemplateOpen(false)}
-            matchId={match.id}
-          />
-        </div>
-        <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
-          <Button
-            onClick={handleUndo}
-            disabled={historyIndex <= 0}
-            className="bg-gray-500 hover:bg-gray-600 text-white text-xs sm:text-sm px-3 py-2 flex-1 sm:flex-none"
-          >
-            Undo
-          </Button>
-          <Button
-            onClick={handleRedo}
-            disabled={historyIndex >= history.length - 1}
-            className="bg-gray-500 hover:bg-gray-600 text-white text-xs sm:text-sm px-3 py-2 flex-1 sm:flex-none"
-          >
-            Redo
-          </Button>
-        </div>
+      <Segmented
+        value={mode}
+        onChange={(v) => setMode(v as "automatic" | "manual")}
+        options={[
+          { value: "automatic", label: <span className="inline-flex items-center gap-1.5"><Shuffle size={15} /> Auto</span> },
+          { value: "manual", label: <span className="inline-flex items-center gap-1.5"><ArrowRightLeft size={15} /> Manual</span> },
+        ]}
+      />
+      <p className="m-0 -mt-2 px-1 text-[13px] text-sc-ink3">
+        {mode === "automatic" ? "Shuffle players into fair teams in one tap." : "Tap Move on a player, or drag them, to pick the teams yourself."}
+      </p>
+
+      <div className="grid grid-cols-4 gap-2">
+        <button type="button" onClick={() => setGenOpen(true)} className="col-span-2 h-12 rounded-full bg-sc-ink text-white font-bold text-sm inline-flex items-center justify-center gap-2"><Shuffle size={17} /> {teams.some((t) => t.players.length) ? "Reshuffle" : "Make teams"}</button>
+        <button type="button" onClick={undo} disabled={historyIndex <= 0} aria-label="Undo" className="h-12 rounded-full bg-white text-sc-ink inline-flex items-center justify-center disabled:opacity-40"><Undo2 size={18} /></button>
+        <button type="button" onClick={redo} disabled={historyIndex >= history.length - 1} aria-label="Redo" className="h-12 rounded-full bg-white text-sc-ink inline-flex items-center justify-center disabled:opacity-40"><Redo2 size={18} /></button>
       </div>
 
-      <div className="flex items-center gap-2 mb-4">
-        <Switch checked={isPublic} onCheckedChange={togglePrivacy} />
-        <span className="text-xs sm:text-sm text-sc-ink dark:text-gray-100">Public Match</span>
-      </div>
+      {players.length === 0 ? (
+        <div className="bg-white rounded-3xl">
+          <EmptyState icon={Users} sport="football" title="No players yet" subtitle="Teams appear here once players join the match." />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {teams.map((team, i) => (
+            <TeamCard
+              key={`${i}-${team.name}`}
+              team={team}
+              index={i}
+              players={players}
+              manual={mode === "manual"}
+              nameValue={names[i] ?? team.name}
+              onNameChange={(v) => setNames((prev) => prev.map((n, j) => (j === i ? v : n)))}
+              onNameCommit={() => renameTeam(i)}
+              onDropPlayer={(pid) => movePlayer(pid, team.name)}
+              onMovePlayer={(pid) => setMoving(pid)}
+            />
+          ))}
+        </div>
+      )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-        {teams.map((team, index) => (
-          <div key={team.name} className="flex-1">
-            <div className="mb-2">
-              <Input
-                value={inputValues[index]}
-                onChange={(e) => handleInputChange(index, e.target.value)}
-                onBlur={() => handleInputBlur(index)}
-                onKeyDown={(e) => handleInputKeyDown(index, e)}
-                placeholder="Team Name"
-                className="text-xs sm:text-sm"
-              />
-            </div>
-            <TeamColumn team={team} setTeams={setTeams} players={players} />
+      {bench.length > 0 && (
+        <div className="bg-white rounded-3xl p-4 flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <span className="text-base font-extrabold">On the bench</span>
+            <Pill sport="tennis">{bench.length}</Pill>
           </div>
-        ))}
+          <div className="flex flex-col divide-y divide-sc-line">
+            {bench.map((p) => (
+              <PlayerRow key={p.id} player={p} teamName="__bench" color="#9CA3AF" manual onMove={() => setMoving(p.id)} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="bg-white rounded-3xl p-4 flex items-center gap-3">
+        <Bubble icon={Eye} sport="guide" size={42} />
+        <span className="flex-1 flex flex-col">
+          <span className="text-[15px] font-bold">Public highlights</span>
+          <span className="text-[13px] text-sc-ink3">{isPublic ? "Anyone with the link can follow teams and the score" : "Only you can see teams and the score"}</span>
+        </span>
+        <Switch checked={isPublic} onCheckedChange={togglePublic} aria-label="Public highlights" />
       </div>
+
+      <button type="button" onClick={() => setRulesOpen(true)} className="bg-white rounded-3xl p-4 flex items-center gap-3 text-left">
+        <Bubble icon={BookOpen} sport="venue" size={42} />
+        <span className="flex-1 min-w-0 flex flex-col">
+          <span className="text-[15px] font-bold">{appliedRule ? appliedRule.name : "Match rules"}</span>
+          <span className="text-[13px] text-sc-ink3 line-clamp-2">{appliedRule ? appliedRule.text : "Pick a rule set so everyone plays the same game"}</span>
+        </span>
+        <span className="text-sm font-bold text-sc-green-dark shrink-0">{appliedRule ? "Change" : "Apply"}</span>
+      </button>
+
+      <ScButton icon={saving ? undefined : Save} onClick={saveTeams} disabled={saving || players.length === 0}>
+        {saving ? <Loader2 size={18} className="animate-spin" /> : "Save teams"}
+      </ScButton>
+
+      {/* Make or reshuffle teams */}
+      <Dialog open={genOpen} onOpenChange={setGenOpen}>
+        <DialogContent className={sheet}>
+          <div className="flex flex-col items-center text-center gap-2">
+            <span className="w-12 h-12 rounded-full bg-sc-ink text-white flex items-center justify-center"><Shuffle size={22} /></span>
+            <DialogTitle className="text-xl font-extrabold">Shuffle teams</DialogTitle>
+            <DialogDescription className="text-sm text-sc-ink2">{players.length} players will be split at random. Anyone left over goes to the bench.</DialogDescription>
+          </div>
+          {started && (
+            <p className="m-0 text-xs font-bold text-sport-tennis-fg bg-sport-tennis-bg rounded-2xl p-3">This match has already kicked off. Reshuffling changes the teams people are playing in.</p>
+          )}
+          <Stepper label="Teams" value={numTeams} min={2} max={10} onChange={setNumTeams} />
+          <Stepper label="Players per team" value={perTeam} min={1} max={20} onChange={setPerTeam} />
+          <ScButton onClick={generate} icon={Shuffle}>Shuffle now</ScButton>
+        </DialogContent>
+      </Dialog>
+
+      {/* Move one player */}
+      <Dialog open={!!moving} onOpenChange={(v) => !v && setMoving(null)}>
+        <DialogContent className={sheet}>
+          <DialogTitle className="text-xl font-extrabold text-center">Move {movingPlayer?.player_name || "player"}</DialogTitle>
+          <DialogDescription className="text-sm text-sc-ink2 text-center">Pick the team they should play for.</DialogDescription>
+          <div className="flex flex-col gap-2">
+            {teams.map((t, i) => {
+              const here = t.players.includes(moving || "");
+              return (
+                <button key={`${i}-${t.name}`} type="button" disabled={here} onClick={() => moving && movePlayer(moving, t.name)} className="h-14 px-4 rounded-2xl bg-white flex items-center gap-3 text-left disabled:opacity-50">
+                  <span className="w-3 h-8 rounded-full" style={{ background: teamColor(i) }} />
+                  <span className="flex-1 font-bold">{t.name}</span>
+                  <span className="text-xs text-sc-ink3">{here ? "Current team" : `${t.players.length} players`}</span>
+                </button>
+              );
+            })}
+            {assigned.has(moving || "") && (
+              <button type="button" onClick={() => moving && movePlayer(moving, null)} className="h-12 rounded-2xl bg-sc-soft font-bold text-sm">Send to the bench</button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rules */}
+      <Dialog open={rulesOpen} onOpenChange={setRulesOpen}>
+        <DialogContent className={sheet}>
+          <div className="flex flex-col items-center text-center gap-2">
+            <span className="w-12 h-12 rounded-full bg-sport-venue-bg text-sport-venue-fg flex items-center justify-center"><BookOpen size={22} /></span>
+            <DialogTitle className="text-xl font-extrabold">Match rules</DialogTitle>
+            <DialogDescription className="text-sm text-sc-ink2">Players see these on the match highlights.</DialogDescription>
+          </div>
+          <div className="flex flex-col gap-2" role="radiogroup">
+            {RULE_TEMPLATES.map((r) => {
+              const on = rule === r.name;
+              return (
+                <button key={r.name} type="button" role="radio" aria-checked={on} onClick={() => setRule(r.name)} className={`rounded-2xl p-3.5 text-left flex gap-3 items-start bg-white ${on ? "ring-2 ring-sc-green" : ""}`}>
+                  <span className={`mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${on ? "bg-sc-green border-sc-green text-white" : "border-sc-line"}`}>{on && <Check size={12} strokeWidth={3} />}</span>
+                  <span className="flex flex-col gap-0.5">
+                    <span className="text-[15px] font-bold">{r.name}</span>
+                    <span className="text-[13px] text-sc-ink3 leading-5">{r.text}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <ScButton onClick={applyRule} disabled={!rule || applying}>{applying ? <Loader2 size={18} className="animate-spin" /> : "Apply rules"}</ScButton>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

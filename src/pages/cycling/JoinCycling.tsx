@@ -1,4 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+
+const USED_REFS_KEY = "sc_used_ride_payments";
+const usedRefs = (): string[] => { try { return JSON.parse(localStorage.getItem(USED_REFS_KEY) || "[]"); } catch { return []; } };
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -101,6 +104,7 @@ const JoinCycling = () => {
   const [verifyingPayment, setVerifyingPayment] = useState(false);
   const [paystackLoaded, setPaystackLoaded] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>("pending");
+  const joinLock = useRef(false);
   const [successDialogOpen, setSuccessDialogOpen] = useState(false);
   const [confirmationCode, setConfirmationCode] = useState<string | null>(null);
 
@@ -361,6 +365,14 @@ const JoinCycling = () => {
       return;
     }
 
+    if (joinLock.current) return;
+    const isPaidJoin = !event.is_free && paymentStatus === "success";
+    if (isPaidJoin && paymentReference && usedRefs().includes(paymentReference)) {
+      toast({ title: "Payment already used", description: "This payment has already been used to join a ride.", variant: "error" });
+      setPaymentStatus("pending");
+      return;
+    }
+    joinLock.current = true;
     setJoining(true);
     try {
       const { data: confirmationCode, error: codeError } = await supabase.rpc(
@@ -409,6 +421,11 @@ const JoinCycling = () => {
       }
 
       setConfirmationCode(confirmationCode);
+      if (isPaidJoin && paymentReference) {
+        try { localStorage.setItem(USED_REFS_KEY, JSON.stringify([...usedRefs(), paymentReference].slice(-50))); } catch { /* ignore */ }
+        setPaymentStatus("pending");
+        window.history.replaceState(null, "", window.location.pathname);
+      }
       setSuccessDialogOpen(true);
       toast({
         title: 'Success',
@@ -429,6 +446,7 @@ const JoinCycling = () => {
       });
     } finally {
       setJoining(false);
+      joinLock.current = false;
     }
   };
 

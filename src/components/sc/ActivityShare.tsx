@@ -96,7 +96,12 @@ export const ShareCard = forwardRef<HTMLDivElement, { info: ShareInfo; theme: Ca
             <Sport size={13} /> {info.kind === "ride" ? "GROUP RIDE" : "FOOTBALL MATCH"}
           </span>
         </div>
-        <div style={{ fontSize: 30, lineHeight: "32px", fontWeight: 900, letterSpacing: "-0.03em", marginTop: 6 }}>{info.title}</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 2 }}>
+          <span style={{ display: "inline-flex", alignItems: "center", height: 26, padding: "0 12px", borderRadius: 99, fontSize: 11, fontWeight: 900, letterSpacing: "0.12em", background: info.priceLabel === "Free" ? "#BEF264" : "#FACC15", color: "#0E1411" }}>
+            {info.priceLabel === "Free" ? "FREE" : "PAID"}
+          </span>
+        </div>
+        <div style={{ fontSize: 30, lineHeight: "32px", fontWeight: 900, letterSpacing: "-0.03em", marginTop: -4, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const }}>{info.title}</div>
         {!!info.chips?.length && (
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: -4 }}>
             {info.chips.map((c) => (
@@ -110,9 +115,9 @@ export const ShareCard = forwardRef<HTMLDivElement, { info: ShareInfo; theme: Ca
               <span style={{ width: 34, height: 34, borderRadius: 11, background: theme === "dark" ? "rgba(255,255,255,0.1)" : iconBg, color: theme === "dark" ? accent : iconFg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <r.icon size={17} />
               </span>
-              <span style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+              <span style={{ display: "flex", flexDirection: "column", minWidth: 0, flex: 1 }}>
                 <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", opacity: 0.55 }}>{r.label}</span>
-                <span style={{ fontSize: 15, fontWeight: 800, lineHeight: "19px" }}>{r.value}</span>
+                <span style={{ fontSize: 15, fontWeight: 800, lineHeight: "19px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.value}</span>
               </span>
             </div>
           ))}

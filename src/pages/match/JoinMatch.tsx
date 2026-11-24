@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import Navbar from "@/components/Navbar";
@@ -65,7 +65,11 @@ const JoinMatch = () => {
   const reference = searchParams.get("reference");
   const trxref = searchParams.get("trxref");
   
-  const paymentReference = reference || trxref;
+  const urlReference = reference || trxref;
+  // Reference from the Paystack popup, when the page did not reload
+  const [popupReference, setPopupReference] = useState<string | null>(null);
+  const paymentReference = urlReference || popupReference;
+  const submitLock = useRef(false);
 
   const [match, setMatch] = useState<Match | null>(null);
   const [loading, setLoading] = useState(true);
@@ -204,7 +208,7 @@ const JoinMatch = () => {
   }, [slug, toast, form, userId]);
 
   useEffect(() => {
-    if (!paymentReference || !match) return;
+    if (!urlReference || !match) return;
 
     const verifyPayment = async () => {
       setVerifyingPayment(true);
@@ -247,7 +251,7 @@ const JoinMatch = () => {
     };
 
     verifyPayment();
-  }, [paymentReference, match, slug, toast]);
+  }, [urlReference, match, slug, toast]);
 
   const handlePaymentInitiation = async () => {
     if (!match || !match.is_paid || !match.price) return;
@@ -283,6 +287,7 @@ const JoinMatch = () => {
       const paystack = new window.PaystackPop();
       paystack.resumeTransaction(access_code, {
         onSuccess: (transaction) => {
+          setPopupReference(transaction?.reference || null);
           setPaymentStatus("success");
           toast({
             title: "Payment Successful",
@@ -312,6 +317,7 @@ const JoinMatch = () => {
 
   const onSubmit = async (data: any) => {
     if (!match || !slug) return;
+    if (submitLock.current) return;
 
     const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
     if (totalPlayerSlots + selectedSlots > match.total_slots) {
@@ -323,9 +329,22 @@ const JoinMatch = () => {
       return;
     }
 
+    submitLock.current = true;
     setJoining(true);
 
     try {
+      // One payment can only be used to join once
+      if (match.is_paid && paymentStatus === "success") {
+        if (!paymentReference) throw new Error("We could not find your payment reference. Please contact support.");
+        const { data: used } = await supabase
+          .from("players").select("id").eq("match_id", match.id)
+          .eq("details->>payment_reference", paymentReference).limit(1);
+        if (used && used.length > 0) {
+          setPaymentStatus("pending");
+          throw new Error("This payment has already been used to join this match.");
+        }
+      }
+
       const playerDetails: Record<string, any> = {};
       Object.keys(data).forEach((key) => {
         if (key !== "name") {
@@ -392,7 +411,10 @@ const JoinMatch = () => {
 
       form.reset();
       setPaymentStatus("pending");
+      setPopupReference(null);
       setSelectedSlots(1);
+      // Drop the payment reference from the address so a refresh cannot reuse it
+      if (urlReference) window.history.replaceState(null, "", window.location.pathname);
       // Ensure match and confirmationCode are set before opening dialog
       if (match && playerData.confirmation_code) {
         setSuccessDialogOpen(true);
@@ -423,15 +445,16 @@ const JoinMatch = () => {
         setMatch(updatedMatch as Match);
       }
       
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error joining match:", error);
       toast({
-        title: "Error",
-        description: "Failed to join the match. Please try again.",
+        title: "Could not join",
+        description: error?.message && error.message.length < 120 ? error.message : "Failed to join the match. Please try again.",
         variant: "destructive",
       });
     } finally {
       setJoining(false);
+      submitLock.current = false;
     }
   };
 

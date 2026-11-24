@@ -2,7 +2,7 @@
 <html lang="en-NG">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content" />
   <title>SportCliq | Play football, ride and book sports venues near you in Nigeria</title>
   <meta name="description" content="SportCliq is a sports community app for Nigeria. Find and join free or paid football matches, group cycling rides and verified sports venues near you, organise your own games and book pitches by the hour." />
   <meta name="keywords" content="SportCliq, Sport Cliq, football matches Nigeria, 5-a-side Lagos, football Ilorin, organise football match, book football pitch, cycling Nigeria, group rides, sports venues Nigeria" />
@@ -132,6 +132,18 @@
   <div id="root"></div>
   <!-- Scripts -->
   <script type="module" src="/src/main.tsx"></script>
+  <script>
+    // Behave like a native app: no pinch zoom and no double tap zoom on iOS Safari
+    ['gesturestart', 'gesturechange', 'gestureend'].forEach(function (t) {
+      document.addEventListener(t, function (e) { e.preventDefault(); }, { passive: false });
+    });
+    var lastTouchEnd = 0;
+    document.addEventListener('touchend', function (e) {
+      var now = Date.now();
+      if (now - lastTouchEnd <= 300 && !(e.target && e.target.closest && e.target.closest('input, textarea, select, [contenteditable]'))) e.preventDefault();
+      lastTouchEnd = now;
+    }, { passive: false });
+  </script>
   <script>
     // Enhanced error handling for debugging
     window.addEventListener('error', function(e) {

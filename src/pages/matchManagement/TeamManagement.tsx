@@ -5,7 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, KeyRound, Lock } from "lucide-react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { TouchBackend } from "react-dnd-touch-backend";
@@ -13,7 +13,8 @@ import Navbar from "@/components/Navbar";
 import MatchReport from "@/components/match/MatchReport";
 import TeamMatchDetails from "@/components/match/TeamMatchDetails";
 
-import { BackButton } from "@/components/sc/ui";
+import { BackButton, EmptyState, ScButton, Segmented } from "@/components/sc/ui";
+import { RowsSkeleton } from "@/components/sc/skeletons";
 type Player = { id: string; player_name: string };
 type Team = {
   name: string;
@@ -59,6 +60,7 @@ const TeamManagement = () => {
   const [history, setHistory] = useState<Team[][]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [mode, setMode] = useState<"automatic" | "manual">("automatic");
+  const [section, setSection] = useState<"teams" | "score">("teams");
 
   useEffect(() => {
     const fetchMatch = async () => {
@@ -74,6 +76,7 @@ const TeamManagement = () => {
             .from("matches")
             .select(`
               id, slug, super_code, title, match_date::text, match_time, venue,
+              venue_info:venues(name, city),
               team_assignments!fk_match (id, teams, is_public)
             `)
             .eq("slug", slug)
@@ -94,7 +97,13 @@ const TeamManagement = () => {
           title: match.title, 
           match_date: match.match_date, 
           match_time: match.match_time,
-          venue: match.venue || "Venue TBD" // Fallback for missing venue
+          venue: match.venue_info?.name
+            ? `${match.venue_info.name}${match.venue_info.city ? `, ${match.venue_info.city}` : ""}`
+            : typeof match.venue === "string" && match.venue
+              ? match.venue
+              : typeof match.venue === "object" && match.venue?.name
+                ? match.venue.name
+                : "Venue not set",
         });
 
         const teamAssignment = match.team_assignments[0] || {};
@@ -140,8 +149,8 @@ const TeamManagement = () => {
         }
       } catch (error) {
         console.error("Error fetching match:", error);
-        toast({ title: "Error", description: "Failed to load match details.", variant: "destructive" });
-        navigate("/matches");
+        toast({ title: "Could not load the match", description: "Check your connection and try again.", variant: "destructive" });
+        navigate(-1);
       }
     };
 
@@ -205,17 +214,14 @@ const TeamManagement = () => {
   const handleVerifySupercode = async () => {
     if (!match) return;
     try {
-      const { data, error } = await fetchWithRetry(
-        supabase.from("matches").select("super_code").eq("super_code", supercodeInput).maybeSingle()
-      );
-      if (error) throw error;
-      if (!data) {
-        toast({ title: "Invalid Supercode", description: "No match found with this supercode.", variant: "destructive" });
+      // The code must belong to this match, not just any match
+      if (supercodeInput.trim() !== String(match.super_code)) {
+        toast({ title: "Wrong super code", description: "That code is not for this match.", variant: "destructive" });
         return;
       }
       setIsVerified(true);
       setVerificationOpen(false);
-      toast({ title: "Access Granted", description: "You can now manage teams and record the match." });
+      toast({ title: "Unlocked", description: "Set the teams and keep score." });
     } catch (error) {
       console.error("Error verifying supercode:", error);
       toast({ title: "Error", description: "Failed to verify supercode.", variant: "destructive" });
@@ -234,9 +240,7 @@ const TeamManagement = () => {
 
   if (!match) {
     return (
-      <div className="min-h-screen bg-sc-bg dark:bg-gray-900 flex items-center justify-center">
-        <p className="text-sc-ink3 dark:text-gray-400">Loading match details...</p>
-      </div>
+      <div className="min-h-screen bg-sc-bg px-5 pt-20"><RowsSkeleton rows={4} /></div>
     );
   }
 
@@ -246,56 +250,72 @@ const TeamManagement = () => {
         <header className="sticky top-0 z-30 bg-sc-bg/95 backdrop-blur-xl px-5 pb-3 pt-[max(env(safe-area-inset-top),1rem)]">
           <div className="pt-3 flex items-center justify-between gap-3">
             <BackButton />
-            <h1 className="m-0 flex-1 text-center text-[17px] font-extrabold truncate">Manage match</h1>
+            <h1 className="m-0 flex-1 text-center text-[17px] font-extrabold truncate">Teams and score</h1>
             <div className="min-w-11" />
           </div>
         </header>
 
-        <div className="max-w-7xl mx-auto p-4 sm:p-6">
+        <div className="max-w-2xl mx-auto px-4 pt-2 pb-8">
           <Dialog open={verificationOpen} onOpenChange={setVerificationOpen}>
-            <DialogContent>
-              <DialogTitle>Verify Supercode</DialogTitle>
-              <DialogDescription>
-                <p className="mb-4">Enter the supercode to manage this match.</p>
-                <Input
-                  value={supercodeInput}
-                  onChange={(e) => setSupercodeInput(e.target.value)}
-                  placeholder="Enter supercode"
-                  className="mb-4"
-                />
-                <Button onClick={handleVerifySupercode} className="w-full bg-sc-green hover:brightness-95 text-sc-green-ink font-bold">
-                  Verify
-                </Button>
-              </DialogDescription>
+            <DialogContent className="w-full max-w-[calc(100%-1.5rem)] sm:max-w-[380px] rounded-[28px] bg-white p-6 flex flex-col items-center text-center gap-3">
+              <span className="w-14 h-14 rounded-full bg-sc-ink text-white flex items-center justify-center"><KeyRound size={24} /></span>
+              <DialogTitle className="text-xl font-extrabold">Enter your super code</DialogTitle>
+              <DialogDescription className="text-sm text-sc-ink2">Only the organiser can manage teams and the score.</DialogDescription>
+              <Input
+                value={supercodeInput}
+                onChange={(e) => setSupercodeInput(e.target.value.replace(/[^0-9]/g, "").slice(0, 6))}
+                onKeyDown={(e) => e.key === "Enter" && supercodeInput.length === 6 && handleVerifySupercode()}
+                placeholder="000000"
+                inputMode="numeric"
+                maxLength={6}
+                className="h-14 text-center text-2xl font-extrabold tracking-[0.4em]"
+              />
+              <ScButton onClick={handleVerifySupercode} disabled={supercodeInput.length !== 6}>Unlock</ScButton>
             </DialogContent>
           </Dialog>
 
+          {!isVerified && !verificationOpen && (
+            <div className="bg-white rounded-3xl mt-4">
+              <EmptyState icon={Lock} sport="gray" title="Locked" subtitle="Enter the super code for this match to manage teams and the score." action={<ScButton size="sm" full={false} kind="dark" onClick={() => setVerificationOpen(true)}>Enter code</ScButton>} />
+            </div>
+          )}
+
           {isVerified && (
-            <div className="space-y-6">
-              <TeamMatchDetails
-                match={match}
-                teams={teams}
-                setTeams={setTeams}
-                players={players}
-                mode={mode}
-                setMode={setMode}
-                isPublic={isPublic}
-                setIsPublic={setIsPublic}
-                history={history}
-                historyIndex={historyIndex}
-                addToHistory={addToHistory}
-                setHistoryIndex={setHistoryIndex}
-              />
-              <MatchReport
-                match={match}
-                teams={teams}
-                setTeams={setTeams}
-                events={events}
-                setEvents={setEvents}
-                players={players}
-                addToHistory={addToHistory}
-                isPublic={isPublic}
-              />
+            <div className="flex flex-col gap-4">
+              <div className="sticky top-[calc(max(env(safe-area-inset-top),1rem)+56px)] z-20 bg-sc-bg/95 backdrop-blur-xl -mx-4 px-4 pt-1 pb-3">
+                <Segmented
+                  value={section}
+                  onChange={(v) => setSection(v as "teams" | "score")}
+                  options={[{ value: "teams", label: "Teams" }, { value: "score", label: "Score and report" }]}
+                />
+              </div>
+              {section === "teams" ? (
+                <TeamMatchDetails
+                  match={match}
+                  teams={teams}
+                  setTeams={setTeams}
+                  players={players}
+                  mode={mode}
+                  setMode={setMode}
+                  isPublic={isPublic}
+                  setIsPublic={setIsPublic}
+                  history={history}
+                  historyIndex={historyIndex}
+                  addToHistory={addToHistory}
+                  setHistoryIndex={setHistoryIndex}
+                />
+              ) : (
+                <MatchReport
+                  match={match}
+                  teams={teams}
+                  setTeams={setTeams}
+                  events={events}
+                  setEvents={setEvents}
+                  players={players}
+                  addToHistory={addToHistory}
+                  isPublic={isPublic}
+                />
+              )}
             </div>
           )}
         </div>

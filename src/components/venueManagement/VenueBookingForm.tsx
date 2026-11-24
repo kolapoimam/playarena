@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -126,6 +126,37 @@ const VenueBookingForm = () => {
   const [accessCode, setAccessCode] = useState("");
   const [accessCodeError, setAccessCodeError] = useState<string | null>(null);
   const defaultEmail = "sportcliqapp@gmail.com";
+  // A payment or code can only ever create one booking
+  const [usedBooking, setUsedBooking] = useState<{ code?: string | null; status?: string | null; matchSlug?: string | null } | null>(null);
+  const submitLock = useRef(false);
+  const pendingKey = (venueId: string) => `sc_booking_${venueId}`;
+
+  /** Returns the booking already made with this payment reference, if any. */
+  const findBookingForReference = async (ref: string) => {
+    const { data: rows } = await supabase.from("bookings").select("id, match_id").eq("payment_reference", ref).limit(1);
+    const existing = rows?.[0];
+    if (!existing) return null;
+    const { data: codes } = await supabase.from("booking_access_codes").select("code, status").eq("booking_id", existing.id).limit(1);
+    let matchSlug: string | null = null;
+    if (existing.match_id) {
+      const { data: m } = await supabase.from("matches").select("slug").eq("id", existing.match_id).maybeSingle();
+      matchSlug = m?.slug ?? null;
+    }
+    return { code: codes?.[0]?.code ?? null, status: codes?.[0]?.status ?? null, matchSlug };
+  };
+
+  /** Sends the user on if this payment already has a booking. Returns true when handled. */
+  const handleExistingBooking = async (ref: string, slugForVenue: string) => {
+    const found = await findBookingForReference(ref);
+    if (!found) return false;
+    if (found.code && found.status === "pending" && !found.matchSlug) {
+      toast({ title: "Booking already saved", description: "This payment already has a booking. Taking you to set up your match." });
+      navigate(`/organize?venue=${slugForVenue}&code=${found.code}`, { replace: true });
+    } else {
+      setUsedBooking(found);
+    }
+    return true;
+  };
 
   const form = useForm<BookingFormValues>({
     resolver: zodResolver(bookingSchema),
@@ -218,6 +249,18 @@ const VenueBookingForm = () => {
         const { verified, resource_id, slug: returnedSlug, resource_type } = response.data;
 
         if (verified && resource_id === venue.id && returnedSlug === venue.slug && resource_type === "venue") {
+          if (await handleExistingBooking(paymentReference, venue.slug)) return;
+          // Put back the exact date and time that were paid for, and keep them locked
+          try {
+            const saved = JSON.parse(sessionStorage.getItem(pendingKey(venue.id)) || "null");
+            if (saved?.match_date && saved?.start_time && saved?.end_time) {
+              form.setValue("match_date", new Date(`${saved.match_date}T12:00:00`));
+              form.setValue("start_time", saved.start_time);
+              form.setValue("end_time", saved.end_time);
+              if (saved.booker_name) form.setValue("booker_name", saved.booker_name);
+              if (saved.booker_phone) form.setValue("booker_phone", saved.booker_phone);
+            }
+          } catch { /* ignore */ }
           setPaymentStatus("success");
           toast({
             title: "Payment Successful",
@@ -303,12 +346,15 @@ const VenueBookingForm = () => {
         endDateTime.setHours(endHours, endMinutes, 0, 0);
 
         const checkAvailability = async () => {
-          const { data, error } = await supabase
-            .from("venue_access_codes")
-            .select("match_date, start_time, end_time, status")
-            .eq("venue_id", venue.id)
-            .eq("match_date", format(value.match_date, "yyyy-MM-dd"))
-            .in("status", ["pending", "active"]);
+          const day = format(value.match_date, "yyyy-MM-dd");
+          const [vac, bac] = await Promise.all([
+            supabase.from("venue_access_codes").select("match_date, start_time, end_time, status")
+              .eq("venue_id", venue.id).eq("match_date", day).in("status", ["pending", "active"]),
+            supabase.from("booking_access_codes").select("match_date, start_time, end_time, status")
+              .eq("venue_id", venue.id).eq("match_date", day).in("status", ["pending", "active"]),
+          ]);
+          const error = vac.error && bac.error ? vac.error : null;
+          const data = [...(vac.data || []), ...(bac.data || [])];
 
           if (error) {
             console.error("Error checking availability:", error);
@@ -436,6 +482,17 @@ const VenueBookingForm = () => {
 
       const { access_code } = response.data;
 
+      try {
+        sessionStorage.setItem(pendingKey(venue.id), JSON.stringify({
+          match_date: format(form.getValues("match_date"), "yyyy-MM-dd"),
+          start_time: form.getValues("start_time"),
+          end_time: form.getValues("end_time"),
+          booker_name: form.getValues("booker_name"),
+          booker_phone: form.getValues("booker_phone"),
+          amount,
+        }));
+      } catch { /* ignore */ }
+
       const paystack = new window.PaystackPop();
       paystack.resumeTransaction(access_code, {
         onSuccess: (transaction) => {
@@ -477,8 +534,20 @@ const VenueBookingForm = () => {
       return;
     }
 
+    if (submitLock.current) return;
+    submitLock.current = true;
+
     try {
       setPaying(true);
+
+      if (!useAccessCode) {
+        if (!paymentReference) throw new Error("We could not find your payment reference. Please contact support.");
+        if (await handleExistingBooking(paymentReference, venue.slug)) return;
+      } else {
+        const fresh = await validateAccessCode(accessCode);
+        if (!fresh) throw new Error("This access code is no longer valid.");
+      }
+
       let bookingAccessCode = accessCode;
       if (!useAccessCode) {
         bookingAccessCode = generateAccessCode();
@@ -540,7 +609,7 @@ const VenueBookingForm = () => {
       };
 
       if (useAccessCode) {
-        const { error: updateAccessCodeError } = await supabase
+        const { data: claimed, error: updateAccessCodeError } = await supabase
           .from("booking_access_codes")
           .update({
             booking_id: bookingData.id,
@@ -551,9 +620,17 @@ const VenueBookingForm = () => {
             expiry_date: new Date(new Date(createdAt).getTime() + 48 * 60 * 60 * 1000).toISOString(),
           })
           .eq("code", bookingAccessCode)
-          .eq("venue_id", venue.id);
+          .eq("venue_id", venue.id)
+          .eq("status", "pending")
+          .is("booking_id", null)
+          .select("id");
 
         if (updateAccessCodeError) throw updateAccessCodeError;
+        if (!claimed || claimed.length === 0) {
+          // Someone used this code first. Undo the booking we just made.
+          await supabase.from("bookings").delete().eq("id", bookingData.id);
+          throw new Error("This access code has already been used.");
+        }
       } else {
         const { error: accessCodeError } = await supabase
           .from("booking_access_codes")
@@ -563,22 +640,25 @@ const VenueBookingForm = () => {
       }
 
       notifyBooking(bookingData.id);
+      try { sessionStorage.removeItem(pendingKey(venue.id)); } catch { /* ignore */ }
 
       toast({
-        title: "Success",
-        description: "Booking successful! Redirecting to organize match...",
+        title: "Booking confirmed",
+        description: "Now set up your match. The venue, date and time are locked to your booking.",
       });
 
-      navigate(`/organize?venue=${venue.slug}&code=${bookingAccessCode}`);
+      // replace so the back button cannot return to Complete booking
+      navigate(`/organize?venue=${venue.slug}&code=${bookingAccessCode}`, { replace: true });
     } catch (error: any) {
       console.error("Error saving booking:", error);
       toast({
-        title: "Error",
-        description: "Failed to save booking. Please try again.",
+        title: "Booking not saved",
+        description: error?.message || "Failed to save booking. Please try again.",
         variant: "destructive",
       });
     } finally {
       setPaying(false);
+      submitLock.current = false;
     }
   };
 
@@ -602,6 +682,39 @@ const VenueBookingForm = () => {
         <div className="text-center py-8">
           <h2 className="text-xl font-semibold mb-2 text-sc-ink dark:text-gray-100">Error</h2>
           <p className="text-sc-ink3 dark:text-gray-400">Unable to load booking form.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (usedBooking) {
+    return (
+      <div className="min-h-screen pb-20 bg-sc-bg">
+        <header className="sticky top-0 z-30 bg-sc-bg/95 backdrop-blur-xl px-5 pb-3 pt-[max(env(safe-area-inset-top),1rem)]">
+          <div className="pt-3 flex items-center justify-between gap-3">
+            <BackButton />
+            <h1 className="m-0 flex-1 text-center text-[17px] font-extrabold truncate">Book venue</h1>
+            <div className="min-w-11" />
+          </div>
+        </header>
+        <div className="px-5 pt-6 max-w-md mx-auto">
+          <div className="bg-white rounded-3xl p-6 flex flex-col items-center text-center gap-3 shadow-card">
+            <span className="w-14 h-14 rounded-full bg-sport-tennis-bg text-sport-tennis-fg flex items-center justify-center text-2xl font-extrabold">!</span>
+            <h2 className="m-0 text-xl font-extrabold">This booking has been used</h2>
+            <p className="m-0 text-sm text-sc-ink3 leading-6">
+              Each payment creates one booking, and each booking can set up one match. This one has already been used, so it cannot be booked again.
+            </p>
+            <div className="w-full flex flex-col gap-2.5 mt-2">
+              {usedBooking.matchSlug && (
+                <button type="button" onClick={() => navigate(`/match/${usedBooking.matchSlug}`, { replace: true })} className="h-12 rounded-full bg-sc-green text-white font-bold">
+                  View the match
+                </button>
+              )}
+              <button type="button" onClick={() => navigate(`/venue/${venue.slug}/book`, { replace: true })} className="h-12 rounded-full bg-sc-soft text-sc-ink font-bold">
+                Make a new booking
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     );

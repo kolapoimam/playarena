@@ -12,7 +12,8 @@ import {
 } from "lucide-react";
 
 import { BackButton } from "@/components/sc/ui";
-import { NavHeader, FunEmpty } from "@/components/sc/ui";
+import { NavHeader, FunEmpty, EmptyState, formatTime12 } from "@/components/sc/ui";
+import { teamColor } from "@/lib/teamColors";
 import { Sparkles } from "lucide-react";
 import { DetailSkeleton } from "@/components/sc/skeletons";
 type MatchHighlight = {
@@ -75,11 +76,7 @@ const MatchHighlights = () => {
 
         if (error) throw error;
         if (!data || data.length === 0) {
-          toast({
-            title: "Error",
-            description: "Match highlights not found or not public.",
-            variant: "destructive",
-          });
+          // The empty state explains this, no toast needed
           return;
         }
 
@@ -120,286 +117,110 @@ const MatchHighlights = () => {
     );
   }
 
+  const teams = Array.isArray(highlight.teams) ? highlight.teams : [];
+  const events = (Array.isArray(highlight.events) ? highlight.events : []).slice().sort((x, y) => y.minute - x.minute);
+  const shareUrl = `${window.location.origin}/highlights/${slug}`;
+  const LABEL: Record<string, { label: string; bg: string; fg: string }> = {
+    goal: { label: "Goal", bg: "#DCFCE7", fg: "#15803D" },
+    shot: { label: "Shot", bg: "#DBEAFE", fg: "#1D4ED8" },
+    foul: { label: "Foul", bg: "#EEF0EB", fg: "#4A524D" },
+    yellow_card: { label: "Yellow card", bg: "#FEF9C3", fg: "#854D0E" },
+    red_card: { label: "Red card", bg: "#FEE2E2", fg: "#B91C1C" },
+    substitution: { label: "Sub", bg: "#EDE9FE", fg: "#6D28D9" },
+  };
+  const time = formatTime12(String(highlight.match_time || "").slice(0, 5));
+  const date = highlight.match_date ? new Date(`${String(highlight.match_date).slice(0, 10)}T12:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }) : "";
+
   return (
-    <div className="min-h-screen bg-sc-bg text-sc-ink font-sans pb-32">
-      {/* Header */}
-      <header className="sticky top-0 z-30 bg-sc-bg/95 backdrop-blur-xl px-5 pb-3 pt-[max(env(safe-area-inset-top),1rem)]">
-          <div className="pt-3 flex items-center justify-between gap-3">
-            <BackButton />
-            <h1 className="m-0 flex-1 text-center text-[17px] font-extrabold truncate">Highlights</h1>
-            <div className="min-w-11" />
+    <div className="min-h-screen bg-sc-bg text-sc-ink pb-32">
+      <NavHeader title="Highlights" />
+      <main className="max-w-2xl mx-auto px-4 pt-2 flex flex-col gap-4">
+        <div className="bg-sc-ink text-white rounded-3xl p-5 flex flex-col gap-4">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-[11px] font-bold tracking-[0.14em] text-[#BEF264]">MATCH HIGHLIGHTS</span>
+            <span className="text-xs font-bold text-white/60">{[date, time].filter(Boolean).join(" · ")}</span>
           </div>
-        </header>
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Match Details Card */}
-        <div className="bg-white dark:bg-gray-800 rounded-3xl p-[18px] mb-6">
-          <h2 className="text-xl font-semibold text-sc-ink dark:text-gray-200 mb-4">
-            Match Details
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Match Title */}
-            <div className="flex items-start space-x-3">
-              <div className="p-2 bg-sc-green-bg dark:bg-green-900 rounded-lg">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 text-sc-green-dark dark:text-green-300"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-                  />
-                </svg>
-              </div>
-              <div>
-                <p className="text-xs font-medium text-sc-ink3 dark:text-gray-400">
-                  TITLE
-                </p>
-                <p className="text-sm font-medium text-sc-ink dark:text-gray-200">
-                  {highlight.title}
-                </p>
-              </div>
-            </div>
-
-            {/* Venue */}
-            <div className="flex items-start space-x-3">
-              <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 text-blue-600 dark:text-blue-300"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                  />
-                </svg>
-              </div>
-              <div>
-                <p className="text-xs font-medium text-sc-ink3 dark:text-gray-400">
-                  VENUE
-                </p>
-                <p className="text-sm font-medium text-sc-ink dark:text-gray-200">
-                  {highlight.venue || "Venue TBD"}
-                </p>
-              </div>
-            </div>
-
-            {/* Match Date */}
-            <div className="flex items-start space-x-3">
-              <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 text-purple-600 dark:text-purple-300"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                  />
-                </svg>
-              </div>
-              <div>
-                <p className="text-xs font-medium text-sc-ink3 dark:text-gray-400">
-                  DATE
-                </p>
-                <p className="text-sm font-medium text-sc-ink dark:text-gray-200">
-                  {highlight.match_date}
-                </p>
-              </div>
-            </div>
-
-            {/* Match Time */}
-            <div className="flex items-start space-x-3">
-              <div className="p-2 bg-amber-100 dark:bg-amber-900 rounded-lg">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 text-amber-600 dark:text-amber-300"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-              </div>
-              <div>
-                <p className="text-xs font-medium text-sc-ink3 dark:text-gray-400">
-                  TIME
-                </p>
-                <p className="text-sm font-medium text-sc-ink dark:text-gray-200">
-                  {highlight.match_time}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Score Display */}
-          <div className="mt-6 flex items-center justify-center space-x-4">
-            <div className="text-center">
-              <p className="text-sm font-medium text-sc-ink2 dark:text-gray-300">
-                {highlight.teams[0]?.name || "Team 1"}
-              </p>
-              <p className="text-3xl font-bold text-sc-ink dark:text-white">
-                {highlight.teams[0]?.score || 0}
-              </p>
-            </div>
-            <div className="text-2xl font-bold text-sc-ink dark:text-white">
-              -
-            </div>
-            <div className="text-center">
-              <p className="text-sm font-medium text-sc-ink2 dark:text-gray-300">
-                {highlight.teams[1]?.name || "Team 2"}
-              </p>
-              <p className="text-3xl font-bold text-sc-ink dark:text-white">
-                {highlight.teams[1]?.score || 0}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Teams Section */}
-          <div className="md:col-span-2 bg-white dark:bg-gray-800 rounded-3xl p-[18px]">
-            <h2 className="text-xl font-semibold text-sc-ink dark:text-gray-200 mb-4">
-              Teams
-            </h2>
-            <div className="space-y-4">
-              {highlight.teams.map((team, index) => (
-                <div
-                  key={team.name}
-                  className="bg-sc-soft dark:bg-gray-700 rounded-lg p-4 border-l-4 border-blue-500"
-                >
-                  <div className="flex justify-between items-center mb-2">
-                    <h3 className="text-lg font-medium text-sc-ink dark:text-gray-200">
-                      {team.name}
-                    </h3>
-                    <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                      {team.score}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div>
-                      <p className="text-sc-ink3 dark:text-gray-400">
-                        Possession: {team.analytics.possession}%
-                      </p>
-                      <p className="text-sc-ink3 dark:text-gray-400">
-                        Shots: {team.analytics.shots}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sc-ink3 dark:text-gray-400">
-                        Fouls: {team.analytics.fouls}
-                      </p>
-                      <p className="text-sc-ink3 dark:text-gray-400">
-                        Yellow Cards: {team.analytics.yellow_cards}
-                      </p>
-                      <p className="text-sc-ink3 dark:text-gray-400">
-                        Red Cards: {team.analytics.red_cards}
-                      </p>
-                    </div>
-                  </div>
+          <span className="text-2xl font-extrabold tracking-[-0.02em] leading-7">{highlight.title}</span>
+          {highlight.venue && <span className="-mt-3 text-sm text-white/70">{highlight.venue}</span>}
+          {teams.length === 0 ? (
+            <span className="text-sm text-white/70">Teams have not been set yet.</span>
+          ) : (
+            <div className="flex flex-col gap-2.5">
+              {teams.map((t, i) => (
+                <div key={`${i}-${t.name}`} className="flex items-center gap-3">
+                  <span className="w-2.5 h-9 rounded-full" style={{ background: teamColor(i) }} />
+                  <span className="flex-1 min-w-0 text-base font-extrabold truncate">{t.name}</span>
+                  <span className="text-[34px] leading-none font-extrabold tabular-nums">{t.score || 0}</span>
                 </div>
               ))}
             </div>
-          </div>
+          )}
+        </div>
 
-          {/* Share Section */}
-          <div className="bg-white dark:bg-gray-800 rounded-3xl p-[18px] text-center">
-            <h2 className="text-xl font-semibold text-sc-ink dark:text-gray-200 mb-4">
-              Spread the Word
-            </h2>
-            <p className="text-sm text-sc-ink3 dark:text-gray-400 mb-4">
-              Enjoyed this match? Let your friends catch the action too — share
-              the highlights!
-            </p>
-            <div className="flex justify-center gap-4">
-              <a
-                href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(
-                  `${window.location.origin}/highlights/${highlight.match_id}`
-                )}&text=Don't miss this thrilling highlight on SportCliq!`}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Button variant="outline" className="p-2">
-                  <Twitter size={20} className="text-blue-400" />
-                </Button>
-              </a>
-              <a
-                href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
-                  `${window.location.origin}/highlights/${highlight.match_id}`
-                )}`}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Button variant="outline" className="p-2">
-                  <Facebook size={20} className="text-blue-600" />
-                </Button>
-              </a>
-              <a
-                href={`https://api.whatsapp.com/send?text=Check out this amazing match highlight on SportCliq! ${encodeURIComponent(
-                  `${window.location.origin}/highlights/${highlight.match_id}`
-                )}`}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Button variant="outline" className="p-2">
-                  <MessageCircle size={20} className="text-sc-green-dark" />
-                </Button>
-              </a>
-              <Button
-                variant="outline"
-                onClick={async () => {
-                  try {
-                    await navigator.clipboard.writeText(
-                      `${window.location.origin}/highlights/${highlight.match_id}`
-                    );
-                    toast({
-                      title: "Copied!",
-                      description: "Highlight link is ready to share.",
-                    });
-                  } catch (error) {
-                    toast({
-                      title: "Error",
-                      description: "Couldn't copy the link.",
-                      variant: "destructive",
-                    });
-                  }
-                }}
-                className="p-2"
-              >
-                <Copy size={20} className="text-sc-ink3" />
-              </Button>
+        <div className="bg-white rounded-3xl p-[18px] flex flex-col gap-1">
+          <span className="text-base font-extrabold mb-1">Key moments</span>
+          {events.length === 0 ? (
+            <EmptyState icon={Sparkles} sport="tennis" title="No moments yet" subtitle="Goals, shots and cards show up here as the organiser records them." />
+          ) : (
+            <div className="flex flex-col divide-y divide-sc-line">
+              {events.map((e) => {
+                const m = LABEL[e.type] || LABEL.foul;
+                const ti = teams.findIndex((t) => t.name === e.team_name);
+                return (
+                  <div key={e.id} className="py-3 flex items-center gap-3">
+                    <span className="w-10 text-center text-sm font-extrabold text-sc-ink3 tabular-nums">{e.minute}'</span>
+                    <span className="h-7 px-2.5 rounded-full text-xs font-extrabold inline-flex items-center shrink-0" style={{ background: m.bg, color: m.fg }}>{m.label}</span>
+                    <span className="flex-1 min-w-0 text-sm font-bold truncate">{e.description || e.team_name}</span>
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: ti >= 0 ? teamColor(ti) : "#9CA3AF" }} />
+                  </div>
+                );
+              })}
             </div>
+          )}
+        </div>
+
+        {teams.length > 0 && (
+          <div className="bg-white rounded-3xl p-[18px] flex flex-col gap-3.5">
+            <span className="text-base font-extrabold">Team stats</span>
+            {teams.map((t, i) => (
+              <div key={`${i}-${t.name}`} className="flex flex-col gap-2">
+                <div className="flex items-center justify-between text-sm font-bold">
+                  <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full" style={{ background: teamColor(i) }} />{t.name}</span>
+                  <span className="text-sc-ink3">{t.analytics?.possession ?? 50}% possession</span>
+                </div>
+                <div className="grid grid-cols-4 gap-2">
+                  {[["Shots", t.analytics?.shots], ["Fouls", t.analytics?.fouls], ["Yellow", t.analytics?.yellow_cards], ["Red", t.analytics?.red_cards]].map(([k, v]) => (
+                    <div key={k as string} className="bg-sc-soft rounded-xl py-2 flex flex-col items-center">
+                      <span className="text-base font-extrabold tabular-nums">{(v as number) ?? 0}</span>
+                      <span className="text-[11px] font-bold text-sc-ink3">{k}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="bg-white rounded-3xl p-[18px] flex flex-col gap-3">
+          <span className="text-base font-extrabold">Share the highlights</span>
+          <div className="grid grid-cols-4 gap-2">
+            <a href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`${highlight.title} on SportCliq ${shareUrl}`)}`} target="_blank" rel="noopener noreferrer" aria-label="Share on WhatsApp" className="h-14 rounded-2xl bg-sc-soft flex items-center justify-center text-[#16A34A]"><MessageCircle size={22} /></a>
+            <a href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(`${highlight.title} on @SportCliq`)}`} target="_blank" rel="noopener noreferrer" aria-label="Share on X" className="h-14 rounded-2xl bg-sc-soft flex items-center justify-center"><Twitter size={22} /></a>
+            <a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`} target="_blank" rel="noopener noreferrer" aria-label="Share on Facebook" className="h-14 rounded-2xl bg-sc-soft flex items-center justify-center text-[#1D4ED8]"><Facebook size={22} /></a>
+            <button
+              type="button"
+              aria-label="Copy link"
+              onClick={async () => {
+                try { await navigator.clipboard.writeText(shareUrl); toast({ title: "Link copied" }); }
+                catch { toast({ title: "Could not copy", description: shareUrl, variant: "destructive" }); }
+              }}
+              className="h-14 rounded-2xl bg-sc-soft flex items-center justify-center"
+            >
+              <Copy size={22} />
+            </button>
           </div>
         </div>
       </main>
-
       <Navbar />
     </div>
   );

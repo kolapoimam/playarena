@@ -124,7 +124,7 @@ const MatchDetailsForm = ({ isPreFilled, preSelectedVenueSlug, onPrefill, onVenu
                 />
               </FormControl>
               <FormDescription className="text-sm text-sc-ink3 dark:text-gray-400">
-                Match start time (12-hour clock
+                {isPreFilled ? "Locked to your booking" : "When the match kicks off"}
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -145,7 +145,7 @@ const MatchDetailsForm = ({ isPreFilled, preSelectedVenueSlug, onPrefill, onVenu
                 />
               </FormControl>
               <FormDescription className="text-sm text-sc-ink3 dark:text-gray-400">
-                Match end time (12-hour clock, e.g., 03:00 PM)
+                {isPreFilled ? "Locked to your booking" : "When the match ends"}
               </FormDescription>
               <FormMessage />
             </FormItem>

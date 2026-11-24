@@ -1,11 +1,12 @@
 import { useRef, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Share2, Download, Copy, Twitter, Facebook, MessageCircle } from "lucide-react";
-import html2canvas from "html2canvas";
+import { Copy, Download, Facebook, Goal, Loader2, MessageCircle, Minus, Plus, Share2, ShieldAlert, Target, Twitter, Trophy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { format, differenceInMinutes } from "date-fns";
+import { EmptyState, ScButton, Segmented } from "@/components/sc/ui";
+import { downloadElementAsPng } from "@/components/sc/TicketCard";
+import { teamColor } from "@/lib/teamColors";
 
 type Player = { id: string; player_name: string };
 type Team = {
@@ -24,87 +25,55 @@ type MatchEvent = {
   description: string;
 };
 type Match = { id: string; slug: string; super_code: string; title: string; match_date: string; match_time: string; venue: string };
-type TeamRanking = {
-  name: string;
-  goals: number;
-  points: number;
-  yellow_cards: number;
-  red_cards: number;
-  fouls: number;
-  shots: number;
+type TeamRanking = { name: string; goals: number; points: number; yellow_cards: number; red_cards: number; fouls: number; shots: number };
+
+const EVENT_META: Record<MatchEvent["type"], { label: string; bg: string; fg: string }> = {
+  goal: { label: "Goal", bg: "#DCFCE7", fg: "#15803D" },
+  shot: { label: "Shot", bg: "#DBEAFE", fg: "#1D4ED8" },
+  foul: { label: "Foul", bg: "#EEF0EB", fg: "#4A524D" },
+  yellow_card: { label: "Yellow card", bg: "#FEF9C3", fg: "#854D0E" },
+  red_card: { label: "Red card", bg: "#FEE2E2", fg: "#B91C1C" },
+  substitution: { label: "Sub", bg: "#EDE9FE", fg: "#6D28D9" },
 };
 
+/** Team stats from the recorded events. Goals come from the scoreboard. */
 const generateAnalyticsAndRankings = (events: MatchEvent[], teams: Team[]): { updatedTeams: Team[]; rankings: TeamRanking[] } => {
-  const updatedTeams = teams.map((team) => ({
-    ...team,
-    analytics: { possession: 50, shots: 0, fouls: 0, yellow_cards: 0, red_cards: 0 },
-  }));
+  const updatedTeams = teams.map((team) => ({ ...team, analytics: { possession: 50, shots: 0, fouls: 0, yellow_cards: 0, red_cards: 0 } }));
+  const stats: Record<string, TeamRanking> = {};
+  teams.forEach((t) => (stats[t.name] = { name: t.name, goals: t.score || 0, points: 0, yellow_cards: 0, red_cards: 0, fouls: 0, shots: 0 }));
+  const actions: Record<string, number> = {};
+  teams.forEach((t) => (actions[t.name] = 0));
 
-  const teamStats: { [key: string]: TeamRanking } = {};
-  teams.forEach((team) => {
-    teamStats[team.name] = { name: team.name, goals: team.score, points: 0, yellow_cards: 0, red_cards: 0, fouls: 0, shots: 0 };
+  events.forEach((e) => {
+    const team = updatedTeams.find((t) => t.name === e.team_name);
+    const s = stats[e.team_name];
+    if (!team || !s) return;
+    if (e.type === "yellow_card") { team.analytics.yellow_cards++; s.yellow_cards++; }
+    if (e.type === "red_card") { team.analytics.red_cards++; s.red_cards++; }
+    if (e.type === "foul") { team.analytics.fouls++; s.fouls++; }
+    if (e.type === "shot") { team.analytics.shots++; s.shots++; }
+    if (["goal", "shot", "foul"].includes(e.type)) actions[e.team_name]++;
   });
 
-  let totalActions = 0;
-  events.forEach((event) => {
-    const team = updatedTeams.find((t) => t.name === event.team_name);
-    if (!team || !teamStats[event.team_name]) return;
-
-    if (event.type === "goal") {
-      teamStats[event.team_name].goals += 1;
-      teamStats[event.team_name].points += 3;
-      totalActions += 1;
-    } else if (event.type === "yellow_card") {
-      team.analytics.yellow_cards += 1;
-      teamStats[event.team_name].yellow_cards += 1;
-      teamStats[event.team_name].points -= 1;
-      totalActions += 1;
-    } else if (event.type === "red_card") {
-      team.analytics.red_cards += 1;
-      teamStats[event.team_name].red_cards += 1;
-      teamStats[event.team_name].points -= 3;
-      totalActions += 1;
-    } else if (event.type === "foul") {
-      team.analytics.fouls += 1;
-      teamStats[event.team_name].fouls += 1;
-      teamStats[event.team_name].points -= 0.5;
-      totalActions += 1;
-    } else if (event.type === "shot") {
-      team.analytics.shots += 1;
-      teamStats[event.team_name].shots += 1;
-      totalActions += 1;
-    }
+  // A simple possession estimate from attacking actions, nudged by the score
+  const totalActions = Object.values(actions).reduce((a, b) => a + b, 0);
+  const totalScore = teams.reduce((a, t) => a + (t.score || 0), 0);
+  updatedTeams.forEach((t) => {
+    let p = totalActions > 0 ? (actions[t.name] / totalActions) * 100 : 100 / Math.max(1, teams.length);
+    if (totalScore > 0) p = Math.min(80, Math.max(20, p + ((t.score || 0) / totalScore) * 10 - 5));
+    t.analytics.possession = Math.round(p);
   });
 
-  const actionsPerTeam: { [key: string]: number } = {};
-  teams.forEach((team) => (actionsPerTeam[team.name] = 0));
-  events.forEach((event) => {
-    if (["goal", "shot", "foul"].includes(event.type) && actionsPerTeam[event.team_name] !== undefined) {
-      actionsPerTeam[event.team_name] += 1;
-    }
+  // 3 points for a win, 1 for a draw against the other teams, cards cost points
+  Object.values(stats).forEach((s) => {
+    teams.forEach((o) => {
+      if (o.name === s.name) return;
+      if (s.goals > (o.score || 0)) s.points += 3;
+      else if (s.goals === (o.score || 0)) s.points += 1;
+    });
+    s.points -= s.red_cards * 2 + s.yellow_cards * 0.5;
   });
-
-  const totalTeamActions = Object.values(actionsPerTeam).reduce((sum, val) => sum + val, 0);
-  const totalScore = teams.reduce((sum, team) => sum + team.score, 0);
-
-  updatedTeams.forEach((team) => {
-    let possession = 50;
-    if (totalTeamActions > 0) {
-      possession = Math.round((actionsPerTeam[team.name] / totalTeamActions) * 100);
-    }
-    if (totalScore > 0) {
-      const scoreWeight = (team.score / totalScore) * 30; // Score influences possession up to 30%
-      possession = Math.min(80, Math.max(20, possession + scoreWeight));
-    }
-    team.analytics.possession = Math.round(possession);
-  });
-
-  const rankings = Object.values(teamStats).sort((a, b) => {
-    if (b.points !== a.points) return b.points - a.points;
-    if (b.goals !== a.goals) return b.goals - a.goals;
-    return a.red_cards - b.red_cards;
-  });
-
+  const rankings = Object.values(stats).sort((a, b) => b.points - a.points || b.goals - a.goals || a.red_cards - b.red_cards);
   return { updatedTeams, rankings };
 };
 
@@ -128,398 +97,337 @@ const MatchReport = ({
   isPublic: boolean;
 }) => {
   const { toast } = useToast();
-  const reportRef = useRef<HTMLDivElement>(null);
   const exportRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [eventType, setEventType] = useState<MatchEvent["type"] | null>(null);
-  const [eventDialogOpen, setEventDialogOpen] = useState(false);
+  const [eventTeam, setEventTeam] = useState<string | null>(null);
+  const [recording, setRecording] = useState(false);
+  const [view, setView] = useState<"live" | "stats">("live");
   const { updatedTeams, rankings } = generateAnalyticsAndRankings(events, teams);
 
-  const handleScoreChange = async (teamName: string, value: string) => {
-    if (!/^\d+$/.test(value) || parseInt(value) >= 30) {
-      toast({ title: "Invalid Score", description: "Score must be a number less than 30.", variant: "destructive" });
-      return;
-    }
+  const start = new Date(`${match.match_date}T${match.match_time}`);
+  const minuteNow = () => {
+    if (isNaN(start.getTime())) return 0;
+    return Math.max(0, Math.min(150, differenceInMinutes(new Date(), start)));
+  };
+  const nameOf = (id?: string) => players.find((p) => p.id === id)?.player_name;
+  const shareUrl = `${window.location.origin}/highlights/${match.slug}`;
 
-    const score = parseInt(value);
-    const tempTeams = teams.map((t) => (t.name === teamName ? { ...t, score } : t));
-    const { updatedTeams: newTeams } = generateAnalyticsAndRankings(events, tempTeams);
-    setTeams(newTeams);
-    addToHistory(newTeams);
-
+  const persist = async (next: Team[], quiet = false) => {
     try {
-      const { data: existingAssignment, error: fetchError } = await supabase
-        .from("team_assignments")
-        .select("id")
-        .eq("match_id", match.id)
-        .maybeSingle();
-
+      const { data: existing, error: fetchError } = await supabase.from("team_assignments").select("id").eq("match_id", match.id).maybeSingle();
       if (fetchError && fetchError.code !== "PGRST116") throw fetchError;
-
-      const teamAssignmentData = { match_id: match.id, super_code: match.super_code, teams: newTeams, is_public: isPublic };
-      const { error } = existingAssignment
-        ? await supabase.from("team_assignments").update(teamAssignmentData).eq("id", existingAssignment.id)
-        : await supabase.from("team_assignments").insert(teamAssignmentData);
-
+      const row = { match_id: match.id, super_code: match.super_code, teams: next, is_public: isPublic };
+      const { error } = existing
+        ? await supabase.from("team_assignments").update(row).eq("id", existing.id)
+        : await supabase.from("team_assignments").insert(row);
       if (error) throw error;
-      toast({ title: "Teams Saved", description: "Team scores and analytics have been updated." });
-    } catch (error) {
-      console.error("Error saving teams:", error);
-      toast({ title: "Error", description: "Failed to save teams.", variant: "destructive" });
+      if (!quiet) toast({ title: "Score saved" });
+    } catch (e) {
+      console.error("Error saving score:", e);
+      toast({ title: "Score not saved", description: "Check your connection and try again.", variant: "destructive" });
     }
   };
 
-  const addEvent = async (type: MatchEvent["type"], teamName: string) => {
-    if (!match) return;
+  const changeScore = (teamName: string, delta: number) => {
+    const team = teams.find((t) => t.name === teamName);
+    if (!team) return;
+    const score = Math.max(0, Math.min(29, (team.score || 0) + delta));
+    if (score === team.score) return;
+    const { updatedTeams: next } = generateAnalyticsAndRankings(events, teams.map((t) => (t.name === teamName ? { ...t, score } : t)));
+    setTeams(next);
+    addToHistory(next);
+    persist(next, true);
+  };
 
+  const openEvent = (type: MatchEvent["type"]) => {
+    if (teams.length === 0) {
+      toast({ title: "Make teams first", description: "Events are recorded against a team.", variant: "destructive" });
+      return;
+    }
+    setEventType(type);
+    setEventTeam(teams.length === 2 ? null : null);
+  };
+
+  const record = async (teamName: string, playerId?: string) => {
+    if (!eventType) return;
+    setRecording(true);
+    const who = nameOf(playerId);
     const newEvent: MatchEvent = {
       id: crypto.randomUUID(),
       match_id: match.id,
-      type,
+      type: eventType,
       team_name: teamName,
-      minute: Math.floor(Date.now() / 60000) % 90,
-      description: `${type.replace("_", " ")} by ${teamName}`,
+      ...(playerId ? { player_id: playerId } : {}),
+      minute: minuteNow(),
+      description: `${EVENT_META[eventType].label}${who ? ` by ${who}` : ""} for ${teamName}`,
     };
-
     try {
       const { error } = await supabase.from("match_events").insert(newEvent);
       if (error) throw error;
-
-      const updatedEvents = [...events, newEvent];
-      setEvents(updatedEvents);
-      const { updatedTeams } = generateAnalyticsAndRankings(updatedEvents, teams);
-      setTeams(updatedTeams);
-      addToHistory(updatedTeams);
-      setEventDialogOpen(false);
-    } catch (error) {
-      console.error("Error adding event:", error);
-      toast({ title: "Error", description: "Failed to add event.", variant: "destructive" });
+      const nextEvents = [...events, newEvent];
+      setEvents(nextEvents);
+      // A goal also goes on the scoreboard
+      const scored = eventType === "goal" ? teams.map((t) => (t.name === teamName ? { ...t, score: Math.min(29, (t.score || 0) + 1) } : t)) : teams;
+      const { updatedTeams: next } = generateAnalyticsAndRankings(nextEvents, scored);
+      setTeams(next);
+      addToHistory(next);
+      if (eventType === "goal") persist(next, true);
+      toast({ title: `${EVENT_META[eventType].label} recorded`, description: newEvent.description });
+      setEventType(null);
+      setEventTeam(null);
+    } catch (e) {
+      console.error("Error adding event:", e);
+      toast({ title: "Not recorded", description: "Check your connection and try again.", variant: "destructive" });
+    } finally {
+      setRecording(false);
     }
   };
 
   const exportReport = async () => {
     if (!exportRef.current) return;
+    if (teams.length === 0) {
+      toast({ title: "Nothing to export yet", description: "Make teams and record the score first.", variant: "destructive" });
+      return;
+    }
     setIsExporting(true);
     try {
-      const canvas = await html2canvas(exportRef.current, {
-        scale: 3,
-        useCORS: true,
-        width: 800,
-        height: exportRef.current.scrollHeight,
-        scrollX: 0,
-        scrollY: 0,
-        backgroundColor: '#ffffff',
-      });
-      const link = document.createElement("a");
-      link.href = canvas.toDataURL("image/png");
-      link.download = `match-report-${match?.slug}.png`;
-      link.click();
-      toast({ title: "Success", description: "Match report exported as PNG." });
-    } catch (error) {
-      console.error("Error exporting report:", error);
-      toast({ title: "Error", description: "Failed to export match report.", variant: "destructive" });
+      await downloadElementAsPng(exportRef.current, `SportCliq-report-${match.slug}.png`);
+      toast({ title: "Report saved", description: "Share it in your group chat." });
+    } catch (e) {
+      console.error("Error exporting report:", e);
+      toast({ title: "Export failed", description: "Please try again.", variant: "destructive" });
     } finally {
       setIsExporting(false);
     }
   };
 
-  const handleShare = async () => {
+  const openShare = () => {
     if (!isPublic) {
-      toast({ title: "Error", description: "Match must be public to share highlights.", variant: "destructive" });
+      toast({ title: "Highlights are private", description: "Turn on Public highlights in the Teams tab, then share.", variant: "destructive" });
       return;
     }
     setShareOpen(true);
   };
 
-  const copyShareLink = async () => {
+  const copyLink = async () => {
     try {
-      const shareUrl = `${window.location.origin}/highlights/${match.slug}`;
       await navigator.clipboard.writeText(shareUrl);
-      toast({ title: "Success", description: "Shareable link copied to clipboard!" });
-    } catch (error) {
-      console.error("Error copying share link:", error);
-      toast({ title: "Error", description: "Failed to copy share link.", variant: "destructive" });
+      toast({ title: "Link copied" });
+    } catch {
+      toast({ title: "Could not copy", description: shareUrl, variant: "destructive" });
     }
   };
 
+  const eventsDesc = [...events].sort((a, b) => b.minute - a.minute);
+  const teamPlayers = (name: string) => (teams.find((t) => t.name === name)?.players || []).map((id) => players.find((p) => p.id === id)).filter(Boolean) as Player[];
+  const generated = format(new Date(), "d MMM yyyy, h:mm a");
+
   return (
-    <div className="space-y-6 sm:space-y-8">
-      <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
-        <Button
-          onClick={exportReport}
-          className="bg-sc-ink text-white rounded-full font-bold text-xs sm:text-sm px-3 py-2 flex-1 sm:flex-none"
-          disabled={isExporting}
-        >
-          {isExporting ? "Exporting..." : <><Download size={16} className="mr-2" /> Export Report</>}
-        </Button>
-        <Button
-          onClick={handleShare}
-          className="bg-sc-green hover:brightness-95 text-sc-green-ink text-xs sm:text-sm px-3 py-2 flex-1 sm:flex-none font-bold"
-        >
-          <Share2 size={16} className="mr-2" />
-          Share
-        </Button>
+    <div className="flex flex-col gap-4">
+      {/* Scoreboard */}
+      <div className="bg-sc-ink text-white rounded-3xl p-5 flex flex-col gap-4">
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-bold tracking-[0.14em] text-[#BEF264]">SCOREBOARD</span>
+          <span className="text-xs font-bold text-white/60">{minuteNow() > 0 ? `${minuteNow()}'` : "Not started"}</span>
+        </div>
+        {teams.length === 0 ? (
+          <p className="m-0 text-sm text-white/70">Make teams to start keeping score.</p>
+        ) : (
+          <div className="flex flex-col gap-2.5">
+            {teams.map((t, i) => (
+              <div key={`${i}-${t.name}`} className="flex items-center gap-3">
+                <span className="w-2.5 h-9 rounded-full shrink-0" style={{ background: teamColor(i) }} />
+                <span className="flex-1 min-w-0 text-base font-extrabold truncate">{t.name}</span>
+                <button type="button" aria-label={`Take a goal off ${t.name}`} onClick={() => changeScore(t.name, -1)} disabled={!t.score} className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center disabled:opacity-30"><Minus size={18} /></button>
+                <span className="w-10 text-center text-[34px] leading-none font-extrabold tabular-nums">{t.score || 0}</span>
+                <button type="button" aria-label={`Add a goal for ${t.name}`} onClick={() => changeScore(t.name, 1)} className="w-10 h-10 rounded-full bg-[#BEF264] text-sc-ink flex items-center justify-center"><Plus size={18} /></button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
+      {/* Record */}
+      <div className="bg-white rounded-3xl p-[18px] flex flex-col gap-3">
+        <span className="text-base font-extrabold">Record a moment</span>
+        <div className="grid grid-cols-5 gap-2">
+          {(["goal", "shot", "foul", "yellow_card", "red_card"] as const).map((type) => {
+            const m = EVENT_META[type];
+            const Icon = type === "goal" ? Goal : type === "shot" ? Target : type === "foul" ? ShieldAlert : null;
+            return (
+              <button key={type} type="button" onClick={() => openEvent(type)} className="h-[72px] rounded-2xl flex flex-col items-center justify-center gap-1.5 active:scale-[0.97] transition-transform" style={{ background: m.bg, color: m.fg }}>
+                {Icon ? <Icon size={20} /> : <span className="w-3.5 h-5 rounded-[3px]" style={{ background: type === "yellow_card" ? "#FACC15" : "#EF4444" }} />}
+                <span className="text-[11px] font-extrabold">{type === "yellow_card" ? "Yellow" : type === "red_card" ? "Red" : m.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <Segmented value={view} onChange={(v) => setView(v as "live" | "stats")} options={[{ value: "live", label: "Timeline" }, { value: "stats", label: "Stats" }]} />
+
+      {view === "live" ? (
+        <div className="bg-white rounded-3xl p-[18px]">
+          {eventsDesc.length === 0 ? (
+            <EmptyState icon={Goal} sport="football" title="No moments yet" subtitle="Goals, shots, fouls and cards you record show up here." />
+          ) : (
+            <div className="flex flex-col divide-y divide-sc-line">
+              {eventsDesc.map((e) => {
+                const m = EVENT_META[e.type] || EVENT_META.foul;
+                const ti = teams.findIndex((t) => t.name === e.team_name);
+                return (
+                  <div key={e.id} className="py-3 flex items-center gap-3">
+                    <span className="w-11 text-center text-sm font-extrabold text-sc-ink3 tabular-nums">{e.minute}'</span>
+                    <span className="h-7 px-2.5 rounded-full text-xs font-extrabold inline-flex items-center" style={{ background: m.bg, color: m.fg }}>{m.label}</span>
+                    <span className="flex-1 min-w-0 flex flex-col">
+                      <span className="text-sm font-bold truncate">{nameOf(e.player_id) || e.team_name}</span>
+                      {nameOf(e.player_id) && <span className="text-xs text-sc-ink3 truncate">{e.team_name}</span>}
+                    </span>
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: ti >= 0 ? teamColor(ti) : "#9CA3AF" }} />
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {updatedTeams.length === 0 ? (
+            <div className="bg-white rounded-3xl"><EmptyState icon={Trophy} sport="tennis" title="No stats yet" subtitle="Make teams and record a few moments to see stats." /></div>
+          ) : (
+            <>
+              <div className="bg-white rounded-3xl p-[18px] flex flex-col gap-3.5">
+                <span className="text-base font-extrabold">Team stats</span>
+                {updatedTeams.map((t, i) => (
+                  <div key={`${i}-${t.name}`} className="flex flex-col gap-2">
+                    <div className="flex items-center justify-between text-sm font-bold">
+                      <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full" style={{ background: teamColor(i) }} />{t.name}</span>
+                      <span className="text-sc-ink3">{t.analytics.possession}% possession</span>
+                    </div>
+                    <div className="h-2 rounded-full bg-sc-soft2 overflow-hidden"><div className="h-full rounded-full" style={{ width: `${t.analytics.possession}%`, background: teamColor(i) }} /></div>
+                    <div className="grid grid-cols-4 gap-2">
+                      {[["Shots", t.analytics.shots], ["Fouls", t.analytics.fouls], ["Yellow", t.analytics.yellow_cards], ["Red", t.analytics.red_cards]].map(([k, v]) => (
+                        <div key={k as string} className="bg-sc-soft rounded-xl py-2 flex flex-col items-center">
+                          <span className="text-base font-extrabold tabular-nums">{v}</span>
+                          <span className="text-[11px] font-bold text-sc-ink3">{k}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {rankings.length > 2 && (
+                <div className="bg-white rounded-3xl p-[18px] flex flex-col gap-2">
+                  <span className="text-base font-extrabold">Table</span>
+                  {rankings.map((r, i) => (
+                    <div key={r.name} className="flex items-center gap-3 py-1.5 text-sm">
+                      <span className="w-6 font-extrabold text-sc-ink3">{i + 1}</span>
+                      <span className="flex-1 font-bold truncate">{r.name}</span>
+                      <span className="w-14 text-right text-sc-ink3">{r.goals} goals</span>
+                      <span className="w-12 text-right font-extrabold">{Math.round(r.points * 10) / 10} pts</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      <div className="flex gap-2.5">
+        <ScButton kind="dark" icon={isExporting ? undefined : Download} onClick={exportReport} disabled={isExporting}>{isExporting ? <Loader2 size={18} className="animate-spin" /> : "Save report"}</ScButton>
+        <ScButton kind="primary" icon={Share2} onClick={openShare}>Share</ScButton>
+      </div>
+
+      {/* Pick team and player for an event */}
+      <Dialog open={!!eventType} onOpenChange={(v) => { if (!v) { setEventType(null); setEventTeam(null); } }}>
+        <DialogContent className="w-full max-w-[calc(100%-1.5rem)] sm:max-w-[420px] rounded-[28px] bg-sc-bg p-5 gap-4 max-h-[92vh] overflow-y-auto">
+          <DialogTitle className="text-xl font-extrabold text-center">{eventType ? EVENT_META[eventType].label : ""}</DialogTitle>
+          <DialogDescription className="text-sm text-sc-ink2 text-center">{eventTeam ? "Who was it? You can skip this." : "Which team?"}</DialogDescription>
+          {!eventTeam ? (
+            <div className="flex flex-col gap-2">
+              {teams.map((t, i) => (
+                <button key={`${i}-${t.name}`} type="button" onClick={() => setEventTeam(t.name)} className="h-14 px-4 rounded-2xl bg-white flex items-center gap-3 text-left font-bold">
+                  <span className="w-3 h-8 rounded-full" style={{ background: teamColor(i) }} />{t.name}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {teamPlayers(eventTeam).map((p) => (
+                <button key={p.id} type="button" disabled={recording} onClick={() => record(eventTeam, p.id)} className="h-12 px-4 rounded-2xl bg-white text-left font-bold text-sm disabled:opacity-50">{p.player_name}</button>
+              ))}
+              <ScButton kind="dark" onClick={() => record(eventTeam)} disabled={recording}>{recording ? <Loader2 size={18} className="animate-spin" /> : `Record for ${eventTeam}`}</ScButton>
+              <button type="button" onClick={() => setEventTeam(null)} className="h-10 text-sm font-bold text-sc-ink3">Change team</button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Share */}
       <Dialog open={shareOpen} onOpenChange={setShareOpen}>
-        <DialogContent className="rounded-xl max-w-md">
-          <DialogTitle>Share Match Highlights</DialogTitle>
-          <DialogDescription>
-            <p className="text-sm mb-4">Relive the excitement! Share this epic match with your friends and teammates!</p>
-            <p className="text-sm mb-4 break-all bg-sc-soft dark:bg-gray-700 p-2 rounded">{`${window.location.origin}/highlights/${match.slug}`}</p>
-            <div className="flex justify-center gap-4 mb-4">
-              <a href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(`${window.location.origin}/highlights/${match.slug}`)}&text=Check out this epic match on SportCliq!`} target="_blank" rel="noopener noreferrer">
-                <Button variant="outline" className="p-2">
-                  <Twitter size={20} className="text-blue-400" />
-                </Button>
-              </a>
-              <a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(`${window.location.origin}/highlights/${match.slug}`)}`} target="_blank" rel="noopener noreferrer">
-                <Button variant="outline" className="p-2">
-                  <Facebook size={20} className="text-blue-600" />
-                </Button>
-              </a>
-              <a href={`https://api.whatsapp.com/send?text=Check out this epic match on SportCliq! ${encodeURIComponent(`${window.location.origin}/highlights/${match.slug}`)}`} target="_blank" rel="noopener noreferrer">
-                <Button variant="outline" className="p-2">
-                  <MessageCircle size={20} className="text-sc-green-dark" />
-                </Button>
-              </a>
-              <Button variant="outline" onClick={copyShareLink} className="p-2">
-                <Copy size={20} className="text-sc-ink3" />
-              </Button>
-            </div>
-            <p className="text-xs text-sc-ink3 dark:text-gray-400 text-center">Powered by @SportCliq</p>
-          </DialogDescription>
+        <DialogContent className="w-full max-w-[calc(100%-1.5rem)] sm:max-w-[420px] rounded-[28px] bg-sc-bg p-5 gap-4">
+          <div className="flex flex-col items-center text-center gap-2">
+            <span className="w-12 h-12 rounded-full bg-sc-green text-white flex items-center justify-center"><Share2 size={22} /></span>
+            <DialogTitle className="text-xl font-extrabold">Share highlights</DialogTitle>
+            <DialogDescription className="text-sm text-sc-ink2">Teams, score and every moment, live.</DialogDescription>
+          </div>
+          <div className="bg-white rounded-2xl px-4 py-3 text-sm font-bold break-all">{shareUrl}</div>
+          <div className="grid grid-cols-4 gap-2">
+            <a href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`Follow ${match.title} on SportCliq ${shareUrl}`)}`} target="_blank" rel="noopener noreferrer" className="h-14 rounded-2xl bg-white flex items-center justify-center text-[#16A34A]" aria-label="Share on WhatsApp"><MessageCircle size={22} /></a>
+            <a href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(`${match.title} on @SportCliq`)}`} target="_blank" rel="noopener noreferrer" className="h-14 rounded-2xl bg-white flex items-center justify-center text-sc-ink" aria-label="Share on X"><Twitter size={22} /></a>
+            <a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`} target="_blank" rel="noopener noreferrer" className="h-14 rounded-2xl bg-white flex items-center justify-center text-[#1D4ED8]" aria-label="Share on Facebook"><Facebook size={22} /></a>
+            <button type="button" onClick={copyLink} className="h-14 rounded-2xl bg-white flex items-center justify-center text-sc-ink" aria-label="Copy link"><Copy size={22} /></button>
+          </div>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={eventDialogOpen} onOpenChange={setEventDialogOpen}>
-        <DialogContent className="rounded-xl max-w-md">
-          <DialogTitle>Select Team for {eventType?.replace("_", " ")}</DialogTitle>
-          <DialogDescription>
-            <p className="text-sm mb-4">Choose the team to apply this event to.</p>
-            <div className="flex justify-center flex-wrap gap-3">
-              {teams.map((team) => (
-                <Button
-                  key={team.name}
-                  onClick={() => addEvent(eventType!, team.name)}
-                  className="bg-sc-green hover:brightness-95 text-sc-green-ink text-sm px-4 py-2 flex-1 min-w-[120px] font-bold"
-                >
-                  {team.name}
-                </Button>
-              ))}
-            </div>
-          </DialogDescription>
-        </DialogContent>
-      </Dialog>
-
-      <div ref={reportRef} className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-4 sm:p-6 dark:border-gray-700 md:space-y-6">
-        {/* Mobile-optimized view */}
-        <div className="md:hidden space-y-4">
-          <div className="text-center">
-            <img src="/playarenalight.png" alt="PlayArena Logo" className="w-24 mx-auto mb-2" />
-            <h2 className="text-xl font-bold text-blue-800">{match.title}</h2>
-            <p className="text-xs text-sc-ink3">{match.match_date} at {match.match_time} | {match.venue}</p>
-            <div className="mt-2 text-2xl font-bold text-sc-ink">
-              {teams[0].name} {teams[0].score} - {teams[1].score} {teams[1].name}
-            </div>
+      {/* The report image, drawn off screen so it exports on any device */}
+      <div aria-hidden="true" style={{ position: "fixed", left: -10000, top: 0, pointerEvents: "none" }}>
+        <div ref={exportRef} style={{ width: 720, background: "#F4F5F1", padding: 36, fontFamily: "Satoshi, 'Plus Jakarta Sans', sans-serif", color: "#0E1411", borderRadius: 32 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <img src="/brand/sportcliq-wordmark.png" alt="SportCliq" style={{ height: 34 }} crossOrigin="anonymous" />
+            <span style={{ fontSize: 13, fontWeight: 800, letterSpacing: "0.12em", color: "#15803D" }}>MATCH REPORT</span>
           </div>
-
-          <div className="space-y-4">
-            <div className="bg-white rounded-3xl shadow-card p-4 border-l-4 border-blue-500">
-              <h3 className="text-base font-semibold text-sc-ink mb-2">Score</h3>
-              {teams.map((team) => (
-                <div key={team.name} className="flex justify-between items-center py-2 border-b border-sc-line">
-                  <span className="text-sc-ink font-medium">{team.name}</span>
-                  <Input
-                    type="number"
-                    value={team.score}
-                    onChange={(e) => handleScoreChange(team.name, e.target.value)}
-                    className="w-16 text-sm text-center border-sc-line focus:border-blue-500"
-                    min="0"
-                    max="29"
-                  />
+          <div style={{ marginTop: 24, fontSize: 34, fontWeight: 900, letterSpacing: "-0.03em", lineHeight: "38px" }}>{match.title}</div>
+          <div style={{ marginTop: 6, fontSize: 15, color: "#4A524D", fontWeight: 600 }}>
+            {!isNaN(start.getTime()) ? format(start, "EEEE d MMMM yyyy, h:mm a") : match.match_date} · {match.venue}
+          </div>
+          <div style={{ marginTop: 22, background: "#0E1411", color: "#fff", borderRadius: 24, padding: "20px 24px", display: "flex", flexDirection: "column", gap: 12 }}>
+            {teams.map((t, i) => (
+              <div key={`${i}-${t.name}`} style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                <span style={{ width: 10, height: 34, borderRadius: 99, background: teamColor(i) }} />
+                <span style={{ flex: 1, fontSize: 22, fontWeight: 800 }}>{t.name}</span>
+                <span style={{ fontSize: 40, fontWeight: 900 }}>{t.score || 0}</span>
+              </div>
+            ))}
+          </div>
+          <div style={{ marginTop: 18, background: "#fff", borderRadius: 24, padding: "16px 22px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "2fr repeat(5, 1fr)", fontSize: 12, fontWeight: 800, color: "#646C67", letterSpacing: "0.06em", paddingBottom: 8 }}>
+              <span>TEAM</span><span>POSS</span><span>SHOTS</span><span>FOULS</span><span>YELLOW</span><span>RED</span>
+            </div>
+            {updatedTeams.map((t, i) => (
+              <div key={`${i}-${t.name}`} style={{ display: "grid", gridTemplateColumns: "2fr repeat(5, 1fr)", fontSize: 16, fontWeight: 700, padding: "8px 0", borderTop: "1px solid #E3E6E0" }}>
+                <span>{t.name}</span><span>{t.analytics.possession}%</span><span>{t.analytics.shots}</span><span>{t.analytics.fouls}</span><span>{t.analytics.yellow_cards}</span><span>{t.analytics.red_cards}</span>
+              </div>
+            ))}
+          </div>
+          {events.length > 0 && (
+            <div style={{ marginTop: 18, background: "#fff", borderRadius: 24, padding: "16px 22px" }}>
+              <div style={{ fontSize: 12, fontWeight: 800, color: "#646C67", letterSpacing: "0.06em", paddingBottom: 6 }}>KEY MOMENTS</div>
+              {[...events].sort((a, b) => a.minute - b.minute).slice(0, 14).map((e) => (
+                <div key={e.id} style={{ display: "flex", gap: 14, fontSize: 15, fontWeight: 600, padding: "6px 0" }}>
+                  <span style={{ width: 40, fontWeight: 800, color: "#646C67" }}>{e.minute}'</span>
+                  <span style={{ flex: 1 }}>{e.description}</span>
                 </div>
               ))}
             </div>
-
-            <div className="bg-white rounded-3xl shadow-card p-4 border-l-4 border-sc-green">
-              <h3 className="text-base font-semibold text-sc-ink mb-2">Analytics</h3>
-              {teams.map((team) => (
-                <div key={team.name} className="py-2 border-b border-sc-line">
-                  <div className="flex justify-between">
-                    <span className="text-sc-ink font-medium">{team.name}</span>
-                    <span className="text-sc-ink">Possession: {team.analytics.possession}%</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sc-ink">Shots: {team.analytics.shots}</span>
-                    <span className="text-sc-ink">Fouls: {team.analytics.fouls}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sc-ink">Yellow: {team.analytics.yellow_cards}</span>
-                    <span className="text-sc-ink">Red: {team.analytics.red_cards}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="bg-white rounded-3xl shadow-card p-4 border-l-4 border-yellow-500">
-              <h3 className="text-base font-semibold text-sc-ink mb-2">Events</h3>
-              {events.length === 0 ? (
-                <p className="text-sm text-sc-ink3">No events recorded.</p>
-              ) : (
-                <ul className="space-y-2">
-                  {events.map((event) => (
-                    <li key={event.id} className="text-sm text-sc-ink3 flex items-center">
-                      <span className="inline-block w-10 text-center font-semibold text-blue-600">{event.minute}'</span>
-                      <span className="flex-1">{event.type.replace("_", " ")} ({event.team_name})</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Desktop view and PNG export (unchanged) */}
-        <div ref={exportRef} className="hidden md:block space-y-8 w-[800px] bg-gradient-to-br from-blue-50 to-green-50 p-6 rounded-lg">
-          <div className="text-center">
-            <img src="/playarenalight.png" alt="PlayArena Logo" className="w-32 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-blue-800">{match.title}</h2>
-            <p className="text-sm text-sc-ink3">{match.match_date} at {match.match_time} | {match.venue}</p>
-            <div className="mt-4 text-4xl font-bold text-sc-ink">
-              {teams[0].name} {teams[0].score} - {teams[1].score} {teams[1].name}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-6">
-            <div className="bg-white rounded-3xl shadow-card p-4 border-l-4 border-blue-500">
-              <h3 className="text-lg font-semibold text-sc-ink mb-3">Score Table</h3>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse text-sm">
-                  <thead>
-                    <tr className="bg-blue-100">
-                      <th className="p-3 text-sc-ink font-semibold">Team</th>
-                      <th className="p-3 text-sc-ink font-semibold">Score</th>
-                      <th className="p-3 text-sc-ink font-semibold">Possession</th>
-                      <th className="p-3 text-sc-ink font-semibold">Shots</th>
-                      <th className="p-3 text-sc-ink font-semibold">Fouls</th>
-                      <th className="p-3 text-sc-ink font-semibold">Yellow</th>
-                      <th className="p-3 text-sc-ink font-semibold">Red</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {teams.map((team, index) => (
-                      <tr key={team.name} className="border-b border-sc-line">
-                        <td className="p-3 text-sc-ink font-medium">{team.name}</td>
-                        <td className="p-3">
-                          <Input
-                            type="number"
-                            value={team.score}
-                            onChange={(e) => handleScoreChange(team.name, e.target.value)}
-                            className="w-16 text-sm text-center border-sc-line focus:border-blue-500"
-                            min="0"
-                            max="29"
-                          />
-                        </td>
-                        <td className="p-3 text-sc-ink text-center">{team.analytics.possession}%</td>
-                        <td className="p-3 text-sc-ink text-center">{team.analytics.shots}</td>
-                        <td className="p-3 text-sc-ink text-center">{team.analytics.fouls}</td>
-                        <td className="p-3 text-sc-ink text-center">{team.analytics.yellow_cards}</td>
-                        <td className="p-3 text-sc-ink text-center">{team.analytics.red_cards}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-3xl shadow-card p-4 border-l-4 border-sc-green">
-              <h3 className="text-lg font-semibold text-sc-ink mb-3">Rankings</h3>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse text-sm">
-                  <thead>
-                    <tr className="bg-sc-green-bg">
-                      <th className="p-3 text-sc-ink font-semibold">Rank</th>
-                      <th className="p-3 text-sc-ink font-semibold">Team</th>
-                      <th className="p-3 text-sc-ink font-semibold">Points</th>
-                      <th className="p-3 text-sc-ink font-semibold">Goals</th>
-                      <th className="p-3 text-sc-ink font-semibold">Yellow</th>
-                      <th className="p-3 text-sc-ink font-semibold">Red</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rankings.map((team, index) => (
-                      <tr key={team.name} className="border-b border-sc-line">
-                        <td className="p-3 text-sc-ink text-center">{index + 1}</td>
-                        <td className="p-3 text-sc-ink font-medium">{team.name}</td>
-                        <td className="p-3 text-sc-ink text-center">{team.points}</td>
-                        <td className="p-3 text-sc-ink text-center">{team.goals}</td>
-                        <td className="p-3 text-sc-ink text-center">{team.yellow_cards}</td>
-                        <td className="p-3 text-sc-ink text-center">{team.red_cards}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-3xl shadow-card p-4 border-l-4 border-yellow-500">
-              <h3 className="text-lg font-semibold text-sc-ink mb-3">Events</h3>
-              {events.length === 0 ? (
-                <p className="text-sm text-sc-ink3">No events recorded.</p>
-              ) : (
-                <ul className="space-y-2">
-                  {events.map((event) => (
-                    <li key={event.id} className="text-sm text-sc-ink3 flex items-center">
-                      <span className="inline-block w-12 text-center font-semibold text-blue-600">{event.minute}'</span>
-                      <span className="flex-1">{event.type.replace("_", " ")} ({event.team_name}): {event.description}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
-
-          <div className="text-center mt-6">
-            <p className="text-xs text-sc-ink3">Generated on May 21, 2025, 09:40 PM WAT</p>
-            <p className="text-xs text-sc-ink3">Powered by @SportCliq</p>
-          </div>
-        </div>
-
-        <div className="mt-6">
-          <h3 className="text-lg font-semibold text-sc-ink dark:text-gray-200">Record Events</h3>
-          <div className="flex justify-center flex-wrap gap-3 mt-3">
-            <Button
-              onClick={() => { setEventType("goal"); setEventDialogOpen(true); }}
-              className="bg-sc-green hover:brightness-95 text-sc-green-ink text-sm px-4 py-2 min-w-[80px] font-bold"
-            >
-              Goal
-            </Button>
-            <Button
-              onClick={() => { setEventType("yellow_card"); setEventDialogOpen(true); }}
-              className="bg-sc-ink text-white rounded-full font-bold text-sm px-4 py-2 min-w-[80px]"
-            >
-              Yellow
-            </Button>
-            <Button
-              onClick={() => { setEventType("red_card"); setEventDialogOpen(true); }}
-              className="bg-red-500 hover:bg-red-600 text-white text-sm px-4 py-2 min-w-[80px]"
-            >
-              Red
-            </Button>
-            <Button
-              onClick={() => { setEventType("foul"); setEventDialogOpen(true); }}
-              className="bg-gray-500 hover:bg-gray-600 text-white text-sm px-4 py-2 min-w-[80px]"
-            >
-              Foul
-            </Button>
-            <Button
-              onClick={() => { setEventType("shot"); setEventDialogOpen(true); }}
-              className="bg-blue-500 hover:bg-blue-600 text-white text-sm px-4 py-2 min-w-[80px]"
-            >
-              Shot
-            </Button>
+          )}
+          <div style={{ marginTop: 20, display: "flex", justifyContent: "space-between", fontSize: 12, fontWeight: 700, color: "#646C67" }}>
+            <span>Made on {generated}</span>
+            <span>app.sportcliq.com · @SportCliq</span>
           </div>
         </div>
       </div>

@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, AlertCircle, ArrowRight, ChevronLeft, Zap } from "lucide-react";
+import { ArrowLeft, AlertCircle, ArrowRight, ChevronLeft, Lock, Zap } from "lucide-react";
 import { Form } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -19,6 +19,7 @@ import RecurringForm from "@/components/gameManagement/RecurringForm";
 import { FormValues, formSchema } from "@/components/MatchFormTypes";
 import { format } from "date-fns";
 import { Seo } from "@/components/Seo";
+import { notify, notifyBooking } from "@/lib/notify";
 
 import { BackButton } from "@/components/sc/ui";
 type Venue = {
@@ -59,8 +60,11 @@ const Organize = () => {
   const [venues, setVenues] = useState<Venue[]>([]);
   const [selectedVenueId, setSelectedVenueId] = useState<string | undefined>(undefined);
   const [hasValidBookingCode, setHasValidBookingCode] = useState(false);
-  const [formMethods, setFormMethods] = useState<{ setValue: (name: keyof FormValues, value: any) => void; watch: () => FormValues } | null>(null);
   const [codeTable, setCodeTable] = useState<"venue_access_codes" | "booking_access_codes" | null>(null);
+  // The booking this match is being set up from. Its venue, date and times are locked.
+  const [lockedBooking, setLockedBooking] = useState<{ venueId: string; matchDate: string; start: string; end: string; bookingId: string | null } | null>(null);
+  const [codeProblem, setCodeProblem] = useState<{ title: string; body: string; matchSlug?: string | null } | null>(null);
+  const submitLock = useRef(false);
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(0);
 
@@ -104,7 +108,7 @@ const Organize = () => {
   }, []);
 
   useEffect(() => {
-    if (!isPreFilled) {
+    if (!isPreFilled && !accessCode) {
       const savedForm = localStorage.getItem("organizeFormState");
       if (savedForm) {
         const parsed = JSON.parse(savedForm);
@@ -144,82 +148,116 @@ const Organize = () => {
     }
   }, [form]);
 
-  // --- Prefill logic: always run when formMethods is set and booking code is present ---
+  const to12 = (t: string) => {
+    const [h, m] = t.split(":").map(Number);
+    return new Date(0, 0, 0, h, m).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
+  };
+
+  // Prefill and lock venue, date and times from a booking code, and refuse used or expired codes
   useEffect(() => {
-    if (formMethods && preSelectedVenueSlug && accessCode && !isPreFilled) {
-      (async () => {
-        try {
-          const { data: venue, error: venueError } = await supabase
-            .from("venues")
-            .select("id, slug, name, city, verified_status")
-            .eq("slug", preSelectedVenueSlug)
-            .single();
+    if (!preSelectedVenueSlug || !accessCode || isPreFilled) return;
+    (async () => {
+      try {
+        const { data: venueRows } = await supabase
+          .from("venues").select("id, slug, name, city, verified_status")
+          .eq("slug", preSelectedVenueSlug).limit(1);
+        const venue = venueRows?.[0];
+        if (!venue) throw { title: "Venue not found", body: "We could not find the venue for this booking." };
 
-          if (venueError || !venue) throw new Error("Venue not found.");
+        let row: any = null;
+        let table: "booking_access_codes" | "venue_access_codes" | null = null;
+        for (const t of ["booking_access_codes", "venue_access_codes"] as const) {
+          const { data } = await supabase.from(t)
+            .select("match_date, start_time, end_time, status, expiry_date, booking_id, created_at")
+            .eq("code", accessCode).eq("venue_id", venue.id).limit(1);
+          if (data?.[0]) { row = data[0]; table = t; break; }
+        }
+        if (!row) throw { title: "Booking code not found", body: "Check the code or make a new booking for this venue." };
 
-          let accessCodeData = null;
-          const { data: bacData } = await supabase
-            .from("booking_access_codes")
-            .select("match_date, start_time, end_time, status, expiry_date, booking_id")
-            .eq("code", accessCode)
-            .eq("venue_id", venue.id)
-            .single();
-          if (bacData && bacData.status === "pending") {
-            const expiryDate = bacData.expiry_date
-              ? new Date(bacData.expiry_date + 'Z')
-              : new Date(new Date(bacData.created_at).getTime() + 48 * 60 * 60 * 1000);
-            const now = new Date();
-            if (expiryDate < now) throw new Error("Booking access code has expired.");
-            accessCodeData = bacData;
-            setCodeTable("booking_access_codes");
-          }
-          if (!accessCodeData) {
-            const { data: vacData } = await supabase
-              .from("venue_access_codes")
-              .select("match_date, start_time, end_time, status, expiry_date")
-              .eq("code", accessCode)
-              .eq("venue_id", venue.id)
-              .single();
-            if (vacData && vacData.status === "pending") {
-              const expiryDate = vacData.expiry_date
-                ? new Date(vacData.expiry_date + 'Z')
-                : new Date(new Date(vacData.created_at).getTime() + 48 * 60 * 60 * 1000);
-              const now = new Date();
-              if (expiryDate < now) throw new Error("Venue access code has expired.");
-              accessCodeData = vacData;
-              setCodeTable("venue_access_codes");
+        if (row.status !== "pending") {
+          let matchSlug: string | null = null;
+          if (row.booking_id) {
+            const { data: b } = await supabase.from("bookings").select("match_id").eq("id", row.booking_id).maybeSingle();
+            if (b?.match_id) {
+              const { data: m } = await supabase.from("matches").select("slug").eq("id", b.match_id).maybeSingle();
+              matchSlug = m?.slug ?? null;
             }
           }
-          if (!accessCodeData) throw new Error("Invalid, used, or expired access code.");
-          setVenues([venue]);
-          setIsPreFilled(true);
-          setSelectedVenueId(venue.id);
-          setHasValidBookingCode(true);
-          formMethods.setValue("venue_id", venue.id);
-          formMethods.setValue("match_date", new Date(accessCodeData.match_date));
-          // Convert times to 12-hour format for the form
-          const [startHours, startMinutes] = accessCodeData.start_time.split(":");
-          const startTime12 = new Date(0, 0, 0, startHours, startMinutes).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-          const [endHours, endMinutes] = accessCodeData.end_time.split(":");
-          const endTime12 = new Date(0, 0, 0, endHours, endMinutes).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-          formMethods.setValue("start_time", startTime12);
-          formMethods.setValue("end_time", endTime12);
-        } catch (error) {
-          // fallback: do not break anything else
+          throw row.status === "active"
+            ? { title: "This booking has been used", body: "A match has already been set up with this booking. Each booking can only be used once.", matchSlug }
+            : { title: "This booking code has expired", body: "Make a new booking to set up a match at this venue." };
         }
-      })();
-    }
-  }, [formMethods, preSelectedVenueSlug, accessCode, isPreFilled]);
+        const expiry = row.expiry_date
+          ? new Date(/Z|[+-]\d\d:?\d\d$/.test(row.expiry_date) ? row.expiry_date : row.expiry_date + "Z")
+          : new Date(new Date(row.created_at).getTime() + 48 * 60 * 60 * 1000);
+        if (expiry < new Date()) throw { title: "This booking code has expired", body: "Make a new booking to set up a match at this venue." };
 
-  const handleFormReady = useCallback(({ watch, setValue }) => {
-    setFormMethods({ watch, setValue });
-  }, []);
+        setVenues([venue]);
+        setCodeTable(table);
+        setSelectedVenueId(venue.id);
+        setHasValidBookingCode(true);
+        setLockedBooking({
+          venueId: venue.id,
+          matchDate: String(row.match_date).slice(0, 10),
+          start: String(row.start_time).slice(0, 5),
+          end: String(row.end_time).slice(0, 5),
+          bookingId: row.booking_id ?? null,
+        });
+        form.setValue("venue_id", venue.id, { shouldValidate: true });
+        form.setValue("match_date", new Date(`${String(row.match_date).slice(0, 10)}T12:00:00`), { shouldValidate: true });
+        form.setValue("start_time", to12(String(row.start_time)), { shouldValidate: true });
+        form.setValue("end_time", to12(String(row.end_time)), { shouldValidate: true });
+        setIsPreFilled(true);
+        // Safety net in case the booking email did not go out. The server sends it only once.
+        if (row.booking_id && table === "booking_access_codes") notifyBooking(row.booking_id);
+      } catch (e: any) {
+        setCodeProblem(e?.title ? e : { title: "We could not load this booking", body: "Please try again in a moment." });
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preSelectedVenueSlug, accessCode, isPreFilled]);
+
+  // Keep the chosen venue's name and city for the review and preview card
+  const watchedVenueId = form.watch("venue_id");
+  useEffect(() => {
+    if (!watchedVenueId) return;
+    setSelectedVenueId(watchedVenueId);
+    if (venues.some((v) => v.id === watchedVenueId)) return;
+    supabase.from("venues").select("id, slug, name, city, verified_status").eq("id", watchedVenueId).maybeSingle()
+      .then(({ data }) => { if (data) setVenues((prev) => [...prev.filter((v) => v.id !== data.id), data as Venue]); });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchedVenueId]);
 
   const selectedVenue = venues.find((venue) => venue.id === selectedVenueId);
 
   const onSubmit = async (data: FormValues) => {
+    if (submitLock.current) return;
+    submitLock.current = true;
     setLoading(true);
+    let claimed = false;
     try {
+      // A booking can set up one match only. Claim the code first so a second tab or a replay cannot reuse it.
+      if (lockedBooking && accessCode && codeTable) {
+        const { data: claim, error: claimError } = await supabase.from(codeTable)
+          .update({ status: "active" })
+          .eq("code", accessCode).eq("venue_id", lockedBooking.venueId).eq("status", "pending")
+          .select("id");
+        if (claimError) throw claimError;
+        if (!claim || claim.length === 0) {
+          setCodeProblem({ title: "This booking has been used", body: "A match has already been set up with this booking. Each booking can only be used once." });
+          throw new Error("This booking has already been used.");
+        }
+        claimed = true;
+        // Always use the booked venue, date and time, whatever the form says
+        data = {
+          ...data,
+          venue_id: lockedBooking.venueId,
+          match_date: new Date(`${lockedBooking.matchDate}T12:00:00`),
+          start_time: to12(lockedBooking.start),
+          end_time: to12(lockedBooking.end),
+        };
+      }
+
       const superCode = Math.floor(100000 + Math.random() * 900000).toString();
 
       const { data: match, error } = await supabase
@@ -258,6 +296,7 @@ const Organize = () => {
         .single();
 
       if (error) throw error;
+      notify("match_created", { match_id: match.id });
 
       if (userId) {
         const { error: linkError } = await supabase
@@ -270,42 +309,35 @@ const Organize = () => {
         if (linkError) throw linkError;
       }
 
-      if (accessCode && preSelectedVenueSlug) {
-        const { data: venue } = await supabase
-          .from("venues")
-          .select("id")
-          .eq("slug", preSelectedVenueSlug)
-          .single();
-
+      if (lockedBooking?.bookingId) {
         const { error: bookingUpdateError } = await supabase
-          .from("bookings")
-          .update({ match_id: match.id })
-          .eq("venue_id", venue.id)
-          .eq("payment_reference", new URLSearchParams(window.location.search).get("reference"));
-
-        if (bookingUpdateError) {
-          console.error("Error updating booking with match_id:", bookingUpdateError);
-          toast({
-            title: "Warning",
-            description: "Match created, but failed to link booking. Contact support.",
-            variant: "destructive",
-          });
-        }
+          .from("bookings").update({ match_id: match.id }).eq("id", lockedBooking.bookingId);
+        if (bookingUpdateError) console.error("Error linking booking to match:", bookingUpdateError);
       }
 
       localStorage.removeItem("organizeFormState");
       setSupercode(match.super_code || "N/A");
       setMatchSlug(match.slug);
       setSuccessDialogOpen(true);
-    } catch (error) {
+      if (accessCode) {
+        // Drop the code from the address so refresh or back cannot reuse it
+        window.history.replaceState(null, "", "/organize");
+        setLockedBooking(null);
+      }
+    } catch (error: any) {
       console.error("Error creating match:", error);
+      if (claimed && accessCode && codeTable && lockedBooking) {
+        // The match was not created, so give the booking back
+        await supabase.from(codeTable).update({ status: "pending" }).eq("code", accessCode).eq("venue_id", lockedBooking.venueId);
+      }
       toast({
-        title: "Error",
-        description: "Failed to create match. Please try again.",
+        title: "Match not created",
+        description: error?.message && error.message.length < 120 ? error.message : "Failed to create match. Please try again.",
         variant: "destructive",
       });
     } finally {
       setLoading(false);
+      submitLock.current = false;
     }
   };
 
@@ -345,10 +377,32 @@ const Organize = () => {
           </div>
         </header>
         <div className="px-5 pt-2 max-w-3xl mx-auto">
-          {isPreFilled && (
-            <div className="mb-4 bg-sc-green-bg dark:bg-green-900 text-sc-green-dark dark:text-green-300 p-4 rounded-lg">
-              <p className="font-medium">Venue Booking Pre-Filled</p>
-              <p className="text-sm">The venue, date, and time are set based on your booking. These fields are locked to match your reservation.</p>
+          {codeProblem && (
+            <div className="mb-4 bg-white rounded-3xl p-5 flex flex-col gap-3 shadow-card border border-sport-red-bg">
+              <div className="flex items-start gap-3">
+                <span className="w-10 h-10 rounded-full bg-sport-red-bg text-sport-red-fg flex items-center justify-center shrink-0"><AlertCircle size={20} /></span>
+                <div className="flex flex-col gap-1">
+                  <p className="m-0 font-extrabold text-base">{codeProblem.title}</p>
+                  <p className="m-0 text-sm text-sc-ink3 leading-6">{codeProblem.body}</p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                {codeProblem.matchSlug && (
+                  <button type="button" onClick={() => navigate(`/match/${codeProblem.matchSlug}`, { replace: true })} className="h-11 px-4 rounded-full bg-sc-green text-white text-sm font-bold">View the match</button>
+                )}
+                {preSelectedVenueSlug && (
+                  <button type="button" onClick={() => navigate(`/venue/${preSelectedVenueSlug}/book`, { replace: true })} className="h-11 px-4 rounded-full bg-sc-soft text-sc-ink text-sm font-bold">Book again</button>
+                )}
+              </div>
+            </div>
+          )}
+          {isPreFilled && lockedBooking && (
+            <div className="mb-4 bg-sc-green-bg text-sc-green-dark p-4 rounded-3xl flex gap-3 items-start">
+              <span className="w-9 h-9 rounded-full bg-white flex items-center justify-center shrink-0"><Lock size={16} /></span>
+              <div>
+                <p className="m-0 font-extrabold">Set from your booking</p>
+                <p className="m-0 text-sm leading-6">Venue, date and time come from your booking and are locked. Fill in the rest to publish.</p>
+              </div>
             </div>
           )}
           {selectedVenue?.verified_status === "True" && !isPreFilled && !hasValidBookingCode && (
@@ -377,14 +431,7 @@ const Organize = () => {
                 <MatchDetailsForm
                   isPreFilled={isPreFilled}
                   preSelectedVenueSlug={preSelectedVenueSlug}
-                  onPrefill={(values) => {
-                    if (formMethods) {
-                      formMethods.setValue("match_date", values.match_date);
-                      formMethods.setValue("start_time", values.start_time);
-                      formMethods.setValue("end_time", values.end_time);
-                      setHasValidBookingCode(true);
-                    }
-                  }}
+                  onPrefill={() => setHasValidBookingCode(true)}
                   onVenueCreated={(venueId, venueSlug, venueName) => {
                     form.setValue("venue_id", venueId);
                     toast({
@@ -473,17 +520,17 @@ const Organize = () => {
           <MatchPreviewDialog
             open={previewDialogOpen}
             onOpenChange={setPreviewDialogOpen}
-            formValues={formMethods ? formMethods.watch() : {}}
+            formValues={form.watch()}
             selectedVenue={selectedVenue}
           />
           <MatchSuccessDialog
             open={successDialogOpen}
             onOpenChange={setSuccessDialogOpen}
-            formValues={formMethods ? formMethods.watch() : {}}
+            formValues={form.watch()}
             selectedVenue={selectedVenue}
             supercode={supercode}
             matchSlug={matchSlug}
-            onNavigate={(slug) => navigate(`/match/${slug}`)}
+            onNavigate={(slug) => navigate(`/match/${slug}`, { replace: true })}
           />
         </div>
       </div>

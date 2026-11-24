@@ -4,7 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2 } from "lucide-react";
+import { KeyRound, Loader2 } from "lucide-react";
 import { z } from "zod";
 
 const codeSchema = z
@@ -65,9 +65,15 @@ const MatchCodeInput = ({
   }, [userId, toast, setRecentSuperCodes]);
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-3xl p-[18px] mb-6 dark:border-gray-700">
-      <h2 className="text-lg font-extrabold tracking-[-0.01em] mb-4 text-sc-ink dark:text-gray-100">Match Super Code</h2>
-      <div className="flex flex-col sm:flex-row gap-4">
+    <div className="bg-white rounded-3xl p-[18px] mb-4 flex flex-col gap-3.5">
+      <div className="flex items-center gap-3">
+        <span className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0" style={{ background: "#DCFCE7", color: "#15803D" }}><KeyRound size={20} /></span>
+        <span className="flex flex-col">
+          <span className="text-base font-extrabold">Match super code</span>
+          <span className="text-[13px] text-sc-ink3">The 6 digit code you got when you published</span>
+        </span>
+      </div>
+      <div className="flex flex-col gap-3">
         <div className="flex-1 relative">
           {userId && recentSuperCodes.length > 0 ? (
             <div className="relative">
@@ -91,7 +97,7 @@ const MatchCodeInput = ({
                 </SelectContent>
               </Select>
               <Input
-                placeholder="Enter 6-digit super code"
+                placeholder="000000"
                 value={superCode}
                 onChange={(e) => {
                   const value = e.target.value.replace(/[^0-9]/g, "").slice(0, 6);
@@ -102,13 +108,13 @@ const MatchCodeInput = ({
                 inputMode="numeric"
                 pattern="[0-9]*"
                 maxLength={6}
-                className="w-full text-base mt-2"
+                className="w-full mt-2 h-14 text-center text-2xl font-extrabold tracking-[0.4em]"
                 ref={codeInputRef}
               />
             </div>
           ) : (
             <Input
-              placeholder="Enter 6-digit super code"
+              placeholder="000000"
               value={superCode}
               onChange={(e) => {
                 const value = e.target.value.replace(/[^0-9]/g, "").slice(0, 6);
@@ -119,16 +125,16 @@ const MatchCodeInput = ({
               inputMode="numeric"
               pattern="[0-9]*"
               maxLength={6}
-              className="w-full text-base"
+              className="w-full h-14 text-center text-2xl font-extrabold tracking-[0.4em]"
               ref={codeInputRef}
             />
           )}
           {superCodeError && (
-            <p className="text-sm text-red-600 mt-1">{superCodeError}</p>
+            <p className="text-sm font-bold text-sport-red-fg mt-2 text-center">{superCodeError}</p>
           )}
         </div>
         <Button
-          className="bg-sc-green hover:brightness-95 text-sc-green-ink font-bold rounded-full px-4 py-2 w-full sm:w-auto"
+          className="bg-sc-green hover:brightness-95 text-white font-bold rounded-full h-[52px] w-full text-base"
           onClick={fetchMatch}
           disabled={loading}
         >
@@ -138,7 +144,7 @@ const MatchCodeInput = ({
               Loading...
             </>
           ) : (
-            "Load Match"
+            "Open"
           )}
         </Button>
       </div>

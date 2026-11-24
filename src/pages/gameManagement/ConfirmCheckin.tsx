@@ -5,7 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { isPast, differenceInMinutes } from "date-fns";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, AlertCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, AlertCircle, Bike, KeyRound, Loader2, SearchX, Trophy } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -27,7 +27,7 @@ import HostCashout from "@/components/cyclingManagement/HostCashout";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Toggle } from "@/components/ui/toggle";
 
-import { BackButton } from "@/components/sc/ui";
+import { BackButton, EmptyState, ScButton, Segmented } from "@/components/sc/ui";
 import { RowsSkeleton } from "@/components/sc/skeletons";
 type Match = {
   id: string;
@@ -131,6 +131,7 @@ const ConfirmCheckin = () => {
   const [recentSuperCodes, setRecentSuperCodes] = useState<string[]>([]);
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+  const [tab, setTab] = useState<"details" | "manage" | "cashout">("details");
 
   const resetState = () => {
     setMatch(null);
@@ -277,9 +278,9 @@ const ConfirmCheckin = () => {
         const { data, error } = await supabase
           .from("matches")
           .select(`
-            id, slug, title, match_date, match_time, match_start_time, match_end_time, total_slots, organizer_id, organizer_name, super_code, is_paid, price, cancellation_status, status,
+            id, slug, title, match_date, match_time, match_start_time, match_end_time, total_slots, organizer_id, organizer_name, super_code, is_paid, price, cancellation_status, status, sell_tickets, ticket_price,
             venue:venues(name, city),
-            players(id, player_name, status, confirmation_code, details, number_of_slots)
+            players(id, player_name, status, player_status, confirmation_code, details, number_of_slots)
           `)
           .eq("super_code", superCode)
           .single();
@@ -592,39 +593,39 @@ const ConfirmCheckin = () => {
           </div>
         </header>
 
-      <div className="max-w-4xl mx-auto p-4 mt-4 pb-24">
-        {superCode.length < 6 && (
-          <div className="bg-white dark:bg-gray-800 rounded-3xl p-[18px] mb-6 dark:border-gray-700">
-            <h2 className="text-lg font-extrabold tracking-[-0.01em] mb-4 text-sc-ink dark:text-gray-100">
-              Select Event Type
-            </h2>
-            <div className="flex gap-4">
-              <Toggle
-                pressed={!isCyclingEvent}
-                onPressedChange={() => {
-                  setIsCyclingEvent(false);
-                  setSuperCode("");
-                  resetState();
-                }}
-                className="flex-1 py-2 text-center bg-gray-100 dark:bg-gray-700 rounded-lg data-[state=on]:bg-green-500 data-[state=on]:text-white"
-              >
-                Match
-              </Toggle>
-              <Toggle
-                pressed={isCyclingEvent}
-                onPressedChange={() => {
-                  setIsCyclingEvent(true);
-                  setSuperCode("");
-                  resetState();
-                }}
-                className="flex-1 py-2 text-center bg-gray-100 dark:bg-gray-700 rounded-lg data-[state=on]:bg-green-500 data-[state=on]:text-white"
-              >
-                Cycling Event
-              </Toggle>
+      <div className="max-w-2xl mx-auto px-4 pt-2 pb-28">
+        {!(match || cyclingEvent) && (
+          <div className="mb-4 flex flex-col gap-3">
+            <div className="flex flex-col gap-1 px-1">
+              <span className="text-[26px] leading-8 font-extrabold tracking-[-0.03em]">Run your game</span>
+              <span className="text-sm text-sc-ink3">Check players in, set teams, record the score and cash out.</span>
             </div>
+            <Segmented
+              value={isCyclingEvent ? "ride" : "match"}
+              onChange={(v) => {
+                setIsCyclingEvent(v === "ride");
+                setSuperCode("");
+                resetState();
+              }}
+              options={[
+                { value: "match", label: <span className="inline-flex items-center gap-1.5"><Trophy size={15} /> Match</span> },
+                { value: "ride", label: <span className="inline-flex items-center gap-1.5"><Bike size={15} /> Ride</span> },
+              ]}
+            />
           </div>
         )}
 
+        {(match || cyclingEvent) && !error ? (
+          <div className="mb-3 bg-white rounded-3xl px-4 py-3 flex items-center gap-3">
+            <span className="w-10 h-10 rounded-2xl bg-sc-soft flex items-center justify-center"><KeyRound size={18} /></span>
+            <span className="flex-1 min-w-0 flex flex-col">
+              <span className="text-[15px] font-extrabold truncate">{isCyclingEvent ? cyclingEvent?.title : match?.title}</span>
+              <span className="text-xs font-bold text-sc-ink3 tracking-[0.2em]">{superCode}</span>
+            </span>
+            <button type="button" onClick={() => { setSuperCode(""); resetState(); setTab("details"); }} className="h-9 px-3.5 rounded-full bg-sc-soft text-sm font-bold">Change</button>
+          </div>
+        ) : (
+          <>
         {isCyclingEvent ? (
           <CyclingCodeInput
             superCode={superCode}
@@ -656,64 +657,39 @@ const ConfirmCheckin = () => {
           />
         )}
 
-        {loading && (
+          </>
+        )}
+
+        {loading && !(match || cyclingEvent) && (
           <div className="py-2"><RowsSkeleton rows={3} /></div>
         )}
 
         {error && !loading && (
-          <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-card p-4 text-center">
-            <AlertCircle
-              size={36}
-              className="text-red-600 dark:text-red-400 mx-auto"
-            />
-            <h2 className="text-lg font-semibold text-red-600 dark:text-red-400">
-              Error
-            </h2>
-            <p className="mt-2 text-sc-ink3 dark:text-gray-400">{error}</p>
+          <div className="bg-white rounded-3xl mb-4">
+            <EmptyState icon={AlertCircle} sport="red" title="Something went wrong" subtitle={error} action={<ScButton size="sm" full={false} kind="dark" onClick={() => fetchEvent()}>Try again</ScButton>} />
           </div>
         )}
 
-        {eventNotFound && !loading && !error && (
-          <div className="bg-white dark:bg-gray-800 rounded-3xl p-[18px] mb-4">
-            <AlertCircle
-              size={36}
-              className="text-red-400 dark:text-red-400 mx-auto"
-            />
-            <h2 className="text-lg font-semibold text-center text-red-600 dark:text-red-400">
-              Event Not Found
-            </h2>
-            <p className="mt-2 text-center text-sc-ink3 dark:text-gray-400">
-              No {isCyclingEvent ? "cycling event" : "match"} found with super code "
-              <strong>{superCode}</strong>".
-            </p>
+        {eventNotFound && !loading && !error && !(match || cyclingEvent) && (
+          <div className="bg-white rounded-3xl mb-4">
+            <EmptyState icon={SearchX} sport="gray" title={`No ${isCyclingEvent ? "ride" : "match"} with that code`} subtitle={`Check the 6 digit super code ${superCode ? `"${superCode}" ` : ""}and try again. It was shown when you published.`} />
           </div>
         )}
 
         {(match || cyclingEvent) && !error && (
-          <Tabs defaultValue="details" className="w-full">
-            <div className="sticky top-16 z-10 bg-white dark:bg-gray-800 rounded-3xl p-[18px] mb-6">
-              <TabsList className="w-full grid grid-cols-3 bg-sc-soft dark:bg-gray-700 rounded-lg h-12">
-                <TabsTrigger
-                  value="details"
-                  className="data-[state=active]:bg-white data-[state=active]:text-sc-ink data-[state=active]:shadow-[0_1px_3px_rgba(14,20,17,0.12)] py-2 text-sm font-semibold rounded-lg"
-                >
-                  Details
-                </TabsTrigger>
-                <TabsTrigger
-                  value="manage"
-                  className="data-[state=active]:bg-white data-[state=active]:text-sc-ink data-[state=active]:shadow-[0_1px_3px_rgba(14,20,17,0.12)] py-2 text-sm font-semibold rounded-lg"
-                >
-                  Manage
-                </TabsTrigger>
-                <TabsTrigger
-                  value="cashout"
-                  className="data-[state=active]:bg-white data-[state=active]:text-sc-ink data-[state=active]:shadow-[0_1px_3px_rgba(14,20,17,0.12)] py-2 text-sm"
-                >
-                  Cashout
-                </TabsTrigger>
-              </TabsList>
+          <div className="w-full">
+            <div className="sticky top-[calc(max(env(safe-area-inset-top),1rem)+56px)] z-20 bg-sc-bg/95 backdrop-blur-xl -mx-4 px-4 pt-1 pb-3 mb-2">
+              <Segmented
+                value={tab}
+                onChange={(v) => setTab(v as "details" | "manage" | "cashout")}
+                options={[
+                  { value: "details", label: "Details" },
+                  { value: "manage", label: isCyclingEvent ? "Riders" : "Manage" },
+                  { value: "cashout", label: "Cashout" },
+                ]}
+              />
             </div>
-            <TabsContent value="details" className="mt-0 pb-8">
+            {tab === "details" && (<div className="pb-8">
               <div className="max-w-4xl mx-auto">
                 {isCyclingEvent ? (
                   <CyclingDetails
@@ -734,8 +710,8 @@ const ConfirmCheckin = () => {
                   />
                 )}
               </div>
-            </TabsContent>
-            <TabsContent value="manage" className="mt-0">
+            </div>)}
+            {tab === "manage" && (<div className="pb-8">
               <div className="max-w-4xl mx-auto">
                 {isCyclingEvent ? (
                   <AttendeesManagement
@@ -774,8 +750,8 @@ const ConfirmCheckin = () => {
                   />
                 )}
               </div>
-            </TabsContent>
-            <TabsContent value="cashout" className="mt-0">
+            </div>)}
+            {tab === "cashout" && (<div className="pb-8">
               <div className="max-w-4xl mx-auto">
                 {isCyclingEvent ? (
                   <HostCashout
@@ -789,48 +765,23 @@ const ConfirmCheckin = () => {
                   />
                 )}
               </div>
-            </TabsContent>
-          </Tabs>
+            </div>)}
+          </div>
         )}
 
         <Dialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
-          <DialogContent className="max-w-sm rounded-2xl p-6">
-            <DialogHeader>
-              <DialogTitle className="text-lg font-semibold text-center">
-                Confirm {isCyclingEvent ? "Event" : "Match"} Cancellation
-              </DialogTitle>
-              <DialogDescription
-                className="text-sm text-center mt-2 text-sc-ink3"
-              >
-                Are you sure you want to cancel this {isCyclingEvent ? "event" : "match"}?
-                This action cannot be undone, and {isCyclingEvent ? "attendees" : "players"} will be notified.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <div className="mt-6 flex items-center justify-between gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setIsCancelDialogOpen(false)}
-                  className="rounded-full px-2 py-1"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleCancelEvent}
-                  className="bg-red-500 hover:bg-red-600 text-white rounded-full px-2 py-1"
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span className="px-2">Processing...</span>
-                    </>
-                  ) : (
-                    `Yes, Cancel ${isCyclingEvent ? "Event" : "Match"}`
-                  )}
-                </Button>
-              </div>
-            </DialogFooter>
+          <DialogContent className="w-full max-w-[calc(100%-1.5rem)] sm:max-w-[380px] rounded-[28px] bg-white p-6 flex flex-col items-center text-center gap-3">
+            <span className="w-14 h-14 rounded-full bg-sport-red-bg text-sport-red-fg flex items-center justify-center"><AlertCircle size={28} /></span>
+            <DialogTitle className="text-xl font-extrabold">Cancel this {isCyclingEvent ? "ride" : "match"}?</DialogTitle>
+            <DialogDescription className="text-sm text-sc-ink2 leading-6">
+              This cannot be undone. {isCyclingEvent ? "Riders" : "Players"} will be told, and anyone who paid will be refunded.
+            </DialogDescription>
+            <div className="w-full flex flex-col gap-2.5 mt-1">
+              <ScButton kind="danger" onClick={handleCancelEvent} disabled={loading}>
+                {loading ? <Loader2 size={18} className="animate-spin" /> : `Yes, cancel ${isCyclingEvent ? "ride" : "match"}`}
+              </ScButton>
+              <ScButton kind="soft" onClick={() => setIsCancelDialogOpen(false)}>Keep it</ScButton>
+            </div>
           </DialogContent>
         </Dialog>
         <Navbar />

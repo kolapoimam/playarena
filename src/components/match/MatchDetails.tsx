@@ -1,6 +1,6 @@
 import { format, differenceInMinutes } from "date-fns";
-import { Trophy, MapPin, Calendar, Clock, Users, DollarSign, Wallet } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { MapPin, Calendar, Clock, Users, Wallet, Banknote, Ticket, XCircle } from "lucide-react";
+import { Bubble, ListGroup, ListRow, Pill, Progress, ScButton, StatCard, formatNairaExact, type Sport } from "@/components/sc/ui";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
@@ -50,12 +50,13 @@ type Cashout = {
 type MatchDetailsProps = {
   match: Match | null;
   cashout: Cashout | null;
-  handleCancelMatch: () => void;
+  handleCancelMatch?: () => void;
+  handleCancel?: () => void;
   loading: boolean;
   isMatchPast: boolean;
 };
 
-const MatchDetails = ({ match, cashout, handleCancelMatch, loading, isMatchPast }: MatchDetailsProps) => {
+const MatchDetails = ({ match, cashout, handleCancelMatch, handleCancel: openCancel, loading, isMatchPast }: MatchDetailsProps) => {
   const { toast } = useToast();
   const [walletBalance, setWalletBalance] = useState<number>(0);
 
@@ -174,7 +175,7 @@ const MatchDetails = ({ match, cashout, handleCancelMatch, loading, isMatchPast 
     const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
     const now = new Date();
     const minutesToStart = differenceInMinutes(matchDateTime, now);
-    const hasCheckedInPlayers = match.players?.some((p) => p.status === "Checked In") || false;
+    const hasCheckedInPlayers = match.players?.some((p: any) => (p.player_status || p.status) === "Checked In") || false;
     return minutesToStart > 0 && !match.cancellation_status && !hasCheckedInPlayers;
   };
 
@@ -214,7 +215,7 @@ const MatchDetails = ({ match, cashout, handleCancelMatch, loading, isMatchPast 
     if (!match) return "N/A";
     let total = 0;
     if (match.is_paid && match.price) {
-      const checkedInPlayers = match.players?.filter((p) => p.status === "Checked In") || [];
+      const checkedInPlayers = match.players?.filter((p: any) => (p.player_status || p.status) === "Checked In") || [];
       const playerRevenue = checkedInPlayers.reduce(
         (sum, player) => sum + ((player.number_of_slots || 1) * (match.price || 0)),
         0
@@ -234,133 +235,76 @@ const MatchDetails = ({ match, cashout, handleCancelMatch, loading, isMatchPast 
     return match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
   };
 
-  const handleCancel = async () => {
-    if (!match) return;
-
-    try {
-      const { error } = await supabase
-        .from("matches")
-        .update({
-          cancellation_status: true,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", match.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Match has been successfully cancelled.",
-      });
-
-      handleCancelMatch();
-    } catch (error) {
-      console.error("Error cancelling match:", error);
-      toast({
-        title: "Error",
-        description: "Failed to cancel match. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
+  // Cancelling is confirmed in a dialog owned by the page
+  const askToCancel = () => (openCancel || handleCancelMatch)?.();
 
   if (!match) return null;
 
+  const taken = calculateTotalSlotsOccupied();
+  const total = match.total_slots || 0;
+  const start = match.match_date && match.match_time ? new Date(`${match.match_date}T${match.match_time}`) : null;
+  const state = match.cancellation_status ? "Cancelled" : isMatchPast ? "Ended" : start && differenceInMinutes(start, new Date()) <= 0 ? "Live" : "Upcoming";
+  const stateSport: Sport = state === "Cancelled" ? "red" : state === "Live" ? "football" : state === "Ended" ? "gray" : "guide";
+  const cashoutSport: Sport = cashout?.status === "Successful" ? "football" : cashout?.status === "Failed" ? "red" : cashout?.status === "Processed" ? "guide" : "tennis";
+  const cancelReason = match.cancellation_status
+    ? "This match is already cancelled."
+    : start && differenceInMinutes(start, new Date()) <= 0
+      ? "You can only cancel before kick off."
+      : match.players?.some((p: any) => (p.player_status || p.status) === "Checked In")
+        ? "Players have checked in, so it can no longer be cancelled."
+        : null;
+
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-3xl p-[18px] dark:border-gray-700">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold text-sc-ink dark:text-gray-100">Match Details</h2>
-        <div className="flex items-center gap-2">
-          {match.cancellation_status && (
-            <span className="inline-block px-3 py-1 text-xs font-bold rounded-full border bg-red-100 text-red-700 border-red-300">
-              Cancelled
-            </span>
-          )}
-          {cashout && (
-            <span
-              className={`inline-block px-3 py-1 text-xs font-bold rounded-full border ${getStatusStyles(
-                cashout.status
-              )}`}
-            >
-              Cashout: {cashout.status}
-            </span>
-          )}
+    <div className="flex flex-col gap-4">
+      <div className="bg-sc-ink text-white rounded-3xl p-5 flex flex-col gap-4 relative overflow-hidden">
+        <svg aria-hidden="true" className="absolute -right-10 -top-10 opacity-10" width="200" height="200" viewBox="0 0 200 200" fill="none" stroke="#fff" strokeWidth="3"><circle cx="100" cy="100" r="60" /><path d="M100 0v200" /><rect x="10" y="10" width="180" height="180" rx="12" /></svg>
+        <div className="flex flex-wrap gap-1.5 relative">
+          <Pill sport={stateSport}>{state}</Pill>
+          <Pill sport={match.is_paid ? "tennis" : "football"}>{match.is_paid ? "Paid" : "Free"}</Pill>
+          {cashout && <Pill sport={cashoutSport}>Cashout {cashout.status.toLowerCase()}</Pill>}
+        </div>
+        <div className="relative flex flex-col gap-1">
+          <span className="text-[26px] leading-8 font-extrabold tracking-[-0.03em] line-clamp-2">{match.title || "Untitled match"}</span>
+          <span className="text-sm text-white/70">Organised by {match.organizer_name || "you"}</span>
+        </div>
+        <div className="relative flex flex-col gap-2">
+          <div className="flex justify-between text-xs font-bold text-white/70"><span>{taken} of {total} slots filled</span><span>{total ? Math.round((taken / total) * 100) : 0}%</span></div>
+          <Progress value={total ? (taken / total) * 100 : 0} color="#BEF264" track="rgba(255,255,255,0.15)" />
         </div>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-        <div className="flex items-center gap-3">
-          <Trophy size={20} className="text-sc-green-dark" />
-          <div>
-            <p className="font-medium text-sc-ink dark:text-gray-100">{match.title || "Untitled Match"}</p>
-            <p className="text-sm text-sc-ink3 dark:text-gray-400">
-              Organized by {match.organizer_name || "Unknown Organizer"}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <MapPin size={20} className="text-sc-green-dark" />
-          <span className="text-sc-ink dark:text-gray-100">
-            {match.venue?.name || "Unknown Venue"}, {match.venue?.city || "Unknown City"}
-          </span>
-        </div>
-        <div className="flex items-center gap-3">
-          <Calendar size={20} className="text-sc-green-dark" />
-          <span className="text-sc-ink dark:text-gray-100">
-            {match.match_date ? formatDate(match.match_date) : "Date TBD"}
-          </span>
-        </div>
-        <div className="flex items-center gap-3">
-          <Clock size={20} className="text-sc-green-dark" />
-          <span className="text-sc-ink dark:text-gray-100">
-            {match.match_time ? formatTime(match.match_time) : "Time TBD"}
-          </span>
-        </div>
-        <div className="flex items-center gap-3">
-          <Users size={20} className="text-sc-green-dark" />
-          <span className="text-sc-ink dark:text-gray-100">
-            {calculateTotalSlotsOccupied()}/{match.total_slots || 0} slots
-          </span>
-        </div>
-        <div className="flex items-center gap-3">
-          <DollarSign size={20} className="text-sc-green-dark" />
-          <span className="text-sc-ink dark:text-gray-100">
-            {match.is_paid ? `₦${match.price?.toLocaleString() || "0"} per ticket` : "Free"}
-            {match.sell_tickets && match.ticket_price
-              ? ` | Tickets: ₦${match.ticket_price.toLocaleString()} each`
-              : ""}
-          </span>
-        </div>
-        <div className="flex items-center gap-3">
-          <Wallet size={20} className="text-sc-green-dark" />
-          <span className="text-sc-ink dark:text-gray-100">
-            Wallet: ₦{walletBalance.toLocaleString() || "0"}
-          </span>
-        </div>
+
+      <div className="flex gap-2.5">
+        <StatCard value={formatNairaExact(walletBalance)} label="In your wallet" icon={Wallet} sport="money" />
+        <StatCard value={match.is_paid ? formatNairaExact(match.price || 0) : "Free"} label={match.is_paid ? "Per player" : "Entry"} icon={Banknote} sport="tennis" />
       </div>
+
+      <ListGroup title="Match info">
+        <ListRow icon={MapPin} sport="venue" title={match.venue?.name || "Venue not set"} subtitle={match.venue?.city || undefined} />
+        <ListRow icon={Calendar} sport="guide" title={match.match_date ? formatDate(match.match_date) : "Date not set"} subtitle="Date" />
+        <ListRow icon={Clock} sport="football" title={match.match_time ? `${formatTime(match.match_time)}${match.match_end_time ? ` to ${formatTime(String(match.match_end_time).slice(11, 16) || String(match.match_end_time))}` : ""}` : "Time not set"} subtitle="Kick off" />
+        <ListRow icon={Users} sport="pink" title={`${taken}/${total} slots`} subtitle={`${(match.players || []).length} players registered`} />
+        {match.sell_tickets && match.ticket_price ? (
+          <ListRow icon={Ticket} sport="tennis" title={`${formatNairaExact(match.ticket_price)} per ticket`} subtitle="Spectator tickets" />
+        ) : null}
+      </ListGroup>
+
       {match.cancellation_status && match.is_paid && (
-        <div className="mt-4 p-4 rounded-lg bg-red-100 dark:bg-red-900">
-          <p className="text-red-700 dark:text-red-300">
-            This match has been cancelled. Players will be contacted for a refund.
-          </p>
-        </div>
+        <div className="bg-sport-red-bg text-sport-red-fg rounded-3xl p-4 text-sm font-bold">This match was cancelled. Paid players will be contacted for a refund.</div>
       )}
       {cashout && (
-        <div className="mt-4 p-4 rounded-lg bg-yellow-100 dark:bg-yellow-900">
-          <p className="text-yellow-700 dark:text-yellow-300">
-            Your cashout request is {cashout.status}. Expected amount: {calculateExpectedAmount()}
-          </p>
+        <div className="bg-white rounded-3xl p-4 flex items-center gap-3">
+          <Bubble icon={Wallet} sport={cashoutSport} size={42} />
+          <span className="flex-1 flex flex-col">
+            <span className="text-[15px] font-bold">Cashout {cashout.status.toLowerCase()}</span>
+            <span className="text-[13px] text-sc-ink3">Expected {calculateExpectedAmount()} to {cashout.bank_name}</span>
+          </span>
         </div>
       )}
-      <div className="flex flex-wrap gap-4 mt-4">
-        <Button
-          onClick={handleCancel}
-          className={`bg-red-500 hover:bg-red-600 text-white ${
-            !canCancelMatch() ? "opacity-50 cursor-not-allowed" : ""
-          }`}
-          disabled={!canCancelMatch() || loading}
-        >
-          Cancel Match
-        </Button>
+
+      <div className="bg-white rounded-3xl p-[18px] flex flex-col gap-2.5">
+        <span className="text-base font-extrabold">Cancel match</span>
+        <span className="text-sm text-sc-ink3 leading-5">{cancelReason || "Players are told straight away. Paid players are refunded."}</span>
+        <ScButton kind="danger" size="md" icon={XCircle} onClick={askToCancel} disabled={!!cancelReason || loading}>Cancel this match</ScButton>
       </div>
     </div>
   );

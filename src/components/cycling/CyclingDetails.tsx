@@ -1,5 +1,6 @@
 import { format, differenceInMinutes } from "date-fns";
-import { Bike, MapPin, Calendar, Clock, Users, DollarSign, Wallet } from "lucide-react";
+import { Bike, MapPin, Calendar, Clock, Users, Wallet, Banknote, Flag, XCircle } from "lucide-react";
+import { ListGroup, ListRow, Pill, Progress, ScButton, StatCard, formatNairaExact, type Sport } from "@/components/sc/ui";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -267,80 +268,58 @@ if (walletError) {
 
   if (!event) return null;
 
+  const taken = calculateTotalSlotsOccupied();
+  const total = event.max_attendees || 0;
+  const start = new Date(`${event.event_date}T${/am|pm/i.test(event.start_time || "") ? "12:00" : event.start_time}`);
+  const state = event.cancellation_status ? "Cancelled" : isEventPast ? "Ended" : "Upcoming";
+  const stateSport: Sport = state === "Cancelled" ? "red" : state === "Ended" ? "gray" : "guide";
+  const cancelReason = event.cancellation_status
+    ? "This ride is already cancelled."
+    : !canCancelEvent()
+      ? "You can only cancel before the ride starts and before anyone checks in."
+      : null;
+  const place = event.start_landmark?.name || event.start_landmark_name;
+
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-3xl p-[18px] dark:border-gray-700">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold text-sc-ink dark:text-gray-100">Cycling Event Details</h2>
-        <div className="flex items-center gap-2">
-          {event.cancellation_status && (
-            <span className="inline-block px-3 py-1 text-xs font-bold rounded-full border bg-red-100 text-red-700 border-red-300">
-              Cancelled
-            </span>
-          )}
+    <div className="flex flex-col gap-4">
+      <div className="bg-sport-cycling-fg text-white rounded-3xl p-5 flex flex-col gap-4 relative overflow-hidden">
+        <svg aria-hidden="true" className="absolute -right-6 -top-6 opacity-20" width="180" height="160" viewBox="0 0 180 160" fill="none" stroke="#fff" strokeWidth="5" strokeLinecap="round"><path d="M10 150 C 70 130 60 70 120 60 S 170 20 200 0" strokeDasharray="2 14" /></svg>
+        <div className="flex flex-wrap gap-1.5 relative">
+          <Pill sport={stateSport}>{state}</Pill>
+          <Pill sport={event.is_free ? "football" : "tennis"}>{event.is_free ? "Free" : "Paid"}</Pill>
+          {cashout && <Pill sport="tennis">Cashout {cashout.status.toLowerCase()}</Pill>}
+        </div>
+        <div className="relative flex flex-col gap-1">
+          <span className="text-[26px] leading-8 font-extrabold tracking-[-0.03em] line-clamp-2">{event.title || "Untitled ride"}</span>
+          <span className="text-sm text-white/80">Hosted by {event.host_name || "you"}</span>
+        </div>
+        <div className="relative flex flex-col gap-2">
+          <div className="flex justify-between text-xs font-bold text-white/80"><span>{taken} of {total} spots filled</span><span>{total ? Math.round((taken / total) * 100) : 0}%</span></div>
+          <Progress value={total ? (taken / total) * 100 : 0} color="#FFFFFF" track="rgba(255,255,255,0.25)" />
         </div>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-        <div className="flex items-center gap-3">
-          <Bike size={20} className="text-sc-green-dark" />
-          <div>
-            <p className="font-medium text-sc-ink dark:text-gray-100">{event.title || "Untitled Event"}</p>
-            <p className="text-sm text-sc-ink3 dark:text-gray-400">
-              Hosted by {event.host_name || "Unknown Host"}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <MapPin size={20} className="text-sc-green-dark" />
-          <span className="text-sc-ink dark:text-gray-100">
-            {event.start_landmark_name || "Unknown Location"}
-          </span>
-        </div>
-        <div className="flex items-center gap-3">
-          <Calendar size={20} className="text-sc-green-dark" />
-          <span className="text-sc-ink dark:text-gray-100">
-            {event.event_date ? formatDate(event.event_date) : "Date TBD"}
-          </span>
-        </div>
-        <div className="flex items-center gap-3">
-          <Clock size={20} className="text-sc-green-dark" />
-          <span className="text-sc-ink dark:text-gray-100">
-            {event.start_time ? formatTime(event.start_time) : "Time TBD"}
-          </span>
-        </div>
-        <div className="flex items-center gap-3">
-          <Users size={20} className="text-sc-green-dark" />
-          <span className="text-sc-ink dark:text-gray-100">
-            {calculateTotalSlotsOccupied()}/{event.max_attendees || 0} slots
-          </span>
-        </div>
-        <div className="flex items-center gap-3">
-          <DollarSign size={20} className="text-sc-green-dark" />
-          <span className="text-sc-ink dark:text-gray-100">
-            {event.is_free ? "Free" : `₦${event.price?.toLocaleString() || "0"} per ticket`}
-          </span>
-        </div>
-        <div className="flex items-center gap-3">
-          <Wallet size={20} className="text-sc-green-dark" />
-          <span className="text-sc-ink dark:text-gray-100">
-            Wallet: ₦{localWalletBalance.toLocaleString() || "0"}
-          </span>
-        </div>
+
+      <div className="flex gap-2.5">
+        <StatCard value={formatNairaExact(localWalletBalance || 0)} label="In your wallet" icon={Wallet} sport="money" />
+        <StatCard value={event.is_free ? "Free" : formatNairaExact(event.price || 0)} label={event.is_free ? "Entry" : "Per rider"} icon={Banknote} sport="tennis" />
       </div>
+
+      <ListGroup title="Ride info">
+        <ListRow icon={MapPin} sport="cycling" title={place || "Start point not set"} subtitle="Start" />
+        {event.end_landmark?.name && <ListRow icon={Flag} sport="cycling" title={event.end_landmark.name} subtitle="Finish" />}
+        <ListRow icon={Calendar} sport="guide" title={event.event_date ? formatDate(event.event_date) : "Date not set"} subtitle="Date" />
+        <ListRow icon={Clock} sport="football" title={event.start_time ? formatTime(event.start_time) : "Time not set"} subtitle="Starts" />
+        <ListRow icon={Users} sport="pink" title={`${taken}/${total} spots`} subtitle={`${(event.cycling_attendees || []).length} riders registered`} />
+      </ListGroup>
+
       {event.cancellation_status && !event.is_free && (
-        <div className="mt-4 p-4 rounded bg-red-100 dark:bg-red-900">
-          <p className="text-red-700 dark:text-red-300">
-            This event has been cancelled. Attendees will be contacted for a refund.
-          </p>
-        </div>
+        <div className="bg-sport-red-bg text-sport-red-fg rounded-3xl p-4 text-sm font-bold">This ride was cancelled. Paid riders will be contacted for a refund.</div>
       )}
-      <div className="flex flex-wrap gap-4 mt-4">
-        <Button
-          onClick={handleCancel}
-          className={`bg-red-500 hover:bg-red-600 text-white ${!canCancelEvent() ? 'opacity-50 cursor-not-allowed' : ''}`}
-          disabled={!canCancelEvent() || loading}
-        >
-          Cancel Event
-        </Button>
+
+      <div className="bg-white rounded-3xl p-[18px] flex flex-col gap-2.5">
+        <span className="text-base font-extrabold">Cancel ride</span>
+        <span className="text-sm text-sc-ink3 leading-5">{cancelReason || "Riders are told straight away. Paid riders are refunded."}</span>
+        <ScButton kind="danger" size="md" icon={XCircle} onClick={handleCancel} disabled={!!cancelReason || loading}>Cancel this ride</ScButton>
       </div>
     </div>
   );

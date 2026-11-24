@@ -11,7 +11,8 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { ChevronDown, ChevronUp, Loader2 } from "lucide-react";
+import { Bike, Check, CheckCircle2, Clock, Loader2, QrCode, ScanLine, Users } from "lucide-react";
+import { Avatar, EmptyState, Pill, ScButton, Segmented, StatCard, initialsOf, type Sport } from "@/components/sc/ui";
 import { z } from "zod";
 import { isPast, addHours, addDays } from "date-fns";
 
@@ -391,169 +392,115 @@ const AttendeesManagement = ({
            status.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
   };
 
+  const [filter, setFilter] = useState<"all" | "waiting" | "in">("all");
+
   if (!event) return null;
 
+  const riders = event.cycling_attendees || [];
+  const statusOf = (r: NonNullable<CyclingEvent["cycling_attendees"]>[number]) =>
+    attendeeStatuses.find((x) => x.id_uuid === r.id_uuid)?.status || r.status || "registered";
+  const inCount = riders.filter((r) => statusOf(r) === "checked_in").length;
+  const spots = riders.reduce((n, r) => n + (Number(r.number_of_slots) || 1), 0);
+  const shown = riders.filter((r) => (filter === "all" ? true : filter === "in" ? statusOf(r) === "checked_in" : statusOf(r) !== "checked_in"));
+  const pillSport = (st: string): Sport => (st === "checked_in" ? "football" : st === "absent" ? "red" : "tennis");
+
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-3xl p-[18px] dark:border-gray-700">
-      <h2 className="text-lg font-extrabold tracking-[-0.01em] mb-4 text-sc-ink dark:text-gray-100">
-        Manage Attendees
-      </h2>
-
-      <div className="mb-4">
-        <Button
-          onClick={handleCheckinMode}
-          className="bg-blue-500 hover:bg-blue-600 text-white w-full sm:w-auto"
-          disabled={!canCheckin() || loading}
-        >
-          {loading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Loading
-            </>
-          ) : (
-            "Check-in Attendees"
-          )}
-        </Button>
+    <div className="flex flex-col gap-4">
+      <div className="flex gap-2.5">
+        <StatCard value={`${spots}/${event.max_attendees || 0}`} label="Spots filled" icon={Users} sport="cycling" />
+        <StatCard value={inCount} label="Checked in" icon={CheckCircle2} sport="money" />
+        <StatCard value={riders.length - inCount} label="Waiting" icon={Clock} sport="tennis" />
       </div>
 
-      <div className="max-h-[400px] overflow-y-auto">
-        <button
-          onClick={() => setIsAttendeesOpen(!isAttendeesOpen)}
-          className="flex items-center gap-2 w-full text-left text-lg font-semibold text-sc-ink dark:text-gray-100 mb-4"
-        >
-          Attendees ({event.cycling_attendees?.length || 0})
-          {isAttendeesOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-        </button>
-
-        {mode === "checkin" && (
-          <div className="mb-4">
-            <QrScanButton label="Scan rider QR code" onClick={() => setScanOpen(true)} />
+      {mode === "checkin" ? (
+        <div className="bg-sc-ink text-white rounded-3xl p-4 flex flex-col gap-3">
+          <span className="flex flex-col">
+            <span className="text-[11px] font-bold tracking-[0.12em] text-[#FED7AA]">CHECK IN IS ON</span>
+            <span className="text-sm text-white/80">Scan a rider's QR ticket, or type their 6 digit code below.</span>
+          </span>
+          <div className="flex gap-2">
+            <ScButton kind="cycling" size="md" icon={ScanLine} onClick={() => setScanOpen(true)}>Scan QR</ScButton>
+            <ScButton kind="white" size="md" full={false} className="px-6" onClick={() => setMode(null)}>Done</ScButton>
           </div>
-        )}
-        {isAttendeesOpen && (
-          <div className="space-y-4">
-            {event.cycling_attendees?.length === 0 ? (
-              <p className="text-sc-ink3 dark:text-gray-400">
-                No attendees registered.
-              </p>
-            ) : (
-              event.cycling_attendees?.map((attendee) => {
-                const currentStatus = attendeeStatuses.find(s => s.id_uuid === attendee.id_uuid)?.status || attendee.status;
-                return (
-                  <div
-                    key={attendee.id_uuid}
-                    className="relative flex flex-col sm:flex-row gap-4 items-start sm:items-center p-4 bg-sc-soft dark:bg-gray-700 rounded-lg"
-                  >
-                    <div className="flex-1">
-                      <p className="font-medium text-sc-ink dark:text-gray-100">{attendee.attendee_name}</p>
-                      <p className="text-sm text-sc-ink3 dark:text-gray-400">
-                        Phone: {attendee.attendee_phone || "N/A"}
-                      </p>
-                      <p className="text-sm text-sc-ink3 dark:text-gray-400">
-                        Slots: {Number(attendee.number_of_slots) || 1}
-                      </p>
-                      {attendee.is_own_bike && (
-                        <p className="text-sm text-sc-ink3 dark:text-gray-400">
-                          Own Bike
-                        </p>
-                      )}
-                      {attendee.is_rental_bike && (
-                        <p className="text-sm text-sc-ink3 dark:text-gray-400">
-                          Rental Bike
-                        </p>
-                      )}
-                    </div>
-                    <span
-                      className={`absolute top-2 right-2 px-2 py-1 text-xs font-medium rounded border ${getStatusStyles(currentStatus)}`}
-                    >
-                      {getDisplayStatus(currentStatus)}
-                    </span>
-                    {mode === "checkin" && currentStatus === "registered" && canConfirmAttendees && (
-                      <div className="flex gap-2 w-full sm:w-auto">
-                        <Input
-                          placeholder="Enter check-in code"
-                          value={checkinCodes[attendee.id_uuid] || ""}
-                          onChange={(e) =>
-                            handleCheckinCodeChange(attendee.id_uuid, e.target.value)
-                          }
-                          inputMode="numeric"
-                          pattern="[0-9]*"
-                          maxLength={6}
-                          className="w-full sm:w-[150px] dark:bg-gray-700 dark:text-gray-100"
-                          disabled={checkingInAttendees[attendee.id_uuid] || loading}
-                        />
-                        <Button
-                          onClick={() => handleCheckin(attendee.id_uuid)}
-                          className="bg-blue-500 hover:bg-blue-600 text-white"
-                          disabled={
-                            !checkinCodes[attendee.id_uuid] ||
-                            checkinCodes[attendee.id_uuid].length !== 6 ||
-                            checkingInAttendees[attendee.id_uuid] ||
-                            loading
-                          }
-                        >
-                          {checkingInAttendees[attendee.id_uuid] ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            "Verify"
-                          )}
-                        </Button>
-                      </div>
-                    )}
-                    {checkinCodeErrors[attendee.id_uuid] && (
-                      <p className="text-sm text-red-600 dark:text-red-400 mt-1">
-                        {checkinCodeErrors[attendee.id_uuid]}
-                      </p>
-                    )}
-                  </div>
-                );
-              })
-            )}
-          </div>
-        )}
-      </div>
-
-      {mode === "checkin" && (
-        <Button
-          onClick={() => setMode(null)}
-          className="mt-4 bg-sc-green hover:brightness-95 text-sc-green-ink font-bold"
-          disabled={loading}
-        >
-          {loading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            "Done"
-          )}
-        </Button>
+        </div>
+      ) : (
+        <ScButton kind="cycling" icon={QrCode} onClick={handleCheckinMode} disabled={loading}>Check in riders</ScButton>
       )}
+
+      <div className="bg-white rounded-3xl p-[18px] flex flex-col gap-3.5">
+        <div className="flex items-center justify-between">
+          <span className="text-lg font-extrabold tracking-[-0.01em]">Riders</span>
+          <span className="text-sm font-bold text-sc-ink3">{riders.length} registered</span>
+        </div>
+        {riders.length > 0 && (
+          <Segmented
+            value={filter}
+            onChange={(v) => setFilter(v as "all" | "waiting" | "in")}
+            options={[
+              { value: "all", label: `All ${riders.length}` },
+              { value: "waiting", label: `Waiting ${riders.length - inCount}` },
+              { value: "in", label: `In ${inCount}` },
+            ]}
+          />
+        )}
+        {riders.length === 0 ? (
+          <EmptyState icon={Bike} sport="cycling" title="No riders yet" subtitle="Share the ride link. Riders show up here as soon as they join." />
+        ) : shown.length === 0 ? (
+          <EmptyState icon={filter === "in" ? CheckCircle2 : Clock} sport="gray" title={filter === "in" ? "Nobody checked in yet" : "Everyone is in"} />
+        ) : (
+          <div className="flex flex-col divide-y divide-sc-line">
+            {shown.map((r) => {
+              const st = statusOf(r);
+              const busy = !!checkingInAttendees[r.id_uuid] || loading;
+              return (
+                <div key={r.id_uuid} className="py-3 flex flex-col gap-2.5">
+                  <div className="flex items-center gap-3">
+                    <Avatar initials={initialsOf(r.attendee_name)} seed={r.attendee_name} size={42} sport="cycling" />
+                    <span className="flex-1 min-w-0 flex flex-col">
+                      <span className="text-[15px] font-bold truncate">{r.attendee_name}</span>
+                      <span className="text-[13px] text-sc-ink3 truncate">
+                        {(Number(r.number_of_slots) || 1) > 1 ? `${r.number_of_slots} spots · ` : ""}
+                        {r.is_own_bike ? "Own bike · " : r.is_rental_bike ? "Rental bike · " : ""}
+                        {r.attendee_phone || "No phone"}
+                      </span>
+                    </span>
+                    <Pill sport={pillSport(st)}>{getDisplayStatus(st) === "Registered" ? "Waiting" : getDisplayStatus(st)}</Pill>
+                  </div>
+                  {mode === "checkin" && st === "registered" && canConfirmAttendees && (
+                    <div className="flex gap-2 pl-[54px]">
+                      <Input
+                        placeholder="6 digit code"
+                        value={checkinCodes[r.id_uuid] || ""}
+                        onChange={(e) => handleCheckinCodeChange(r.id_uuid, e.target.value)}
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        maxLength={6}
+                        className="h-11 flex-1 tracking-[0.3em] font-bold placeholder:tracking-normal placeholder:font-semibold"
+                        disabled={busy}
+                      />
+                      <ScButton size="sm" full={false} kind="cycling" className="h-11 px-5" onClick={() => handleCheckin(r.id_uuid)} disabled={!checkinCodes[r.id_uuid] || checkinCodes[r.id_uuid].length !== 6 || busy}>
+                        {checkingInAttendees[r.id_uuid] ? <Loader2 size={16} className="animate-spin" /> : "Verify"}
+                      </ScButton>
+                    </div>
+                  )}
+                  {checkinCodeErrors[r.id_uuid] && <p className="m-0 pl-[54px] text-xs font-bold text-sport-red-fg">{checkinCodeErrors[r.id_uuid]}</p>}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       <QrScannerDialog open={scanOpen} onOpenChange={setScanOpen} onCode={handleScannedCode} hint="Point the camera at the QR code on the rider's ticket" />
 
       <Dialog open={checkinDialogOpen} onOpenChange={setCheckinDialogOpen}>
-        <DialogContent className="sm:max-w-md rounded-lg">
-          <DialogHeader>
-            <DialogTitle>Check-in Successful</DialogTitle>
-            <DialogDescription>
-              {checkinAttendee && (
-                <>
-                  {checkinAttendee.name} has been checked in with{" "}
-                  {checkinAttendee.slots} slot
-                  {checkinAttendee.slots !== 1 ? "s" : ""}.
-                </>
-              )}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              onClick={() => setCheckinDialogOpen(false)}
-              className="bg-sc-green hover:brightness-95 text-sc-green-ink rounded-full font-bold"
-            >
-              Close
-            </Button>
-          </DialogFooter>
+        <DialogContent className="w-full max-w-[calc(100%-1.5rem)] sm:max-w-[380px] rounded-[28px] bg-white p-6 flex flex-col items-center text-center gap-3">
+          <span className="w-14 h-14 rounded-full bg-sport-cycling text-white flex items-center justify-center"><Check size={28} strokeWidth={3} /></span>
+          <DialogTitle className="text-xl font-extrabold">Checked in</DialogTitle>
+          <DialogDescription className="text-sm text-sc-ink2">
+            {checkinAttendee && <>{checkinAttendee.name} is in with {checkinAttendee.slots} spot{checkinAttendee.slots !== 1 ? "s" : ""}.</>}
+          </DialogDescription>
+          <ScButton kind="cycling" onClick={() => setCheckinDialogOpen(false)}>Next rider</ScButton>
         </DialogContent>
       </Dialog>
     </div>

@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/compone
 import { Eye } from "lucide-react";
 import { FormValues } from "@/components/MatchFormTypes";
 import { ShareCard, CardTheme, ShareInfo } from "@/components/sc/ActivityShare";
-import { formatNaira, formatTime12 } from "@/components/sc/ui";
+import { formatNairaExact, formatTime12 } from "@/components/sc/ui";
 
 type Venue = { id: string; name: string; city?: string };
 
@@ -19,11 +19,11 @@ export const matchInfoFromForm = (f: Record<string, any>, venue?: { name: string
   return {
     kind: "match",
     title: f.title || "Your match",
-    dateLabel: date ? date.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }) : "Pick a date",
-    timeLabel: f.start_time ? formatTime12(f.start_time) : "Pick a time",
-    place: venue?.name || "Pick a venue",
+    dateLabel: date && !isNaN(date.getTime()) ? date.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" }) : "Date not set",
+    timeLabel: f.start_time ? `${formatTime12(f.start_time)}${f.end_time ? ` to ${formatTime12(f.end_time)}` : ""}` : "Time not set",
+    place: venue?.name || "Venue not set",
     city: venue?.city,
-    priceLabel: f.is_paid && f.price ? formatNaira(f.price) : "Free",
+    priceLabel: f.is_paid && Number(f.price) > 0 ? formatNairaExact(Number(f.price)) : "Free",
     taken: 0,
     total: Number(f.total_slots) || 0,
     chips: [f.match_type, f.skill_level, f.gender].filter(Boolean),

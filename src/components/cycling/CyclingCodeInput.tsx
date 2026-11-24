@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2 } from "lucide-react";
+import { KeyRound, Loader2 } from "lucide-react";
 import { z } from "zod";
 
 type CyclingEvent = {
@@ -238,11 +238,15 @@ const CyclingCodeInput = ({
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-3xl p-[18px] mb-6 dark:border-gray-700">
-      <h2 className="text-lg font-extrabold tracking-[-0.01em] mb-4 text-sc-ink dark:text-gray-100">
-        Cycling Super Code
-      </h2>
-      <div className="flex flex-col sm:flex-row gap-4">
+    <div className="bg-white rounded-3xl p-[18px] mb-4 flex flex-col gap-3.5">
+      <div className="flex items-center gap-3">
+        <span className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0" style={{ background: "#FFEDD5", color: "#C2410C" }}><KeyRound size={20} /></span>
+        <span className="flex flex-col">
+          <span className="text-base font-extrabold">Ride super code</span>
+          <span className="text-[13px] text-sc-ink3">The 6 digit code you got when you published</span>
+        </span>
+      </div>
+      <div className="flex flex-col gap-3">
         <div className="flex-1 relative">
           {userId && recentSuperCodes.length > 0 ? (
             <div className="relative">
@@ -255,7 +259,7 @@ const CyclingCodeInput = ({
                 }}
                 value={superCode}
               >
-                <SelectTrigger className="w-full text-base dark:bg-gray-700 dark:text-gray-100">
+                <SelectTrigger className="w-full h-14 text-center text-2xl font-extrabold tracking-[0.4em]">
                   <SelectValue placeholder="Select or enter super code" />
                 </SelectTrigger>
                 <SelectContent>
@@ -267,34 +271,34 @@ const CyclingCodeInput = ({
                 </SelectContent>
               </Select>
               <Input
-                placeholder="Enter 6-digit super code"
+                placeholder="000000"
                 value={superCode}
                 onChange={(e) => handleCodeChange(e.target.value)}
                 inputMode="numeric"
                 pattern="[0-9]*"
                 maxLength={6}
-                className="w-full text-base mt-2 dark:bg-gray-700 dark:text-gray-100"
+                className="w-full mt-2 h-14 text-center text-2xl font-extrabold tracking-[0.4em]"
                 ref={codeInputRef}
               />
             </div>
           ) : (
             <Input
-              placeholder="Enter 6-digit super code"
+              placeholder="000000"
               value={superCode}
               onChange={(e) => handleCodeChange(e.target.value)}
               inputMode="numeric"
               pattern="[0-9]*"
               maxLength={6}
-              className="w-full text-base dark:bg-gray-700 dark:text-gray-100"
+              className="w-full h-14 text-center text-2xl font-extrabold tracking-[0.4em]"
               ref={codeInputRef}
             />
           )}
           {superCodeError && (
-            <p className="text-sm text-red-600 dark:text-red-400 mt-1">{superCodeError}</p>
+            <p className="text-sm font-bold text-sport-red-fg mt-2 text-center">{superCodeError}</p>
           )}
         </div>
         <Button
-          className="bg-sc-green hover:brightness-95 dark:bg-green-600 dark:hover:bg-green-700 text-sc-green-ink font-bold rounded-full px-4 py-2 w-full sm:w-auto"
+          className="bg-sc-green hover:brightness-95 text-white font-bold rounded-full h-[52px] w-full text-base"
           onClick={handleFetchEvent}
           disabled={loading || superCode.length !== 6}
         >
@@ -304,7 +308,7 @@ const CyclingCodeInput = ({
               Loading...
             </>
           ) : (
-            "Load Cycling Event"
+            "Open"
           )}
         </Button>
       </div>

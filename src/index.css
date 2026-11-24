@@ -127,3 +127,27 @@
 @media (prefers-reduced-motion: reduce) {
   .sc-skel { animation: none; }
 }
+
+
+/* App frame: stay inside the device screen and never zoom */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  touch-action: manipulation;
+}
+html, body, #root {
+  max-width: 100%;
+  /* clip, not hidden: hidden would break the sticky headers */
+  overflow-x: clip;
+  overscroll-behavior-x: none;
+}
+body {
+  overscroll-behavior-y: none;
+  -webkit-tap-highlight-color: transparent;
+}
+/* iOS zooms into any field under 16px when focused */
+@media (max-width: 767px) {
+  input, select, textarea, [contenteditable="true"] {
+    font-size: 16px !important;
+  }
+}

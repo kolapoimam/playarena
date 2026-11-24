@@ -18,7 +18,7 @@ serve(async (req) => {
       .select("id, venue_id, title, organizer_name, match_date, start_time, end_time, created_at")
       .eq("id", bookingId).maybeSingle();
     if (!b) return json(req, { error: "Booking not found" }, 404);
-    if (!recent(b.created_at, 30)) return json(req, { skipped: "not a new booking" });
+    if (!recent(b.created_at, 48 * 60)) return json(req, { skipped: "booking is too old to notify" });
 
     const { data: v } = await db.from("venues").select("id, name, slug, email, user_id").eq("id", b.venue_id).maybeSingle();
     if (!v) return json(req, { error: "Venue not found" }, 404);
@@ -56,6 +56,7 @@ serve(async (req) => {
           `<p>Good news. Your venue has a new booking through SportCliq.</p>${table}<p>The organiser will share the access code with you when they arrive.</p>`,
           { label: "See your bookings", path: `/venues-bookings/${v.slug}` },
         ),
+        `booking-email:${b.id}`,
       );
     } else {
       out.email = { skipped: "venue has no email" };
@@ -64,7 +65,7 @@ serve(async (req) => {
     out.push = await notifyUsers(db, [v.user_id], "booking_confirmation",
       `New booking at ${v.name}`,
       `${b.title || "A match"} on ${b.match_date}, ${time(b.start_time)} to ${time(b.end_time)}.`,
-      `/venues-bookings/${v.slug}`);
+      `/venues-bookings/${v.slug}`, `booking:${b.id}`);
 
     return json(req, out);
   } catch (e) {
