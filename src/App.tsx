@@ -9,6 +9,8 @@ import ScrollToTop from "@/components/ScrollToTop";
 import InstallPrompt from "@/components/InstallPrompt";
 import { pageview } from "@/lib/analytics";
 import { linkPushUser, listenPushClicks } from "@/lib/onesignal";
+import { ensureProfile, takeAuthError } from "@/lib/ensureProfile";
+import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import MobileOnlyGuard from "@/components/MobileOnlyGuard";
 
@@ -116,11 +118,20 @@ const AppRoutes = () => {
 
   // Link this device to the signed in user for OneSignal push
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => linkPushUser(data.session?.user?.id));
+    supabase.auth.getSession().then(({ data }) => {
+      linkPushUser(data.session?.user?.id);
+      ensureProfile(data.session?.user);
+    });
     listenPushClicks();
+    // A sign in that failed on the server comes back with the error in the address
+    if (!window.location.pathname.startsWith("/auth/callback")) {
+      const authError = takeAuthError();
+      if (authError) toast({ title: "Sign in did not finish", description: authError, variant: "destructive" });
+    }
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_OUT") localStorage.removeItem("sc_profile_cache");
       if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") linkPushUser(session?.user?.id);
+      if (event === "SIGNED_IN") setTimeout(() => ensureProfile(session?.user), 0);
     });
     return () => authListener.subscription.unsubscribe();
   }, []);
