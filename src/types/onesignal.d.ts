@@ -7,7 +7,11 @@ export interface OneSignalV16 {
     addTag: (key: string, value: string) => void;
     PushSubscription: { id?: string | null; optedIn?: boolean; optIn: () => Promise<void> };
   };
-  Notifications: { permission: boolean; requestPermission: () => Promise<void> };
+  Notifications: {
+    permission: boolean;
+    requestPermission: () => Promise<void>;
+    addEventListener?: (event: "click", cb: (e: { notification?: { additionalData?: Record<string, unknown> } }) => void) => void;
+  };
 }
 
 declare global {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import ConfirmModal from "@/components/sc/ConfirmModal";
 import { Link, useNavigate } from "react-router-dom";
+import { useInboxUnread } from "@/lib/inbox";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ const Profile = () => {
   const [isLoading, setIsLoading] = useState(!cached);
   const [confirmOut, setConfirmOut] = useState(false);
   const navigate = useNavigate();
+  const inboxUnread = useInboxUnread();
 
   useEffect(() => {
     let alive = true;
@@ -106,7 +108,7 @@ const Profile = () => {
       <div className="relative overflow-hidden rounded-b-[40px] bg-sc-green px-5 pb-[26px] flex flex-col gap-[18px]" style={{ paddingTop: "max(env(safe-area-inset-top), 1rem)" }}>
         <Trophy aria-hidden="true" className="absolute text-white/10" size={220} strokeWidth={1} style={{ right: -40, top: 40 }} />
         <div className="relative pt-3 flex justify-end gap-2">
-          <IconButton icon={Bell} label="Notifications" onClick={() => navigate("/profile/notifications")} />
+          <IconButton icon={Bell} label={inboxUnread ? `Notifications, ${inboxUnread} unread` : "Notifications"} dot={inboxUnread > 0} onClick={() => navigate("/notifications")} />
           <IconButton icon={Settings} label="Settings" onClick={() => navigate("/profile/settings")} />
         </div>
         <div className="relative flex items-center gap-4">

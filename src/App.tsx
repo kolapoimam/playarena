@@ -8,7 +8,7 @@ import SplashScreen from "@/components/SplashScreen";
 import ScrollToTop from "@/components/ScrollToTop";
 import InstallPrompt from "@/components/InstallPrompt";
 import { pageview } from "@/lib/analytics";
-import { linkPushUser } from "@/lib/onesignal";
+import { linkPushUser, listenPushClicks } from "@/lib/onesignal";
 import { supabase } from "@/integrations/supabase/client";
 import MobileOnlyGuard from "@/components/MobileOnlyGuard";
 
@@ -41,6 +41,7 @@ const Activities = load(() => import("@/pages/gameManagement/Activities"));
 const Matches = load(() => import("@/pages/match/Matches"));
 const Profile = load(() => import("@/pages/profile/Profile"));
 const Notifications = load(() => import("@/pages/profile/Notifications"));
+const Inbox = load(() => import("@/pages/Inbox"));
 const ViewProfile = load(() => import("@/pages/profile/ViewProfile"));
 const ResetPassword = load(() => import("@/pages/ResetPassword"));
 const Organize = load(() => import("@/pages/gameManagement/Organize"));
@@ -116,6 +117,7 @@ const AppRoutes = () => {
   // Link this device to the signed in user for OneSignal push
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => linkPushUser(data.session?.user?.id));
+    listenPushClicks();
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_OUT") localStorage.removeItem("sc_profile_cache");
       if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") linkPushUser(session?.user?.id);
@@ -136,6 +138,8 @@ const AppRoutes = () => {
       <Route path="/profile" element={<Profile />} />
       <Route path="/profile/view-profile" element={<ViewProfile />} />
       <Route path="/profile/notifications" element={<Notifications />} />
+      <Route path="/notifications" element={<Inbox />} />
+      <Route path="/inbox" element={<Navigate to="/notifications" replace />} />
       <Route
         path="/profile/account-details"
         element={<AccountDetails />}

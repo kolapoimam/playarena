@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useInboxUnread } from "@/lib/inbox";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Bell,
@@ -84,6 +85,7 @@ const formatTime = (timeString: string) => {
 
 const Index = () => {
   const navigate = useNavigate();
+  const inboxUnread = useInboxUnread();
   const { toast } = useToast();
   const [upcomingMatches, setUpcomingMatches] = useState<(Match | CyclingEvent)[]>([]);
   const [popularVenues, setPopularVenues] = useState<Venue[]>([]);
@@ -280,7 +282,7 @@ const Index = () => {
             </div>
             <div className="flex items-center gap-2">
               <LocationChip />
-              <IconButton icon={Bell} label="Notifications" onClick={() => navigate("/profile/notifications")} />
+              <IconButton icon={Bell} label={inboxUnread ? `Notifications, ${inboxUnread} unread` : "Notifications"} dot={inboxUnread > 0} onClick={() => navigate("/notifications")} />
             </div>
           </div>
         </header>

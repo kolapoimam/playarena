@@ -20,3 +20,21 @@ export function linkPushUser(userId?: string | null) {
     }
   });
 }
+
+let clicksBound = false;
+/** When someone taps a push sent from the admin portal, record the click for the admin performance numbers. */
+export function listenPushClicks() {
+  if (clicksBound) return;
+  clicksBound = true;
+  withOneSignal((os) => {
+    os.Notifications.addEventListener?.("click", (e) => {
+      const id = e?.notification?.additionalData?.notification_id;
+      if (typeof id === "string" && id) {
+        import("@/lib/inbox").then(({ trackInbox }) => {
+          trackInbox(id, "open");
+          trackInbox(id, "click");
+        });
+      }
+    });
+  });
+}
