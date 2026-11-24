@@ -1,3 +1,4 @@
+import RidePreviewDialog from '@/components/cycling/RidePreviewDialog';
 import { useState, useEffect, useRef, Component, ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -460,6 +461,7 @@ const HostCycling = () => {
   };
 
   const [step, setStep] = useState(0);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const onInvalid = (errors: Record<string, unknown>) => {
     const keys = Object.keys(errors);
     const idx = RIDE_STEPS.findIndex((st) => st.fields.some((f) => keys.includes(f)));
@@ -985,9 +987,14 @@ const HostCycling = () => {
                     Next <ArrowRight size={18} />
                   </button>
                 ) : (
+                  <>
+                  <button type="button" onClick={() => setPreviewOpen(true)} disabled={isLoading} className="h-[54px] px-5 rounded-full bg-white border border-sc-line text-sc-ink text-base font-bold shrink-0 disabled:opacity-50">
+                    Preview
+                  </button>
                   <button type="submit" ref={createButtonRef} disabled={isLoading || loadingLandmarks || !!landmarksError} className="flex-1 h-[54px] rounded-full text-white text-base font-bold flex items-center justify-center gap-2 disabled:opacity-60" style={{ background: "#F97316" }}>
                     <Bike size={18} /> {isLoading ? "Creating..." : "Publish ride"}
                   </button>
+                  </>
                 )}
               </div>
             </form>
@@ -1017,6 +1024,13 @@ const HostCycling = () => {
           onNavigate={() => handleNavigate(eventSlug)}
         />
       </ErrorBoundary>
+      <RidePreviewDialog
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        formValues={form.watch()}
+        start={landmarks.find((l) => l.id_uuid === form.watch('start_landmark_id'))}
+        finish={landmarks.find((l) => l.id_uuid === form.watch('end_landmark_id'))}
+      />
       <CreateLandmarkDialog
         open={isCreateLandmarkOpen}
         onOpenChange={setIsCreateLandmarkOpen}

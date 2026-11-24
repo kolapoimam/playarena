@@ -1,14 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Loader2, Copy, Repeat } from "lucide-react";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { CalendarDays, Check, Copy, KeyRound, Loader2, Plus, Repeat, Share2, User, Phone, Clock } from "lucide-react";
 import TimeInput from "@/components/TimeInput";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { EmptyState, Segmented, formatTime12 } from "@/components/sc/ui";
+import { modalAction, modalCancel } from "@/components/ui/modal-styles";
+import { cn } from "@/lib/utils";
 
 type AccessCode = {
   id: string;
@@ -46,6 +44,8 @@ const VenueAccessCode = ({ venueId }: VenueAccessCodeProps) => {
   const [generatedCode, setGeneratedCode] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
+  const [filter, setFilter] = useState<"open" | "closed">("open");
 
   // Check authentication status
   useEffect(() => {
@@ -141,7 +141,7 @@ const VenueAccessCode = ({ venueId }: VenueAccessCodeProps) => {
       });
       return;
     }
-    if (is_recurring && (!recurring_frequency || !recurring_occurrences || parseInt(recurring_occurrences) < 1)) {
+    if (is_recurring && (!(recurring_frequency || "weekly") || !recurring_occurrences || parseInt(recurring_occurrences) < 1)) {
       toast({
         title: "Error",
         description: "Please specify valid recurring frequency and occurrences.",
@@ -173,7 +173,7 @@ const VenueAccessCode = ({ venueId }: VenueAccessCodeProps) => {
           start_time,
           end_time,
           is_recurring: is_recurring || false,
-          recurring_frequency: is_recurring ? recurring_frequency : null,
+          recurring_frequency: is_recurring ? (recurring_frequency || "weekly") : null,
           recurring_occurrences: is_recurring ? parseInt(recurring_occurrences) : null,
         });
 
@@ -183,10 +183,6 @@ const VenueAccessCode = ({ venueId }: VenueAccessCodeProps) => {
       }
 
       setGeneratedCode(code);
-      toast({
-        title: "Success",
-        description: `Access code ${code} generated successfully.`,
-      });
       await fetchAccessCodes();
     } catch (error: any) {
       console.error("Access code error:", error);
@@ -200,224 +196,158 @@ const VenueAccessCode = ({ venueId }: VenueAccessCodeProps) => {
     }
   };
 
-  const handleCopyCode = (code: string) => {
-    navigator.clipboard.writeText(code);
-    toast({
-      title: "Copied",
-      description: `Access code ${code} copied to clipboard.`,
-    });
-  };
-
-  const getStatusStyles = (status: string) => {
-    switch (status) {
-      case "active":
-        return "bg-sc-green-bg text-sc-green-dark border-green-300";
-      case "inactive":
-        return "bg-red-100 text-red-700 border-red-300";
-      case "pending":
-        return "bg-yellow-100 text-yellow-700 border-yellow-300";
-      default:
-        return "bg-sc-soft text-sc-ink2 border-transparent";
+  const handleCopyCode = async (code: string) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(code);
+      setTimeout(() => setCopied(null), 1500);
+    } catch {
+      toast({ title: "Copy this code", description: code });
     }
   };
 
-  const capitalizeStatus = (status: string) => {
-    return status.charAt(0).toUpperCase() + status.slice(1);
+  const shareCode = async (code: string) => {
+    const text = `Your SportCliq booking code is ${code}. Open app.sportcliq.com/organize and enter it to set up your match for free.`;
+    if (navigator.share) {
+      try { await navigator.share({ text }); } catch { /* closed */ }
+    } else handleCopyCode(text);
   };
 
-  return (
-    <Card className="bg-white dark:bg-gray-800 border-none shadow-card rounded-3xl">
-      <CardHeader>
-        <CardTitle className="text-lg font-semibold text-sc-ink dark:text-gray-100 flex justify-between items-center">
-          Booking Code
-          <Button
-            onClick={() => setShowAccessCodeDialog(true)}
-            className="bg-sc-green hover:brightness-95 text-sc-green-ink rounded-full font-bold"
-            disabled={loading}
-          >
-            Generate Code
-          </Button>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <Collapsible>
-          <CollapsibleTrigger className="text-sm font-medium text-sc-ink3 dark:text-gray-400 mb-2">
-            {accessCodes.length > 0 ? `View ${accessCodes.length} Access Codes` : "No Access Codes"}
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <div className="space-y-4">
-              {accessCodes.map((code) => (
-                <div
-                  key={code.id}
-                  className="p-4 bg-sc-bg rounded-2xl"
-                >
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="text-lg font-medium text-sc-ink dark:text-gray-100 flex items-center">
-                        Code: {code.code}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleCopyCode(code.code)}
-                          className="ml-2 p-1"
-                          title="Copy Code"
-                        >
-                          <Copy size={16} />
-                        </Button>
-                      </p>
-                      <p className="text-sm text-sc-ink3 dark:text-gray-400">
-                        Date: {new Date(code.match_date).toLocaleDateString("en-NG", { dateStyle: "medium" })}
-                      </p>
-                      <p className="text-sm text-sc-ink3 dark:text-gray-400">
-                        Time: {code.start_time} - {code.end_time}
-                      </p>
-                      {userId && code.is_recurring && (
-                        <p className="text-sm text-sc-ink3 dark:text-gray-400 flex items-center">
-                          <Repeat className="w-4 h-4 mr-1" />
-                          Repeats {code.recurring_frequency} for {code.recurring_occurrences} times
-                        </p>
-                      )}
-                      <p className="text-sm text-sc-ink3 dark:text-gray-400">
-                        Expires: {new Date(code.expiry_date).toLocaleString("en-NG", {
-                          dateStyle: "medium",
-                          timeStyle: "short",
-                        })}
-                      </p>
-                      <p className="text-sm text-sc-ink3 dark:text-gray-400">
-                        Created: {new Date(code.created_at).toLocaleString("en-NG", {
-                          dateStyle: "medium",
-                          timeStyle: "short",
-                        })}
-                      </p>
-                      <p className="text-sm text-sc-ink3 dark:text-gray-400">
-                        Booker Name: {code.booker_name || "N/A"}
-                      </p>
-                      <p className="text-sm text-sc-ink3 dark:text-gray-400">
-                        Phone Number: {code.booker_phone || "N/A"}
-                      </p>
-                    </div>
-                    <span
-                      className={`inline-block px-3 py-1 text-xs font-bold rounded-full border ${getStatusStyles(code.status)}`}
-                    >
-                      {capitalizeStatus(code.status)}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CollapsibleContent>
-        </Collapsible>
-      </CardContent>
+  const closeDialog = () => {
+    setShowAccessCodeDialog(false);
+    setGeneratedCode(null);
+    setAccessCodeForm({ match_date: "", start_time: "", end_time: "", is_recurring: false, recurring_frequency: "", recurring_occurrences: "" });
+  };
 
-      <Dialog open={showAccessCodeDialog} onOpenChange={setShowAccessCodeDialog}>
-        <DialogContent className="w-auto bg-white dark:bg-gray-800 border-none shadow-card rounded-3xl p-6">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-semibold text-sc-ink dark:text-gray-100">Generate Access Code</DialogTitle>
-            <DialogDescription className="text-sm text-sc-ink3 dark:text-gray-400">
-              Enter the date, time range, and recurring details for the free booking.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <Input
-              type="date"
-              value={accessCodeForm.match_date}
-              onChange={(e) => setAccessCodeForm({ ...accessCodeForm, match_date: e.target.value })}
-              className="text-base bg-white dark:bg-gray-700 border-sc-line dark:border-gray-600 text-sc-ink dark:text-gray-100 rounded-lg"
-            />
-            <TimeInput
-              value={accessCodeForm.start_time}
-              onChange={(value) => setAccessCodeForm({ ...accessCodeForm, start_time: value })}
-              placeholder="e.g., 01:00 PM"
-            />
-            <TimeInput
-              value={accessCodeForm.end_time}
-              onChange={(value) => setAccessCodeForm({ ...accessCodeForm, end_time: value })}
-              placeholder="e.g., 03:00 PM"
-            />
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={accessCodeForm.is_recurring}
-                onChange={(e) => setAccessCodeForm({ ...accessCodeForm, is_recurring: e.target.checked })}
-                className="h-4 w-4 text-sc-green-dark border-sc-line rounded"
-              />
-              <label className="text-sm text-sc-ink3 dark:text-gray-400">Recurring Booking</label>
-            </div>
-            {accessCodeForm.is_recurring && (
-              <>
-                <Select
-                  value={accessCodeForm.recurring_frequency}
-                  onValueChange={(value) => setAccessCodeForm({ ...accessCodeForm, recurring_frequency: value })}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select frequency" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="daily">Daily</SelectItem>
-                    <SelectItem value="weekly">Weekly</SelectItem>
-                    <SelectItem value="monthly">Monthly</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Input
-                  type="number"
-                  min="1"
-                  value={accessCodeForm.recurring_occurrences}
-                  onChange={(e) => setAccessCodeForm({ ...accessCodeForm, recurring_occurrences: e.target.value })}
-                  placeholder="Number of occurrences"
-                  className="text-base bg-white dark:bg-gray-700 border-sc-line dark:border-gray-600 text-sc-ink dark:text-gray-100 rounded-lg"
-                />
-              </>
-            )}
-            {generatedCode && (
-              <div className="text-center">
-                <p className="text-sm font-medium text-sc-ink dark:text-gray-100">
-                  Generated Code: <span className="text-sc-green-dark">{generatedCode}</span>
-                </p>
-                <p className="text-xs text-sc-ink3 dark:text-gray-400">
-                  Share this code with an organizer to book the venue for free.
-                </p>
-              </div>
-            )}
-          </div>
-          <DialogFooter className="flex gap-3 justify-center mt-4">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowAccessCodeDialog(false);
-                setGeneratedCode(null);
-                setAccessCodeForm({
-                  match_date: "",
-                  start_time: "",
-                  end_time: "",
-                  is_recurring: false,
-                  recurring_frequency: "",
-                  recurring_occurrences: "",
-                });
-              }}
-              className="border-sc-line dark:border-gray-600 text-sc-ink2 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-            >
-              Close
-            </Button>
-            {!generatedCode && (
-              <Button
-                onClick={handleGenerateAccessCode}
-                className="bg-sc-green hover:brightness-95 text-sc-green-ink rounded-full font-bold"
-                disabled={loading}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  "Generate"
+  const tone = (status: string) =>
+    status === "active" ? "bg-sc-green/10 text-sc-green" : status === "pending" ? "bg-[#FEF9C3] text-[#A16207]" : "bg-black/[0.05] text-sc-ink3";
+  const label = (status: string) => (status === "active" ? "Used" : status === "pending" ? "Waiting" : "Expired");
+  const shown = accessCodes.filter((c) => (filter === "open" ? c.status === "pending" : c.status !== "pending"));
+  const fmtDate = (d: string) => new Date(d).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+  const fmtWhen = (d: string) => new Date(d).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
+  const field = "block w-full min-w-0 h-11 rounded-xl bg-sc-bg px-3.5 text-[16px] font-semibold text-sc-ink outline-none border border-transparent focus:bg-white focus:border-sc-ink/20";
+
+  return (
+    <div className="flex flex-col gap-3.5">
+      <div className="bg-white rounded-[24px] p-4 flex items-center gap-3">
+        <span className="w-11 h-11 rounded-2xl bg-sport-venue-bg text-sport-venue-fg flex items-center justify-center shrink-0"><KeyRound size={20} /></span>
+        <span className="flex-1 min-w-0 flex flex-col">
+          <span className="text-[16px] font-extrabold">Booking codes</span>
+          <span className="text-[13px] text-sc-ink3">Give an organiser a free slot at your venue. Codes last 48 hours.</span>
+        </span>
+        <button type="button" onClick={() => setShowAccessCodeDialog(true)} className="h-10 pl-3 pr-4 rounded-full bg-sc-ink text-white text-[14px] font-bold inline-flex items-center gap-1.5 shrink-0 active:scale-95">
+          <Plus size={16} /> New
+        </button>
+      </div>
+
+      <Segmented
+        options={[{ value: "open", label: `Waiting${accessCodes.filter((c) => c.status === "pending").length ? ` (${accessCodes.filter((c) => c.status === "pending").length})` : ""}` }, { value: "closed", label: "Used and expired" }]}
+        value={filter}
+        onChange={setFilter}
+      />
+
+      {shown.length === 0 ? (
+        <div className="bg-white rounded-[24px]">
+          <EmptyState icon={KeyRound} sport="venue" title={filter === "open" ? "No codes waiting" : "Nothing here yet"} subtitle={filter === "open" ? "Create a code and share it with an organiser." : "Codes move here once they are used or expire."} />
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2.5">
+          {shown.map((code) => (
+            <div key={code.id} className="bg-white rounded-[22px] p-4 flex flex-col gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-[22px] font-extrabold tracking-[0.18em] font-mono">{code.code}</span>
+                <button type="button" onClick={() => handleCopyCode(code.code)} aria-label="Copy code" className="w-8 h-8 rounded-full bg-black/[0.05] flex items-center justify-center active:scale-95">
+                  {copied === code.code ? <Check size={15} className="text-sc-green" /> : <Copy size={15} />}
+                </button>
+                {code.status === "pending" && (
+                  <button type="button" onClick={() => shareCode(code.code)} aria-label="Share code" className="w-8 h-8 rounded-full bg-black/[0.05] flex items-center justify-center active:scale-95"><Share2 size={15} /></button>
                 )}
-              </Button>
-            )}
-          </DialogFooter>
+                <span className={cn("ml-auto h-7 px-2.5 rounded-full text-[12px] font-bold inline-flex items-center", tone(code.status))}>{label(code.status)}</span>
+              </div>
+              <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[13px] text-sc-ink2">
+                <span className="inline-flex items-center gap-1.5 min-w-0"><CalendarDays size={14} className="shrink-0 text-sc-ink3" /><span className="truncate">{code.match_date ? fmtDate(code.match_date) : "Any day"}</span></span>
+                <span className="inline-flex items-center gap-1.5 min-w-0"><Clock size={14} className="shrink-0 text-sc-ink3" /><span className="truncate">{formatTime12(code.start_time)} to {formatTime12(code.end_time)}</span></span>
+                {code.booker_name && <span className="inline-flex items-center gap-1.5 min-w-0"><User size={14} className="shrink-0 text-sc-ink3" /><span className="truncate">{code.booker_name}</span></span>}
+                {code.booker_phone && <span className="inline-flex items-center gap-1.5 min-w-0"><Phone size={14} className="shrink-0 text-sc-ink3" /><span className="truncate">{code.booker_phone}</span></span>}
+                {userId && code.is_recurring && <span className="col-span-2 inline-flex items-center gap-1.5"><Repeat size={14} className="text-sc-ink3" /> Repeats {code.recurring_frequency} for {code.recurring_occurrences} times</span>}
+              </div>
+              <span className="text-[12px] text-sc-ink3">{code.status === "pending" ? `Expires ${fmtWhen(code.expiry_date)}` : `Created ${fmtWhen(code.created_at)}`}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <Dialog open={showAccessCodeDialog} onOpenChange={(v) => (v ? setShowAccessCodeDialog(true) : closeDialog())}>
+        <DialogContent className="sm:max-w-[360px] max-w-[calc(100%-2rem)] p-5 gap-4">
+          {generatedCode ? (
+            <div className="flex flex-col items-center text-center gap-3 pt-2">
+              <span className="w-14 h-14 rounded-[20px] bg-sc-green/10 text-sc-green flex items-center justify-center"><Check size={26} strokeWidth={2.6} /></span>
+              <DialogTitle className="text-center">Code ready</DialogTitle>
+              <DialogDescription className="text-center">Share it with the organiser. It works once and expires in 48 hours.</DialogDescription>
+              <span className="w-full rounded-2xl bg-sc-bg py-4 text-[30px] font-extrabold tracking-[0.3em] font-mono">{generatedCode}</span>
+              <div className="w-full flex gap-2">
+                <button type="button" onClick={() => handleCopyCode(generatedCode)} className={cn(modalCancel, "flex-1 px-3")}>
+                  {copied === generatedCode ? <><Check size={16} /> Copied</> : <><Copy size={16} /> Copy</>}
+                </button>
+                <button type="button" onClick={() => shareCode(generatedCode)} className={cn(modalAction, "flex-1 px-3")}><Share2 size={16} /> Share</button>
+              </div>
+              <button type="button" onClick={closeDialog} className="text-[14px] font-bold text-sc-ink3 py-1">Done</button>
+            </div>
+          ) : (
+            <>
+              <DialogHeader>
+                <DialogTitle>New booking code</DialogTitle>
+                <DialogDescription>Pick the date and time this free booking covers.</DialogDescription>
+              </DialogHeader>
+              <div className="flex flex-col gap-3 min-w-0">
+                <label className="flex flex-col gap-1.5 min-w-0">
+                  <span className="text-[12.5px] font-bold text-sc-ink2">Date</span>
+                  <input type="date" value={accessCodeForm.match_date} min={new Date().toISOString().slice(0, 10)} onChange={(e) => setAccessCodeForm({ ...accessCodeForm, match_date: e.target.value })} className={field} />
+                </label>
+                <div className="flex flex-col gap-1.5 min-w-0">
+                  <span className="text-[12.5px] font-bold text-sc-ink2">Starts</span>
+                  <TimeInput value={accessCodeForm.start_time} onChange={(v) => setAccessCodeForm({ ...accessCodeForm, start_time: v })} placeholder="01:00 PM" />
+                </div>
+                <div className="flex flex-col gap-1.5 min-w-0">
+                  <span className="text-[12.5px] font-bold text-sc-ink2">Ends</span>
+                  <TimeInput value={accessCodeForm.end_time} onChange={(v) => setAccessCodeForm({ ...accessCodeForm, end_time: v })} placeholder="03:00 PM" />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAccessCodeForm({ ...accessCodeForm, is_recurring: !accessCodeForm.is_recurring })}
+                  className="flex items-center justify-between gap-3 rounded-xl bg-sc-bg px-3.5 h-12"
+                  aria-pressed={accessCodeForm.is_recurring}
+                >
+                  <span className="text-[14px] font-bold inline-flex items-center gap-2"><Repeat size={16} /> Repeats</span>
+                  <span className={cn("w-11 h-6 rounded-full p-0.5 transition-colors", accessCodeForm.is_recurring ? "bg-sc-green" : "bg-black/15")}>
+                    <span className={cn("block w-5 h-5 rounded-full bg-white shadow transition-transform", accessCodeForm.is_recurring && "translate-x-5")} />
+                  </span>
+                </button>
+                {accessCodeForm.is_recurring && (
+                  <div className="flex flex-col gap-2.5">
+                    <Segmented
+                      options={[{ value: "daily", label: "Daily" }, { value: "weekly", label: "Weekly" }, { value: "monthly", label: "Monthly" }]}
+                      value={(accessCodeForm.recurring_frequency || "weekly") as any}
+                      onChange={(v) => setAccessCodeForm({ ...accessCodeForm, recurring_frequency: v })}
+                    />
+                    <label className="flex items-center justify-between gap-3">
+                      <span className="text-[13px] font-bold text-sc-ink2">How many times</span>
+                      <input type="number" inputMode="numeric" min="1" max="52" value={accessCodeForm.recurring_occurrences} onChange={(e) => setAccessCodeForm({ ...accessCodeForm, recurring_occurrences: e.target.value.replace(/[^0-9]/g, "").slice(0, 2) })} placeholder="4" className={cn(field, "w-24 text-center")} />
+                    </label>
+                  </div>
+                )}
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button type="button" onClick={closeDialog} className={cn(modalCancel, "flex-1 px-3")}>Cancel</button>
+                <button type="button" onClick={handleGenerateAccessCode} disabled={loading} className={cn(modalAction, "flex-1 px-3")}>
+                  {loading ? <Loader2 size={18} className="animate-spin" /> : "Create code"}
+                </button>
+              </div>
+            </>
+          )}
         </DialogContent>
       </Dialog>
-    </Card>
+    </div>
   );
 };
 

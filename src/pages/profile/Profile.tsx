@@ -31,14 +31,15 @@ const Profile = () => {
           navigate("/auth", { replace: true });
           return;
         }
-        const [profileRes, venueRes] = await Promise.all([
+        const [profileRes, venueRes, pinRes] = await Promise.all([
           supabase.from("profiles").select("nickname, gender").eq("id", user.id).maybeSingle(),
           supabase.from("venues").select("id").eq("user_id", user.id).limit(1),
+          supabase.from("access_pins").select("id").eq("user_id", user.id).limit(1),
         ]);
         if (!alive) return;
         if (profileRes.error) console.error("Error fetching profile:", profileRes.error);
         const next = { ...user, ...(profileRes.data || {}) };
-        const venue = !venueRes.error && (venueRes.data?.length || 0) > 0;
+        const venue = (!venueRes.error && (venueRes.data?.length || 0) > 0) || (!pinRes.error && (pinRes.data?.length || 0) > 0);
         setProfile(next);
         setIsVenueLinked(venue);
         try {
@@ -157,11 +158,11 @@ const Profile = () => {
         ])}
         <span className="text-[13px] font-bold text-sc-ink3 uppercase tracking-[0.06em] px-1 pt-1">Venue manager</span>
         {rows([
-          { to: "/profile/my-venue", icon: MapPin, sport: "venue", title: "My venue", sub: "Manage your listing" },
+          { to: "/profile/my-venue", icon: MapPin, sport: "venue", title: "My venues", sub: isVenueLinked ? "Dashboard, earnings and payouts" : "Link or list your venue" },
           ...(isVenueLinked
             ? [
-                { to: "/profile/my-bookings", icon: Calendar, sport: "guide" as Sport, title: "Bookings", sub: "Bookings at your venue" },
-                { to: "/profile/booking-code", icon: Key, sport: "pink" as Sport, title: "Booking code", sub: "Verify access codes" },
+                { to: "/profile/my-bookings", icon: Calendar, sport: "guide" as Sport, title: "Bookings", sub: "Calendar of bookings at your venue" },
+                { to: "/profile/booking-code", icon: Key, sport: "pink" as Sport, title: "Booking codes", sub: "Give organisers a free slot" },
               ]
             : []),
         ])}
