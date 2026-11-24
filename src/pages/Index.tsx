@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useInboxUnread } from "@/lib/inbox";
+import NotificationPanel from "@/components/NotificationPanel";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Bell,
@@ -86,6 +87,7 @@ const formatTime = (timeString: string) => {
 const Index = () => {
   const navigate = useNavigate();
   const inboxUnread = useInboxUnread();
+  const [panelOpen, setPanelOpen] = useState(false);
   const { toast } = useToast();
   const [upcomingMatches, setUpcomingMatches] = useState<(Match | CyclingEvent)[]>([]);
   const [popularVenues, setPopularVenues] = useState<Venue[]>([]);
@@ -282,7 +284,8 @@ const Index = () => {
             </div>
             <div className="flex items-center gap-2">
               <LocationChip />
-              <IconButton icon={Bell} label={inboxUnread ? `Notifications, ${inboxUnread} unread` : "Notifications"} dot={inboxUnread > 0} onClick={() => navigate("/notifications")} />
+              <IconButton icon={Bell} label={inboxUnread ? `Notifications, ${inboxUnread} unread` : "Notifications"} dot={inboxUnread > 0} onClick={() => setPanelOpen(true)} />
+              <NotificationPanel open={panelOpen} onOpenChange={setPanelOpen} />
             </div>
           </div>
         </header>

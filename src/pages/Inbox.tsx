@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNowStrict, isThisWeek, isToday, isYesterday, format } from "date-fns";
-import { ArrowUpRight, BellOff, BellRing, CheckCheck, Settings2 } from "lucide-react";
+import { ArrowUpRight, BellOff, BellRing, CheckCheck, LogIn, Settings2, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
 import { BackButton, EmptyState, IconButton, ScButton, Segmented } from "@/components/sc/ui";
@@ -42,8 +42,11 @@ function RowSkeleton() {
   );
 }
 
-const Inbox = () => {
+/** The notification list. Used as a full page and inside the panel the bell opens. */
+export function InboxView({ mode = "page", onClose }: { mode?: "page" | "panel"; onClose?: () => void }) {
+  const panel = mode === "panel";
   const navigate = useNavigate();
+  const [signedOut, setSignedOut] = useState(false);
   const { toast } = useToast();
   const [items, setItems] = useState<InboxItem[]>([]);
   const [unread, setUnread] = useState(0);
@@ -58,7 +61,10 @@ const Inbox = () => {
   const load = useCallback(async () => {
     const { data: s } = await supabase.auth.getSession();
     if (!s.session) {
-      navigate("/auth", { replace: true });
+      if (panel) {
+        setSignedOut(true);
+        setLoading(false);
+      } else navigate("/auth", { replace: true });
       return;
     }
     try {
@@ -71,7 +77,7 @@ const Inbox = () => {
     } finally {
       setLoading(false);
     }
-  }, [navigate, toast]);
+  }, [navigate, toast, panel]);
 
   useEffect(() => {
     load();
@@ -113,6 +119,7 @@ const Inbox = () => {
     if (!item.link) return;
     trackInbox(item.id, "click");
     setOpen(null);
+    if (item.link.startsWith("/")) onClose?.();
     openInboxLink(item.link, navigate);
   };
 
@@ -136,22 +143,40 @@ const Inbox = () => {
   }, [shown]);
 
   return (
-    <div className="min-h-screen bg-sc-bg font-sans text-sc-ink pb-32">
-      <header className="sticky top-0 z-20 bg-sc-bg/95 px-5 pt-[max(env(safe-area-inset-top),1rem)] pb-3 backdrop-blur-xl">
-        <div className="flex min-h-11 items-center justify-between pt-3">
-          <BackButton />
-          <div className="flex gap-2">
-            <IconButton icon={CheckCheck} label="Mark all as read" onClick={() => (unread ? setConfirmAll(true) : toast({ title: "Nothing unread" }))} />
-            <IconButton icon={Settings2} label="Notification settings" onClick={() => navigate("/profile/notifications")} />
-          </div>
-        </div>
-        <div className="mt-3.5 flex items-end justify-between gap-3">
-          <h1 className="m-0 text-[32px] font-extrabold leading-[38px] tracking-[-0.03em]">Notifications</h1>
-          {unread > 0 && (
-            <span className="mb-1.5 inline-flex h-7 items-center rounded-full bg-sc-ink px-3 text-xs font-extrabold text-white">{unread} new</span>
-          )}
-        </div>
-        <div className="mt-4">
+    <div className={cn("bg-sc-bg font-sans text-sc-ink", panel ? "flex h-full flex-col" : "min-h-screen pb-32")}>
+      <header className={cn("z-20 bg-sc-bg/95 px-5 pb-3 backdrop-blur-xl", panel ? "shrink-0 pt-2" : "sticky top-0 pt-[max(env(safe-area-inset-top),1rem)]")}>
+        {panel ? (
+          <>
+            <span aria-hidden="true" className="mx-auto mb-3 block h-1.5 w-11 rounded-full bg-black/15" />
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex min-w-0 items-center gap-2.5">
+                <h2 className="m-0 truncate text-[24px] font-extrabold leading-8 tracking-[-0.03em]">Notifications</h2>
+              </div>
+              <div className="flex shrink-0 gap-2">
+                {!signedOut && <IconButton icon={CheckCheck} label="Mark all as read" onClick={() => (unread ? setConfirmAll(true) : toast({ title: "Nothing unread" }))} />}
+                <IconButton icon={Settings2} label="Notification settings" onClick={() => { onClose?.(); navigate("/profile/notifications"); }} />
+                <IconButton icon={X} label="Close" onClick={onClose} />
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="flex min-h-11 items-center justify-between pt-3">
+              <BackButton />
+              <div className="flex gap-2">
+                <IconButton icon={CheckCheck} label="Mark all as read" onClick={() => (unread ? setConfirmAll(true) : toast({ title: "Nothing unread" }))} />
+                <IconButton icon={Settings2} label="Notification settings" onClick={() => navigate("/profile/notifications")} />
+              </div>
+            </div>
+            <div className="mt-3.5 flex items-end justify-between gap-3">
+              <h1 className="m-0 text-[32px] font-extrabold leading-[38px] tracking-[-0.03em]">Notifications</h1>
+              {unread > 0 && (
+                <span className="mb-1.5 inline-flex h-7 items-center rounded-full bg-sc-ink px-3 text-xs font-extrabold text-white">{unread} new</span>
+              )}
+            </div>
+          </>
+        )}
+        {!signedOut && <div className="mt-4">
           <Segmented
             value={filter}
             onChange={(v) => setFilter(v as "all" | "unread")}
@@ -160,11 +185,16 @@ const Inbox = () => {
               { value: "unread", label: unread ? `Unread (${unread})` : "Unread" },
             ]}
           />
-        </div>
+        </div>}
       </header>
 
-      <main className="flex flex-col gap-5 px-5 pt-2">
-        {loading ? (
+      <main className={cn("flex flex-col gap-5 px-5 pt-2", panel && "min-h-0 flex-1 overflow-y-auto overscroll-contain pb-[max(env(safe-area-inset-bottom),1.5rem)]")}>
+        {signedOut ? (
+          <div className="mt-4 rounded-[28px] bg-white py-6">
+            <EmptyState icon={BellRing} title="Sign in to see notifications" subtitle="Match updates, offers and news from SportCliq show up here."
+              action={<div className="mt-2 w-full max-w-[220px]"><ScButton icon={LogIn} size="md" onClick={() => { onClose?.(); navigate("/auth"); }}>Sign in</ScButton></div>} />
+          </div>
+        ) : loading ? (
           <div className="flex flex-col gap-2.5">{[0, 1, 2, 3].map((i) => <RowSkeleton key={i} />)}</div>
         ) : shown.length === 0 ? (
           <div className="mt-6 rounded-[28px] bg-white py-6">
@@ -256,9 +286,11 @@ const Inbox = () => {
         onConfirm={readAll}
       />
 
-      <Navbar />
+      {!panel && <Navbar />}
     </div>
   );
-};
+}
+
+const Inbox = () => <InboxView mode="page" />;
 
 export default Inbox;
