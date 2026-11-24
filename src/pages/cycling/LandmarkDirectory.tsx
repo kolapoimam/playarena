@@ -104,11 +104,9 @@ const LandmarkDirectory = () => {
             .from("user_landmark_favourites")
             .select("landmark_id")
             .eq("user_id", session.session.user.id);
-          if (favError) {
-            toast({ title: "Error", description: "Failed to load favorites.", variant: "destructive" });
-            return;
-          }
-          setFavorites(new Set(favData.map((fav) => fav.landmark_id)));
+          // Favourites are a nice extra, so a problem here never blocks the list
+          if (favError) console.warn("Landmark favourites not loaded", favError);
+          else setFavorites(new Set((favData || []).map((fav: any) => fav.landmark_id)));
         }
       } catch (error) {
         console.error("Error fetching landmarks:", error);
@@ -216,7 +214,8 @@ const LandmarkDirectory = () => {
         .eq("user_id", userId)
         .eq("landmark_id", landmarkId);
       if (error) {
-        toast({ title: "Error", description: "Failed to remove favorite.", variant: "destructive" });
+        console.error("Remove landmark favourite failed", error);
+        toast({ title: "Could not remove favourite", description: error.message, variant: "destructive" });
         return;
       }
       setFavorites((prev) => {
@@ -230,7 +229,8 @@ const LandmarkDirectory = () => {
         .from("user_landmark_favourites")
         .insert([{ user_id: userId, landmark_id: landmarkId }]);
       if (error) {
-        toast({ title: "Error", description: "Failed to add favorite.", variant: "destructive" });
+        console.error("Add landmark favourite failed", error);
+        toast({ title: "Could not save favourite", description: error.message, variant: "destructive" });
         return;
       }
       setFavorites((prev) => new Set(prev).add(landmarkId));

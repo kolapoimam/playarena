@@ -202,66 +202,33 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
   }, [match, toast]);
 
   useEffect(() => {
-    console.log('OrganizerCashout - tempIdentifier:', localTempIdentifier);
-    console.log('OrganizerCashout - match.id:', match?.id);
-
-    const fetchData = async () => {
-      if (!match || !localTempIdentifier) {
-        setWalletBalance(0);
-        setCashoutRequests([]);
-        return;
-      }
-
-      await fetchWalletData();
-      await fetchCashoutRequests();
-
-      // Set up real-time subscriptions
-      const cashoutChannel = supabase
-        .channel(`cashout_requests_match_${match.id}`)
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'cashout_requests',
-            filter: `match_id=eq.${match.id}`,
-          },
-          () => {
-            fetchWalletData();
-            fetchCashoutRequests();
-          }
-        )
-        .subscribe();
-
-      const ticketsChannel = supabase
-        .channel(`tickets_match_${match.id}`)
-        .on(
-          'postgres_changes',
-          {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'tickets',
-            filter: `match_id=eq.${match.id}`,
-          },
-          () => {
-            fetchWalletData();
-          }
-        )
-        .subscribe();
-
-      return () => {
-        supabase.removeChannel(cashoutChannel);
-        supabase.removeChannel(ticketsChannel);
-      };
-    };
-
-    fetchData();
-  }, [match, localTempIdentifier, fetchWalletData, fetchCashoutRequests]);
-
-  const handleRefresh = () => {
+    if (!match || !localTempIdentifier) {
+      setWalletBalance(0);
+      setCashoutRequests([]);
+      return;
+    }
     fetchWalletData();
     fetchCashoutRequests();
-  };
+
+    // Live updates when a cashout or ticket changes
+    const cashoutChannel = supabase
+      .channel(`cashout_requests_match_${match.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cashout_requests', filter: `match_id=eq.${match.id}` }, () => {
+        fetchWalletData();
+        fetchCashoutRequests();
+      })
+      .subscribe();
+    const ticketsChannel = supabase
+      .channel(`tickets_match_${match.id}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tickets', filter: `match_id=eq.${match.id}` }, () => fetchWalletData())
+      .subscribe();
+    return () => {
+      supabase.removeChannel(cashoutChannel);
+      supabase.removeChannel(ticketsChannel);
+    };
+  }, [match, localTempIdentifier, fetchWalletData, fetchCashoutRequests]);
+
+  const handleRefresh = () => Promise.all([fetchWalletData(), fetchCashoutRequests()]);
 
   const handleCashoutMode = () => {
     if (!localTempIdentifier) {
@@ -411,7 +378,7 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
 
   return (
     <div className="flex flex-col gap-3.5">
-      <BalanceHero balance={walletBalance} onRefresh={handleRefresh} onRequest={handleCashoutMode} disabled={!localTempIdentifier} note="From paid slots in this match" />
+      <BalanceHero balance={walletBalance} onRefresh={handleRefresh} onRequest={handleCashoutMode} disabled={!localTempIdentifier || !!match.cancellation_status} note="From paid slots in this match" />
       <CashoutList rows={cashoutRequests.map((r: any) => ({ id: r.id, amount: r.amount, created_at: r.created_at, status: r.status, name: r.account_details?.account_name, bank: r.account_details?.bank_name, account: r.account_details?.bank_account_number }))} />
       <CashoutDialog
         open={cashoutDialogOpen}

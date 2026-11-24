@@ -418,7 +418,7 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
 
   return (
     <div className="flex flex-col gap-3.5">
-      <BalanceHero accent="#F97316" balance={walletBalance} onRefresh={() => { fetchWalletBalance(); fetchCashoutRequests(); }} onRequest={() => setCashoutDialogOpen(true)} disabled={event.cancellation_status || loading || walletBalance <= 0} note="From paid spots on this ride" />
+      <BalanceHero accent="#F97316" balance={walletBalance} onRefresh={() => Promise.all([fetchWalletBalance(), fetchCashoutRequests()])} onRequest={() => setCashoutDialogOpen(true)} disabled={event.cancellation_status || loading || walletBalance <= 0} note="From paid spots on this ride" />
       <CashoutList rows={cashoutRequests.map((r: any) => ({ id: r.id, amount: r.total_amount_paid, created_at: r.created_at, status: r.status, name: r.account_name, bank: r.bank_name, account: r.bank_account_number }))} />
       <CashoutDialog
         open={cashoutDialogOpen}

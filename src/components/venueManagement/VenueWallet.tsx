@@ -1,4 +1,4 @@
-import { BalanceHero, CashoutList } from "@/components/sc/CashoutUI";
+import { BalanceHero, CashoutDialog, CashoutList } from "@/components/sc/CashoutUI";
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -86,6 +86,22 @@ const VenueWallet = ({ venueId, availableFunds, setAvailableFunds }: VenueWallet
     }
   }, [venueId, toast]);
 
+  // Work out what is left to cash out, the same way the venue page does
+  const refreshFunds = useCallback(async () => {
+    if (!venueId) return;
+    const [paid, out] = await Promise.all([
+      supabase.from("bookings").select("amount").eq("venue_id", venueId).eq("payment_status", "paid"),
+      supabase.from("venue_booking_cashout").select("amount, status").eq("venue_id", venueId).in("status", ["Review", "Processed", "Successful"]),
+    ]);
+    if (paid.error || out.error) {
+      toast({ title: "Balance not updated", description: "Please try again.", variant: "destructive" });
+      return;
+    }
+    const total = (paid.data || []).reduce((sum: number, b: any) => sum + (b.amount || 0), 0);
+    const taken = (out.data || []).reduce((sum: number, r: any) => sum + (r.amount || 0), 0);
+    setAvailableFunds(Math.max(0, total - taken));
+  }, [venueId, setAvailableFunds, toast]);
+
   useEffect(() => {
     fetchCashoutRequests();
 
@@ -170,7 +186,7 @@ const VenueWallet = ({ venueId, availableFunds, setAvailableFunds }: VenueWallet
       }
 
       await fetchCashoutRequests();
-      setAvailableFunds(availableFunds - Number(cashoutAmount));
+      setAvailableFunds(Math.max(0, availableFunds - Number(cashoutAmount)));
       setCashoutDialogOpen(false);
       setBankAccountNumber("");
       setBankName("");
@@ -207,111 +223,27 @@ const VenueWallet = ({ venueId, availableFunds, setAvailableFunds }: VenueWallet
 
   return (
     <div className="flex flex-col gap-3.5">
-      <BalanceHero accent="#7C3AED" label="Venue wallet" balance={availableFunds} onRefresh={fetchCashoutRequests} onRequest={() => setCashoutDialogOpen(true)} disabled={availableFunds === 0 || loading} note="From bookings at your venue" />
+      <BalanceHero accent="#7C3AED" label="Venue wallet" balance={availableFunds} onRefresh={() => Promise.all([refreshFunds(), fetchCashoutRequests()])} onRequest={() => setCashoutDialogOpen(true)} disabled={loading} note="From bookings at your venue" />
       <CashoutList rows={cashoutRequests.map((r: any) => ({ id: r.id, amount: r.amount, created_at: r.created_at, status: r.status, name: r.account_holder_name, bank: r.bank_name, account: r.account_number }))} />
-      <Dialog open={cashoutDialogOpen} onOpenChange={setCashoutDialogOpen}>
-        <DialogContent className="w-full max-w-[calc(100%-1.5rem)] sm:max-w-[420px] rounded-[28px] bg-sc-bg p-5 max-h-[92vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-semibold text-sc-ink dark:text-gray-100">Request Cashout</DialogTitle>
-            <DialogDescription className="text-sm text-sc-ink3 dark:text-gray-400">
-              Enter your bank details and amount to request a cashout. Amount must not exceed available funds (₦{availableFunds.toFixed(2)}).
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 p-4">
-            <div>
-              <label className="block text-sm font-medium text-sc-ink2 dark:text-gray-300">
-                Amount (₦)
-              </label>
-              <Input
-                type="number"
-                value={cashoutAmount}
-                onChange={(e) => {
-                  setCashoutAmount(e.target.value);
-                  setAmountError(null);
-                }}
-                className="text-base bg-white dark:bg-gray-700 border-sc-line dark:border-gray-600 text-sc-ink dark:text-gray-100 rounded-lg"
-                min="1"
-              />
-              {amountError && (
-                <p className="text-sm text-red-600 mt-1">{amountError}</p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-sc-ink2 dark:text-gray-300">
-                Bank Account Number
-              </label>
-              <Input
-                value={bankAccountNumber}
-                onChange={(e) => {
-                  setBankAccountNumber(e.target.value.replace(/[^0-9]/g, "").slice(0, 10));
-                  setBankAccountError(null);
-                }}
-                inputMode="numeric"
-                pattern="[0-9]*"
-                maxLength={10}
-                className="text-base bg-white dark:bg-gray-700 border-sc-line dark:border-gray-600 text-sc-ink dark:text-gray-100 rounded-lg"
-              />
-              {bankAccountError && (
-                <p className="text-sm text-red-600 mt-1">{bankAccountError}</p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-sc-ink2 dark:text-gray-300">
-                Bank Name
-              </label>
-              <select
-                value={bankName}
-                onChange={(e) => setBankName(e.target.value)}
-                className="text-base bg-white dark:bg-gray-700 border-sc-line dark:border-gray-600 text-sc-ink dark:text-gray-100 rounded-lg w-full"
-              >
-                <option value="">Select a bank</option>
-                {nigerianBanks.map((bank) => (
-                  <option key={bank} value={bank}>{bank}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-sc-ink2 dark:text-gray-300">
-                Account Name
-              </label>
-              <Input
-                value={accountName}
-                onChange={(e) => {
-                  setAccountName(e.target.value);
-                  setAccountNameError(null);
-                }}
-                className="text-base bg-white dark:bg-gray-700 border-sc-line dark:border-gray-600 text-sc-ink dark:text-gray-100 rounded-lg"
-              />
-              {accountNameError && (
-                <p className="text-sm text-red-600 mt-1">{accountNameError}</p>
-              )}
-            </div>
-          </div>
-          <DialogFooter className="flex justify-between">
-            <Button
-              variant="outline"
-              onClick={() => setCashoutDialogOpen(false)}
-              className="border-sc-line dark:border-gray-600 text-sc-ink2 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleCashoutSubmit}
-              className="bg-sc-green hover:brightness-95 text-sc-green-ink rounded-full font-bold"
-              disabled={loading}
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Submitting...
-                </>
-              ) : (
-                "Submit Cashout"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <CashoutDialog
+        open={cashoutDialogOpen}
+        onOpenChange={setCashoutDialogOpen}
+        balance={availableFunds}
+        accent="#7C3AED"
+        banks={nigerianBanks}
+        note="Cash out what your venue earned from bookings."
+        amount={String(cashoutAmount ?? "")}
+        onAmount={(v) => { setCashoutAmount(v); setAmountError(null); }}
+        bank={bankName}
+        onBank={(v) => setBankName(v)}
+        account={bankAccountNumber}
+        onAccount={(v) => { setBankAccountNumber(v.replace(/[^0-9]/g, "").slice(0, 10)); setBankAccountError(null); }}
+        name={accountName}
+        onName={(v) => { setAccountName(v); setAccountNameError(null); }}
+        errors={{ amount: amountError, account: bankAccountError, name: accountNameError }}
+        loading={loading}
+        onSubmit={handleCashoutSubmit}
+      />
     </div>
   );
 };

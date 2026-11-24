@@ -24,7 +24,7 @@ export const modalOverlay =
 
 export const modalContent = (className?: string) =>
   cn(
-    "fixed left-[50%] top-[50%] z-50 grid w-full max-w-[calc(100%-1.5rem)] sm:max-w-[420px] translate-x-[-50%] translate-y-[-50%] gap-4 border-0 bg-white p-6 font-sans text-sc-ink",
+    "fixed left-[50%] top-[50%] z-50 grid grid-cols-[minmax(0,1fr)] w-full max-w-[calc(100%-1.5rem)] sm:max-w-[420px] translate-x-[-50%] translate-y-[-50%] gap-4 border-0 bg-white p-6 font-sans text-sc-ink",
     "rounded-[28px] shadow-[0_24px_60px_-12px_rgba(14,20,17,0.35)] max-h-[90dvh] overflow-y-auto overscroll-contain",
     "duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-[0.97] data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[46%]",
     strip(className, LEGACY),
