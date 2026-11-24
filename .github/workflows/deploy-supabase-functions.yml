@@ -37,5 +37,5 @@ jobs:
         run: |
           for f in $FUNCTIONS; do
             echo "Deploying $f"
-            supabase functions deploy "$f" --project-ref "$PROJECT_REF"
+            supabase functions deploy "$f" --project-ref "$PROJECT_REF" --yes
           done
