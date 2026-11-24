@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { payerEmail } from "@/lib/payerEmail";
 import { phase, rideWindow } from "@/lib/activityTime";
 import { NotFoundState } from "@/components/sc/FunState";
 
@@ -292,7 +293,7 @@ const JoinCycling = () => {
       setJoining(true);
       const response = await supabase.functions.invoke('initialize-paystack-transaction', {
         body: {
-          email: defaultEmail,
+          email: await payerEmail((form.getValues() as any).email),
           amount: amountInNaira, // Send Naira to Paystack
           event_id: event.id_uuid,
           slug: event.slug,

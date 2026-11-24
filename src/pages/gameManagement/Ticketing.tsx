@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { payerEmail } from "@/lib/payerEmail";
 import { NotFoundState } from "@/components/sc/FunState";
 import { useParams, useNavigate, Routes, Route } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -202,7 +203,7 @@ const Ticketing = () => {
 
       const response = await supabase.functions.invoke("initialize-paystack-transaction", {
         body: {
-          email: defaultEmail,
+          email: await payerEmail((form.getValues() as any).email),
           amount: totalPrice,
           match_id: match.id,
           slug: match.slug,

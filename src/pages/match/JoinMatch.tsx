@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { payerEmail } from "@/lib/payerEmail";
 import { matchWindow, phase } from "@/lib/activityTime";
 import { NotFoundState } from "@/components/sc/FunState";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
@@ -272,7 +273,7 @@ const JoinMatch = () => {
 
       const response = await supabase.functions.invoke("initialize-paystack-transaction", {
         body: {
-          email: defaultEmail,
+          email: await payerEmail(form.getValues("email")),
           amount: match.price * selectedSlots,
           match_id: match.id,
           slug: match.slug,
