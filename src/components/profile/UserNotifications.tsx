@@ -1,4 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import ConfirmModal from "@/components/sc/ConfirmModal";
+import { getMyVenues } from "@/lib/myVenues";
+import { cn } from "@/lib/utils";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -10,7 +14,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent } from "@/components/ui/card";
-import { CheckCircle, Loader2, ChevronDown, Clock, UserPlus, Users, CalendarCheck, Store, Heart, LucideIcon } from "lucide-react";
+import { CheckCircle, Loader2, ChevronDown, ChevronUp, Clock, UserPlus, Users, CalendarCheck, Store, Heart, LucideIcon } from "lucide-react";
 import { Bubble, ScButton, Sport } from "@/components/sc/ui";
 
 const notificationSchema = z.object({
@@ -52,6 +56,29 @@ const UserNotifications = ({ profile, setShowNotifications }) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [subscriptionId, setSubscriptionId] = useState<string | null>(null);
+  const navigate = useNavigate();
+  // Which settings apply to this user. Reminders and favourite venues apply to everyone.
+  const [roles, setRoles] = useState<{ organiser: boolean; venue: boolean; favourites: number } | null>(null);
+  const [openCard, setOpenCard] = useState<string | null>(null);
+  const [askFavourite, setAskFavourite] = useState(false);
+  const toVenues = useRef(false);
+
+  useEffect(() => {
+    if (!profile?.id) return;
+    (async () => {
+      const [org, rides, fav, venues] = await Promise.all([
+        supabase.from("user_organized_matches").select("match_id").eq("user_id", profile.id).limit(1),
+        supabase.from("user_hosted_cycling").select("user_id").eq("user_id", profile.id).limit(1),
+        supabase.from("user_venue_favourites").select("venue_id").eq("user_id", profile.id),
+        getMyVenues(profile.id).catch(() => []),
+      ]);
+      setRoles({
+        organiser: ((org.data as any[]) || []).length > 0 || ((rides.data as any[]) || []).length > 0,
+        venue: venues.length > 0,
+        favourites: ((fav.data as any[]) || []).length,
+      });
+    })();
+  }, [profile?.id]);
 
   const form = useForm<NotificationSettings>({
     resolver: zodResolver(notificationSchema),
@@ -149,7 +176,9 @@ const UserNotifications = ({ profile, setShowNotifications }) => {
       }
 
       toast({ title: "Settings saved", description: wantsPush && typeof Notification !== "undefined" && Notification.permission === "denied" ? "Push is blocked on this device. Allow notifications for SportCliq in your phone or browser settings to get push alerts." : "We will notify you the way you chose." });
-      setShowNotifications(false);
+      // Favourite venue alerts need at least one favourite venue to be useful
+      if (data.venue_favourite_match?.enabled && roles && roles.favourites === 0) setAskFavourite(true);
+      else setShowNotifications(false);
     } catch (error: any) {
       console.error("Saving notification settings failed", error);
       toast({ title: "Settings not saved", description: error?.message ? `${error.message}` : "Please try again.", variant: "destructive" });
@@ -158,41 +187,62 @@ const UserNotifications = ({ profile, setShowNotifications }) => {
     }
   };
 
-  const EVENTS: { event: string; label: string; sub: string; icon: LucideIcon; sport: Sport }[] = [
-    { event: "match_playing_time", label: "Match reminders", sub: "Before a match you joined kicks off", icon: Clock, sport: "football" },
-    { event: "match_organizing_registration", label: "New players", sub: "When someone joins your match", icon: UserPlus, sport: "guide" },
-    { event: "match_organizing_slot_filled", label: "Match full", sub: "When every slot in your match is taken", icon: Users, sport: "tennis" },
-    { event: "booking_confirmation", label: "Venue bookings", sub: "For venue owners, when a slot is booked", icon: CalendarCheck, sport: "venue" },
-    { event: "venue_match_created", label: "Matches at my venue", sub: "For venue owners, new matches at your venue", icon: Store, sport: "pink" },
-    { event: "venue_favourite_match", label: "Favourite venues", sub: "New matches at venues you love", icon: Heart, sport: "red" },
+  const EVENTS: { event: string; label: string; sub: string; icon: LucideIcon; sport: Sport; show: boolean }[] = [
+    { event: "match_playing_time", label: "Match reminders", sub: "Before a match you joined kicks off", icon: Clock, sport: "football", show: true },
+    { event: "venue_favourite_match", label: "Favourite venues", sub: "New matches at venues you love", icon: Heart, sport: "red", show: true },
+    { event: "match_organizing_registration", label: "New players", sub: "When someone joins your match", icon: UserPlus, sport: "guide", show: !!roles?.organiser },
+    { event: "match_organizing_slot_filled", label: "Match full", sub: "When every slot in your match is taken", icon: Users, sport: "tennis", show: !!roles?.organiser },
+    { event: "booking_confirmation", label: "Venue bookings", sub: "When someone books a slot at your venue", icon: CalendarCheck, sport: "venue", show: !!roles?.venue },
+    { event: "venue_match_created", label: "Matches at my venue", sub: "New matches set up at your venue", icon: Store, sport: "pink", show: !!roles?.venue },
   ];
   const chip = (on: boolean) => `h-9 px-3.5 rounded-full text-[13px] font-bold capitalize ${on ? "bg-sc-ink text-white" : "bg-sc-soft text-sc-ink"}`;
+  const typeLabel: Record<string, string> = { push: "Push", email: "Email", both: "Push and email" };
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-3">
-        {EVENTS.map(({ event, label, sub, icon, sport }) => {
+        {EVENTS.filter((e) => e.show).map(({ event, label, sub, icon, sport }) => {
           const enabled = form.watch(`${event}.enabled` as any);
+          const type = form.watch(`${event}.type` as any);
+          const freq = form.watch(`${event}.frequency` as any);
+          const isOpen = openCard === event && enabled;
           return (
-            <div key={event} className="bg-white rounded-3xl p-4 flex flex-col gap-3">
-              <FormField
-                control={form.control}
-                name={`${event}.enabled` as any}
-                render={({ field }) => (
-                  <FormItem className="flex items-center gap-3 space-y-0">
-                    <Bubble icon={icon} sport={sport} size={42} radius={14} />
-                    <span className="flex-1 min-w-0 flex flex-col">
-                      <FormLabel className="text-[15px] font-extrabold text-sc-ink">{label}</FormLabel>
-                      <span className="text-xs text-sc-ink3">{sub}</span>
-                    </span>
-                    <FormControl>
-                      <Switch checked={field.value} onCheckedChange={field.onChange} className="data-[state=checked]:bg-sc-green" aria-label={label} />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              {enabled && (
-                <div className="flex flex-col gap-2.5 pl-[54px]">
+            <div key={event} className="bg-white rounded-3xl px-4 py-3.5 flex flex-col gap-3">
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => enabled && setOpenCard(isOpen ? null : event)}
+                  aria-expanded={isOpen}
+                  className="flex-1 min-w-0 flex items-center gap-3 text-left"
+                >
+                  <Bubble icon={icon} sport={sport} size={42} radius={14} />
+                  <span className="flex-1 min-w-0 flex flex-col">
+                    <span className="text-[15px] font-extrabold text-sc-ink">{label}</span>
+                    <span className="text-xs text-sc-ink3">{sub}</span>
+                    {enabled && (
+                      <span className="mt-1 text-[12px] font-bold text-sc-ink2 inline-flex items-center gap-1">
+                        {typeLabel[type] || "Push"}, {freq || "immediate"}
+                        {isOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                      </span>
+                    )}
+                  </span>
+                </button>
+                <FormField
+                  control={form.control}
+                  name={`${event}.enabled` as any}
+                  render={({ field }) => (
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={(v) => { field.onChange(v); if (!v && openCard === event) setOpenCard(null); }}
+                      className="data-[state=checked]:bg-sc-green shrink-0"
+                      aria-label={label}
+                    />
+                  )}
+                />
+              </div>
+              {isOpen && (
+                <div className="flex flex-col gap-2.5 pl-[54px] pb-1">
+                  <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-sc-ink3">How</span>
                   <FormField
                     control={form.control}
                     name={`${event}.type` as any}
@@ -204,6 +254,7 @@ const UserNotifications = ({ profile, setShowNotifications }) => {
                       </div>
                     )}
                   />
+                  <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-sc-ink3 pt-1">When</span>
                   <FormField
                     control={form.control}
                     name={`${event}.frequency` as any}
@@ -220,8 +271,21 @@ const UserNotifications = ({ profile, setShowNotifications }) => {
             </div>
           );
         })}
+        {roles && !roles.organiser && !roles.venue && (
+          <p className={cn("m-0 px-1 text-[12.5px] text-sc-ink3")}>More settings show up once you organise a match or manage a venue.</p>
+        )}
         <ScButton type="submit" icon={CheckCircle} disabled={loading}>{loading ? "Saving..." : "Save settings"}</ScButton>
       </form>
+      <ConfirmModal
+        open={askFavourite}
+        onOpenChange={(v) => { setAskFavourite(v); if (!v && !toVenues.current) setShowNotifications(false); }}
+        icon={Heart}
+        title="Pick your favourite venues"
+        description="Your settings are saved. Tap the heart on any venue and we will tell you when new matches are set up there."
+        confirmLabel="Browse venues"
+        cancelLabel="Later"
+        onConfirm={() => { toVenues.current = true; navigate("/venues"); }}
+      />
     </Form>
   );
 };

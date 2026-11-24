@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { ArrowRight, Bike, ChevronLeft, LocateFixed, MapPin, Store, Trophy, LucideIcon } from "lucide-react";
 import { BrandMark, SPORT, Sport } from "@/components/sc/ui";
@@ -30,6 +30,10 @@ export default function Onboarding() {
   const [busy, setBusy] = useState(false);
   const [pick, setPick] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  // Swipe the card left or right to move between slides
+  const [drag, setDrag] = useState(0);
+  const [dir, setDir] = useState<1 | -1>(1);
+  const touch = useRef<{ x: number; y: number; lock: boolean | null } | null>(null);
 
   useEffect(() => {
     if (pathname.startsWith("/auth/callback")) return;
@@ -54,6 +58,35 @@ export default function Onboarding() {
   const c = SPORT[s.sport];
   const last = i === SLIDES.length - 1;
   const Icon = s.icon;
+
+  const go = (n: number) => {
+    if (n < 0 || n >= SLIDES.length) return;
+    setDir(n > i ? 1 : -1);
+    setI(n);
+  };
+  const onStart = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    touch.current = { x: t.clientX, y: t.clientY, lock: null };
+  };
+  const onMove = (e: React.TouchEvent) => {
+    const st = touch.current;
+    if (!st) return;
+    const t = e.touches[0];
+    const dx = t.clientX - st.x;
+    const dy = t.clientY - st.y;
+    if (st.lock === null && (Math.abs(dx) > 6 || Math.abs(dy) > 6)) st.lock = Math.abs(dx) > Math.abs(dy);
+    if (!st.lock) return;
+    // resist at the first and last slide
+    const edge = (dx > 0 && i === 0) || (dx < 0 && last);
+    setDrag(edge ? dx * 0.25 : dx);
+  };
+  const onEnd = () => {
+    const dx = drag;
+    touch.current = null;
+    setDrag(0);
+    if (dx < -60) go(i + 1);
+    else if (dx > 60) go(i - 1);
+  };
 
   const locate = async () => {
     setBusy(true);
@@ -86,8 +119,17 @@ export default function Onboarding() {
       <div className="flex-1 flex flex-col justify-center px-5">
         <div
           key={i}
-          className="relative overflow-hidden rounded-[32px] p-6 h-[360px] flex flex-col justify-between animate-[sc-card-in_0.35s_ease-out]"
-          style={{ background: c.solid, color: c.onSolid }}
+          onTouchStart={onStart}
+          onTouchMove={onMove}
+          onTouchEnd={onEnd}
+          onTouchCancel={onEnd}
+          className={`relative overflow-hidden rounded-[32px] p-6 h-[360px] flex flex-col justify-between select-none touch-pan-y ${dir === 1 ? "animate-[sc-card-next_0.3s_ease-out]" : "animate-[sc-card-prev_0.3s_ease-out]"}`}
+          style={{
+            background: c.solid,
+            color: c.onSolid,
+            transform: drag ? `translateX(${drag}px) rotate(${drag / 40}deg)` : undefined,
+            transition: drag ? "none" : "transform 0.25s ease-out",
+          }}
         >
           <Icon aria-hidden="true" className="absolute opacity-20" size={260} strokeWidth={1} style={{ right: -60, bottom: -60 }} />
           <span className="w-16 h-16 rounded-full bg-white/25 flex items-center justify-center">
@@ -100,11 +142,14 @@ export default function Onboarding() {
           </div>
         </div>
 
-        <div className="flex justify-center gap-2 pt-6" aria-hidden="true">
+        <div className="flex justify-center gap-1 pt-5">
           {SLIDES.map((_, k) => (
-            <span key={k} className="h-2 rounded-full transition-all" style={{ width: k === i ? 24 : 8, background: k === i ? "#0E1411" : "#D5D9D3" }} />
+            <button key={k} type="button" aria-label={`Slide ${k + 1}`} onClick={() => go(k)} className="h-6 px-1 flex items-center">
+              <span className="block h-2 rounded-full transition-all" style={{ width: k === i ? 24 : 8, background: k === i ? "#0E1411" : "#D5D9D3" }} />
+            </button>
           ))}
         </div>
+        {i === 0 && <p className="m-0 pt-1 text-center text-[12px] font-semibold text-sc-ink3">Swipe to see more</p>}
 
         {last && (
           <div className="pt-5 flex flex-col gap-2.5">
@@ -130,7 +175,7 @@ export default function Onboarding() {
           <button
             type="button"
             aria-label="Previous"
-            onClick={() => setI(i - 1)}
+            onClick={() => go(i - 1)}
             className="w-[54px] h-[54px] rounded-full bg-white text-sc-ink flex items-center justify-center shrink-0"
           >
             <ChevronLeft size={22} />
@@ -138,7 +183,7 @@ export default function Onboarding() {
         )}
         <button
           type="button"
-          onClick={() => (last ? finish() : setI(i + 1))}
+          onClick={() => (last ? finish() : go(i + 1))}
           className="flex-1 h-[54px] rounded-full bg-sc-ink text-white text-base font-bold flex items-center justify-center gap-2"
         >
           {last ? "Let's play" : "Next"} <ArrowRight size={18} />
@@ -152,7 +197,7 @@ export default function Onboarding() {
           if (!v && getSavedState()) finish();
         }}
       />
-      <style>{`@keyframes sc-card-in { from { opacity: 0; transform: translateY(12px) scale(0.98); } to { opacity: 1; transform: none; } }`}</style>
+      <style>{`@keyframes sc-card-next { from { opacity: 0; transform: translateX(40px) scale(0.98); } to { opacity: 1; transform: none; } } @keyframes sc-card-prev { from { opacity: 0; transform: translateX(-40px) scale(0.98); } to { opacity: 1; transform: none; } }`}</style>
     </div>
   );
 }
