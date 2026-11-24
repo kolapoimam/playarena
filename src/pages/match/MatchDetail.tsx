@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { matchWindow, phase } from "@/lib/activityTime";
 import AccessGate from "@/components/sc/AccessGate";
 import { LoadFailedState, NotFoundState } from "@/components/sc/FunState";
 import { useParams, useNavigate } from "react-router-dom";
@@ -192,15 +193,11 @@ const MatchDetail = () => {
   const getMatchStatus = () => {
     if (!match) return { isStarted: false, isEnded: false, isFull: false };
     
-    const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
-    const matchEndTime = addHours(matchDateTime, 2); // Match duration is 2 hours
-    const now = new Date();
-    
+    // open for joining until the final whistle
+    const { isStarted, isEnded } = phase(matchWindow(match as any));
+
     const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
     const isFull = totalPlayerSlots >= match.total_slots;
-    const isStarted = now >= matchDateTime && now < matchEndTime;
-    const isEnded = now >= matchEndTime;
-    
     return { isStarted, isEnded, isFull };
   };
 
@@ -384,7 +381,7 @@ const MatchDetail = () => {
                 Match is full
               </ScButton>
             ) : (
-              <ScButton onClick={() => navigate(`/join/${match.slug}`)}>Join match</ScButton>
+              <ScButton onClick={() => navigate(`/join/${match.slug}`)}>{isStarted ? "Join live match" : "Join match"}</ScButton>
             )}
           </div>
           {match.sell_tickets && !isEnded && (

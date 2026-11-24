@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { phase, rideWindow } from "@/lib/activityTime";
 import { NotFoundState } from "@/components/sc/FunState";
 
 const USED_REFS_KEY = "sc_used_ride_payments";
@@ -472,7 +473,8 @@ const JoinCycling = () => {
   if (!event) return <NotFoundState kind="ride" />;
 
   const isFull = attendees.length >= event.max_attendees;
-  const isPastEvent = new Date(event.event_date) < new Date(new Date().setHours(0, 0, 0, 0));
+  // joining stays open while the ride is on, until it ends
+  const { isEnded: isPastEvent } = phase(rideWindow(event as any));
 
   return (
     <>

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import ActivityCard, { activityStatus } from "@/components/sc/ActivityCard";
 import ConfirmModal from "@/components/sc/ConfirmModal";
-import { PageHeader, Segmented, formatTime12 } from "@/components/sc/ui";
+import { PageHeader, Segmented, formatTime12, formatNairaExact } from "@/components/sc/ui";
+import { matchWindow, refundShare } from "@/lib/activityTime";
 import { Ban } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -65,6 +66,7 @@ type Match = {
   total_slots?: number;
   organizer_name?: string;
   is_recurring: boolean;
+  price?: number | null;
   recurring_frequency: string | null;
   recurring_occurrences: number | null;
 };
@@ -94,6 +96,7 @@ const MyMatches = () => {
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"organizing" | "playing">("organizing");
+  const [cancelRefund, setCancelRefund] = useState<{ share: number; amount: number }>({ share: 1, amount: 0 });
   const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -292,11 +295,11 @@ const MyMatches = () => {
       matchError ||
       !match ||
       match.cancellation_status ||
-      new Date(`${match.match_date}T${String(match.match_time).slice(0, 5)}:00`) <= new Date(now.getTime() + 60 * 60 * 1000)
+      new Date(`${match.match_date}T${String(match.match_time).slice(0, 5)}:00`) <= new Date(now.getTime() + (cancelIsJoined ? 0 : 60 * 60 * 1000))
     ) {
       toast({
         title: "Error",
-        description: "Cannot cancel match within 1 hour, in the past, or already cancelled.",
+        description: cancelIsJoined ? "This match has already started or was cancelled." : "Matches can be cancelled up to 1 hour before kick off.",
         variant: "destructive",
       });
       setShowCancelDialog(false);
@@ -314,11 +317,15 @@ const MyMatches = () => {
 
         if (joinedError) throw joinedError;
 
-        const { error: playerError } = await supabase
-          .from("players")
-          .update({ status: "cancelled", cancellation_status: true, updated_at: new Date().toISOString() })
-          .eq("match_id", cancelMatchId)
-          .eq("player_name", profile.nickname || profile.first_name || "User");
+        const playerName = profile.nickname || profile.first_name || "User";
+        const base = { status: "cancelled", cancellation_status: true, updated_at: new Date().toISOString() };
+        // save the refund share for paid matches, so payments can refund the right amount
+        let { error: playerError } = await supabase.from("players")
+          .update({ ...base, refund_percent: Math.round(cancelRefund.share * 100), cancelled_at: new Date().toISOString() } as any)
+          .eq("match_id", cancelMatchId).eq("player_name", playerName);
+        if (playerError && /refund_percent|cancelled_at/.test(playerError.message)) {
+          ({ error: playerError } = await supabase.from("players").update(base).eq("match_id", cancelMatchId).eq("player_name", playerName));
+        }
 
         if (playerError) throw playerError;
 
@@ -363,7 +370,9 @@ const MyMatches = () => {
 
       toast({
         title: "Success",
-        description: cancelIsJoined ? "Participation cancelled successfully!" : "Match cancelled successfully!",
+        description: cancelIsJoined
+          ? cancelRefund.amount > 0 ? `You left the match. ${cancelRefund.share === 1 ? "Your full" : "A 50%"} refund of ${formatNairaExact(cancelRefund.amount)} is on its way.` : "You left the match."
+          : "Match cancelled. Players will be refunded in full.",
       });
     } catch (error) {
       console.error("Cancellation error:", error);
@@ -488,9 +497,14 @@ const MyMatches = () => {
                 ) : undefined}
                 cancel={live ? {
                   label: "Cancel",
-                  disabled: !canCancelMatch(match.match_date, match.match_time),
-                  hint: "You can cancel up to 1 hour before kick off",
-                  onClick: () => { setCancelMatchId(match.id); setCancelIsJoined(joined); setShowCancelDialog(true); },
+                  disabled: joined ? Date.now() >= matchWindow(match as any).start.getTime() : !canCancelMatch(match.match_date, match.match_time),
+                  hint: joined ? "Free cancellation up to 12 hours before kick off" : "You can cancel up to 1 hour before kick off",
+                  onClick: () => {
+                    const share = refundShare(matchWindow(match as any).start);
+                    const paidTotal = match.is_paid ? (Number(match.price) || 0) * (match.number_of_slots || 1) : 0;
+                    setCancelRefund({ share, amount: Math.floor(paidTotal * share) });
+                    setCancelMatchId(match.id); setCancelIsJoined(joined); setShowCancelDialog(true);
+                  },
                 } : null}
                 feedback={status === "Passed" && !cancelled ? {
                   label: joined ? "Feedback" : "Reviews",
@@ -509,7 +523,13 @@ const MyMatches = () => {
         icon={Ban}
         tone="danger"
         title={cancelIsJoined ? "Leave this match?" : "Cancel this match?"}
-        description={cancelIsJoined ? "Your slot is given up and the organiser is told. This cannot be undone." : "Every player is told the match is off. This cannot be undone."}
+        description={cancelIsJoined
+          ? cancelRefund.amount > 0
+            ? cancelRefund.share === 1
+              ? `You get a full refund of ${formatNairaExact(cancelRefund.amount)} because it is more than 12 hours to kick off.`
+              : `It is less than 12 hours to kick off, so you only get a 50% refund of ${formatNairaExact(cancelRefund.amount)}. Cancelling more than 12 hours ahead is free.`
+            : "Your slot is given up and the organiser can see it. This cannot be undone."
+          : "Every player is told the match is off and paid players get a full refund. This cannot be undone."}
         confirmLabel={cancelIsJoined ? "Leave match" : "Cancel match"}
         cancelLabel="Keep it"
         onConfirm={handleCancelConfirm}

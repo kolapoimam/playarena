@@ -118,7 +118,7 @@ const AttendeesTable: React.FC<AttendeesTableProps> = ({ event, attendees, navig
           {isEnded ? (
             <ScButton kind="soft" disabled>Ride completed</ScButton>
           ) : (
-            <ScButton kind="cycling" onClick={() => navigate(`/join-cycling/${event.slug}`)} disabled={isFull || isStarted}>
+            <ScButton kind="cycling" onClick={() => navigate(`/join-cycling/${event.slug}`)} disabled={isFull}>
               {isFull ? "Ride is full" : "Join ride"}
             </ScButton>
           )}

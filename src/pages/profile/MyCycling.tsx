@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import ActivityCard, { activityStatus } from "@/components/sc/ActivityCard";
 import ConfirmModal from "@/components/sc/ConfirmModal";
-import { PageHeader, Segmented, formatTime12 } from "@/components/sc/ui";
+import { PageHeader, Segmented, formatTime12, formatNairaExact } from "@/components/sc/ui";
+import { refundShare, rideWindow } from "@/lib/activityTime";
 import { Ban } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -42,6 +43,8 @@ type CyclingEvent = {
   my_slots?: number | null;
   my_status?: string | null;
   end_landmark?: Landmark | null;
+  is_free?: boolean | null;
+  price?: number | null;
 };
 
 const MyCycling = () => {
@@ -53,6 +56,7 @@ const MyCycling = () => {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"hosting" | "riding">("hosting");
   const [cancelling, setCancelling] = useState<CyclingEvent | null>(null);
+  const [refund, setRefund] = useState<{ share: number; amount: number }>({ share: 1, amount: 0 });
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -121,6 +125,8 @@ const MyCycling = () => {
               max_attendees,
               host_name,
               status,
+              is_free,
+              price,
               attendees:cycling_attendees!cycling_attendees_cycling_event_id_uuid_fkey(id_uuid),
               start_landmark:landmarks!cycling_events_start_landmark_id_fkey(name, state)
             ),
@@ -263,12 +269,18 @@ const MyCycling = () => {
         toast({ title: "Ride cancelled", description: "Riders can see the ride is off." });
       } else {
         if (e.attendee_id) {
-          const { error } = await supabase.from("cycling_attendees").update({ status: "cancelled" } as any).eq("id_uuid", e.attendee_id);
+          // save the refund share for paid rides, so payments can refund the right amount
+          let { error } = await supabase.from("cycling_attendees")
+            .update({ status: "cancelled", refund_percent: Math.round(refund.share * 100), cancelled_at: new Date().toISOString() } as any)
+            .eq("id_uuid", e.attendee_id);
+          if (error && /refund_percent|cancelled_at/.test(error.message)) {
+            ({ error } = await supabase.from("cycling_attendees").update({ status: "cancelled" } as any).eq("id_uuid", e.attendee_id));
+          }
           if (error) throw error;
         }
         // keep the record in My cycling, marked as left, so nothing disappears unexpectedly
         setJoinedEvents((prev) => prev.map((x) => (x.id_uuid === e.id_uuid ? { ...x, my_status: "cancelled" } : x)));
-        toast({ title: "You left the ride", description: "Your spot is free for someone else." });
+        toast({ title: "You left the ride", description: refund.amount > 0 ? `${refund.share === 1 ? "Your full" : "A 50%"} refund of ${formatNairaExact(refund.amount)} is on its way.` : "Your spot is free for someone else." });
       }
     } catch (err: any) {
       toast({ title: "Could not cancel", description: err.message || "Please try again.", variant: "destructive" });
@@ -350,7 +362,17 @@ const MyCycling = () => {
                     footnote: "The host scans this QR code on ride day.",
                   }} />
                 ) : undefined}
-                cancel={upcoming ? { label: riding ? "Leave" : "Cancel", disabled: !canCancel(event), hint: "You can cancel up to 1 hour before the start", onClick: () => setCancelling(event) } : null}
+                cancel={upcoming ? {
+                  label: riding ? "Leave" : "Cancel",
+                  disabled: riding ? Date.now() >= rideWindow(event as any).start.getTime() : !canCancel(event),
+                  hint: riding ? "Free cancellation up to 12 hours before the start" : "You can cancel up to 1 hour before the start",
+                  onClick: () => {
+                    const share = refundShare(rideWindow(event as any).start);
+                    const paid = !event.is_free && Number(event.price) > 0 ? Number(event.price) * (event.my_slots || 1) : 0;
+                    setRefund({ share, amount: Math.floor(paid * share) });
+                    setCancelling(event);
+                  },
+                } : null}
               />
             );
           })
@@ -362,7 +384,13 @@ const MyCycling = () => {
         icon={Ban}
         tone="danger"
         title={tab === "hosting" ? "Cancel this ride?" : "Leave this ride?"}
-        description={tab === "hosting" ? "Every rider can see the ride is off. This cannot be undone." : "Your spot is given up and the host can see it. This cannot be undone."}
+        description={tab === "hosting"
+          ? "Every rider can see the ride is off and paid riders get a full refund. This cannot be undone."
+          : refund.amount > 0
+            ? refund.share === 1
+              ? `You get a full refund of ${formatNairaExact(refund.amount)} because it is more than 12 hours to the start.`
+              : `It is less than 12 hours to the start, so you only get a 50% refund of ${formatNairaExact(refund.amount)}. Cancelling more than 12 hours ahead is free.`
+            : "Your spot is given up and the host can see it. This cannot be undone."}
         confirmLabel={tab === "hosting" ? "Cancel ride" : "Leave ride"}
         cancelLabel="Keep it"
         onConfirm={doCancel}

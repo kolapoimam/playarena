@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { phase, rideWindow } from "@/lib/activityTime";
 import { NotFoundState } from "@/components/sc/FunState";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -194,8 +195,8 @@ const CyclingDetail = () => {
     else if (eventDate < today) status = "ended";
 
     const isFull = attendees.length >= event.max_attendees;
-    const isStarted = now >= eventDateTime && now < thirtyMinutesAfterStart;
-    const isEnded = now >= thirtyMinutesAfterStart || eventDate < today;
+    // riders can join until the ride ends
+    const { isStarted, isEnded } = phase(rideWindow(event as any));
 
     return { status, isEnded, isStarted, isFull };
   };
@@ -431,8 +432,8 @@ const CyclingDetail = () => {
             {isEnded ? (
               <ScButton kind="soft" disabled>Ride completed</ScButton>
             ) : (
-              <ScButton kind="cycling" onClick={() => navigate(`/join-cycling/${event.slug}`)} disabled={isFull || isStarted}>
-                {isFull ? "Ride is full" : "Join ride"}
+              <ScButton kind="cycling" onClick={() => navigate(`/join-cycling/${event.slug}`)} disabled={isFull}>
+                {isFull ? "Ride is full" : isStarted ? "Join live ride" : "Join ride"}
               </ScButton>
             )}
           </div>

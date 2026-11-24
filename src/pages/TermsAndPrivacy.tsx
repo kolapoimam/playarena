@@ -108,12 +108,13 @@ const TermsAndPrivacy = () => {
                         For paid activities such as matches and rides, Sport Cliq facilitates payments through secure third-party providers. Organizers and hosts pay no platform fee on their first 2 paid activities. After that, a 5% platform fee applies to every paid activity. Venue owners pay no fee on their first paid booking, then a 10% referral fee applies to each paid booking made through the Platform. Fees are deducted before cashout. All fees are non-refundable unless otherwise stated in our Refund Policy.
                       </p>
                       <p>
-                        Refunds for players are subject to the following:
+                        Refunds for players and riders are subject to the following:
                       </p>
                       <ul className="list-disc ml-5 mt-2 space-y-1">
-                        <li>Full refund if canceled 1 hour before the match start time.</li>
-                        <li>50% refund if canceled within 1 hour of the match start time.</li>
-                        <li>No refunds for checked-in players after the match starts.</li>
+                        <li>Full refund if canceled 12 hours or more before the activity starts.</li>
+                        <li>50% refund if canceled less than 12 hours before the activity starts.</li>
+                        <li>No refunds once the activity has started or for checked-in players.</li>
+                        <li>Full refund if the organizer or host cancels the activity.</li>
                       </ul>
                     </section>
 

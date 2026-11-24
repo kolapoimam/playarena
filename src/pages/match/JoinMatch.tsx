@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { matchWindow, phase } from "@/lib/activityTime";
 import { NotFoundState } from "@/components/sc/FunState";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -485,8 +486,8 @@ const JoinMatch = () => {
   const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
   const isFull = totalPlayerSlots >= match.total_slots;
   const maxSlots = Math.min(5, match.total_slots - totalPlayerSlots);
-  const matchDate = new Date(`${match.match_date}T00:00:00`);
-  const isPastMatch = isPast(matchDate) && !isToday(matchDate);
+  // joining stays open while the match is live, until it ends
+  const { isEnded: isPastMatch } = phase(matchWindow(match as any));
 
   return (
     <>

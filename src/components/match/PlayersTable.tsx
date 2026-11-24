@@ -1,4 +1,5 @@
 import { Avatar, Pill, Progress, SPORT, Sport, initialsOf, sportFor } from "@/components/sc/ui";
+import { matchWindow, phase } from "@/lib/activityTime";
 import { addHours } from "date-fns";
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
@@ -47,15 +48,10 @@ const getStatusStyles = (status: string) => {
 const PlayersTable: React.FC<PlayersTableProps> = ({ match }) => {
   
   const getMatchStatus = () => {
-    const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
-    const matchEndTime = addHours(matchDateTime, 2); // Match duration is 2 hours
-    const now = new Date(); // Use current date instead of hardcoded date
-    
+    const { isStarted, isEnded } = phase(matchWindow(match as any));
+
     const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
     const isFull = totalPlayerSlots >= match.total_slots;
-    const isStarted = now >= matchDateTime && now < matchEndTime;
-    const isEnded = now >= matchEndTime;
-    
     return { isStarted, isEnded, isFull };
   };
 
