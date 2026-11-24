@@ -10,6 +10,7 @@ import VenueCalendar, { BookingRow, type VenueBooking } from "@/components/venue
 import { BackButton, Bubble, Cover, FunEmpty, IconButton, Segmented, formatNaira, formatNairaExact } from "@/components/sc/ui";
 import { RowsSkeleton } from "@/components/sc/skeletons";
 import { canManageVenue, venueIsActive } from "@/lib/myVenues";
+import { activeOccurrences } from "@/lib/codeSchedule";
 
 type Tab = "overview" | "bookings" | "payouts" | "codes";
 type Venue = { id: string; name: string; slug: string; city: string | null; state: string | null; image_urls: string[] | null; is_verified: boolean | null };
@@ -80,7 +81,7 @@ const VenueManagerDashboard = () => {
             .limit(500),
           supabase.from("venue_booking_cashout").select("amount, status").eq("venue_id", venueId).in("status", ["Review", "Processed", "Successful"]),
           supabase.from("access_pins").select("created_at, updated_at").eq("venue_id", venueId).eq("verified", "true").limit(1),
-          supabase.from("booking_access_codes").select("id, code, match_date, start_time, end_time").eq("venue_id", venueId).is("booking_id", null).in("status", ["pending", "active"]),
+          supabase.from("booking_access_codes").select("*").eq("venue_id", venueId).is("booking_id", null).in("status", ["pending", "active"]),
         ]);
         const venueRow = ((v.data as any[]) || [])[0];
         if (v.error || !venueRow) throw new Error("We could not load this venue.");
@@ -94,10 +95,12 @@ const VenueManagerDashboard = () => {
           recurring_occurrences: r.matches?.recurring_occurrences ?? null,
         }));
         // Times held with a booking code show on the calendar too
-        const held: VenueBooking[] = ((holds.data as any[]) || []).map((h) => ({
-          id: `hold-${h.id}`, match_id: null, title: `Held with code ${h.code}`, match_date: h.match_date, start_time: h.start_time, end_time: h.end_time,
-          organizer_name: null, amount: null, payment_status: "held", slug: null,
-        }));
+        const held: VenueBooking[] = ((holds.data as any[]) || []).flatMap((h) =>
+          activeOccurrences(h).map((day) => ({
+            id: `hold-${h.id}-${day}`, match_id: null, title: `Held with code ${h.code}`, match_date: day, start_time: h.start_time, end_time: h.end_time,
+            organizer_name: null, amount: null, payment_status: "held", slug: null,
+          })),
+        );
         setBookings([...rows, ...held]);
         const earned = rows.filter((r) => (r.payment_status || "").toLowerCase() === "paid").reduce((s2, r) => s2 + (Number(r.amount) || 0), 0);
         const out = ((c.data as any[]) || []).reduce((s2, r) => s2 + (Number(r.amount) || 0), 0);

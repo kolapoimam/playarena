@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { occurrences } from "@/lib/codeSchedule";
 import { venueIsActive } from "@/lib/myVenues";
 import ConfirmModal from "@/components/sc/ConfirmModal";
 import { Store } from "lucide-react";
@@ -65,6 +66,7 @@ const Organize = () => {
   const [selectedVenueId, setSelectedVenueId] = useState<string | undefined>(undefined);
   const [hasValidBookingCode, setHasValidBookingCode] = useState(false);
   const [codeTable, setCodeTable] = useState<"venue_access_codes" | "booking_access_codes" | null>(null);
+  const [codeRow, setCodeRow] = useState<any>(null);
   // The booking this match is being set up from. Its venue, date and times are locked.
   const [lockedBooking, setLockedBooking] = useState<{ venueId: string; matchDate: string; start: string; end: string; bookingId: string | null } | null>(null);
   const [codeProblem, setCodeProblem] = useState<{ title: string; body: string; matchSlug?: string | null } | null>(null);
@@ -177,12 +179,18 @@ const Organize = () => {
         let table: "booking_access_codes" | "venue_access_codes" | null = null;
         for (const t of ["booking_access_codes", "venue_access_codes"] as const) {
           const { data } = await supabase.from(t)
-            .select("match_date, start_time, end_time, status, expiry_date, booking_id, created_at")
-            .eq("code", accessCode).eq("venue_id", venue.id).limit(1);
+            .select("*")
+            .ilike("code", accessCode).eq("venue_id", venue.id).limit(1);
           if (data?.[0]) { row = data[0]; table = t; break; }
         }
         if (!row) throw { title: "Booking code not found", body: "Check the code or make a new booking for this venue." };
 
+        if (row.cancelled_at || (row.status === "inactive" && !row.booking_id)) {
+          throw { title: "This booking code was cancelled", body: `${venue.name} cancelled this code, so it no longer works. Ask the venue for a new code or book another time.` };
+        }
+        if (row.deactivated_at && new Date(row.deactivated_at) <= new Date()) {
+          throw { title: "This booking code has been stopped", body: `${venue.name} stopped this repeating booking. Ask the venue for a new code.` };
+        }
         if (row.status !== "pending") {
           let matchSlug: string | null = null;
           if (row.booking_id) {
@@ -216,6 +224,13 @@ const Organize = () => {
         form.setValue("match_date", new Date(`${String(row.match_date).slice(0, 10)}T12:00:00`), { shouldValidate: true });
         form.setValue("start_time", to12(String(row.start_time)), { shouldValidate: true });
         form.setValue("end_time", to12(String(row.end_time)), { shouldValidate: true });
+        if (row.is_recurring && row.recurring_frequency) {
+          // a repeating code sets up a repeating match with the same number of sessions
+          form.setValue("is_recurring" as any, true);
+          form.setValue("recurring_frequency" as any, String(row.recurring_frequency).toLowerCase());
+          form.setValue("recurring_occurrences" as any, occurrences(row).length || row.recurring_occurrences || 1);
+        }
+        setCodeRow(row);
         setIsPreFilled(true);
         // Safety net in case the booking email did not go out. The server sends it only once.
         if (row.booking_id && table === "booking_access_codes") notifyBooking(row.booking_id);
@@ -271,6 +286,9 @@ const Organize = () => {
           throw new Error("This booking has already been used.");
         }
         claimed = true;
+        // keep a count of how many times the code was used, for the venue's records
+        (supabase.from(codeTable) as any).update({ times_used: (codeRow?.times_used || 0) + 1 }).eq("code", accessCode).eq("venue_id", lockedBooking.venueId)
+          .then(({ error }: any) => error && console.warn("times_used not saved", error.message));
         // Always use the booked venue, date and time, whatever the form says
         data = {
           ...data,

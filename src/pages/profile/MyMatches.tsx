@@ -1,4 +1,8 @@
 import React, { useState, useEffect } from "react";
+import ActivityCard, { activityStatus } from "@/components/sc/ActivityCard";
+import ConfirmModal from "@/components/sc/ConfirmModal";
+import { PageHeader, Segmented, formatTime12 } from "@/components/sc/ui";
+import { Ban } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -89,6 +93,7 @@ const MyMatches = () => {
   const [cancelIsJoined, setCancelIsJoined] = useState<boolean>(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState<"organizing" | "playing">("organizing");
   const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -267,7 +272,7 @@ const MyMatches = () => {
   const canCancelMatch = (matchDate: string, matchTime: string) => {
     if (!matchDate || !matchTime) return false;
     const now = new Date();
-    const matchDateTime = new Date(`${matchDate}T${matchTime}Z`);
+    const matchDateTime = new Date(`${matchDate}T${String(matchTime).slice(0, 5)}:00`);
     if (isNaN(matchDateTime.getTime())) return false;
     const oneHourBefore = new Date(matchDateTime.getTime() - 60 * 60 * 1000);
     return now < oneHourBefore;
@@ -287,7 +292,7 @@ const MyMatches = () => {
       matchError ||
       !match ||
       match.cancellation_status ||
-      new Date(`${match.match_date}T${match.match_time}Z`) <= new Date(now.getTime() + 60 * 60 * 1000)
+      new Date(`${match.match_date}T${String(match.match_time).slice(0, 5)}:00`) <= new Date(now.getTime() + 60 * 60 * 1000)
     ) {
       toast({
         title: "Error",
@@ -364,9 +369,7 @@ const MyMatches = () => {
       console.error("Cancellation error:", error);
       toast({ title: "Error", description: "Failed to cancel. Please try again.", variant: "destructive" });
     } finally {
-      setShowCancelDialog(false);
       setCancelMatchId(null);
-      setCancelIsJoined(false);
     }
   };
 
@@ -407,290 +410,111 @@ const MyMatches = () => {
     );
   }
 
+  const timeRange = (m: Match) => [m.start_time || m.match_time, m.end_time].filter(Boolean).map((t) => formatTime12(t as string)).join(" to ");
+  const repeatLabel = (m: Match) => (m.is_recurring ? `Repeats ${m.recurring_frequency || ""}${m.recurring_occurrences ? `, ${m.recurring_occurrences} times` : ""}` : null);
+  const feedbackOpen = (m: Match) => m.status === "completed" && (Date.now() - new Date(`${m.match_date}T${(m.match_time || "00:00").slice(0, 5)}:00`).getTime()) / 36e5 <= 48;
+  const list = tab === "organizing" ? organizedMatches : joinedMatches;
+  const sorted = [...list].sort((x, y) => {
+    const sx = activityStatus(x.match_date, x.start_time || x.match_time, x.end_time, x.cancellation_status || x.player_cancellation_status);
+    const sy = activityStatus(y.match_date, y.start_time || y.match_time, y.end_time, y.cancellation_status || y.player_cancellation_status);
+    const rank = (st: string) => (st === "Live" ? 0 : st === "Today" ? 1 : st === "Upcoming" ? 2 : 3);
+    if (rank(sx) !== rank(sy)) return rank(sx) - rank(sy);
+    return rank(sx) < 3 ? x.match_date.localeCompare(y.match_date) : y.match_date.localeCompare(x.match_date);
+  });
+
   return (
-    <div className="min-h-screen flex flex-col bg-sc-bg dark:bg-gray-900">
-      <header className="px-5 pt-[max(env(safe-area-inset-top),1rem)] flex flex-col gap-3.5">
-          <div className="pt-3 flex items-center justify-between min-h-11">
-            <BackButton to="/profile" />
-            <div className="flex gap-2"></div>
-          </div>
-          <h1 className="m-0 text-[32px] leading-[38px] font-extrabold tracking-[-0.03em]">My matches</h1>
-        </header>
+    <div className="min-h-screen flex flex-col bg-sc-bg text-sc-ink font-sans pb-32">
+      <PageHeader back backTo="/profile" title="My matches" subtitle="Matches you organise and play in" />
+      <main className="px-5 pt-4 flex flex-col gap-3">
+        <Segmented
+          options={[
+            { value: "organizing", label: `Organising${organizedMatches.length ? ` (${organizedMatches.length})` : ""}` },
+            { value: "playing", label: `Playing${joinedMatches.length ? ` (${joinedMatches.length})` : ""}` },
+          ]}
+          value={tab}
+          onChange={(v) => setTab(v as "organizing" | "playing")}
+        />
+        {sorted.length === 0 ? (
+          tab === "organizing" ? (
+            <FunEmpty icon={WhistleIcon} sport="football" title="You haven't blown a whistle yet" body="Organise your first match. Pick a venue, set the slots and share the link with your squad." primary={{ label: "Organise a match", onClick: () => navigate("/organize") }} />
+          ) : (
+            <FunEmpty icon={TrophyIcon} sport="football" title="Your boots are still clean" body="Matches you join show up here with your ticket. Find a game near you and grab a slot." primary={{ label: "Find a match", onClick: () => navigate("/matches") }} />
+          )
+        ) : (
+          sorted.map((match) => {
+            const organizer = organizers.find((org) => org.name === match.organizer_name);
+            const joined = tab === "playing";
+            const cancelled = match.cancellation_status || (joined && match.player_cancellation_status);
+            const status = activityStatus(match.match_date, match.start_time || match.match_time, match.end_time, cancelled);
+            const live = status === "Upcoming" || status === "Today";
+            const dateStr = new Date(`${match.match_date}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+            return (
+              <ActivityCard
+                key={match.id}
+                sport="football"
+                title={match.title}
+                date={match.match_date}
+                timeLabel={timeRange(match)}
+                place={match.venue_name || "Venue to be confirmed"}
+                status={status}
+                codeLabel={joined ? "Your code" : "Super code"}
+                code={joined ? match.confirmation_code : match.super_code}
+                taken={joined ? undefined : match.booked_slots}
+                total={joined ? undefined : match.total_slots}
+                extra={joined ? (
+                  <span className="flex flex-col gap-0.5">
+                    <span className="text-[11px] font-semibold text-sc-ink3">Your slots</span>
+                    <span className="text-[15px] font-extrabold">{match.number_of_slots || 1}</span>
+                  </span>
+                ) : undefined}
+                organiser={match.organizer_name || null}
+                verified={!!organizer?.is_verified}
+                repeat={repeatLabel(match)}
+                view={{ label: "View details", onClick: () => navigate(`/match/${match.slug}`) }}
+                ticket={joined && match.confirmation_code ? (
+                  <ViewTicketButton soft ticket={{
+                    sport: "football",
+                    kind: "Match ticket",
+                    title: match.title,
+                    code: match.confirmation_code,
+                    rows: [
+                      { label: "Date", value: dateStr },
+                      { label: "Time", value: timeRange(match) },
+                      { label: "Venue", value: match.venue_name || "To be confirmed" },
+                      { label: "Slots", value: String(match.number_of_slots || 1) },
+                    ],
+                    footnote: "The organiser scans this QR code on match day.",
+                  }} />
+                ) : undefined}
+                cancel={live ? {
+                  label: "Cancel",
+                  disabled: !canCancelMatch(match.match_date, match.match_time),
+                  hint: "You can cancel up to 1 hour before kick off",
+                  onClick: () => { setCancelMatchId(match.id); setCancelIsJoined(joined); setShowCancelDialog(true); },
+                } : null}
+                feedback={status === "Passed" && !cancelled ? {
+                  label: joined ? "Feedback" : "Reviews",
+                  disabled: !feedbackOpen(match),
+                  onClick: () => navigate(`/feedback?matchSlug=${match.slug}`),
+                } : null}
+              />
+            );
+          })
+        )}
+      </main>
 
-      <div className="flex-grow overflow-y-auto">
-        <div className="container mx-auto px-4 py-6">
-          <Card className="w-full bg-white dark:bg-gray-800 border-none shadow-card rounded-3xl">
-            <CardHeader>
-              <CardTitle className="text-xl font-semibold text-sc-green-dark dark:text-green-400 flex items-center">
-                <Volleyball className="mr-2 h-6 w-6" />
-                My Matches
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Tabs defaultValue="organizing" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 bg-sc-soft dark:bg-gray-700 rounded-t-lg">
-                  <TabsTrigger
-                    value="organizing"
-                    className="data-[state=active]:bg-white data-[state=active]:text-sc-ink data-[state=active]:shadow-[0_1px_3px_rgba(14,20,17,0.12)]"
-                  >
-                    Organizing
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="playing"
-                    className="data-[state=active]:bg-white data-[state=active]:text-sc-ink data-[state=active]:shadow-[0_1px_3px_rgba(14,20,17,0.12)]"
-                  >
-                    Playing
-                  </TabsTrigger>
-                </TabsList>
-                <TabsContent value="organizing">
-                  {organizedMatches.length > 0 ? (
-                    organizedMatches.map((match) => {
-                      const organizer = organizers.find((org) => org.name === match.organizer_name);
-                      const isVerified = organizer?.is_verified || false;
-                      const { dateStr, timeStr } = formatMatchDateTime(match.match_date, match.match_time);
-                      const statusLabel = getStatusLabel(match.status, match.cancellation_status, match.match_date, match.start_time, match.end_time);
-                      return (
-                        <div
-                          key={match.id}
-                          className="w-full p-4 mb-4 bg-white dark:bg-gray-800 rounded-3xl shadow-card dark:border-gray-700"
-                        >
-                          <div className="flex justify-between items-start">
-                            <div className="space-y-2">
-                              <h3 className="text-lg font-semibold text-sc-ink dark:text-gray-100">{match.title}</h3>
-                              <div className="flex items-center gap-2">
-                                <span className={`text-xs font-medium px-2 py-1 rounded-full ${statusLabel.className}`}>
-                                  {statusLabel.text}
-                                </span>
-                              </div>
-                              <p className="text-sm text-sc-ink3 dark:text-gray-400 flex items-center">
-                                <Calendar size={16} className="mr-2" />
-                                {dateStr} at {timeStr}
-                              </p>
-                              <p className="text-sm text-sc-ink3 dark:text-gray-400 flex items-center">
-                                <MapPin size={16} className="mr-2" />
-                                {match.venue_name || "Venue TBD"}
-                              </p>
-                              {userId && match.is_recurring && (
-                                <p className="text-sm text-sc-ink3 dark:text-gray-400 flex items-center">
-                                  <Repeat size={16} className="mr-2" />
-                                  Repeats {match.recurring_frequency} for {match.recurring_occurrences} times
-                                </p>
-                              )}
-                              <div className="text-sm text-sc-ink3 dark:text-gray-400 flex items-center gap-2">
-                                <span>Super Code:</span>
-                                <span className="flex items-center gap-1">
-                                  <span>{match.super_code || "N/A"}</span>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => {
-                                      navigator.clipboard.writeText(match.super_code || '');
-                                      toast({
-                                        title: "Success",
-                                        description: "Super code copied!",
-                                      });
-                                    }}
-                                    className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
-                                  >
-                                    <Copy size={12} />
-                                  </Button>
-                                </span>
-                              </div>
-                              <p className="text-base font-medium text-sc-ink dark:text-gray-100">
-                                Slots: <span className="text-sc-green-dark dark:text-green-400">{match.booked_slots}</span>/{match.total_slots}
-                              </p>
-                              <p className="text-sm text-sc-ink3 dark:text-gray-400 flex items-center">
-                                Organized by: {match.organizer_name || "Unknown"}
-                                {isVerified && <img src="/green-verified.png" alt="Verified" className="w-4 h-4 ml-1" />}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="mt-4 flex gap-2">
-                            {(match.status === "upcoming" || match.status === "live") && !match.cancellation_status ? (
-                              <Button
-                                variant="outline"
-                                className="px-4 py-2 border-sc-green text-sc-green-dark hover:bg-green-500 hover:text-white rounded-lg"
-                                onClick={() => {
-                                  setCancelMatchId(match.id);
-                                  setCancelIsJoined(false);
-                                  setShowCancelDialog(true);
-                                }}
-                                disabled={!canCancelMatch(match.match_date, match.match_time)}
-                              >
-                                Cancel
-                              </Button>
-                            ) : (
-                              <Button
-                                className="px-4 py-2 bg-sc-green hover:brightness-95 text-sc-green-ink rounded-full font-bold"
-                                onClick={() => navigate(`/feedback?matchSlug=${match.slug}`)}
-                                disabled={
-                                  (new Date().getTime() - new Date(`${match.match_date}T${match.match_time}Z`).getTime()) /
-                                    (1000 * 60 * 60) >
-                                  48 || match.status !== "completed"
-                                }
-                              >
-                                Review Feedback
-                              </Button>
-                            )}
-                            <Button
-                              className="px-4 py-2 bg-sc-green hover:brightness-95 text-sc-green-ink rounded-full font-bold"
-                              onClick={() => navigate(`/match/${match.slug}`)}
-                            >
-                              View Details
-                            </Button>
-                          </div>
-                        </div>
-                      );
-                    })
-                  ) : (
-<FunEmpty icon={WhistleIcon} sport="football" title="You haven't blown a whistle yet" body="Organise your first match. Pick a venue, set the slots and share the link with your squad." primary={{ label: "Organise a match", onClick: () => navigate("/organize") }} />
-                  )}
-                </TabsContent>
-                <TabsContent value="playing">
-                  {joinedMatches.length > 0 ? (
-                    joinedMatches.map((match) => {
-                      const organizer = organizers.find((org) => org.name === match.organizer_name);
-                      const isVerified = organizer?.is_verified || false;
-                      const { dateStr, timeStr } = formatMatchDateTime(match.match_date, match.match_time);
-                      const statusLabel = getStatusLabel(match.player_status || "registered", match.player_cancellation_status || match.cancellation_status, match.match_date, match.start_time, match.end_time);
-                      return (
-                        <div
-                          key={match.id}
-                          className="w-full p-4 mb-4 bg-white dark:bg-gray-800 rounded-3xl shadow-card dark:border-gray-700"
-                        >
-                          <div className="flex justify-between items-start">
-                            <div className="space-y-2">
-                              <h3 className="text-lg font-semibold text-sc-ink dark:text-gray-100">{match.title}</h3>
-                              <div className="flex items-center gap-2">
-                                <span className={`text-xs font-medium px-2 py-1 rounded-full ${statusLabel.className}`}>
-                                  {statusLabel.text}
-                                </span>
-                              </div>
-                              <p className="text-sm text-sc-ink3 dark:text-gray-400 flex items-center">
-                                <Calendar size={16} className="mr-2" />
-                                {dateStr} at {timeStr}
-                              </p>
-                              <p className="text-sm text-sc-ink3 dark:text-gray-400 flex items-center">
-                                <MapPin size={16} className="mr-2" />
-                                {match.venue_name || "Venue TBD"}
-                              </p>
-                              {userId && match.is_recurring && (
-                                <p className="text-sm text-sc-ink3 dark:text-gray-400 flex items-center">
-                                  <Repeat size={16} className="mr-2" />
-                                  Repeats {match.recurring_frequency} for {match.recurring_occurrences} times
-                                </p>
-                              )}
-                              <div className="flex items-center justify-between gap-2 py-1">
-                                <span className="text-sm text-sc-ink3">
-                                  Code <b className="text-sc-ink tracking-[0.12em]">{match.confirmation_code || "N/A"}</b>
-                                </span>
-                                <ViewTicketButton
-                                  ticket={{
-                                    sport: "football",
-                                    kind: "Match ticket",
-                                    title: match.title,
-                                    code: match.confirmation_code,
-                                    rows: [
-                                      { label: "Date", value: dateStr },
-                                      { label: "Time", value: timeStr },
-                                      { label: "Venue", value: match.venue_name || "To be confirmed" },
-                                      { label: "Slots", value: String(match.number_of_slots || 1) },
-                                    ],
-                                    footnote: "The organiser scans this QR code on match day.",
-                                  }}
-                                />
-                              </div>
-                              {match.is_paid && match.number_of_slots && (
-                                <p className="text-base font-medium text-sc-ink dark:text-gray-100">
-                                  Slots Purchased: <span className="text-sc-green-dark dark:text-green-400">{match.number_of_slots}</span>
-                                </p>
-                              )}
-                              <p className="text-sm text-sc-ink3 dark:text-gray-400 flex items-center">
-                                Organized by: {match.organizer_name || "Unknown"}
-                                {isVerified && <img src="/green-verified.png" alt="Verified" className="w-4 h-4 ml-1" />}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="mt-4 flex gap-2">
-                            {(match.status === "upcoming" || match.status === "live") &&
-                            !match.cancellation_status &&
-                            !match.player_cancellation_status ? (
-                              <Button
-                                variant="outline"
-                                className="px-4 py-2 border-sc-green text-sc-green-dark hover:bg-green-500 hover:text-white rounded-lg"
-                                onClick={() => {
-                                  setCancelMatchId(match.id);
-                                  setCancelIsJoined(true);
-                                  setShowCancelDialog(true);
-                                }}
-                                disabled={!canCancelMatch(match.match_date, match.match_time)}
-                              >
-                                Cancel
-                              </Button>
-                            ) : (
-                              <Button
-                                className="px-4 py-2 bg-sc-green hover:brightness-95 text-sc-green-ink rounded-full font-bold"
-                                onClick={() => navigate(`/feedback?matchSlug=${match.slug}`)}
-                                disabled={
-                                  (new Date().getTime() - new Date(`${match.match_date}T${match.match_time}Z`).getTime()) /
-                                    (1000 * 60 * 60) >
-                                  48 || match.status !== "completed"
-                                }
-                              >
-                                Give Feedback
-                              </Button>
-                            )}
-                            <Button
-                              className="px-4 py-2 bg-sc-green hover:brightness-95 text-sc-green-ink rounded-full font-bold"
-                              onClick={() => navigate(`/match/${match.slug}`)}
-                            >
-                              View Details
-                            </Button>
-                          </div>
-                        </div>
-                      );
-                    })
-                  ) : (
-<FunEmpty icon={TrophyIcon} sport="football" title="Your boots are still clean" body="Matches you join show up here with your ticket. Find a game near you and grab a slot." primary={{ label: "Find a match", onClick: () => navigate("/matches") }} />
-                  )}
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
-        <DialogContent className="max-w-md rounded-3xl bg-white dark:bg-gray-800 border-none shadow-card">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-semibold text-sc-ink dark:text-gray-100">
-              Confirm Cancellation
-            </DialogTitle>
-            <DialogDescription className="text-sm text-sc-ink3 dark:text-gray-400">
-              Are you sure you want to cancel {cancelIsJoined ? "your participation in" : "this match"}? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="flex justify-between mt-4">
-            <Button
-              variant="outline"
-              className="w-1/2 px-4 py-2 border-sc-line text-sc-ink2 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 rounded-lg"
-              onClick={() => setShowCancelDialog(false)}
-            >
-              No, Go Back
-            </Button>
-            <Button
-              className="w-1/2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg"
-              onClick={handleCancelConfirm}
-            >
-              Yes, Cancel
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <div className="pb-28">
-        <Navbar />
-      </div>
+      <ConfirmModal
+        open={showCancelDialog}
+        onOpenChange={(v) => { setShowCancelDialog(v); if (!v) setCancelMatchId(null); }}
+        icon={Ban}
+        tone="danger"
+        title={cancelIsJoined ? "Leave this match?" : "Cancel this match?"}
+        description={cancelIsJoined ? "Your slot is given up and the organiser is told. This cannot be undone." : "Every player is told the match is off. This cannot be undone."}
+        confirmLabel={cancelIsJoined ? "Leave match" : "Cancel match"}
+        cancelLabel="Keep it"
+        onConfirm={handleCancelConfirm}
+      />
+      <Navbar />
     </div>
   );
 };

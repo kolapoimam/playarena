@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import AccessGate from "@/components/sc/AccessGate";
+import { LoadFailedState, NotFoundState } from "@/components/sc/FunState";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -95,7 +97,12 @@ const MatchDetail = () => {
     checkMatchAccess(slug);
   }, [slug]);
 
+  const [notFound, setNotFound] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
+
   const checkMatchAccess = async (matchSlug: string) => {
+    setLoadFailed(false);
+    setNotFound(false);
     try {
       const { data, error } = await supabase
         .from("matches")
@@ -106,88 +113,36 @@ const MatchDetail = () => {
           players(player_name, player_status, number_of_slots)
         `)
         .eq("slug", matchSlug)
-        .single();
+        .limit(1);
 
       if (error) throw error;
-
-      const matchData = data as Match;
-      if (matchData.is_private) {
+      const matchData = ((data as any[]) || [])[0] as Match | undefined;
+      if (!matchData) {
+        setNotFound(true);
+      } else if (matchData.is_private && localStorage.getItem(`match_access_${matchSlug}`) !== "true") {
         setPasswordDialogOpen(true);
-        setLoading(false);
       } else {
         setMatch(matchData);
-        setLoading(false);
       }
     } catch (error) {
       console.error("Error fetching match:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load match details. Please try again.",
-        variant: "destructive",
-      });
-      navigate("/matches");
+      setLoadFailed(true);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const verifyPassword = async () => {
-    if (!slug) {
-      navigate("/matches");
-      return;
-    }
-
-    if (!password) {
-      toast({
-        title: "Error",
-        description: "Please enter a password.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      const { data, error } = await supabase
-        .from("matches")
-        .select("access_password, is_private")
-        .eq("slug", slug)
-        .single();
-
-      if (error) {
-        toast({
-          title: "Error",
-          description: "Failed to verify access. Please try again.",
-          variant: "destructive",
-        });
-        navigate("/matches");
-        return;
-      }
-
-      if (!data.is_private) {
-        fetchMatch(slug);
-        setPasswordDialogOpen(false);
-        return;
-      }
-
-      if (data.access_password === password) {
-        localStorage.setItem(`match_access_${slug}`, "true");
-        setPasswordDialogOpen(false);
-        fetchMatch(slug);
-      } else {
-        toast({
-          title: "Error",
-          description: "Incorrect or expired password. Please try again.",
-          variant: "destructive",
-        });
-        navigate("/matches");
-      }
-    } catch (error) {
-      console.error("Error verifying password:", error);
-      toast({
-        title: "Error",
-        description: "Failed to verify access. Please try again.",
-        variant: "destructive",
-      });
-      navigate("/matches");
-    }
+  // Checks the code for a private match. Returns true when it opens the match.
+  const unlock = async (code: string) => {
+    if (!slug) return false;
+    const { data, error } = await supabase.from("matches").select("access_password, is_private").eq("slug", slug).limit(1);
+    const row = ((data as any[]) || [])[0];
+    if (error || !row) return false;
+    if (row.is_private && String(row.access_password || "").toUpperCase() !== code.toUpperCase()) return false;
+    localStorage.setItem(`match_access_${slug}`, "true");
+    setPasswordDialogOpen(false);
+    await fetchMatch(slug);
+    return true;
   };
 
   const fetchMatch = async (matchSlug: string) => {
@@ -269,57 +224,9 @@ const MatchDetail = () => {
     return <DetailSkeleton />;
   }
 
-  if (!match && !passwordDialogOpen) {
-    return (
-      <div className="p-4">
-        <Button 
-          variant="ghost" 
-          onClick={() => navigate(-1)} 
-          className="mb-4"
-        >
-          <ArrowLeft size={18} className="mr-2" />
-          Back
-        </Button>
-        <div className="text-center py-8">
-          <h2 className="text-xl font-semibold mb-2">Match Not Found</h2>
-          <p className="text-muted-foreground">The match you're looking for doesn't exist or has been removed.</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (passwordDialogOpen) {
-    return (
-      <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
-        <DialogContent className="max-w-md rounded-3xl bg-white dark:bg-gray-800 p-6 shadow-card dark:border-gray-700">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-sc-ink dark:text-white text-center">Access Required</DialogTitle>
-            <DialogDescription className="text-sc-ink3 dark:text-gray-300 text-center mt-2">
-              This is a private match. Please enter the 6-character access password to view details.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <Input
-              type="text"
-              placeholder="Enter password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-2 rounded-lg border-sc-line dark:border-gray-600 focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sc-ink dark:text-white bg-sc-soft dark:bg-gray-700"
-              maxLength={6}
-            />
-          </div>
-          <DialogFooter className="flex justify-center">
-            <Button 
-              className="bg-sc-green hover:brightness-95 text-sc-green-ink px-6 py-2 rounded-full transition-colors font-bold"
-              onClick={verifyPassword}
-            >
-              Verify
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    );
-  }
+  if (loadFailed) return <LoadFailedState onRetry={() => slug && checkMatchAccess(slug)} />;
+  if (passwordDialogOpen) return <AccessGate what="match" onUnlock={unlock} />;
+  if (!match || notFound) return <NotFoundState kind="match" />;
 
   const { isStarted, isEnded, isFull } = getMatchStatus();
   const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);

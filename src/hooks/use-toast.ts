@@ -6,7 +6,7 @@ import type {
 } from "@/components/ui/toast"
 
 const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 1000000
+const TOAST_REMOVE_DELAY = 1000
 
 type ToasterToast = ToastProps & {
   id: string
@@ -160,6 +160,11 @@ function toast({ ...props }: Toast) {
       },
     },
   })
+
+  // Close on our own timer too, because the built in one pauses while the toast has focus
+  // or the app is in the background, which left toasts stuck on phones.
+  const ms = typeof (props as any).duration === "number" ? (props as any).duration : props.variant === "destructive" ? 6000 : 4000
+  if (ms !== Infinity) setTimeout(dismiss, ms)
 
   return {
     id: id,

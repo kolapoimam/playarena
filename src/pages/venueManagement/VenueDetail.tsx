@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { NotFoundState } from "@/components/sc/FunState";
 import { venueIsActive } from "@/lib/myVenues";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -176,28 +177,7 @@ const VenueDetail = () => {
     return <DetailSkeleton />;
   }
 
-  if (error || !venue) {
-    return (
-      <div className="p-6 bg-sc-bg dark:bg-gray-900 min-h-screen">
-        <Button
-          variant="ghost"
-          onClick={() => navigate(-1)}
-          className="mb-4 text-sc-ink2 dark:text-gray-300"
-        >
-          <ArrowLeft size={18} className="mr-2" />
-          Back
-        </Button>
-        <div className="text-center py-8">
-          <h2 className="text-xl font-semibold mb-2 text-sc-ink dark:text-gray-100">
-            {error ? "Error Loading Venue" : "Venue Not Found"}
-          </h2>
-          <p className="text-sc-ink3 dark:text-gray-400">
-            {error || "The venue you're looking for doesn't exist or has been removed."}
-          </p>
-        </div>
-      </div>
-    );
-  }
+  if (error || !venue) return <NotFoundState kind="venue" />;
 
   const defaultImage = "/placeholders/stadium.webp";
   const venueImage = venue.image_urls && venue.image_urls.length > 0 ? venue.image_urls[0] : defaultImage;

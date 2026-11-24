@@ -18,7 +18,7 @@ import Navbar from "@/components/Navbar";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Seo } from "@/components/Seo";
-import { Avatar, Bubble, FunEmpty, IconButton, Meta, Pill, Screen, Section, SPORT, formatNaira, initialsOf, Cover } from "@/components/sc/ui";
+import { Avatar, Bubble, FunEmpty, IconButton, Meta, Pill, Screen, Section, SPORT, formatNaira, initialsOf, Cover, myGender } from "@/components/sc/ui";
 import { LocationChip, useUserState } from "@/components/sc/location";
 import { sameState } from "@/lib/location";
 import { HomeRailSkeleton } from "@/components/sc/skeletons";
@@ -272,7 +272,7 @@ const Index = () => {
         <header className="px-5 pt-[max(env(safe-area-inset-top),1rem)] flex flex-col gap-[18px]">
           <div className="pt-3 flex items-center justify-between">
             <div className="flex items-center gap-3 min-w-0">
-              {nickname ? <Avatar seed={nickname} initials={initialsOf(nickname)} size={46} /> : <img src="/brand/sportcliq-mark.png" alt="SportCliq" className="w-[46px] h-[46px]" />}
+              {nickname ? <Avatar seed={nickname} gender={myGender()} initials={initialsOf(nickname)} size={46} /> : <img src="/brand/sportcliq-mark.png" alt="SportCliq" className="w-[46px] h-[46px]" />}
               <div className="flex flex-col gap-0.5 min-w-0">
                 <span className="text-[13px] text-sc-ink3 font-semibold">{greeting}</span>
                 <span className="text-lg font-extrabold tracking-[-0.02em] truncate">{nickname || "Welcome to SportCliq"}</span>

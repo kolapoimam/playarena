@@ -67,6 +67,20 @@ interface Venue {
   match_dates: string[];
 }
 
+interface Ride {
+  id: string;
+  slug: string;
+  title: string;
+  event_date: string;
+  start_time: string;
+  is_free: boolean;
+  price: number | null;
+  max_attendees: number | null;
+  status: string | null;
+  start: { name: string; state: string | null } | null;
+  taken: number;
+}
+
 const ITEMS_PER_PAGE = 4;
 
 const SearchPage = () => {
@@ -74,9 +88,10 @@ const SearchPage = () => {
   const navigate = useNavigate();
   const [matches, setMatches] = useState<Match[]>([]);
   const [venues, setVenues] = useState<Venue[]>([]);
+  const [rides, setRides] = useState<Ride[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
-  const [activeTab, setActiveTab] = useState<"matches" | "venues">("matches");
+  const [activeTab, setActiveTab] = useState<"matches" | "rides" | "venues">("matches");
   const [currentPage, setCurrentPage] = useState(1);
   const [term, setTerm] = useState(searchParams.get("q") || "");
   const [recent, setRecent] = useState<string[]>(readRecent());
@@ -111,11 +126,43 @@ const SearchPage = () => {
       setHasSearched(false);
       setMatches([]);
       setVenues([]);
+      setRides([]);
     }
   }, [searchParams]);
 
+  // Rides by title, or by the name or state of their start landmark
+  const searchRides = async (query: string): Promise<Ride[]> => {
+    try {
+      const cols = "id_uuid, slug, title, event_date, start_time, is_free, price, max_attendees, status, start_landmark_id, start:landmarks!start_landmark_id(name, state), cycling_attendees!cycling_attendees_cycling_event_id_uuid_fkey(number_of_slots, status)";
+      const { data: lms } = await supabase.from("landmarks").select("id_uuid").or(`name.ilike.%${query}%,state.ilike.%${query}%`).limit(50);
+      const lmIds = ((lms as any[]) || []).map((l) => l.id_uuid);
+      const [byTitle, byPlace] = await Promise.all([
+        supabase.from("cycling_events").select(cols).ilike("title", `%${query}%`).limit(50),
+        lmIds.length ? supabase.from("cycling_events").select(cols).in("start_landmark_id", lmIds).limit(50) : Promise.resolve({ data: [] as any[] }),
+      ]);
+      const rows = [...(((byTitle as any).data as any[]) || []), ...(((byPlace as any).data as any[]) || [])];
+      const unique = Array.from(new Map(rows.map((r) => [r.id_uuid, r])).values());
+      const today = new Date().toISOString().slice(0, 10);
+      return unique
+        .map((r: any) => ({
+          id: r.id_uuid, slug: r.slug, title: r.title, event_date: r.event_date, start_time: r.start_time,
+          is_free: r.is_free, price: r.price, max_attendees: r.max_attendees, status: r.status, start: r.start,
+          taken: ((r.cycling_attendees as any[]) || []).filter((a) => a.status !== "cancelled").reduce((n, a) => n + (Number(a.number_of_slots) || 1), 0),
+        }))
+        .sort((a, b) => {
+          const au = a.event_date >= today, bu = b.event_date >= today;
+          if (au !== bu) return au ? -1 : 1;
+          return au ? a.event_date.localeCompare(b.event_date) : b.event_date.localeCompare(a.event_date);
+        });
+    } catch (e) {
+      console.error("Ride search failed", e);
+      return [];
+    }
+  };
+
   const searchMatchesAndVenues = async (query: string) => {
     setLoading(true);
+    searchRides(query).then(setRides);
     try {
       // Search for venues matching the query in name, city, or state
       const { data: venueData, error: venueError } = await supabase
@@ -311,8 +358,9 @@ const SearchPage = () => {
   const totalMatches = matches.length;
   const totalVenues = venues.length;
   const totalPages = Math.ceil(
-    activeTab === "matches" ? totalMatches / ITEMS_PER_PAGE : totalVenues / ITEMS_PER_PAGE
+    (activeTab === "matches" ? totalMatches : activeTab === "rides" ? rides.length : totalVenues) / ITEMS_PER_PAGE
   );
+  const paginatedRides = rides.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
   const paginatedMatches = matches.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
@@ -359,10 +407,10 @@ const SearchPage = () => {
           >
             <SearchIcon size={20} className="shrink-0" />
             <input
-              aria-label="Search matches or venues"
+              aria-label="Search matches, rides or venues"
               value={term}
               onChange={(e) => setTerm(e.target.value.replace(/[^A-Za-z\s]/g, ""))}
-              placeholder="Matches, venues, cities"
+              placeholder="Matches, rides, venues, cities"
               className="flex-1 min-w-0 bg-transparent outline-none text-base text-sc-ink placeholder:text-[#8A918C]"
             />
             {term && (
@@ -424,7 +472,7 @@ const SearchPage = () => {
               </ListGroup>
             )}
             {recent.length === 0 && (
-              <p className="text-sm text-sc-ink3 text-center px-6">Search for matches or venues by title, name, city or state.</p>
+              <p className="text-sm text-sc-ink3 text-center px-6">Search for matches, rides or venues by name, landmark, city or state.</p>
             )}
           </main>
         ) : (
@@ -437,11 +485,12 @@ const SearchPage = () => {
               }}
               options={[
                 { value: "matches", label: `Matches ${matches.length}` },
+                { value: "rides", label: `Rides ${rides.length}` },
                 { value: "venues", label: `Venues ${venues.length}` },
               ]}
             />
             <span className="text-[13px] font-semibold text-sc-ink3">
-              {matches.length} {matches.length === 1 ? "match" : "matches"} and {venues.length} {venues.length === 1 ? "venue" : "venues"} for “{searchParams.get("q")}”
+              {matches.length} {matches.length === 1 ? "match" : "matches"}, {rides.length} {rides.length === 1 ? "ride" : "rides"} and {venues.length} {venues.length === 1 ? "venue" : "venues"} for “{searchParams.get("q")}”
             </span>
 
             {loading ? (
@@ -521,6 +570,50 @@ const SearchPage = () => {
                 })
               ) : (
                 <EmptyState icon={Trophy} sport="football" title="No matches found" subtitle="Try searching with different keywords." />
+              )
+            ) : activeTab === "rides" ? (
+              paginatedRides.length > 0 ? (
+                paginatedRides.map((r) => {
+                  const today = new Date().toISOString().slice(0, 10);
+                  const cancelled = r.status === "cancelled";
+                  const passed = !cancelled && r.event_date < today;
+                  const full = !!r.max_attendees && r.taken >= r.max_attendees;
+                  const label = cancelled ? "Cancelled" : passed ? "Passed" : r.event_date === today ? "Today" : "Upcoming";
+                  return (
+                    <div key={r.id} onClick={() => navigate(`/cycling/${r.slug}`)} className="bg-white rounded-3xl p-[18px] flex flex-col gap-3.5 cursor-pointer active:scale-[0.99] transition-transform">
+                      <div className="flex gap-3.5 items-center">
+                        <DateBox date={r.event_date} sport="cycling" />
+                        <div className="flex-1 min-w-0 flex flex-col gap-1">
+                          <span className="text-lg font-extrabold tracking-[-0.02em] truncate">{r.title}</span>
+                          <span className="text-[13px] text-sc-ink3">{formatDate(r.event_date)} · {formatTime(r.start_time)}</span>
+                        </div>
+                      </div>
+                      {r.start && <Meta icon={MapPin}>Starts at {r.start.name}{r.start.state ? `, ${r.start.state}` : ""}</Meta>}
+                      <div className="flex gap-1.5 flex-wrap">
+                        <Pill sport={statusSport(label)}>{label}</Pill>
+                        <Pill sport={r.is_free ? "football" : "tennis"}>{r.is_free || !r.price ? "Free" : formatNaira(r.price)}</Pill>
+                      </div>
+                      {!!r.max_attendees && (
+                        <div className="flex flex-col gap-2">
+                          <div className="flex justify-between text-[13px]">
+                            <span className="text-sc-ink3 font-semibold">Riders</span>
+                            <span className="font-extrabold">{r.taken}/{r.max_attendees}</span>
+                          </div>
+                          <Progress value={(r.taken * 100) / r.max_attendees} color={SPORT.cycling.solid} />
+                        </div>
+                      )}
+                      {cancelled || passed || full ? (
+                        <button type="button" disabled className="h-11 rounded-full bg-sc-soft text-sc-ink3 text-[15px] font-bold">{cancelled ? "Cancelled" : passed ? "Ride ended" : "Full"}</button>
+                      ) : (
+                        <button type="button" onClick={(e) => { e.stopPropagation(); navigate(`/join-cycling/${r.slug}`); }} className="h-11 rounded-full text-white text-[15px] font-extrabold" style={{ background: SPORT.cycling.solid }}>
+                          Join ride
+                        </button>
+                      )}
+                    </div>
+                  );
+                })
+              ) : (
+                <EmptyState icon={Bike} sport="cycling" title="No rides found" subtitle="Try a landmark, a city or a ride name." />
               )
             ) : paginatedVenues.length > 0 ? (
               paginatedVenues.map((venue: any) => (

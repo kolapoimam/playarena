@@ -111,7 +111,7 @@ const Profile = () => {
         </div>
         <div className="relative flex items-center gap-4">
           <span className="rounded-full border-4 border-white shrink-0 bg-white">
-            <Avatar seed={profile?.nickname || profile?.email} initials={initialsOf(name)} size={80} />
+            <Avatar seed={profile?.nickname || profile?.email} gender={profile?.gender} initials={initialsOf(name)} size={80} />
           </span>
           <div className="flex flex-col gap-1 text-sc-green-ink min-w-0">
             <span className="text-2xl font-extrabold tracking-[-0.02em] truncate">{name}</span>

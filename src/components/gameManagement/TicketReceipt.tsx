@@ -1,5 +1,6 @@
 
 import { useState, useEffect, useRef } from "react";
+import { NotFoundState } from "@/components/sc/FunState";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -128,20 +129,7 @@ const TicketReceipt = () => {
     );
   }
 
-  if (!ticket) {
-    return (
-      <div className="p-4">
-        <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4">
-          <ArrowLeft size={18} className="mr-2" />
-          Back
-        </Button>
-        <div className="text-center py-8">
-          <h2 className="text-xl font-semibold mb-2">Ticket Not Found</h2>
-          <p className="text-muted-foreground">The ticket you're looking for doesn't exist.</p>
-        </div>
-      </div>
-    );
-  }
+  if (!ticket) return <NotFoundState kind="ticket" />;
 
   const isDarkBackground = backgroundColor === '#4CAF50' || backgroundColor === '#000000' || backgroundColor === '#2196F3' || backgroundColor === '#9C27B0';
   const logoSrc = isDarkBackground ? '/playarenadark.png' : '/playarenalight.png';

@@ -17,6 +17,7 @@ import Index from "@/pages/Index";
 import NotFound from "@/pages/NotFound";
 import AppErrorBoundary from "@/components/sc/AppErrorBoundary";
 import SwipeBack from "@/components/sc/SwipeBack";
+import RequireAuth from "@/components/sc/RequireAuth";
 
 
 // Screens load on demand so the first open is quick. If a deploy replaced a file
@@ -151,9 +152,9 @@ const AppRoutes = () => {
       <Route path="/auth" element={<Auth />} />
       <Route path="/auth/callback" element={<AuthCallback />} />
       <Route path="/confirm" element={<Confirm />} />
-      <Route path="/organize" element={<Organize />} />
-      <Route path="/host-cycling" element={<HostCycling />} />
-      <Route path="/venue-create" element={<VenueCreate />} />
+      <Route path="/organize" element={<RequireAuth kind="organise"><Organize /></RequireAuth>} />
+      <Route path="/host-cycling" element={<RequireAuth kind="host"><HostCycling /></RequireAuth>} />
+      <Route path="/venue-create" element={<RequireAuth kind="venue"><VenueCreate /></RequireAuth>} />
       <Route path="/venues" element={<VenueDirectory />} />
       <Route path="/landmarks" element={<LandmarkDirectory />} />
       <Route path="/confirm-checkin" element={<ConfirmCheckin />} />
@@ -172,7 +173,7 @@ const AppRoutes = () => {
       <Route path="/venue-id/:id" element={<VenueRedirect />} />
       <Route path="/venuemanager/dashboard/:venueId" element={<VenueManagerDashboard />} />
       <Route path="/venues-bookings/:venueSlug" element={<VenueBookings />} />
-      <Route path="/venue/:slug/book" element={<VenueBookingForm />} />
+      <Route path="/venue/:slug/book" element={<RequireAuth kind="book"><VenueBookingForm /></RequireAuth>} />
       <Route path="/cycling-event/:slug" element={<CyclingDetail />} />
       <Route path="/feedback/cycling/:slug" element={<LegacyRideFeedback />} />
       <Route path="/login" element={<Navigate to="/auth" replace />} />

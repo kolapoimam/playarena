@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { NotFoundState } from "@/components/sc/FunState";
 import { useParams, useNavigate, Routes, Route } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -375,20 +376,7 @@ const Ticketing = () => {
     );
   }
 
-  if (!match) {
-    return (
-      <div className="p-4">
-        <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4">
-          <ArrowLeft size={18} className="mr-2" />
-          Back
-        </Button>
-        <div className="text-center py-8">
-          <h2 className="text-xl font-semibold mb-2">Match Not Found</h2>
-          <p className="text-muted-foreground">The match you're looking for doesn't exist or has been removed.</p>
-        </div>
-      </div>
-    );
-  }
+  if (!match) return <NotFoundState kind="match" />;
 
   return (
     <>

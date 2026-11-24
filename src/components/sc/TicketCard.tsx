@@ -173,7 +173,7 @@ export const downloadElementAsPng = async (el: HTMLElement, filename: string) =>
 
 /** Re-open a saved ticket from My matches or My cycling. */
 
-export function ViewTicketButton({ ticket }: { ticket: Omit<Props, "onReady"> }) {
+export function ViewTicketButton({ ticket, soft = false }: { ticket: Omit<Props, "onReady">; soft?: boolean }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -187,9 +187,9 @@ export function ViewTicketButton({ ticket }: { ticket: Omit<Props, "onReady"> })
           e.stopPropagation();
           setOpen(true);
         }}
-        className="h-10 px-4 rounded-full bg-sc-ink text-white text-sm font-bold inline-flex items-center gap-1.5"
+        className={soft ? "h-10 px-3.5 rounded-full bg-black/[0.05] text-sc-ink text-[13px] font-bold inline-flex items-center gap-1.5 shrink-0" : "h-10 px-4 rounded-full bg-sc-ink text-white text-sm font-bold inline-flex items-center gap-1.5"}
       >
-        <QrCode size={16} /> View ticket
+        <QrCode size={16} /> {soft ? "Ticket" : "View ticket"}
       </button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="w-full max-w-[calc(100%-1.5rem)] sm:max-w-[420px] max-h-[92vh] overflow-y-auto bg-sc-bg p-5">

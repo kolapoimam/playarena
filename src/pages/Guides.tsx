@@ -1,427 +1,100 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, MessageCircle } from "lucide-react";
-import { PageHeader, SPORT } from "@/components/sc/ui";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import {
-  Accordion,
-  AccordionItem,
-  AccordionTrigger,
-  AccordionContent,
-} from "@/components/ui/accordion";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { PageHeader, SPORT, Segmented } from "@/components/sc/ui";
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import Navbar from "@/components/Navbar";
 import { Seo } from "@/components/Seo";
+import { FEES } from "@/lib/fees";
+
+type Tab = "organise" | "join" | "venues" | "fees";
+const pct = (n: number) => `${Math.round(n * 100)}%`;
+
+// One guide for every kind of activity. Matches and rides work the same way,
+// so the copy talks about activities and names the differences where they matter.
+const GUIDES: Record<Tab, { q: string; a: string }[]> = {
+  organise: [
+    { q: "What can I organise?", a: "Football matches and group rides today, with more sports on the way. Everything here works the same for each activity unless we say otherwise." },
+    { q: "Do I need an account?", a: "Yes. You need to sign in to organise a match, host a ride or book a venue. It keeps your activities, payments and cashouts tied to you." },
+    { q: "Setting up a match", a: "Tap Organise, pick the venue, date and time, choose how many players and whether it is free or paid, then publish. If a venue gave you a booking code, the venue, date and time fill in for you and stay locked." },
+    { q: "Hosting a ride", a: "Tap Host a ride, pick a start landmark and an optional finish, set the date, time, route length and spots, then publish. Use Preview to see the card riders will share." },
+    { q: "Public or private", a: "Public activities show in search for everyone. Private ones are hidden and players need the access code you share to see and join." },
+    { q: "Your Super Code", a: "Each activity you create gets a Super Code. Keep it safe. It lets you manage players or riders, check people in, edit details and request cashouts, even from another phone." },
+    { q: "Checking people in", a: "On the day, open Manage, enter your Super Code and check in each player or rider with their personal code. Only people who are checked in count towards your earnings." },
+    { q: "Repeating activities", a: "Matches can repeat daily, weekly or monthly for a set number of sessions. A repeating booking code from a venue sets this up for you." },
+    { q: "Cashing out", a: `Request a cashout from Manage once paid players or riders have been checked in. Cashouts open from 30 minutes before start time so players are protected. Your first ${FEES.activityFreeCount} paid activities have no fee. After that ${pct(FEES.activityRate)} is kept as the platform fee, and the cashout screen shows the exact amount you will receive.` },
+    { q: "Notifications", a: "In Profile, open Notifications to choose alerts for new players or riders, full activities and reminders. Each one can go by push, email or both." },
+  ],
+  join: [
+    { q: "Joining a match or ride", a: "Find an activity in Search or from a shared link, tap Join, add your details and pay if it is paid. You do not need an account to join." },
+    { q: "Your personal code", a: "After joining you get a personal code. Show it to the organiser or host when you arrive so they can check you in." },
+    { q: "Booking for friends", a: "You can take more than one slot or spot in one go and pay once. Each person still gets checked in on the day." },
+    { q: "Private activities", a: "If an activity is private, ask the organiser for its access code. Enter it when asked and the activity opens." },
+    { q: "Refunds", a: "If an organiser cancels, paid players are refunded. If you cannot make it, contact the organiser before the activity starts." },
+    { q: "No shows", a: "Please turn up or let the organiser know. Organisers can see who did not check in." },
+    { q: "Favourites and alerts", a: "Tap the heart on a venue or a landmark to save it. We will tell you when new matches or rides are set up there." },
+    { q: "Your privacy", a: "Your phone number and email are only shared with the organiser or host of an activity you join." },
+  ],
+  venues: [
+    { q: "Listing your venue", a: "Go to Profile, then My venues, and tap List a new venue. Add photos, address, opening hours and price per hour." },
+    { q: "Linking your venue", a: "Enter the 6 character access code SportCliq gave you in My venues. One account manages each venue." },
+    { q: "Bookings and your calendar", a: "Players and organisers book open times on your venue page. Every booking shows on the Calendar tab of your venue manager." },
+    { q: "Booking codes", a: "Took a booking offline? Create a booking code to hold that time. It blocks the slot on your calendar and the organiser uses the code to set up their match. Codes can repeat daily, weekly on chosen days, or monthly on a chosen date. You can cancel an unused code or stop a repeating one at any time." },
+    { q: "Pausing bookings", a: "Switch your venue to Inactive on the Calendar tab to pause new bookings. Organisers who pick your venue are told to confirm with you first." },
+    { q: "Payouts", a: `Your first paid booking has no fee. After that a ${pct(FEES.venueRate)} referral fee applies to each paid booking. The Payouts tab shows what you collected, the fee and what you can cash out.` },
+  ],
+  fees: [
+    { q: "Organisers and hosts", a: `Your first ${FEES.activityFreeCount} paid activities are free. After that a ${pct(FEES.activityRate)} platform fee applies to every paid activity, whatever the sport.` },
+    { q: "Venues", a: `Your first paid booking is free. After that a ${pct(FEES.venueRate)} referral fee applies to each paid booking made through SportCliq.` },
+    { q: "Players and riders", a: "Joining is free. You only pay the price the organiser sets for a paid activity." },
+    { q: "Free activities", a: "No fees at all. Free matches and rides cost nothing to set up or join." },
+  ],
+};
 
 const Guides = () => {
-  const [activeTab, setActiveTab] = useState("organiser");
+  const [tab, setTab] = useState<Tab>("organise");
   const navigate = useNavigate();
 
   return (
     <>
       <Seo
         title="Guides | Sport Cliq Nigeria"
-        description="User guides for playing and organizing sports in Nigeria. Learn how to join football matches, cycling events, and more. Football in Nigeria, Sports in Nigeria, Sportstech."
+        description="How to join and organise football matches, group rides and venue bookings in Nigeria with SportCliq."
         url={window.location.href}
         image={undefined}
         children={null}
       />
       <div className="min-h-screen flex flex-col bg-sc-bg text-sc-ink font-sans pb-32">
-        <PageHeader title="Guides" subtitle="How to play, organise and host on SportCliq" back />
+        <PageHeader title="Guides" subtitle="How to play, organise, host and manage venues" back />
 
         <main className="flex-grow w-full px-5 pt-4 flex flex-col gap-4">
-          <button
-            type="button"
-            onClick={() => navigate("/organize")}
-            className="relative overflow-hidden rounded-[28px] p-5 h-[168px] flex flex-col justify-between text-left text-white"
-            style={{ background: SPORT.guide.solid }}
-          >
-            <span className="self-start h-6 px-2.5 rounded-full bg-sc-ink text-white text-xs font-bold flex items-center">Get started</span>
-            <span className="relative text-2xl leading-7 font-extrabold tracking-[-0.02em] max-w-[260px]">Organise your first match in a few taps</span>
-            <ArrowRight aria-hidden="true" className="absolute right-5 bottom-5" size={24} />
-          </button>
-          <Card className="bg-transparent border-0 shadow-none rounded-none">
-            <CardContent className="p-0">
-              <Tabs
-                value={activeTab}
-                onValueChange={setActiveTab}
-                className="w-full"
-              >
-                <TabsList className="grid w-full grid-cols-3 h-[46px] rounded-[15px] bg-sc-soft2 p-1 mb-4">
-                  <TabsTrigger
-                    value="organiser"
-                    className="h-full rounded-xl text-sm font-bold text-sc-ink2 data-[state=active]:bg-white data-[state=active]:text-sc-ink data-[state=active]:shadow-[0_1px_3px_rgba(14,20,17,0.12)]"
-                  >
-                    Organiser
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="players"
-                    className="h-full rounded-xl text-sm font-bold text-sc-ink2 data-[state=active]:bg-white data-[state=active]:text-sc-ink data-[state=active]:shadow-[0_1px_3px_rgba(14,20,17,0.12)]"
-                  >
-                    Players
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="venueOwner"
-                    className="h-full rounded-xl text-sm font-bold text-sc-ink2 data-[state=active]:bg-white data-[state=active]:text-sc-ink data-[state=active]:shadow-[0_1px_3px_rgba(14,20,17,0.12)]"
-                  >
-                    Venue Owner
-                  </TabsTrigger>
-                </TabsList>
+          <div className="grid grid-cols-2 gap-2.5">
+            <button type="button" onClick={() => navigate("/organize")} className="relative overflow-hidden rounded-[24px] p-4 h-[132px] flex flex-col justify-between text-left text-white" style={{ background: SPORT.football.solid }}>
+              <span className="text-xs font-bold opacity-80">Football</span>
+              <span className="text-[18px] leading-6 font-extrabold tracking-[-0.02em]">Organise a match</span>
+              <ArrowRight aria-hidden="true" className="absolute right-4 bottom-4" size={20} />
+            </button>
+            <button type="button" onClick={() => navigate("/host-cycling")} className="relative overflow-hidden rounded-[24px] p-4 h-[132px] flex flex-col justify-between text-left text-white" style={{ background: SPORT.cycling.solid }}>
+              <span className="text-xs font-bold opacity-80">Cycling</span>
+              <span className="text-[18px] leading-6 font-extrabold tracking-[-0.02em]">Host a ride</span>
+              <ArrowRight aria-hidden="true" className="absolute right-4 bottom-4" size={20} />
+            </button>
+          </div>
 
-                <TabsContent value="organiser">
-                  <Accordion type="single" collapsible className="w-full flex flex-col gap-2.5">
-                    <AccordionItem
-                      value="createMatch"
-                      className="bg-white rounded-[22px] border-0 px-4"
-                    >
-                      <AccordionTrigger className="text-[15px] font-extrabold text-left py-4 hover:no-underline">
-                        Creating a Match
-                      </AccordionTrigger>
-                      <AccordionContent className="text-sm leading-[22px] text-sc-ink2">
-                        To create a match, navigate to the "Organize Match" section,
-                        enter the match title, date, time, venue, and pricing details.
-                        Save to publish a public match or retrieve a password for a
-                        private match. All types of football matches are supported
-                        (5-a-side, 7-a-side, 11-a-side, etc.). You can choose to
-                        include your contact number for direct communication with
-                        players.
-                      </AccordionContent>
-                    </AccordionItem>
-                    <AccordionItem
-                      value="organiserCode"
-                      className="bg-white rounded-[22px] border-0 px-4"
-                    >
-                      <AccordionTrigger className="text-[15px] font-extrabold text-left py-4 hover:no-underline">
-                        Match Management
-                      </AccordionTrigger>
-                      <AccordionContent className="text-sm leading-[22px] text-sc-ink2">
-                        When you create a match, you'll receive a Super Code. This code
-                        is essential as it allows you to:
-                        <ul className="list-disc ml-5 mt-2 space-y-1">
-                          <li>Manage all aspects of your match</li>
-                          <li>Confirm player registrations</li>
-                          <li>Check-in players on match day</li>
-                          <li>Request payouts for paid matches</li>
-                          <li>Access player contact information during check-in</li>
-                        </ul>
-                        Keep this code secure and don't share it with players. You'll need
-                        it every time you manage your match.
-                      </AccordionContent>
-                    </AccordionItem>
-                    <AccordionItem
-                      value="privateMatch"
-                      className="bg-white rounded-[22px] border-0 px-4"
-                    >
-                      <AccordionTrigger className="text-[15px] font-extrabold text-left py-4 hover:no-underline">
-                        Creating a Private Match
-                      </AccordionTrigger>
-                      <AccordionContent className="text-sm leading-[22px] text-sc-ink2">
-                        For a private match, check the "Private Match" option during
-                        creation, copy an access password, and share it with invited
-                        players. Private matches won't appear in public search results,
-                        giving you control over who joins your match.
-                      </AccordionContent>
-                    </AccordionItem>
-                    <AccordionItem
-                      value="publicMatch"
-                      className="bg-white rounded-[22px] border-0 px-4"
-                    >
-                      <AccordionTrigger className="text-[15px] font-extrabold text-left py-4 hover:no-underline">
-                        Creating a Public Match
-                      </AccordionTrigger>
-                      <AccordionContent className="text-sm leading-[22px] text-sc-ink2">
-                        Leave the "Private Match" option unchecked to create a public
-                        match. It will be visible to all users for joining. Public matches
-                        are ideal for finding new players or filling empty slots quickly.
-                      </AccordionContent>
-                    </AccordionItem>
-                    <AccordionItem
-                      value="bulkSlots"
-                      className="bg-white rounded-[22px] border-0 px-4"
-                    >
-                      <AccordionTrigger className="text-[15px] font-extrabold text-left py-4 hover:no-underline">
-                        Enabling Bulk Slot Booking
-                      </AccordionTrigger>
-                      <AccordionContent className="text-sm leading-[22px] text-sc-ink2">
-                        As an organizer, you can enable the "Allow Bulk Booking" option
-                        when creating a paid match. This lets players book multiple slots
-                        at once, which is useful for players bringing friends. When bulk
-                        booking is used, all slots will be checked in at once during the
-                        match day.
-                      </AccordionContent>
-                    </AccordionItem>
-                    <AccordionItem
-                      value="bulkPayment"
-                      className="bg-white rounded-[22px] border-0 px-4"
-                    >
-                      <AccordionTrigger className="text-[15px] font-extrabold text-left py-4 hover:no-underline">
-                        Bulk Payment on Paid Match
-                      </AccordionTrigger>
-                      <AccordionContent className="text-sm leading-[22px] text-sc-ink2">
-                        For paid matches, use the "Bulk Payment" feature to collect fees
-                        from multiple players. Navigate to the match management page and
-                        process payments securely. This is particularly useful for team
-                        captains who want to pay for their entire team at once.
-                      </AccordionContent>
-                    </AccordionItem>
-                    <AccordionItem
-                      value="manageMatches"
-                      className="bg-white rounded-[22px] border-0 px-4"
-                    >
-                      <AccordionTrigger className="text-[15px] font-extrabold text-left py-4 hover:no-underline">
-                        Managing Matches
-                      </AccordionTrigger>
-                      <AccordionContent className="text-sm leading-[22px] text-sc-ink2">
-                        Access the "Manage Matches" section with your Super Code to edit
-                        details, view players, and update statuses. The dashboard gives you
-                        an overview of registered players, available slots, and payment
-                        status. In compliance with NDPR, player phone numbers are hidden
-                        by default but will be available during check-in for verification
-                        purposes.
-                      </AccordionContent>
-                    </AccordionItem>
-                    <AccordionItem
-                      value="confirmAttendance"
-                      className="bg-white rounded-[22px] border-0 px-4"
-                    >
-                      <AccordionTrigger className="text-[15px] font-extrabold text-left py-4 hover:no-underline">
-                        Confirming Attendance
-                      </AccordionTrigger>
-                      <AccordionContent className="text-sm leading-[22px] text-sc-ink2">
-                        Confirm player attendance via the match management page using your
-                        Super Code. Ask players for their individual codes during check-in
-                        as proof of registration. You'll have access to player phone
-                        numbers during check-in as an additional verification measure.
-                      </AccordionContent>
-                    </AccordionItem>
-                    <AccordionItem
-                      value="cashout"
-                      className="bg-white rounded-[22px] border-0 px-4"
-                    >
-                      <AccordionTrigger className="text-[15px] font-extrabold text-left py-4 hover:no-underline">
-                        Cashout
-                      </AccordionTrigger>
-                      <AccordionContent className="text-sm leading-[22px] text-sc-ink2">
-                        Request a cashout from earned match fees via the "Manage" section
-                        using your Super Code. A 2% platform fee applies after your first
-                        5 free matches. For player protection, cashouts can only be
-                        requested starting 30 minutes before match time to ensure players
-                        aren't scammed and matches actually take place as scheduled.
-                      </AccordionContent>
-                    </AccordionItem>
-                    <AccordionItem
-                      value="contactInfo"
-                      className="bg-white rounded-[22px] border-0 px-4"
-                    >
-                      <AccordionTrigger className="text-[15px] font-extrabold text-left py-4 hover:no-underline">
-                        Contact Information
-                      </AccordionTrigger>
-                      <AccordionContent className="text-sm leading-[22px] text-sc-ink2">
-                        You can choose to display your phone number on match details. This
-                        is optional but recommended for easier communication with players.
-                        Player phone numbers are hidden by default (NDPR compliance) but
-                        will be available to you during check-in for verification purposes.
-                      </AccordionContent>
-                    </AccordionItem>
-                  </Accordion>
-                </TabsContent>
+          <Segmented
+            options={[{ value: "organise", label: "Organise" }, { value: "join", label: "Join" }, { value: "venues", label: "Venues" }, { value: "fees", label: "Fees" }]}
+            value={tab}
+            onChange={(v) => setTab(v as Tab)}
+          />
 
-                <TabsContent value="players">
-                  <Accordion type="single" collapsible className="w-full flex flex-col gap-2.5">
-                    <AccordionItem
-                      value="joinMatch"
-                      className="bg-white rounded-[22px] border-0 px-4"
-                    >
-                      <AccordionTrigger className="text-[15px] font-extrabold text-left py-4 hover:no-underline">
-                        Joining a Match
-                      </AccordionTrigger>
-                      <AccordionContent className="text-sm leading-[22px] text-sc-ink2">
-                        Search for a match, view details, and click "Join" if slots are
-                        available. Enter a password for private matches if required. After
-                        booking, you'll receive a unique code - save it immediately as
-                        it's required for check-in on match day.
-                      </AccordionContent>
-                    </AccordionItem>
-                    <AccordionItem
-                      value="playerCode"
-                      className="bg-white rounded-[22px] border-0 px-4"
-                    >
-                      <AccordionTrigger className="text-[15px] font-extrabold text-left py-4 hover:no-underline">
-                        Player Code Importance
-                      </AccordionTrigger>
-                      <AccordionContent className="text-sm leading-[22px] text-sc-ink2">
-                        When you book a match slot, you'll receive a unique player code.
-                        This code is essential as it:
-                        <ul className="list-disc ml-5 mt-2 space-y-1">
-                          <li>Confirms your registration for the match</li>
-                          <li>Is required for check-in on match day</li>
-                          <li>Helps organizers verify your booking</li>
-                          <li>Is needed for any refund requests</li>
-                        </ul>
-                        Take a screenshot or note of this code immediately after booking as
-                        it won't be sent to you again.
-                      </AccordionContent>
-                    </AccordionItem>
-                    <AccordionItem
-                      value="bulkBooking"
-                      className="bg-white rounded-[22px] border-0 px-4"
-                    >
-                      <AccordionTrigger className="text-[15px] font-extrabold text-left py-4 hover:no-underline">
-                        Booking Multiple Slots
-                      </AccordionTrigger>
-                      <AccordionContent className="text-sm leading-[22px] text-sc-ink2">
-                        If an organizer has enabled bulk booking for a paid match, you can
-                        book multiple slots at once. This is useful when bringing friends.
-                        All slots will be checked in together on match day using the same
-                        code. Make sure all players arrive together for check-in.
-                      </AccordionContent>
-                    </AccordionItem>
-                    <AccordionItem
-                      value="refund"
-                      className="bg-white rounded-[22px] border-0 px-4"
-                    >
-                      <AccordionTrigger className="text-[15px] font-extrabold text-left py-4 hover:no-underline">
-                        Refund Policy
-                      </AccordionTrigger>
-                      <AccordionContent className="text-sm leading-[22px] text-sc-ink2">
-                        • Cancel your participation 1 hour before match start for a full
-                        refund
-                        <br />
-                        • Cancellations within 1 hour attract a 50% refund
-                        <br />
-                        • No refunds after the match starts for checked-in players
-                        <br />
-                        • You'll need your player code to request any refund
-                      </AccordionContent>
-                    </AccordionItem>
-                    <AccordionItem
-                      value="noShow"
-                      className="bg-white rounded-[22px] border-0 px-4"
-                    >
-                      <AccordionTrigger className="text-[15px] font-extrabold text-left py-4 hover:no-underline">
-                        No Show Policy
-                      </AccordionTrigger>
-                      <AccordionContent className="text-sm leading-[22px] text-sc-ink2">
-                        Full refund for no-shows if the player is unconfirmed, but
-                        organizers may ban repeat offenders. Check in on time to avoid
-                        issues. For bulk bookings, if any player in your group doesn't
-                        show up, refunds are at the organizer's discretion.
-                      </AccordionContent>
-                    </AccordionItem>
-                    <AccordionItem
-                      value="matchTypes"
-                      className="bg-white rounded-[22px] border-0 px-4"
-                    >
-                      <AccordionTrigger className="text-[15px] font-extrabold text-left py-4 hover:no-underline">
-                        Match Types
-                      </AccordionTrigger>
-                      <AccordionContent className="text-sm leading-[22px] text-sc-ink2">
-                        All types of football matches are supported, including 5-a-side,
-                        7-a-side, 11-a-side, and other variations. Check the match
-                        description for specific details about the format, skill level
-                        requirements, and any special rules.
-                      </AccordionContent>
-                    </AccordionItem>
-                    <AccordionItem
-                      value="privacy"
-                      className="bg-white rounded-[22px] border-0 px-4"
-                    >
-                      <AccordionTrigger className="text-[15px] font-extrabold text-left py-4 hover:no-underline">
-                        Privacy & Data Protection
-                      </AccordionTrigger>
-                      <AccordionContent className="text-sm leading-[22px] text-sc-ink2">
-                        In compliance with NDPR, your phone number is hidden from other
-                        players by default. However, organizers will have access to your
-                        contact information during check-in for verification purposes. This
-                        is necessary to confirm identities and prevent fraudulent bookings.
-                      </AccordionContent>
-                    </AccordionItem>
-                  </Accordion>
-                </TabsContent>
-
-                <TabsContent value="venueOwner">
-                  <Accordion type="single" collapsible className="w-full flex flex-col gap-2.5">
-                    <AccordionItem
-                      value="createVenue"
-                      className="bg-white rounded-[22px] border-0 px-4"
-                    >
-                      <AccordionTrigger className="text-[15px] font-extrabold text-left py-4 hover:no-underline">
-                        Creating a Venue
-                      </AccordionTrigger>
-                      <AccordionContent className="text-sm leading-[22px] text-sc-ink2">
-                        Register your venue by providing name, location, and availability
-                        details in the "Add Venue" section. Include your phone number and
-                        an accurate address with a Google Maps link to help players find
-                        your venue easily.
-                      </AccordionContent>
-                    </AccordionItem>
-                    <AccordionItem
-                      value="venueDetails"
-                      className="bg-white rounded-[22px] border-0 px-4"
-                    >
-                      <AccordionTrigger className="text-[15px] font-extrabold text-left py-4 hover:no-underline">
-                        Required Venue Information
-                      </AccordionTrigger>
-                      <AccordionContent className="text-sm leading-[22px] text-sc-ink2">
-                        When registering your venue, please include:
-                        <ul className="list-disc ml-5 mt-2 space-y-1">
-                          <li>Venue name and type (indoor/outdoor)</li>
-                          <li>Complete address with postal code</li>
-                          <li>Google Maps link for easy navigation</li>
-                          <li>Contact phone number</li>
-                          <li>Available hours and days</li>
-                          <li>Pricing structure and any special conditions</li>
-                          <li>Facilities available (changing rooms, showers, etc.)</li>
-                        </ul>
-                        Accurate and complete information increases your venue's booking rate.
-                      </AccordionContent>
-                    </AccordionItem>
-                    <AccordionItem
-                      value="bookVenue"
-                      className="bg-white rounded-[22px] border-0 px-4"
-                    >
-                      <AccordionTrigger className="text-[15px] font-extrabold text-left py-4 hover:no-underline">
-                        Booking a Venue
-                      </AccordionTrigger>
-                      <AccordionContent className="text-sm leading-[22px] text-sc-ink2">
-                        Organizers can book your venue through the site. You'll be notified
-                        and can confirm or decline. Providing quick responses to booking
-                        requests increases your venue's attractiveness to organizers.
-                      </AccordionContent>
-                    </AccordionItem>
-                    <AccordionItem
-                      value="referralFee"
-                      className="bg-white rounded-[22px] border-0 px-4"
-                    >
-                      <AccordionTrigger className="text-[15px] font-extrabold text-left py-4 hover:no-underline">
-                        Venue Referral Fee
-                      </AccordionTrigger>
-                      <AccordionContent className="text-sm leading-[22px] text-sc-ink2">
-                        A 10% referral fee is deducted from your earnings when your venue is
-                        booked through the site, payable by you. This fee helps maintain the
-                        platform and bring more organizers to your venue, increasing your
-                        overall bookings.
-                      </AccordionContent>
-                    </AccordionItem>
-                    <AccordionItem
-                      value="venueAccounts"
-                      className="bg-white rounded-[22px] border-0 px-4"
-                    >
-                      <AccordionTrigger className="text-[15px] font-extrabold text-left py-4 hover:no-underline">
-                        Venue Accounts (Coming Soon)
-                      </AccordionTrigger>
-                      <AccordionContent className="text-sm leading-[22px] text-sc-ink2">
-                        Full profile and account features for venue owners are coming soon.
-                        This will include a dashboard to track bookings, manage availability,
-                        and view earnings reports. Stay tuned for updates on this feature.
-                      </AccordionContent>
-                    </AccordionItem>
-                  </Accordion>
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
+          <Accordion key={tab} type="single" collapsible className="w-full flex flex-col gap-2.5">
+            {GUIDES[tab].map((g, i) => (
+              <AccordionItem key={g.q} value={`${tab}-${i}`} className="bg-white rounded-[22px] border-0 px-4">
+                <AccordionTrigger className="text-[15px] font-extrabold text-left py-4 hover:no-underline">{g.q}</AccordionTrigger>
+                <AccordionContent className="text-sm leading-[22px] text-sc-ink2">{g.a}</AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
 
           <div className="bg-white rounded-3xl p-[18px] flex items-center gap-3">
             <span className="w-11 h-11 rounded-full flex items-center justify-center shrink-0" style={{ background: SPORT.football.bg, color: SPORT.football.fg }}>
@@ -431,12 +104,7 @@ const Guides = () => {
               <span className="text-[15px] font-extrabold">Need help?</span>
               <span className="text-[13px] text-sc-ink3">Reach out to us on X</span>
             </span>
-            <a
-              href="https://x.com/SportCliq"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="h-10 px-4 rounded-full bg-sc-ink text-white text-sm font-bold flex items-center"
-            >
+            <a href="https://x.com/SportCliq" target="_blank" rel="noopener noreferrer" className="h-10 px-4 rounded-full bg-sc-ink text-white text-sm font-bold flex items-center">
               Contact us
             </a>
           </div>

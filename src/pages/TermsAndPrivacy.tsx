@@ -73,14 +73,17 @@ const TermsAndPrivacy = () => {
                     <section>
                       <h2 className="text-xl font-semibold mb-2">3. Platform Services</h2>
                       <p>
-                        Sport Cliq provides a platform for organizing, joining, and managing football matches and venues in Nigeria. Services include:
+                        Sport Cliq provides a platform for organizing, joining, and managing sports activities and venues in Nigeria, including football matches and group rides. Services include:
                       </p>
                       <ul className="list-disc ml-5 mt-2 space-y-1">
-                        <li>Creating and managing football matches (public or private).</li>
-                        <li>Booking venues for matches.</li>
-                        <li>Facilitating payments for paid matches.</li>
-                        <li>Providing tools for player check-in and match management.</li>
+                        <li>Creating and managing activities such as matches and rides (public or private).</li>
+                        <li>Booking venues and holding venue time with booking codes.</li>
+                        <li>Facilitating payments for paid activities.</li>
+                        <li>Providing tools for check-in, activity management and cashouts.</li>
                       </ul>
+                      <p>
+                        You must be signed in to a Sport Cliq account to organize an activity, host a ride or book a venue. Players and riders can join activities without an account.
+                      </p>
                       <p>
                         Sport Cliq reserves the right to modify or discontinue any service at any time without prior notice.
                       </p>
@@ -102,7 +105,7 @@ const TermsAndPrivacy = () => {
                     <section>
                       <h2 className="text-xl font-semibold mb-2">5. Payments and Fees</h2>
                       <p>
-                        For paid matches, Sport Cliq facilitates payments through secure third-party providers. A 2% platform fee is charged to organizers after their first 5 free matches. Venue owners are subject to a 10% referral fee for bookings made through the Platform. All fees are non-refundable unless otherwise stated in our Refund Policy.
+                        For paid activities such as matches and rides, Sport Cliq facilitates payments through secure third-party providers. Organizers and hosts pay no platform fee on their first 2 paid activities. After that, a 5% platform fee applies to every paid activity. Venue owners pay no fee on their first paid booking, then a 10% referral fee applies to each paid booking made through the Platform. Fees are deducted before cashout. All fees are non-refundable unless otherwise stated in our Refund Policy.
                       </p>
                       <p>
                         Refunds for players are subject to the following:

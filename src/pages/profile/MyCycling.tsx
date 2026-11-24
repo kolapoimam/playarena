@@ -1,4 +1,8 @@
 import { useState, useEffect } from "react";
+import ActivityCard, { activityStatus } from "@/components/sc/ActivityCard";
+import ConfirmModal from "@/components/sc/ConfirmModal";
+import { PageHeader, Segmented, formatTime12 } from "@/components/sc/ui";
+import { Ban } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -33,6 +37,11 @@ type CyclingEvent = {
   supercode?: string;
   host_name?: string;
   confirmation_code?: string;
+  status?: string | null;
+  attendee_id?: string | null;
+  my_slots?: number | null;
+  my_status?: string | null;
+  end_landmark?: Landmark | null;
 };
 
 const MyCycling = () => {
@@ -42,6 +51,8 @@ const MyCycling = () => {
   const [hostedEvents, setHostedEvents] = useState<CyclingEvent[]>([]);
   const [joinedEvents, setJoinedEvents] = useState<CyclingEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState<"hosting" | "riding">("hosting");
+  const [cancelling, setCancelling] = useState<CyclingEvent | null>(null);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -82,7 +93,8 @@ const MyCycling = () => {
               max_attendees,
               supercode,
               host_name,
-              attendees:cycling_attendees!cycling_attendees_cycling_event_id_uuid_fkey(id_uuid),
+              status,
+              attendees:cycling_attendees!cycling_attendees_cycling_event_id_uuid_fkey(id_uuid, number_of_slots, status),
               start_landmark:landmarks!cycling_events_start_landmark_id_fkey(name, state)
             )
           `)
@@ -108,10 +120,11 @@ const MyCycling = () => {
               start_time,
               max_attendees,
               host_name,
-              attendees:cycling_attendees!cycling_attendees_cycling_event_id_uuid_fkey(id_uuid, confirmation_code),
+              status,
+              attendees:cycling_attendees!cycling_attendees_cycling_event_id_uuid_fkey(id_uuid),
               start_landmark:landmarks!cycling_events_start_landmark_id_fkey(name, state)
             ),
-            attendee:cycling_attendees!user_joined_cycling_attendee_id_fkey(confirmation_code)
+            attendee:cycling_attendees!user_joined_cycling_attendee_id_fkey(id_uuid, confirmation_code, number_of_slots, status)
           `)
           .eq("user_id", userId);
 
@@ -121,8 +134,11 @@ const MyCycling = () => {
           .map((item: any) => ({
             ...item.cycling_event,
             confirmation_code: item.attendee?.confirmation_code,
+            attendee_id: item.attendee?.id_uuid ?? null,
+            my_slots: item.attendee?.number_of_slots ?? 1,
+            my_status: item.attendee?.status ?? null,
           }))
-          .filter((event: CyclingEvent | null) => event !== null);
+          .filter((event: any) => event && event.id_uuid);
 
         setJoinedEvents(joined);
       } catch (err: any) {
@@ -226,186 +242,132 @@ const MyCycling = () => {
     );
   }
 
-  return (
-    <div className="min-h-screen flex flex-col bg-sc-bg dark:bg-gray-900">
-      <header className="px-5 pt-[max(env(safe-area-inset-top),1rem)] flex flex-col gap-3.5">
-          <div className="pt-3 flex items-center justify-between min-h-11">
-            <BackButton />
-            <div className="flex gap-2"></div>
-          </div>
-          <h1 className="m-0 text-[32px] leading-[38px] font-extrabold tracking-[-0.03em]">My cycling</h1>
-        </header>
+  const rideTaken = (e: CyclingEvent) => (e.attendees || []).filter((a: any) => a.status !== "cancelled").reduce((n: number, a: any) => n + (Number(a.number_of_slots) || 1), 0);
+  const list = tab === "hosting" ? hostedEvents : joinedEvents;
+  const sorted = [...list].sort((x, y) => {
+    const rank = (st: string) => (st === "Live" ? 0 : st === "Today" ? 1 : st === "Upcoming" ? 2 : 3);
+    const sx = activityStatus(x.event_date, x.start_time, null, x.status === "cancelled", 3);
+    const sy = activityStatus(y.event_date, y.start_time, null, y.status === "cancelled", 3);
+    if (rank(sx) !== rank(sy)) return rank(sx) - rank(sy);
+    return rank(sx) < 3 ? String(x.event_date).localeCompare(String(y.event_date)) : String(y.event_date).localeCompare(String(x.event_date));
+  });
 
-      <div className="flex-grow overflow-y-auto">
-        <div className="container mx-auto px-4 py-6">
-          <Card className="w-full bg-white dark:bg-gray-800 border-none shadow-card rounded-3xl">
-            <CardHeader>
-              <CardTitle className="text-xl font-semibold text-sc-green-dark dark:text-green-400 flex items-center">
-                <Bike className="mr-2 h-6 w-6" />
-                My Cycling
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Tabs defaultValue="hosting" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 bg-sc-soft dark:bg-gray-700 rounded-t-lg">
-                  <TabsTrigger
-                    value="hosting"
-                    className="data-[state=active]:bg-white data-[state=active]:text-sc-ink data-[state=active]:shadow-[0_1px_3px_rgba(14,20,17,0.12)]"
-                  >
-                    Hosting
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="cycling"
-                    className="data-[state=active]:bg-white data-[state=active]:text-sc-ink data-[state=active]:shadow-[0_1px_3px_rgba(14,20,17,0.12)]"
-                  >
-                    Cycling
-                  </TabsTrigger>
-                </TabsList>
-                <TabsContent value="hosting">
-                  {hostedEvents.length > 0 ? (
-                    hostedEvents.map((event) => {
-                      const { dateStr, timeStr } = formatMatchDateTime(event.event_date, event.start_time);
-                      const statusLabel = getMatchStatus(event.event_date, event.start_time);
-                      return (
-                        <div
-                          key={event.id_uuid}
-                          className="w-full p-4 mb-4 bg-white dark:bg-gray-800 rounded-3xl shadow-card dark:border-gray-700"
-                        >
-                          <div className="flex justify-between items-start">
-                            <div className="space-y-2">
-                              <h3 className="text-lg font-semibold text-sc-ink dark:text-gray-100">{event.title}</h3>
-                              <div className="flex items-center gap-2">
-                                <span className={`text-xs font-medium px-2 py-1 rounded-full ${statusLabel.className}`}>
-                                  {statusLabel.text}
-                                </span>
-                              </div>
-                              <p className="text-sm text-sc-ink3 dark:text-gray-400 flex items-center">
-                                <Calendar size={16} className="mr-2" />
-                                {dateStr} at {timeStr}
-                              </p>
-                              <p className="text-sm text-sc-ink3 dark:text-gray-400 flex items-center">
-                                <MapPin size={16} className="mr-2" />
-                                {event.start_landmark.name}, {event.start_landmark.state}
-                              </p>
-                              <div className="text-sm text-sc-ink3 dark:text-gray-400 flex items-center gap-2">
-                                <span>Super Code:</span>
-                                <span className="flex items-center gap-1">
-                                  <span>{event.supercode || "N/A"}</span>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => {
-                                      navigator.clipboard.writeText(event.supercode || "");
-                                      toast({
-                                        title: "Success",
-                                        description: "Super code copied!",
-                                      });
-                                    }}
-                                    className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
-                                  >
-                                    <Copy size={12} />
-                                  </Button>
-                                </span>
-                              </div>
-                              <p className="text-base font-medium text-sc-ink dark:text-gray-100">
-                                Slots: <span className="text-sc-green-dark dark:text-green-400">{event.attendees.length}</span>/{event.max_attendees}
-                              </p>
-                              <p className="text-sm text-sc-ink3 dark:text-gray-400 flex items-center">
-                                <Bike size={16} className="mr-2" />
-                                Organized by: {event.host_name || "Unknown"}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="mt-4 flex gap-2">
-                            <Button
-                              className="px-4 py-2 bg-sc-green hover:brightness-95 text-sc-green-ink rounded-full font-bold"
-                              onClick={() => navigate(`/cycling/${event.slug}`)}
-                            >
-                              View Details
-                            </Button>
-                          </div>
-                        </div>
-                      );
-                    })
-                  ) : (
-<FunEmpty icon={RouteIcon} sport="cycling" title="No rides hosted yet" body="Lead the pack. Pick a landmark, set the distance and invite your crew." primary={{ label: "Host a ride", onClick: () => navigate("/host-cycling") }} />
-                  )}
-                </TabsContent>
-                <TabsContent value="cycling">
-                  {joinedEvents.length > 0 ? (
-                    joinedEvents.map((event) => {
-                      const { dateStr, timeStr } = formatMatchDateTime(event.event_date, event.start_time);
-                      const statusLabel = getMatchStatus(event.event_date, event.start_time);
-                      return (
-                        <div
-                          key={event.id_uuid}
-                          className="w-full p-4 mb-4 bg-white dark:bg-gray-800 rounded-3xl shadow-card dark:border-gray-700"
-                        >
-                          <div className="flex justify-between items-start">
-                            <div className="space-y-2">
-                              <h3 className="text-lg font-semibold text-sc-ink dark:text-gray-100">{event.title}</h3>
-                              <div className="flex items-center gap-2">
-                                <span className={`text-xs font-medium px-2 py-1 rounded-full ${statusLabel.className}`}>
-                                  {statusLabel.text}
-                                </span>
-                              </div>
-                              <p className="text-sm text-sc-ink3 dark:text-gray-400 flex items-center">
-                                <Calendar size={16} className="mr-2" />
-                                {dateStr} at {timeStr}
-                              </p>
-                              <p className="text-sm text-sc-ink3 dark:text-gray-400 flex items-center">
-                                <MapPin size={16} className="mr-2" />
-                                {event.start_landmark.name}, {event.start_landmark.state}
-                              </p>
-                              <div className="flex items-center justify-between gap-2 py-1">
-                                <span className="text-sm text-sc-ink3">
-                                  Code <b className="text-sc-ink tracking-[0.12em]">{event.confirmation_code || "N/A"}</b>
-                                </span>
-                                <ViewTicketButton
-                                  ticket={{
-                                    sport: "cycling",
-                                    kind: "Ride ticket",
-                                    title: event.title,
-                                    code: event.confirmation_code,
-                                    rows: [
-                                      { label: "Date", value: dateStr },
-                                      { label: "Starts", value: timeStr },
-                                      { label: "Meet at", value: `${event.start_landmark.name}, ${event.start_landmark.state}` },
-                                      { label: "Host", value: event.host_name || "SportCliq host" },
-                                    ],
-                                    footnote: "The host scans this QR code on ride day.",
-                                  }}
-                                />
-                              </div>
-                              <p className="text-sm text-sc-ink3 dark:text-gray-400 flex items-center">
-                                <Bike size={16} className="mr-2" />
-                                Organized by: {event.host_name || "Unknown"}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="mt-4 flex gap-2">
-                            <Button
-                              className="px-4 py-2 bg-sc-green hover:brightness-95 text-sc-green-ink rounded-full font-bold"
-                              onClick={() => navigate(`/cycling/${event.slug}`)}
-                            >
-                              View Details
-                            </Button>
-                          </div>
-                        </div>
-                      );
-                    })
-                  ) : (
-<FunEmpty icon={BikeIcon} sport="cycling" title="Your wheels are waiting" body="Rides you join appear here with your ticket. Find a group ride near you." primary={{ label: "Browse rides", onClick: () => navigate("/cycling-activities") }} />
-                  )}
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-      <div className="pb-28">
-        <Navbar />
-      </div>
+  const doCancel = async () => {
+    if (!cancelling) return;
+    const e = cancelling;
+    try {
+      if (tab === "hosting") {
+        const { error } = await supabase.from("cycling_events").update({ status: "cancelled", updated_at: new Date().toISOString() } as any).eq("id_uuid", e.id_uuid);
+        if (error) throw error;
+        setHostedEvents((prev) => prev.map((x) => (x.id_uuid === e.id_uuid ? { ...x, status: "cancelled" } : x)));
+        toast({ title: "Ride cancelled", description: "Riders can see the ride is off." });
+      } else {
+        if (e.attendee_id) {
+          const { error } = await supabase.from("cycling_attendees").update({ status: "cancelled" } as any).eq("id_uuid", e.attendee_id);
+          if (error) throw error;
+        }
+        // keep the record in My cycling, marked as left, so nothing disappears unexpectedly
+        setJoinedEvents((prev) => prev.map((x) => (x.id_uuid === e.id_uuid ? { ...x, my_status: "cancelled" } : x)));
+        toast({ title: "You left the ride", description: "Your spot is free for someone else." });
+      }
+    } catch (err: any) {
+      toast({ title: "Could not cancel", description: err.message || "Please try again.", variant: "destructive" });
+    } finally {
+      setCancelling(null);
+    }
+  };
+
+  const canCancel = (e: CyclingEvent) => {
+    const m = String(e.start_time || "").match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+    if (!m) return false;
+    let h = Number(m[1]);
+    if (m[3]?.toUpperCase() === "PM" && h !== 12) h += 12;
+    if (m[3]?.toUpperCase() === "AM" && h === 12) h = 0;
+    const [y, mo, d] = String(e.event_date).slice(0, 10).split("-").map(Number);
+    return new Date(y, mo - 1, d, h, Number(m[2])).getTime() - Date.now() > 60 * 60 * 1000;
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col bg-sc-bg text-sc-ink font-sans pb-32">
+      <PageHeader back backTo="/profile" title="My cycling" subtitle="Rides you host and ride in" />
+      <main className="px-5 pt-4 flex flex-col gap-3">
+        <Segmented
+          options={[
+            { value: "hosting", label: `Hosting${hostedEvents.length ? ` (${hostedEvents.length})` : ""}` },
+            { value: "riding", label: `Riding${joinedEvents.length ? ` (${joinedEvents.length})` : ""}` },
+          ]}
+          value={tab}
+          onChange={(v) => setTab(v as "hosting" | "riding")}
+        />
+        {sorted.length === 0 ? (
+          tab === "hosting" ? (
+            <FunEmpty icon={RouteIcon} sport="cycling" title="No rides hosted yet" body="Lead the pack. Pick a landmark, set the distance and invite your crew." primary={{ label: "Host a ride", onClick: () => navigate("/host-cycling") }} />
+          ) : (
+            <FunEmpty icon={BikeIcon} sport="cycling" title="Your wheels are waiting" body="Rides you join appear here with your ticket. Find a group ride near you." primary={{ label: "Browse rides", onClick: () => navigate("/cycling-activities") }} />
+          )
+        ) : (
+          sorted.map((event) => {
+            const riding = tab === "riding";
+            const cancelled = event.status === "cancelled" || (riding && event.my_status === "cancelled");
+            const status = activityStatus(event.event_date, event.start_time, null, cancelled, 3);
+            const upcoming = status === "Upcoming" || status === "Today";
+            const place = event.start_landmark ? `${event.start_landmark.name}${event.start_landmark.state ? `, ${event.start_landmark.state}` : ""}` : null;
+            const dateStr = new Date(`${String(event.event_date).slice(0, 10)}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+            return (
+              <ActivityCard
+                key={event.id_uuid}
+                sport="cycling"
+                title={event.title}
+                date={String(event.event_date).slice(0, 10)}
+                timeLabel={`Starts ${formatTime12(event.start_time)}`}
+                place={place ? `Meet at ${place}` : null}
+                status={status}
+                codeLabel={riding ? "Your code" : "Super code"}
+                code={riding ? event.confirmation_code : event.supercode}
+                taken={riding ? undefined : rideTaken(event)}
+                total={riding ? undefined : event.max_attendees}
+                slotsLabel="Riders"
+                extra={riding ? (
+                  <span className="flex flex-col gap-0.5">
+                    <span className="text-[11px] font-semibold text-sc-ink3">Your spots</span>
+                    <span className="text-[15px] font-extrabold">{event.my_slots || 1}</span>
+                  </span>
+                ) : undefined}
+                organiser={event.host_name || null}
+                view={{ label: "View details", onClick: () => navigate(`/cycling/${event.slug}`) }}
+                ticket={riding && event.confirmation_code ? (
+                  <ViewTicketButton soft ticket={{
+                    sport: "cycling",
+                    kind: "Ride ticket",
+                    title: event.title,
+                    code: event.confirmation_code,
+                    rows: [
+                      { label: "Date", value: dateStr },
+                      { label: "Starts", value: formatTime12(event.start_time) },
+                      { label: "Meet at", value: place || "See ride details" },
+                      { label: "Host", value: event.host_name || "SportCliq host" },
+                    ],
+                    footnote: "The host scans this QR code on ride day.",
+                  }} />
+                ) : undefined}
+                cancel={upcoming ? { label: riding ? "Leave" : "Cancel", disabled: !canCancel(event), hint: "You can cancel up to 1 hour before the start", onClick: () => setCancelling(event) } : null}
+              />
+            );
+          })
+        )}
+      </main>
+      <ConfirmModal
+        open={!!cancelling}
+        onOpenChange={(v) => !v && setCancelling(null)}
+        icon={Ban}
+        tone="danger"
+        title={tab === "hosting" ? "Cancel this ride?" : "Leave this ride?"}
+        description={tab === "hosting" ? "Every rider can see the ride is off. This cannot be undone." : "Your spot is given up and the host can see it. This cannot be undone."}
+        confirmLabel={tab === "hosting" ? "Cancel ride" : "Leave ride"}
+        cancelLabel="Keep it"
+        onConfirm={doCancel}
+      />
+      <Navbar />
     </div>
   );
 };

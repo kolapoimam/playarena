@@ -1,5 +1,6 @@
 import { Component, ReactNode } from "react";
-import { ErrorScene } from "@/pages/NotFound";
+import { FunState } from "@/components/sc/FunState";
+import { Home, RefreshCw } from "lucide-react";
 
 /** Catches a crash anywhere in a screen and shows a friendly way back instead of a blank page. */
 export default class AppErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
@@ -13,12 +14,13 @@ export default class AppErrorBoundary extends Component<{ children: ReactNode },
   render() {
     if (!this.state.failed) return this.props.children;
     return (
-      <ErrorScene
-        code="Oops"
-        title="Something went off side"
-        body="This screen hit a problem. Reload to try again, or head home."
-        primary={{ label: "Reload", onClick: () => window.location.reload() }}
-        secondary={{ label: "Go home", onClick: () => (window.location.href = "/") }}
+      <FunState
+        kind="error"
+        badge="Offside"
+        title="This screen went offside"
+        body="Something on this page tripped up. Reload to give it another go, or head back home."
+        primary={{ label: "Reload", onClick: () => window.location.reload(), icon: RefreshCw }}
+        secondary={{ label: "Go home", onClick: () => (window.location.href = "/"), icon: Home }}
       />
     );
   }

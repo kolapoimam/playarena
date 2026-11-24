@@ -12,6 +12,11 @@ import { NavLink } from "react-router-dom";
 import { Seo } from "@/components/Seo";
 
 const Auth = () => {
+  // Where to go after signing in. Only paths inside the app are allowed.
+  const nextPath = (() => {
+    const n = new URLSearchParams(window.location.search).get("next") || "";
+    return n.startsWith("/") && !n.startsWith("//") ? n : "/profile";
+  })();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [email, setEmail] = useState("");
@@ -91,7 +96,7 @@ const Auth = () => {
             throw error; // Handle all other errors generically
           }
         } else {
-          navigate("/profile");
+          navigate(nextPath);
         }
       }
     } catch (error) {
@@ -112,7 +117,7 @@ const Auth = () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/profile`,
+          redirectTo: `${window.location.origin}${nextPath}`,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',

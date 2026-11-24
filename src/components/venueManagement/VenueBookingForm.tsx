@@ -299,8 +299,8 @@ const VenueBookingForm = () => {
     try {
       const { data, error } = await supabase
         .from("booking_access_codes")
-        .select("code, expiry_date, status, venue_id, match_date, start_time, end_time, booking_id")
-        .eq("code", code)
+        .select("*")
+        .ilike("code", code)
         .eq("venue_id", venue?.id)
         .single();
 
@@ -309,8 +309,12 @@ const VenueBookingForm = () => {
         return null;
       }
 
+      if ((data as any).cancelled_at || (data.status === "inactive" && !data.booking_id)) {
+        setAccessCodeError("This code was cancelled by the venue. Ask them for a new one.");
+        return null;
+      }
       if (data.status !== "pending") {
-        setAccessCodeError("Access code is not valid or has already been used.");
+        setAccessCodeError("This code has already been used.");
         return null;
       }
 

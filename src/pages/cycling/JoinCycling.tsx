@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { NotFoundState } from "@/components/sc/FunState";
 
 const USED_REFS_KEY = "sc_used_ride_payments";
 const usedRefs = (): string[] => { try { return JSON.parse(localStorage.getItem(USED_REFS_KEY) || "[]"); } catch { return []; } };
@@ -468,20 +469,7 @@ const JoinCycling = () => {
     return <PageSkeleton />;
   }
 
-  if (!event) {
-    return (
-      <div className="p-4">
-        <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4">
-          <ArrowLeft size={18} className="mr-2" />
-          Back
-        </Button>
-        <div className="text-center py-8">
-          <h2 className="text-xl font-semibold mb-2">Event Not Found</h2>
-          <p className="text-muted-foreground">The event doesn't exist or has been removed.</p>
-        </div>
-      </div>
-    );
-  }
+  if (!event) return <NotFoundState kind="ride" />;
 
   const isFull = attendees.length >= event.max_attendees;
   const isPastEvent = new Date(event.event_date) < new Date(new Date().setHours(0, 0, 0, 0));

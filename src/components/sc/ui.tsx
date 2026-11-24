@@ -119,8 +119,23 @@ export function Pill({
 // Dicebear avatars. The style is picked from the seed, so each person keeps the same look everywhere.
 const DICEBEAR_STYLES = ["adventurer", "avataaars", "big-smile", "lorelei", "micah", "notionists", "personas", "fun-emoji"];
 const DICEBEAR_BG = ["dcfce7", "ffedd5", "ede9fe", "fef9c3", "dbeafe", "ccfbf1", "fce7f3"];
-export const dicebearUrl = (seed?: string | null) => {
+// When we know someone's gender, use one style with hair and features that match it
+const GENDERED_TOP = {
+  male: "shortFlat,shortRound,shortWaved,shortCurly,theCaesar,theCaesarAndSidePart,sides,dreads01,frizzle,fro",
+  female: "bigHair,bob,bun,curly,curvy,longButNotTooLong,straight01,straight02,miaWallace,frida,froBand,hijab",
+};
+/** The signed in user's gender, saved with their profile on this device. */
+export const myGender = (): string | null => {
+  try { return JSON.parse(localStorage.getItem("sc_profile_cache") || "null")?.profile?.gender ?? null; } catch { return null; }
+};
+export const dicebearUrl = (seed?: string | null, gender?: string | null) => {
   const s = (seed || "sportcliq").trim().toLowerCase();
+  const g = (gender || "").toLowerCase();
+  if (g === "male" || g === "female") {
+    const top = GENDERED_TOP[g as "male" | "female"];
+    const extra = g === "male" ? "&facialHairProbability=35" : "&facialHairProbability=0";
+    return `https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(s)}&top=${top}${extra}&skinColor=ae5d29,614335,d08b5b,fd9841&backgroundColor=${DICEBEAR_BG.join(",")}&radius=50`;
+  }
   let h = 0;
   for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 100003;
   const style = DICEBEAR_STYLES[h % DICEBEAR_STYLES.length];
@@ -134,6 +149,7 @@ export function Avatar({
   solid = true,
   src,
   seed,
+  gender,
 }: {
   initials: string;
   sport?: Sport;
@@ -141,10 +157,11 @@ export function Avatar({
   solid?: boolean;
   src?: string | null;
   seed?: string | null;
+  gender?: string | null;
 }) {
   const c = SPORT[sport];
   const [failed, setFailed] = useState(false);
-  const url = src || (seed ? dicebearUrl(seed) : null);
+  const url = src || (seed ? dicebearUrl(seed, gender) : null);
   if (url && !failed) {
     return (
       <img

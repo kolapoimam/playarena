@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { NotFoundState } from "@/components/sc/FunState";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -257,20 +258,7 @@ const CyclingDetail = () => {
     return <DetailSkeleton />;
   }
 
-  if (!event) {
-    return (
-      <div className="p-4">
-        <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4">
-          <ArrowLeft size={18} className="mr-2" />
-          Back
-        </Button>
-        <div className="text-center py-8">
-          <h2 className="text-2xl font-semibold mb-2">Event Not Found</h2>
-          <p className="text-muted-foreground">The event doesn't exist or has been removed.</p>
-        </div>
-      </div>
-    );
-  }
+  if (!event) return <NotFoundState kind="ride" />;
 
   const { status, isStarted, isEnded, isFull } = getEventStatus();
 

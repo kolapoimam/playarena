@@ -2,16 +2,16 @@ import { supabase } from "@/integrations/supabase/client";
 
 /**
  * SportCliq platform fees, as stated in the Terms and the Guides.
- * Organisers and ride hosts keep everything on their first 5 paid activities,
- * then 2% goes to the platform. Venues pay a 10% referral fee on every paid booking.
+ * Every paid activity (matches, rides and any we add later) is free for the first 2
+ * an organiser runs, then 5% goes to the platform. Venues get their first paid booking
+ * free, then pay 10% on each paid booking.
  * Change the numbers here and every cashout screen follows.
  */
 export const FEES = {
-  organiserRate: 0.02,
-  organiserFreeCount: 5,
-  hostRate: 0.02,
-  hostFreeCount: 5,
+  activityRate: 0.05,
+  activityFreeCount: 2,
   venueRate: 0.1,
+  venueFreeBookings: 1,
 };
 
 export type Payout = {
@@ -37,48 +37,50 @@ export function payout(gross: number, rate: number, requested: number, note: str
   return { gross, fee, rate, requested, available: Math.max(0, Math.floor(gross - fee - requested)), note };
 }
 
-/** Is this match one of the organiser's first free paid matches? */
-export async function organiserRate(matchId: string): Promise<{ rate: number; note: string }> {
-  const charged = { rate: FEES.organiserRate, note: `${FEES.organiserRate * 100}% platform fee` };
-  const { data: m } = await supabase.from("matches").select("id, user_id").eq("id", matchId).limit(1);
-  const owner = (m as any[])?.[0]?.user_id;
-  if (!owner) return charged;
-  const { data: firsts } = await supabase
-    .from("matches")
-    .select("id")
-    .eq("user_id", owner)
-    .eq("is_paid", true)
-    .order("created_at", { ascending: true })
-    .limit(FEES.organiserFreeCount);
-  return ((firsts as any[]) || []).some((r) => r.id === matchId)
-    ? { rate: 0, note: `No platform fee on your first ${FEES.organiserFreeCount} paid matches` }
-    : charged;
+/** The organiser's first free paid activities, matches and rides counted together. */
+async function firstPaid(userId: string): Promise<Set<string>> {
+  const n = FEES.activityFreeCount;
+  const [m, r] = await Promise.all([
+    supabase.from("matches").select("id, created_at").eq("user_id", userId).eq("is_paid", true).order("created_at", { ascending: true }).limit(n),
+    supabase.from("cycling_events").select("id_uuid, created_at").eq("host_id", userId).eq("is_free", false).order("created_at", { ascending: true }).limit(n),
+  ]);
+  const all = [
+    ...((m.data as any[]) || []).map((x) => ({ id: String(x.id), at: x.created_at })),
+    ...((r.data as any[]) || []).map((x) => ({ id: String(x.id_uuid), at: x.created_at })),
+  ].sort((a, b) => String(a.at).localeCompare(String(b.at)));
+  return new Set(all.slice(0, n).map((x) => x.id));
 }
 
-/** Is this ride one of the host's first free paid rides? */
+const charged = () => ({ rate: FEES.activityRate, note: `${FEES.activityRate * 100}% platform fee` });
+const free = () => ({ rate: 0, note: `No platform fee on your first ${FEES.activityFreeCount} paid activities` });
+
+/** Fee rate for a paid match. */
+export async function organiserRate(matchId: string): Promise<{ rate: number; note: string }> {
+  const { data: m } = await supabase.from("matches").select("id, user_id").eq("id", matchId).limit(1);
+  const owner = (m as any[])?.[0]?.user_id;
+  if (!owner) return charged();
+  return (await firstPaid(owner)).has(String(matchId)) ? free() : charged();
+}
+
+/** Fee rate for a paid ride. */
 export async function hostRate(eventId: string, hostId?: string | null): Promise<{ rate: number; note: string }> {
-  const charged = { rate: FEES.hostRate, note: `${FEES.hostRate * 100}% platform fee` };
-  if (!hostId) return charged;
-  const { data: firsts } = await supabase
-    .from("cycling_events")
-    .select("id_uuid")
-    .eq("host_id", hostId)
-    .eq("is_free", false)
-    .order("created_at", { ascending: true })
-    .limit(FEES.hostFreeCount);
-  return ((firsts as any[]) || []).some((r) => r.id_uuid === eventId)
-    ? { rate: 0, note: `No platform fee on your first ${FEES.hostFreeCount} paid rides` }
-    : charged;
+  if (!hostId) return charged();
+  return (await firstPaid(hostId)).has(String(eventId)) ? free() : charged();
 }
 
 /** Venue earnings after the referral fee and earlier cashouts. */
 export async function venuePayout(venueId: string): Promise<Payout | null> {
   const [paid, out] = await Promise.all([
-    supabase.from("bookings").select("amount").eq("venue_id", venueId).eq("payment_status", "paid"),
+    supabase.from("bookings").select("amount, created_at").eq("venue_id", venueId).eq("payment_status", "paid").order("created_at", { ascending: true }),
     supabase.from("venue_booking_cashout").select("amount, status").eq("venue_id", venueId).in("status", ["Review", "Processed", "Successful"]),
   ]);
   if (paid.error || out.error) return null;
   const gross = ((paid.data as any[]) || []).reduce((s, b) => s + (Number(b.amount) || 0), 0);
   const requested = ((out.data as any[]) || []).reduce((s, r) => s + (Number(r.amount) || 0), 0);
-  return payout(gross, FEES.venueRate, requested, `${FEES.venueRate * 100}% referral fee on bookings`);
+  // the first paid booking carries no fee, every later one carries the venue rate
+  const rows = (paid.data as any[]) || [];
+  const freeAmount = rows.slice(0, FEES.venueFreeBookings).reduce((s, b) => s + (Number(b.amount) || 0), 0);
+  const fee = Math.ceil(Math.max(0, gross - freeAmount) * FEES.venueRate);
+  const note = rows.length <= FEES.venueFreeBookings ? "Your first booking has no fee" : `${FEES.venueRate * 100}% fee after your first booking`;
+  return { gross, fee, rate: rows.length <= FEES.venueFreeBookings ? 0 : FEES.venueRate, requested, available: Math.max(0, Math.floor(gross - fee - requested)), note };
 }

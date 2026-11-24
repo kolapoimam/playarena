@@ -1,4 +1,4 @@
-import { Avatar, initialsOf } from "@/components/sc/ui";
+import { Avatar, initialsOf, myGender } from "@/components/sc/ui";
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -235,7 +235,7 @@ const AccountDetails = ({ profile: initialProfile, setProfile: setInitialProfile
           <div className="relative rounded-[28px] p-5 text-white overflow-hidden flex items-center gap-4" style={{ background: "#16A34A" }}>
             <span aria-hidden="true" className="absolute -right-10 -top-10 w-36 h-36 rounded-full border-[18px] border-white/15" />
             <span className="rounded-full border-4 border-white/70 shrink-0">
-              <Avatar seed={form.watch("nickname") || form.watch("first_name") || "SportCliq"} initials={initialsOf(`${form.watch("first_name") || ""} ${form.watch("last_name") || ""}`.trim() || "SC")} size={64} />
+              <Avatar seed={form.watch("nickname") || form.watch("first_name") || "SportCliq"} gender={myGender()} initials={initialsOf(`${form.watch("first_name") || ""} ${form.watch("last_name") || ""}`.trim() || "SC")} size={64} />
             </span>
             <span className="relative flex flex-col min-w-0">
               <span className="text-[22px] leading-7 font-extrabold tracking-[-0.02em] truncate">{form.watch("nickname") || "Your profile"}</span>
