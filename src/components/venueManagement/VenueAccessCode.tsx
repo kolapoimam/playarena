@@ -196,7 +196,7 @@ const VenueAccessCode = ({ venueId, venueName, venueSlug }: { venueId: string; v
         <span className="w-11 h-11 rounded-2xl bg-sport-venue-bg text-sport-venue-fg flex items-center justify-center shrink-0"><KeyRound size={20} /></span>
         <span className="flex-1 min-w-0 flex flex-col">
           <span className="text-[16px] font-extrabold">Booking codes</span>
-          <span className="text-[13px] leading-[18px] text-sc-ink3">Give an organiser a slot at your venue. The time is blocked on your calendar right away.</span>
+          <span className="text-[13px] leading-[18px] text-sc-ink3">Give an organiser a slot at your venue.</span>
         </span>
         <button type="button" onClick={() => setOpen(true)} className="h-10 pl-3 pr-4 rounded-full bg-sc-ink text-white text-[14px] font-bold inline-flex items-center gap-1.5 shrink-0 active:scale-95">
           <Plus size={16} /> New
