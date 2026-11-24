@@ -3,6 +3,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { supabase } from "@/integrations/supabase/client";
+import { withOneSignal } from "@/lib/onesignal";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -92,10 +93,11 @@ const UserNotifications = ({ profile, setShowNotifications }) => {
     }
   };
 
-  const initPushNotifications = async () => {
-    if (!window.OneSignal) return;
-    const userId = await OneSignal.getUserId();
-    if (userId) setSubscriptionId(userId);
+  const initPushNotifications = () => {
+    withOneSignal((os) => {
+      const id = os.User.PushSubscription.id;
+      if (id) setSubscriptionId(id);
+    });
   };
 
   const onSubmit = async (data: NotificationSettings) => {

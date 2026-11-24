@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/form";
 import { Switch } from "@/components/ui/switch";
 import { Copy } from "lucide-react";
+import { notify } from "@/lib/notify";
 
 const OrganizerDetails = ({ userId }: { userId: string | null }) => {
   const form = useFormContext();
@@ -88,9 +89,10 @@ const OrganizerDetails = ({ userId }: { userId: string | null }) => {
         matchData.ticket_price = null;
       }
 
-      const { error } = await supabase.from("matches").insert(matchData);
+      const { data: created, error } = await supabase.from("matches").insert(matchData).select("id").single();
 
       if (error) throw error;
+      if (created?.id) notify("match_created", { match_id: created.id });
 
       localStorage.removeItem("organizeFormState");
       toast({

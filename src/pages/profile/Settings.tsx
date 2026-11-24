@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { Seo } from "@/components/Seo";
+import { withOneSignal, linkPushUser } from "@/lib/onesignal";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import usePWAInstallPrompt from "@/hooks/usePWAInstallPrompt";
@@ -39,15 +40,16 @@ const Settings = () => {
   const [pushState, setPushState] = useState<string>(typeof Notification !== "undefined" ? Notification.permission : "unsupported");
 
   const enablePush = async () => {
-    const w = window as unknown as { OneSignalDeferred?: Array<(os: any) => void> };
     if (typeof Notification === "undefined") {
       toast({ title: "Not supported", description: isIOS ? "Install SportCliq to your home screen first, then turn on alerts." : "This browser can't show notifications." });
       return;
     }
-    w.OneSignalDeferred = w.OneSignalDeferred || [];
-    w.OneSignalDeferred.push(async (OneSignal) => {
+    withOneSignal(async (OneSignal) => {
       try {
         await OneSignal.Notifications.requestPermission();
+        if (!OneSignal.User.PushSubscription.optedIn) await OneSignal.User.PushSubscription.optIn();
+        const { data } = await supabase.auth.getSession();
+        if (data.session?.user?.id) linkPushUser(data.session.user.id);
       } finally {
         setPushState(Notification.permission);
       }

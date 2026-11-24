@@ -8,6 +8,7 @@ import SplashScreen from "@/components/SplashScreen";
 import ScrollToTop from "@/components/ScrollToTop";
 import InstallPrompt from "@/components/InstallPrompt";
 import { pageview } from "@/lib/analytics";
+import { linkPushUser } from "@/lib/onesignal";
 import { supabase } from "@/integrations/supabase/client";
 import MobileOnlyGuard from "@/components/MobileOnlyGuard";
 
@@ -71,55 +72,13 @@ const AppRoutes = () => {
     pageview(location.pathname + location.search);
   }, [location]);
 
-  // OneSignal user tagging effect
+  // Link this device to the signed in user for OneSignal push
   useEffect(() => {
-    // Wait for OneSignal to initialize
-    const waitForOneSignal = () => {
-      return new Promise((resolve) => {
-        const checkInterval = setInterval(() => {
-          if (window.OneSignal && window.OneSignal.initialized) {
-            clearInterval(checkInterval);
-            console.log("OneSignal fully initialized");
-            resolve(true);
-          }
-        }, 100);
-        setTimeout(() => {
-          clearInterval(checkInterval);
-          console.log("OneSignal initialization timeout after 10 seconds");
-          resolve(false);
-        }, 10000);
-      });
-    };
-
-    // Listen for auth state changes to ensure we tag the user after login
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      const userId = session?.user?.id;
-      if (userId && window.OneSignal) {
-        // Wait for OneSignal to be fully initialized
-        const isInitialized = await waitForOneSignal();
-        if (!isInitialized) {
-          console.log("OneSignal not initialized, skipping login and tagging");
-          return;
-        }
-
-        console.log("Tagging OneSignal with user_id:", userId);
-        window.OneSignal.push(() => {
-          if (window.OneSignal) {
-            window.OneSignal.login(userId);
-            console.log("OneSignal login triggered for user_id:", userId);
-            window.OneSignal.User.addTag("user_id", userId);
-            console.log("Tag added to OneSignal: user_id =", userId);
-          }
-        });
-      } else {
-        console.log("No user session or OneSignal not loaded:", { userId, OneSignal: !!window.OneSignal });
-      }
+    supabase.auth.getSession().then(({ data }) => linkPushUser(data.session?.user?.id));
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") linkPushUser(session?.user?.id);
     });
-
-    // Cleanup listener on component unmount
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
+    return () => authListener.subscription.unsubscribe();
   }, []);
 
   return (

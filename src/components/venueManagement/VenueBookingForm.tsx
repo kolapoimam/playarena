@@ -18,6 +18,7 @@ import TimeInput from "@/components/TimeInput";
 
 import { BackButton } from "@/components/sc/ui";
 import { RowsSkeleton } from "@/components/sc/skeletons";
+import { notifyBooking } from "@/lib/notify";
 // Lazy load Navbar to avoid circular dependencies
 const Navbar = lazy(() => import("@/components/Navbar"));
 
@@ -561,19 +562,7 @@ const VenueBookingForm = () => {
         if (accessCodeError) throw accessCodeError;
       }
 
-      if (venue.email) {
-        await supabase.functions.invoke("send-booking-notification", {
-          body: {
-            venue_email: venue.email,
-            venue_name: venue.name,
-            match_date: format(values.match_date, "yyyy-MM-dd"),
-            start_time: `${startHours.toString().padStart(2, "0")}:${startTime.split(":")[1]}`,
-            end_time: `${endHours.toString().padStart(2, "0")}:${endTime.split(":")[1]}`,
-            user_email: userEmail || defaultEmail,
-            access_code: bookingAccessCode,
-          },
-        });
-      }
+      notifyBooking(bookingData.id);
 
       toast({
         title: "Success",
