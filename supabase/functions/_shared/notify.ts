@@ -44,7 +44,15 @@ export const esc = (s: unknown) =>
 
 // ---------- push ----------
 
-export async function sendPush(externalIds: string[], title: string, message: string, path: string) {
+/** Stable UUID from any text, so retries of the same notification are ignored by OneSignal. */
+export async function stableUuid(text: string) {
+  const h = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text))).slice(0, 16);
+  h[6] = (h[6] & 0x0f) | 0x50; h[8] = (h[8] & 0x3f) | 0x80;
+  const x = [...h].map((b) => b.toString(16).padStart(2, "0")).join("");
+  return `${x.slice(0, 8)}-${x.slice(8, 12)}-${x.slice(12, 16)}-${x.slice(16, 20)}-${x.slice(20)}`;
+}
+
+export async function sendPush(externalIds: string[], title: string, message: string, path: string, idempotencyKey?: string) {
   if (!externalIds.length) return { ok: true, skipped: "no recipients" };
   if (!ONESIGNAL_APP_ID || !ONESIGNAL_API_KEY) return { ok: false, error: "OneSignal secrets missing" };
   // New OneSignal keys (os_v2_...) use the Key scheme. Older keys use Basic.
@@ -60,6 +68,7 @@ export async function sendPush(externalIds: string[], title: string, message: st
       contents: { en: message },
       url: APP_URL + path,
       chrome_web_icon: `${APP_URL}/icons/icon-192x192.png`,
+      ...(idempotencyKey ? { idempotency_key: idempotencyKey } : {}),
     }),
   });
   const text = await res.text();
@@ -83,11 +92,15 @@ ${cta ? `<p style="margin:24px 0 0"><a href="${APP_URL}${cta.path}" style="displ
 </table></td></tr></table></body></html>`;
 }
 
-export async function sendEmail(to: string, subject: string, html: string) {
+export async function sendEmail(to: string, subject: string, html: string, idempotencyKey?: string) {
   if (!RESEND_API_KEY) return { ok: false, error: "RESEND_API_KEY missing" };
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
-    headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
+    headers: {
+      Authorization: `Bearer ${RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+      ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
+    },
     body: JSON.stringify({ from: EMAIL_FROM, to: [to], reply_to: REPLY_TO, subject, html }),
   });
   const text = await res.text();
@@ -111,6 +124,8 @@ export async function notifyUsers(
   title: string,
   message: string,
   path: string,
+  /** When set, each user gets their own push and email keyed on this, so repeats are dropped. */
+  onceKey?: string,
 ) {
   const ids = [...new Set(userIds.filter((x): x is string => !!x))];
   if (!ids.length) return { push: 0, email: 0 };
@@ -133,11 +148,15 @@ export async function notifyUsers(
   }
 
   const results: unknown[] = [];
-  if (push.length) results.push(await sendPush(push, title, message, path));
+  if (onceKey) {
+    for (const id of push) results.push(await sendPush([id], title, message, path, await stableUuid(`${onceKey}:push:${id}`)));
+  } else if (push.length) {
+    results.push(await sendPush(push, title, message, path));
+  }
   for (const id of email) {
     const { data } = await db.auth.admin.getUserById(id);
     const to = data?.user?.email;
-    if (to) results.push(await sendEmail(to, title, emailShell(title, `<p>${esc(message)}</p>`, { label: "Open SportCliq", path })));
+    if (to) results.push(await sendEmail(to, title, emailShell(title, `<p>${esc(message)}</p>`, { label: "Open SportCliq", path }), onceKey ? `${onceKey}:email:${id}` : undefined));
   }
   return { push: push.length, email: email.length, results };
 }
