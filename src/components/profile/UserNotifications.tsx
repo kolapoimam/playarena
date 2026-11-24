@@ -101,27 +101,58 @@ const UserNotifications = ({ profile, setShowNotifications }) => {
   };
 
   const onSubmit = async (data: NotificationSettings) => {
+    if (!profile?.id) {
+      toast({ title: "Sign in first", description: "Sign in to save your notification settings.", variant: "destructive" });
+      return;
+    }
     setLoading(true);
     try {
-      const updates = Object.entries(data).map(([event_type, settings]) => ({
-        user_id: profile?.id,
+      // Update rows that exist and add the missing ones. This works whether or not
+      // the table has a unique rule on user and event, which upsert needs.
+      const { data: existing, error: readError } = await supabase
+        .from("user_notifications")
+        .select("id, event_type")
+        .eq("user_id", profile.id);
+      if (readError) throw readError;
+      const idByEvent = new Map<string, string>((existing || []).map((r: any) => [String(r.event_type), String(r.id)]));
+
+      const rows: any[] = Object.entries(data).map(([event_type, settings]) => ({
+        user_id: profile.id,
         event_type,
         notification_type: settings.type,
         frequency: settings.frequency,
         is_enabled: settings.enabled,
-        subscription_id: subscriptionId,
+        ...(subscriptionId ? { subscription_id: subscriptionId } : {}),
         updated_at: new Date().toISOString(),
       }));
 
-      const { error } = await supabase
-        .from("user_notifications")
-        .upsert(updates, { onConflict: ["user_id", "event_type"] });
-      if (error) throw error;
+      const updates = rows.filter((r) => idByEvent.has(r.event_type));
+      const inserts = rows.filter((r) => !idByEvent.has(r.event_type));
 
-      toast({ title: "Success", description: "Notification settings saved!" });
+      const results = await Promise.all([
+        ...updates.map((r) => (supabase.from("user_notifications") as any).update(r).eq("id", idByEvent.get(r.event_type)!)),
+        ...(inserts.length ? [(supabase.from("user_notifications") as any).insert(inserts)] : []),
+      ]);
+      const failed = results.find((r) => r.error);
+      if (failed?.error) throw failed.error;
+
+      // Push needs this device to be allowed and linked to the account
+      const wantsPush = rows.some((r) => r.is_enabled && (r.notification_type === "push" || r.notification_type === "both"));
+      if (wantsPush) {
+        withOneSignal(async (os) => {
+          try {
+            if (typeof Notification !== "undefined" && Notification.permission === "default") await os.Notifications.requestPermission();
+            if (!os.User.PushSubscription.optedIn) await os.User.PushSubscription.optIn();
+            if (os.User.externalId !== profile.id) await os.login(profile.id);
+          } catch (e) { console.warn("Push setup", e); }
+        });
+      }
+
+      toast({ title: "Settings saved", description: wantsPush && typeof Notification !== "undefined" && Notification.permission === "denied" ? "Push is blocked on this device. Allow notifications for SportCliq in your phone or browser settings to get push alerts." : "We will notify you the way you chose." });
       setShowNotifications(false);
-    } catch (error) {
-      toast({ title: "Error", description: "Failed to save settings.", variant: "destructive" });
+    } catch (error: any) {
+      console.error("Saving notification settings failed", error);
+      toast({ title: "Settings not saved", description: error?.message ? `${error.message}` : "Please try again.", variant: "destructive" });
     } finally {
       setLoading(false);
     }

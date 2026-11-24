@@ -52,11 +52,22 @@ const Activities = () => {
       const today = new Date().toISOString().split("T")[0];
       const items: Upcoming[] = [];
       try {
-        const { data: org } = await supabase
+        const [{ data: org }, { data: joined }, { data: hosted }] = await Promise.all([
+          supabase
           .from("user_organized_matches")
           .select("matches(id, title, slug, match_date, match_time, total_slots, total_registered_players)")
           .eq("user_id", userId)
-          .limit(10);
+          .limit(10),
+          supabase
+          .from("user_joined_matches")
+          .select("matches(id, title, slug, match_date, match_time)")
+          .eq("user_id", userId)
+          .limit(10),
+          supabase
+          .from("user_hosted_cycling")
+          .select("cycling_event:cycling_events(id_uuid, slug, title, event_date, start_time)")
+          .eq("user_id", userId),
+        ]);
         (org || []).forEach((r: any) => {
           const m = r.matches;
           if (m && m.match_date >= today)
@@ -70,20 +81,11 @@ const Activities = () => {
               tag: m.total_slots ? `${m.total_registered_players ?? 0}/${m.total_slots}` : undefined,
             });
         });
-        const { data: joined } = await supabase
-          .from("user_joined_matches")
-          .select("matches(id, title, slug, match_date, match_time)")
-          .eq("user_id", userId)
-          .limit(10);
         (joined || []).forEach((r: any) => {
           const m = r.matches;
           if (m && m.match_date >= today && !items.some((i) => i.key === "o" + m.id))
             items.push({ key: "j" + m.id, kind: "joined", title: m.title, date: m.match_date, time: m.match_time, to: `/match/${m.slug}` });
         });
-        const { data: hosted } = await supabase
-          .from("user_hosted_cycling")
-          .select("cycling_event:cycling_events(id_uuid, slug, title, event_date, start_time)")
-          .eq("user_id", userId);
         (hosted || []).forEach((r: any) => {
           const e = r.cycling_event;
           if (e && e.event_date >= today)

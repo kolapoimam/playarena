@@ -1,5 +1,8 @@
-import { ArrowDownToLine, Banknote, RefreshCw, Clock, CheckCircle2, XCircle } from "lucide-react";
-import { formatNaira } from "@/components/sc/ui";
+import React from "react";
+import { ArrowDownToLine, Banknote, RefreshCw, Clock, CheckCircle2, XCircle, ChevronDown, Loader2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { modalAction, modalCancel } from "@/components/ui/modal-styles";
+import { formatNaira, formatNairaExact } from "@/components/sc/ui";
 
 export type CashoutRow = { id: string; amount: number; created_at: string; status: string; name?: string | null; bank?: string | null; account?: string | null };
 
@@ -65,5 +68,97 @@ export function CashoutList({ rows, title = "Cashout history" }: { rows: Cashout
         })
       )}
     </div>
+  );
+}
+
+// ---------- request cashout modal ----------
+
+type CashoutErrors = { amount?: string | null; bank?: string | null; account?: string | null; name?: string | null };
+
+const fieldBox = "w-full h-[52px] rounded-2xl bg-white border border-sc-line px-4 text-[16px] font-semibold text-sc-ink outline-none transition focus:border-sc-ink placeholder:text-sc-ink3 placeholder:font-medium";
+
+function Field({ label, error, children }: { label: string; error?: string | null; children: React.ReactNode }) {
+  return (
+    <label className="flex flex-col gap-1.5">
+      <span className="text-[13px] font-bold text-sc-ink2">{label}</span>
+      {children}
+      {error && <span className="text-[13px] font-semibold text-[#B91C1C]">{error}</span>}
+    </label>
+  );
+}
+
+export function CashoutDialog({
+  open, onOpenChange, balance, accent = "#16A34A", banks,
+  amount, onAmount, bank, onBank, account, onAccount, name, onName,
+  errors = {}, loading, submitDisabled, onSubmit, note,
+}: {
+  open: boolean; onOpenChange: (v: boolean) => void; balance: number; accent?: string; banks: string[];
+  amount: string; onAmount: (v: string) => void; bank: string; onBank: (v: string) => void;
+  account: string; onAccount: (v: string) => void; name: string; onName: (v: string) => void;
+  errors?: CashoutErrors; loading?: boolean; submitDisabled?: boolean; onSubmit: () => void; note?: string;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="bg-sc-bg p-5 gap-4">
+        <DialogHeader>
+          <span className="w-12 h-12 rounded-2xl flex items-center justify-center mb-1" style={{ background: `${accent}1F`, color: accent }}>
+            <ArrowDownToLine size={22} />
+          </span>
+          <DialogTitle>Request cashout</DialogTitle>
+          <DialogDescription>{note || "Send your earnings to your bank account."}</DialogDescription>
+        </DialogHeader>
+
+        <div className="rounded-3xl bg-white p-4 flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <span className="text-[13px] font-bold text-sc-ink2">Amount</span>
+            <span className="text-[13px] font-semibold text-sc-ink3">Available {formatNairaExact(balance)}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[30px] font-extrabold text-sc-ink3">₦</span>
+            <input
+              type="number"
+              inputMode="decimal"
+              min="1"
+              value={amount}
+              onChange={(e) => onAmount(e.target.value)}
+              placeholder="0"
+              aria-label="Amount in naira"
+              className="sc-big-field flex-1 min-w-0 bg-transparent text-[34px] leading-[40px] font-extrabold tracking-[-0.02em] text-sc-ink outline-none placeholder:text-sc-ink3/50"
+            />
+            {balance > 0 && (
+              <button type="button" onClick={() => onAmount(String(balance))} className="h-9 px-3.5 rounded-full text-[13px] font-bold" style={{ background: `${accent}1F`, color: accent }}>
+                Max
+              </button>
+            )}
+          </div>
+          {errors.amount && <span className="text-[13px] font-semibold text-[#B91C1C]">{errors.amount}</span>}
+        </div>
+
+        <div className="flex flex-col gap-3.5">
+          <Field label="Bank" error={errors.bank}>
+            <span className="relative">
+              <select value={bank} onChange={(e) => onBank(e.target.value)} className={`${fieldBox} appearance-none pr-10 ${bank ? "" : "text-sc-ink3 font-medium"}`}>
+                <option value="">Select your bank</option>
+                {banks.map((b) => <option key={b} value={b}>{b}</option>)}
+              </select>
+              <ChevronDown size={18} className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-sc-ink3" />
+            </span>
+          </Field>
+          <Field label="Account number" error={errors.account}>
+            <input value={account} onChange={(e) => onAccount(e.target.value)} inputMode="numeric" pattern="[0-9]*" maxLength={10} placeholder="10 digit account number" className={fieldBox} />
+          </Field>
+          <Field label="Account name" error={errors.name}>
+            <input value={name} onChange={(e) => onName(e.target.value)} placeholder="Name on the account" autoComplete="name" className={fieldBox} />
+          </Field>
+        </div>
+
+        <DialogFooter>
+          <button type="button" onClick={() => onOpenChange(false)} className={modalCancel}>Cancel</button>
+          <button type="button" onClick={onSubmit} disabled={loading || submitDisabled} className={modalAction} style={{ background: accent }}>
+            {loading ? <><Loader2 size={18} className="animate-spin" /> Sending request</> : "Request cashout"}
+          </button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

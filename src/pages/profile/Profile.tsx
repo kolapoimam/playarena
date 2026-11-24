@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import ConfirmModal from "@/components/sc/ConfirmModal";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -11,66 +12,56 @@ import { Avatar, IconButton, ListRow, Sport, initialsOf } from "@/components/sc/
 import { PageSkeleton } from "@/components/sc/skeletons";
 const Profile = () => {
   const { toast } = useToast();
-  const [profile, setProfile] = useState(null);
-  const [isVenueLinked, setIsVenueLinked] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  // Show the last known profile at once, then refresh it quietly
+  const cached = (() => { try { return JSON.parse(localStorage.getItem("sc_profile_cache") || "null"); } catch { return null; } })();
+  const [profile, setProfile] = useState<any>(cached?.profile || null);
+  const [isVenueLinked, setIsVenueLinked] = useState<boolean>(!!cached?.venue);
+  const [isLoading, setIsLoading] = useState(!cached);
+  const [confirmOut, setConfirmOut] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const checkAuthAndFetchUser = async () => {
+    let alive = true;
+    const load = async () => {
       try {
-        // Check if user is authenticated
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
-        if (authError || !user) {
-          // Redirect to /auth if user is not authenticated
+        const { data: { session } } = await supabase.auth.getSession();
+        const user = session?.user;
+        if (!user) {
+          localStorage.removeItem("sc_profile_cache");
           navigate("/auth", { replace: true });
           return;
         }
-
-        setIsLoading(true);
-        const { data, error: userError } = await supabase.auth.getUser();
-        if (userError) throw userError;
-
-        if (data.user) {
-          const { data: profileData, error: profileError } = await supabase
-            .from("profiles")
-            .select("nickname, gender")
-            .eq("id", data.user.id)
-            .single();
-          if (profileError) throw profileError;
-
-          setProfile({ ...data.user, ...profileData });
-
-          try {
-            const { data: venueData, error: venueError } = await supabase
-              .from("venues")
-              .select("*")
-              .eq("user_id", data.user.id);
-            if (venueError) {
-              console.error("Error fetching venue data:", venueError);
-              setIsVenueLinked(false);
-            } else {
-              setIsVenueLinked(venueData && venueData.length > 0);
-            }
-          } catch (venueError) {
-            console.error("Error fetching venue data:", venueError);
-            setIsVenueLinked(false);
-          }
-        }
+        const [profileRes, venueRes] = await Promise.all([
+          supabase.from("profiles").select("nickname, gender").eq("id", user.id).maybeSingle(),
+          supabase.from("venues").select("id").eq("user_id", user.id).limit(1),
+        ]);
+        if (!alive) return;
+        if (profileRes.error) console.error("Error fetching profile:", profileRes.error);
+        const next = { ...user, ...(profileRes.data || {}) };
+        const venue = !venueRes.error && (venueRes.data?.length || 0) > 0;
+        setProfile(next);
+        setIsVenueLinked(venue);
+        try {
+          localStorage.setItem("sc_profile_cache", JSON.stringify({
+            profile: { id: next.id, email: next.email, nickname: next.nickname, gender: next.gender, user_metadata: next.user_metadata, created_at: next.created_at },
+            venue,
+          }));
+        } catch { /* storage full or blocked */ }
       } catch (error) {
         console.error("Error fetching user data:", error);
       } finally {
-        setIsLoading(false);
+        if (alive) setIsLoading(false);
       }
     };
-    checkAuthAndFetchUser();
-
+    load();
     window.scrollTo(0, 0);
+    return () => { alive = false; };
   }, [navigate]);
 
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
+      localStorage.removeItem("sc_profile_cache");
       toast({
         title: "Success",
         description: "You have been logged out successfully.",
@@ -188,7 +179,7 @@ const Profile = () => {
         ])}
         <button
           type="button"
-          onClick={handleLogout}
+          onClick={() => setConfirmOut(true)}
           className="h-[54px] rounded-full bg-sport-red-bg text-sport-red-fg font-bold flex items-center justify-center gap-2 mt-1"
         >
           <LogOut size={20} />
@@ -196,6 +187,16 @@ const Profile = () => {
         </button>
       </main>
       <Navbar />
+      <ConfirmModal
+        open={confirmOut}
+        onOpenChange={setConfirmOut}
+        icon={LogOut}
+        tone="danger"
+        title="Sign out of SportCliq?"
+        description="You can sign back in any time with your email."
+        confirmLabel="Sign out"
+        onConfirm={handleLogout}
+      />
     </div>
   );
 };

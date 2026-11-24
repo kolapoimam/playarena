@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { fastGetUser } from '@/lib/fastAuth';
 
 // The URL and anon key are public by design (Row Level Security protects the data).
 // They come from Vercel env vars, with the project defaults as a fallback.
@@ -9,4 +10,5 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey); 
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+fastGetUser(supabase); 

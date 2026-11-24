@@ -1,5 +1,5 @@
 
-import { BalanceHero, CashoutList } from "@/components/sc/CashoutUI";
+import { BalanceHero, CashoutDialog, CashoutList } from "@/components/sc/CashoutUI";
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -413,108 +413,25 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
     <div className="flex flex-col gap-3.5">
       <BalanceHero balance={walletBalance} onRefresh={handleRefresh} onRequest={handleCashoutMode} disabled={!localTempIdentifier} note="From paid slots in this match" />
       <CashoutList rows={cashoutRequests.map((r: any) => ({ id: r.id, amount: r.amount, created_at: r.created_at, status: r.status, name: r.account_details?.account_name, bank: r.account_details?.bank_name, account: r.account_details?.bank_account_number }))} />
-      <Dialog open={cashoutDialogOpen} onOpenChange={setCashoutDialogOpen}>
-        <DialogContent className="w-full max-w-[calc(100%-1.5rem)] sm:max-w-[420px] rounded-[28px] bg-sc-bg p-5 max-h-[92vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Request Cashout</DialogTitle>
-            <DialogDescription>
-              Enter your bank details and amount to request a cashout for this match. Amount must not exceed your wallet balance (₦{walletBalance.toLocaleString()}).
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-sc-ink2 dark:text-gray-300">
-                Amount (₦)
-              </label>
-              <Input
-                type="number"
-                value={cashoutAmount}
-                onChange={(e) => {
-                  setCashoutAmount(e.target.value);
-                  setAmountError(null);
-                }}
-                className="mt-1"
-                min="1"
-              />
-              {amountError && (
-                <p className="text-sm text-red-600 mt-1">{amountError}</p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-sc-ink2 dark:text-gray-300">
-                Bank Account Number
-              </label>
-              <Input
-                value={bankAccountNumber}
-                onChange={(e) => {
-                  setBankAccountNumber(e.target.value.replace(/[^0-9]/g, "").slice(0, 10));
-                  setBankAccountError(null);
-                }}
-                inputMode="numeric"
-                pattern="[0-9]*"
-                maxLength={10}
-                className="mt-1"
-              />
-              {bankAccountError && (
-                <p className="text-sm text-red-600 mt-1">{bankAccountError}</p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-sc-ink2 dark:text-gray-300">
-                Bank Name
-              </label>
-              <select
-                value={bankName}
-                onChange={(e) => setBankName(e.target.value)}
-                className="mt-1 block w-full rounded-2xl border-sc-line shadow-card focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
-              >
-                <option value="">Select a bank</option>
-                {nigerianBanks.map((bank) => (
-                  <option key={bank} value={bank}>{bank}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-sc-ink2 dark:text-gray-300">
-                Account Name
-              </label>
-              <Input
-                value={accountName}
-                onChange={(e) => {
-                  setAccountName(e.target.value);
-                  setAccountNameError(null);
-                }}
-                className="mt-1"
-              />
-              {accountNameError && (
-                <p className="text-sm text-red-600 mt-1">{accountNameError}</p>
-              )}
-            </div>
-          </div>
-          <DialogFooter className="mt-6">
-            <Button
-              variant="outline"
-              onClick={() => setCashoutDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleCashoutSubmit}
-              className="bg-sc-green hover:brightness-95 text-sc-green-ink font-bold"
-              disabled={loading || !localTempIdentifier}
-            >
-              {loading ? (
-                <>
-                  <Loader2 size={16} className="mr-2 animate-spin" />
-                  Submitting...
-                </>
-              ) : (
-                "Submit Cashout"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <CashoutDialog
+        open={cashoutDialogOpen}
+        onOpenChange={setCashoutDialogOpen}
+        balance={walletBalance}
+        banks={nigerianBanks}
+        note="Send what you earned from paid slots in this match to your bank."
+        amount={String(cashoutAmount ?? "")}
+        onAmount={(v) => { setCashoutAmount(v); setAmountError(null); }}
+        bank={bankName}
+        onBank={(v) => setBankName(v)}
+        account={bankAccountNumber}
+        onAccount={(v) => { setBankAccountNumber(v.replace(/[^0-9]/g, "").slice(0, 10)); setBankAccountError(null); }}
+        name={accountName}
+        onName={(v) => { setAccountName(v); setAccountNameError(null); }}
+        errors={{ amount: amountError, account: bankAccountError, name: accountNameError }}
+        loading={loading}
+        submitDisabled={!localTempIdentifier}
+        onSubmit={handleCashoutSubmit}
+      />
     </div>
   );
 };

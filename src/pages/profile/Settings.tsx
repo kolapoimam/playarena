@@ -1,4 +1,5 @@
 import { useState } from "react";
+import ConfirmModal from "@/components/sc/ConfirmModal";
 import { useNavigate } from "react-router-dom";
 import {
   Bell,
@@ -29,6 +30,7 @@ const isStandalone = () =>
   window.matchMedia?.("(display-mode: standalone)").matches || (navigator as unknown as { standalone?: boolean }).standalone === true;
 
 const Settings = () => {
+  const [confirmOut, setConfirmOut] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const state = useUserState();
@@ -58,6 +60,7 @@ const Settings = () => {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    localStorage.removeItem("sc_profile_cache");
     toast({ title: "Signed out", description: "See you on the pitch." });
     navigate("/auth");
   };
@@ -160,13 +163,23 @@ const Settings = () => {
 
           <button
             type="button"
-            onClick={signOut}
+            onClick={() => setConfirmOut(true)}
             className="h-[54px] rounded-full bg-sport-red-bg text-sport-red-fg font-bold flex items-center justify-center gap-2"
           >
             <LogOut size={20} /> Sign out
           </button>
         </main>
         <LocationSheet open={locOpen} onOpenChange={setLocOpen} />
+        <ConfirmModal
+          open={confirmOut}
+          onOpenChange={setConfirmOut}
+          icon={LogOut}
+          tone="danger"
+          title="Sign out of SportCliq?"
+          description="You can sign back in any time with your email."
+          confirmLabel="Sign out"
+          onConfirm={signOut}
+        />
         <Navbar />
       </Screen>
     </>

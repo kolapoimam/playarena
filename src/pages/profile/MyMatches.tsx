@@ -104,6 +104,43 @@ const MyMatches = () => {
       }
       setUserId(session.session.user.id);
 
+      // Start every request now (then() sends it) instead of one after another
+      const organizersPromise = supabase
+          .from("organizers")
+          .select("id, name, phone, is_verified")
+          .order("name", { ascending: true })
+          .then((r) => r);
+      const orgPromise = supabase
+        .from("user_organized_matches")
+        .select(`
+          match_id,
+          matches(
+            id, title, slug, match_date, match_time, start_time, end_time, super_code, status, 
+            cancellation_status, is_paid, venue_id, total_slots, organizer_name, 
+            is_recurring, recurring_frequency, recurring_occurrences, venues(name)
+          )
+        `)
+        .eq("user_id", session.session.user.id)
+        .order("created_at", { ascending: false })
+        .limit(5)
+        .then((r) => r);
+      const joinPromise = supabase
+        .from("user_joined_matches")
+        .select(`
+          match_id,
+          player_id,
+          matches(
+            id, title, slug, match_date, match_time, start_time, end_time, status, 
+            cancellation_status, is_paid, venue_id, total_slots, organizer_name, 
+            is_recurring, recurring_frequency, recurring_occurrences, venues(name)
+          ),
+          players(confirmation_code, number_of_slots, status, cancellation_status)
+        `)
+        .eq("user_id", session.session.user.id)
+        .order("created_at", { ascending: false })
+        .limit(5)
+        .then((r) => r);
+
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
         .select("*")
@@ -120,10 +157,7 @@ const MyMatches = () => {
 
       // Fetch organizers
       try {
-        const { data, error } = await supabase
-          .from("organizers")
-          .select("id, name, phone, is_verified")
-          .order("name", { ascending: true });
+        const { data, error } = await organizersPromise;
 
         if (error) throw error;
         setOrganizers(data as Organizer[]);
@@ -137,19 +171,7 @@ const MyMatches = () => {
       }
 
       // Fetch organized matches with recurring details
-      const { data: orgData, error: orgError } = await supabase
-        .from("user_organized_matches")
-        .select(`
-          match_id,
-          matches(
-            id, title, slug, match_date, match_time, start_time, end_time, super_code, status, 
-            cancellation_status, is_paid, venue_id, total_slots, organizer_name, 
-            is_recurring, recurring_frequency, recurring_occurrences, venues(name)
-          )
-        `)
-        .eq("user_id", session.session.user.id)
-        .order("created_at", { ascending: false })
-        .limit(5);
+      const { data: orgData, error: orgError } = await orgPromise;
 
       if (orgError) {
         toast({ title: "Error", description: "Failed to load organized matches.", variant: "destructive" });
@@ -189,21 +211,7 @@ const MyMatches = () => {
       setOrganizedMatches(organizedMatchesWithSlots);
 
       // Fetch joined matches with recurring details
-      const { data: joinData, error: joinError } = await supabase
-        .from("user_joined_matches")
-        .select(`
-          match_id,
-          player_id,
-          matches(
-            id, title, slug, match_date, match_time, start_time, end_time, status, 
-            cancellation_status, is_paid, venue_id, total_slots, organizer_name, 
-            is_recurring, recurring_frequency, recurring_occurrences, venues(name)
-          ),
-          players(confirmation_code, number_of_slots, status, cancellation_status)
-        `)
-        .eq("user_id", session.session.user.id)
-        .order("created_at", { ascending: false })
-        .limit(5);
+      const { data: joinData, error: joinError } = await joinPromise;
 
       if (joinError) {
         toast({ title: "Error", description: "Failed to load joined matches.", variant: "destructive" });

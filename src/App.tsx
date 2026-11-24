@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MantineProvider } from '@mantine/core';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense, type ComponentType } from 'react';
 import SplashScreen from "@/components/SplashScreen";
 import ScrollToTop from "@/components/ScrollToTop";
 import InstallPrompt from "@/components/InstallPrompt";
@@ -14,61 +14,101 @@ import MobileOnlyGuard from "@/components/MobileOnlyGuard";
 
 // Import page components
 import Index from "@/pages/Index";
-import Search from "@/pages/Search";
-import Activities from "@/pages/gameManagement/Activities";
-import Matches from "@/pages/match/Matches";
-import Profile from "@/pages/profile/Profile";
-import Notifications from "@/pages/profile/Notifications";
-import ViewProfile from "@/pages/profile/ViewProfile";
 import NotFound from "@/pages/NotFound";
-import ResetPassword from "@/pages/ResetPassword";
 import AppErrorBoundary from "@/components/sc/AppErrorBoundary";
-import Organize from "@/pages/gameManagement/Organize";
-import MatchDetail from "@/pages/match/MatchDetail";
-import JoinMatch from "@/pages/match/JoinMatch";
-import VenueDetail from "@/pages/venueManagement/VenueDetail";
-import VenueCreate from "@/pages/venueManagement/VenueCreate";
-import MatchRedirect from "@/pages/match/MatchRedirect";
-import VenueRedirect from "@/pages/venueManagement/VenueRedirect";
-import VenueDirectory from "@/pages/venueManagement/VenueDirectory";
-import ConfirmCheckin from "@/pages/gameManagement/ConfirmCheckin";
-import Feedback from "@/pages/gameManagement/Feedback";
-import Guides from "@/pages/Guides";
-import Auth from "@/pages/Auth";
-import TeamManagement from "@/pages/matchManagement/TeamManagement";
-import MatchHighlights from "@/components/match/MatchHighlights";
-import Ticketing from "@/pages/gameManagement/Ticketing";
-import TermsAndPrivacy from "@/pages/TermsAndPrivacy";
-import Confirm from "@/pages/gameManagement/Confirm";
-import VenueManagerDashboard from "@/pages/venueManagement/VenueManagerDashboard";
-import VenueBookings from "@/pages/venueManagement/VenueBookings";
-import VenueBookingForm from "@/components/venueManagement/VenueBookingForm";
-import MyVenue from "@/pages/venueManagement/MyVenue";
-import MyBookings from "@/pages/profile/MyBookings";
-import BookingCode from "@/pages/venueManagement/BookingCode";
-import AccountDetails from "@/pages/profile/AccountDetails";
-import MyMatches from "@/pages/profile/MyMatches";
-import MyCycling from "@/pages/profile/MyCycling";
-import MatchPreferences from "@/pages/match/MatchPreferences";
-import Wallet from "@/pages/profile/Wallet";
-import CyclingActivity from "@/pages/cycling/CyclingActivity";
-import CyclingDetail from "@/pages/cycling/CyclingDetail";
-import JoinCycling from "@/pages/cycling/JoinCycling";
-import HostCycling from "@/pages/cycling/HostCycling";
-import LandmarkDirectory from "@/pages/cycling/LandmarkDirectory";
-import LandmarkDetail from "@/pages/cycling/LandmarkDetail";
-import AuthCallback from "@/pages/AuthCallback";
-import Settings from "@/pages/profile/Settings";
-import Badges from "@/pages/profile/Badges";
-import Onboarding from "@/components/sc/Onboarding";
+import SwipeBack from "@/components/sc/SwipeBack";
 
-const queryClient = new QueryClient();
+
+// Screens load on demand so the first open is quick. If a deploy replaced a file
+// while the app was open, reload once to pick up the new version.
+function load<T extends ComponentType<any>>(factory: () => Promise<{ default: T }>) {
+  const key = "sc_chunk_reload";
+  return lazy(() =>
+    factory().then((m) => { sessionStorage.removeItem(key); return m; }).catch((err) => {
+      if (!sessionStorage.getItem(key)) {
+        sessionStorage.setItem(key, "1");
+        window.location.reload();
+        return new Promise<{ default: T }>(() => {});
+      }
+      throw err;
+    }),
+  );
+}
+
+const Search = load(() => import("@/pages/Search"));
+const Activities = load(() => import("@/pages/gameManagement/Activities"));
+const Matches = load(() => import("@/pages/match/Matches"));
+const Profile = load(() => import("@/pages/profile/Profile"));
+const Notifications = load(() => import("@/pages/profile/Notifications"));
+const ViewProfile = load(() => import("@/pages/profile/ViewProfile"));
+const ResetPassword = load(() => import("@/pages/ResetPassword"));
+const Organize = load(() => import("@/pages/gameManagement/Organize"));
+const MatchDetail = load(() => import("@/pages/match/MatchDetail"));
+const JoinMatch = load(() => import("@/pages/match/JoinMatch"));
+const VenueDetail = load(() => import("@/pages/venueManagement/VenueDetail"));
+const VenueCreate = load(() => import("@/pages/venueManagement/VenueCreate"));
+const MatchRedirect = load(() => import("@/pages/match/MatchRedirect"));
+const VenueRedirect = load(() => import("@/pages/venueManagement/VenueRedirect"));
+const VenueDirectory = load(() => import("@/pages/venueManagement/VenueDirectory"));
+const ConfirmCheckin = load(() => import("@/pages/gameManagement/ConfirmCheckin"));
+const Feedback = load(() => import("@/pages/gameManagement/Feedback"));
+const Guides = load(() => import("@/pages/Guides"));
+const Auth = load(() => import("@/pages/Auth"));
+const TeamManagement = load(() => import("@/pages/matchManagement/TeamManagement"));
+const MatchHighlights = load(() => import("@/components/match/MatchHighlights"));
+const Ticketing = load(() => import("@/pages/gameManagement/Ticketing"));
+const TermsAndPrivacy = load(() => import("@/pages/TermsAndPrivacy"));
+const Confirm = load(() => import("@/pages/gameManagement/Confirm"));
+const VenueManagerDashboard = load(() => import("@/pages/venueManagement/VenueManagerDashboard"));
+const VenueBookings = load(() => import("@/pages/venueManagement/VenueBookings"));
+const VenueBookingForm = load(() => import("@/components/venueManagement/VenueBookingForm"));
+const MyVenue = load(() => import("@/pages/venueManagement/MyVenue"));
+const MyBookings = load(() => import("@/pages/profile/MyBookings"));
+const BookingCode = load(() => import("@/pages/venueManagement/BookingCode"));
+const AccountDetails = load(() => import("@/pages/profile/AccountDetails"));
+const MyMatches = load(() => import("@/pages/profile/MyMatches"));
+const MyCycling = load(() => import("@/pages/profile/MyCycling"));
+const MatchPreferences = load(() => import("@/pages/match/MatchPreferences"));
+const Wallet = load(() => import("@/pages/profile/Wallet"));
+const CyclingActivity = load(() => import("@/pages/cycling/CyclingActivity"));
+const CyclingDetail = load(() => import("@/pages/cycling/CyclingDetail"));
+const JoinCycling = load(() => import("@/pages/cycling/JoinCycling"));
+const HostCycling = load(() => import("@/pages/cycling/HostCycling"));
+const LandmarkDirectory = load(() => import("@/pages/cycling/LandmarkDirectory"));
+const LandmarkDetail = load(() => import("@/pages/cycling/LandmarkDetail"));
+const AuthCallback = load(() => import("@/pages/AuthCallback"));
+const Settings = load(() => import("@/pages/profile/Settings"));
+const Badges = load(() => import("@/pages/profile/Badges"));
+const Onboarding = load(() => import("@/components/sc/Onboarding"));
+
+// The main tabs are fetched in the background after the first screen shows,
+// so moving between them feels instant.
+const warmTabs = () => {
+  import("@/pages/profile/Profile");
+  import("@/pages/gameManagement/Activities");
+  import("@/pages/Search");
+  import("@/pages/match/Matches");
+  import("@/pages/cycling/CyclingActivity");
+  import("@/pages/match/MatchDetail");
+};
+
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { staleTime: 60_000, gcTime: 10 * 60_000, refetchOnWindowFocus: false, retry: 1 } },
+});
+
+const RouteFallback = () => (
+  <div className="min-h-screen bg-sc-bg font-sans px-4 pt-6 animate-pulse" aria-busy="true">
+    <div className="h-8 w-40 rounded-xl bg-black/[0.06]" />
+    <div className="mt-6 h-32 rounded-3xl bg-black/[0.05]" />
+    <div className="mt-3 h-20 rounded-3xl bg-black/[0.05]" />
+    <div className="mt-3 h-20 rounded-3xl bg-black/[0.05]" />
+  </div>
+);
 
 const AppRoutes = () => {
   const location = useLocation();
 
   useEffect(() => {
-    console.log("Current path:", location.pathname);
     pageview(location.pathname + location.search);
   }, [location]);
 
@@ -76,6 +116,7 @@ const AppRoutes = () => {
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => linkPushUser(data.session?.user?.id));
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_OUT") localStorage.removeItem("sc_profile_cache");
       if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") linkPushUser(session?.user?.id);
     });
     return () => authListener.subscription.unsubscribe();
@@ -83,6 +124,7 @@ const AppRoutes = () => {
 
   return (
     <AppErrorBoundary key={location.pathname}>
+    <Suspense fallback={<RouteFallback />}>
     <Routes>
       <Route path="/" element={<Index />} />
       <Route path="/search" element={<Search />} />
@@ -138,6 +180,7 @@ const AppRoutes = () => {
       <Route path="/not-found" element={<NotFound />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
+    </Suspense>
     </AppErrorBoundary>
   );
 };
@@ -148,28 +191,19 @@ function LegacyRideFeedback() {
 }
 
 const App = () => {
-  const [showSplash, setShowSplash] = useState(true);
+  // The splash shows once per session, briefly, while the app loads behind it.
+  const [showSplash, setShowSplash] = useState(() => !sessionStorage.getItem('seenSplash'));
 
   useEffect(() => {
-    const seen = sessionStorage.getItem('seenSplash');
-
-    if (seen) {
-      setShowSplash(false);
-      return;
-    }
-
+    const idle = (window as any).requestIdleCallback || ((fn: () => void) => setTimeout(fn, 1200));
+    idle(warmTabs);
+    if (!showSplash) return;
     const timer = setTimeout(() => {
       setShowSplash(false);
       sessionStorage.setItem('seenSplash', 'true');
-    }, 2500);
-
+    }, 1100);
     return () => clearTimeout(timer);
   }, []);
-
-
-  if (showSplash) {
-    return <SplashScreen />;
-  }
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -180,10 +214,12 @@ const App = () => {
             <ScrollToTop />
             <MobileOnlyGuard>
               <AppRoutes />
-              <Onboarding />
+              <SwipeBack />
+              <Suspense fallback={null}><Onboarding /></Suspense>
               <InstallPrompt />
             </MobileOnlyGuard>
           </Router>
+          {showSplash && <SplashScreen />}
         </TooltipProvider>
       </MantineProvider>
     </QueryClientProvider>

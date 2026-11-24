@@ -89,8 +89,23 @@ const Index = () => {
   const [popularVenues, setPopularVenues] = useState<Venue[]>([]);
   const [loading, setLoading] = useState(true);
   const [recentRides, setRecentRides] = useState<CyclingEvent[]>([]);
-  const [nickname, setNickname] = useState<string | null>(null);
+  const [nickname, setNickname] = useState<string | null>(() => {
+    try { return JSON.parse(localStorage.getItem("sc_profile_cache") || "null")?.profile?.nickname || null; } catch { return null; }
+  });
   const [isOrganizeDialogOpen, setIsOrganizeDialogOpen] = useState(false);
+
+  // Show what we loaded last time straight away, then refresh it
+  useEffect(() => {
+    try {
+      const c = JSON.parse(localStorage.getItem("sc_home_cache") || "null");
+      if (c) {
+        setUpcomingMatches(c.upcoming || []);
+        setPopularVenues(c.venues || []);
+        setRecentRides(c.rides || []);
+        setLoading(false);
+      }
+    } catch { /* ignore a bad cache */ }
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -99,157 +114,63 @@ const Index = () => {
         const currentDateTime = new Date(now);
         const currentDate = currentDateTime.toISOString().split("T")[0];
         const currentTime = currentDateTime.toTimeString().slice(0, 5);
+        const matchCols = `id, slug, title, match_date, match_time, is_paid, price, venue:venues(slug, name, city, state, image_urls)`;
+        const rideCols = `id, slug, title, event_date, start_time, is_free, start_landmark:landmarks!start_landmark_id(name, state)`;
 
-        // Fetch football matches
-        const { data: upcomingMatchesData, error: matchesError } = await supabase
-          .from("matches")
-          .select(`
-            id,
-            slug,
-            title,
-            match_date,
-            match_time,
-            is_paid,
-            price,
-            venue:venues(slug, name, city, state, image_urls)
-          `)
-          .gte("match_date", currentDate)
-          .order("match_date", { ascending: true })
-          .order("match_time", { ascending: true })
-          .limit(5);
+        // Everything the home screen needs, asked for at the same time
+        const [upRes, upRideRes, recentRes, recentRideRes, venueRes, pastRes] = await Promise.all([
+          supabase.from("matches").select(matchCols).gte("match_date", currentDate)
+            .order("match_date", { ascending: true }).order("match_time", { ascending: true }).limit(5),
+          supabase.from("cycling_events").select(rideCols).gte("event_date", currentDate)
+            .order("event_date", { ascending: true }).order("start_time", { ascending: true }).limit(5),
+          supabase.from("matches").select(matchCols)
+            .order("match_date", { ascending: false }).order("match_time", { ascending: false }).limit(5),
+          supabase.from("cycling_events").select(rideCols)
+            .order("event_date", { ascending: false }).order("start_time", { ascending: false }).limit(5),
+          supabase.from("venues").select(`id, slug, name, city, state, image_urls, is_verified, booking_fee, matches:matches!venue_id(count)`)
+            .order("created_at", { ascending: false }).limit(5),
+          supabase.from("cycling_events").select(rideCols).lt("event_date", currentDate)
+            .order("event_date", { ascending: false }).limit(6),
+        ]);
+        for (const r of [upRes, upRideRes, recentRes, recentRideRes, venueRes]) if (r.error) throw r.error;
 
-        if (matchesError) throw matchesError;
-
-        let filteredMatches: Match[] = upcomingMatchesData
-          .filter((match: Match) => {
-            const matchDateTime = new Date(`${match.match_date}T${match.match_time}:00`);
-            const isToday = match.match_date === currentDate;
-            const isTimePassed = isToday && match.match_time < currentTime;
-            return !isTimePassed || match.match_date > currentDate;
-          })
+        const filteredMatches: Match[] = ((upRes.data as any[]) || [])
+          .filter((match: Match) => !(match.match_date === currentDate && match.match_time < currentTime))
           .map((match) => ({ ...match, type: "football" as const }));
-
-        // Fetch cycling events
-        const { data: cyclingEventsData, error: cyclingError } = await supabase
-          .from("cycling_events")
-          .select(`
-            id,
-            slug,
-            title,
-            event_date,
-            start_time,
-            is_free,
-            start_landmark:landmarks!start_landmark_id(name, state)
-          `)
-          .gte("event_date", currentDate)
-          .order("event_date", { ascending: true })
-          .order("start_time", { ascending: true })
-          .limit(5);
-
-        if (cyclingError) throw cyclingError;
-
-        let filteredCyclingEvents: CyclingEvent[] = cyclingEventsData
-          .filter((event: CyclingEvent) => {
-            const eventDateTime = new Date(`${event.event_date}T${event.start_time}:00`);
-            const isToday = event.event_date === currentDate;
-            const isTimePassed = isToday && event.start_time < currentTime;
-            return !isTimePassed || event.event_date > currentDate;
-          })
+        const filteredCyclingEvents: CyclingEvent[] = ((upRideRes.data as any[]) || [])
+          .filter((event: CyclingEvent) => !(event.event_date === currentDate && event.start_time < currentTime))
           .map((event) => ({ ...event, type: "cycling" as const }));
 
-        // Combine and sort matches and cycling events, limit to 5
-        const combinedEvents = [...filteredMatches, ...filteredCyclingEvents]
-          .sort((a, b) => {
-            const dateA = new Date(`${a.match_date || a.event_date}T${a.match_time || a.start_time}:00`);
-            const dateB = new Date(`${b.match_date || b.event_date}T${b.match_time || b.start_time}:00`);
-            return dateA.getTime() - dateB.getTime();
-          })
+        const when = (x: any) => new Date(`${x.match_date || x.event_date}T${x.match_time || x.start_time}:00`).getTime();
+        const combinedEvents: (Match | CyclingEvent)[] = [...filteredMatches, ...filteredCyclingEvents]
+          .sort((a, b) => when(a) - when(b))
           .slice(0, 5);
 
-        // If fewer than 5 events, fetch recent matches/events
+        // Fewer than 5 coming up, so fill with the most recent ones
         if (combinedEvents.length < 5) {
-          const { data: recentMatchesData, error: recentMatchesError } = await supabase
-            .from("matches")
-            .select(`
-              id,
-              slug,
-              title,
-              match_date,
-              match_time,
-              is_paid,
-              price,
-              venue:venues(slug, name, city, state, image_urls)
-            `)
-            .order("match_date", { ascending: false })
-            .order("match_time", { ascending: false })
-            .limit(5 - combinedEvents.length);
-
-          if (recentMatchesError) throw recentMatchesError;
-
-          const { data: recentCyclingData, error: recentCyclingError } = await supabase
-            .from("cycling_events")
-            .select(`
-              id,
-              slug,
-              title,
-              event_date,
-              start_time,
-              is_free,
-              start_landmark:landmarks!start_landmark_id(name, state)
-            `)
-            .order("event_date", { ascending: false })
-            .order("start_time", { ascending: false })
-            .limit(5 - combinedEvents.length);
-
-          if (recentCyclingError) throw recentCyclingError;
-
-          const recentMatches = recentMatchesData.map((match) => ({ ...match, type: "football" as const }));
-          const recentCyclingEvents = recentCyclingData.map((event) => ({ ...event, type: "cycling" as const }));
-
-          combinedEvents.push(
-            ...[...recentMatches, ...recentCyclingEvents]
-              .sort((a, b) => {
-                const dateA = new Date(`${a.match_date || a.event_date}T${a.match_time || a.start_time}:00`);
-                const dateB = new Date(`${b.match_date || b.event_date}T${b.match_time || b.start_time}:00`);
-                return dateB.getTime() - dateA.getTime();
-              })
-              .slice(0, 5 - combinedEvents.length)
-          );
+          const have = new Set(combinedEvents.map((e: any) => `${e.type}:${e.id}`));
+          const recent = [
+            ...((recentRes.data as any[]) || []).map((m) => ({ ...m, type: "football" as const })),
+            ...((recentRideRes.data as any[]) || []).map((e) => ({ ...e, type: "cycling" as const })),
+          ]
+            .filter((e) => !have.has(`${e.type}:${e.id}`))
+            .sort((a, b) => when(b) - when(a))
+            .slice(0, 5 - combinedEvents.length);
+          combinedEvents.push(...recent);
         }
 
-        const { data: venuesData, error: venuesError } = await supabase
-          .from("venues")
-          .select(`
-            id,
-            slug,
-            name,
-            city,
-            state,
-            image_urls,
-            is_verified,
-            booking_fee,
-            matches:matches!venue_id(count)
-          `)
-          .order("created_at", { ascending: false })
-          .limit(5);
-
-        if (venuesError) throw venuesError;
-
-        const venuesWithMatchCount = venuesData.map((venue: any) => ({
+        const venuesWithMatchCount = ((venueRes.data as any[]) || []).map((venue: any) => ({
           ...venue,
-          match_count: venue.matches[0]?.count || 0,
+          match_count: venue.matches?.[0]?.count || 0,
         }));
+        const rides = ((pastRes.data as any[]) || []).map((e) => ({ ...e, type: "cycling" as const }));
 
         setUpcomingMatches(combinedEvents);
-
-        const { data: pastRides } = await supabase
-          .from("cycling_events")
-          .select(`id, slug, title, event_date, start_time, is_free, start_landmark:landmarks!start_landmark_id(name, state)`)
-          .lt("event_date", currentDate)
-          .order("event_date", { ascending: false })
-          .limit(6);
-        setRecentRides(((pastRides as any[]) || []).map((e) => ({ ...e, type: "cycling" as const })));
+        setRecentRides(rides);
         setPopularVenues(venuesWithMatchCount as Venue[]);
+        try {
+          localStorage.setItem("sc_home_cache", JSON.stringify({ upcoming: combinedEvents, venues: venuesWithMatchCount, rides }));
+        } catch { /* storage full or blocked */ }
       } catch (error) {
         console.error("Error fetching data:", error);
         toast({
@@ -269,7 +190,7 @@ const Index = () => {
     const loadProfile = async () => {
       const { data: sessionData } = await supabase.auth.getSession();
       const userId = sessionData.session?.user?.id;
-      if (!userId) return;
+      if (!userId) { setNickname(null); return; }
       const { data } = await supabase.from("profiles").select("nickname, first_name").eq("id", userId).maybeSingle();
       setNickname(data?.nickname || data?.first_name || null);
     };

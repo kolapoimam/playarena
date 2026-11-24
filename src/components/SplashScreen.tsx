@@ -3,7 +3,7 @@ import { BrandMark } from "@/components/sc/ui";
 
 const SplashScreen: React.FC = () => {
   return (
-    <div className="fixed inset-0 z-50 bg-sc-green overflow-hidden font-sans">
+    <div className="fixed inset-0 z-[300] bg-sc-green overflow-hidden font-sans">
       {[260, 420, 600].map((d, i) => (
         <span
           key={d}

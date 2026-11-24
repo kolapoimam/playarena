@@ -1,4 +1,4 @@
-import { BalanceHero, CashoutList } from "@/components/sc/CashoutUI";
+import { BalanceHero, CashoutDialog, CashoutList } from "@/components/sc/CashoutUI";
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -420,95 +420,30 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
     <div className="flex flex-col gap-3.5">
       <BalanceHero accent="#F97316" balance={walletBalance} onRefresh={() => { fetchWalletBalance(); fetchCashoutRequests(); }} onRequest={() => setCashoutDialogOpen(true)} disabled={event.cancellation_status || loading || walletBalance <= 0} note="From paid spots on this ride" />
       <CashoutList rows={cashoutRequests.map((r: any) => ({ id: r.id, amount: r.total_amount_paid, created_at: r.created_at, status: r.status, name: r.account_name, bank: r.bank_name, account: r.bank_account_number }))} />
-      <Dialog open={cashoutDialogOpen} onOpenChange={setCashoutDialogOpen}>
-        <DialogContent className="w-full max-w-[calc(100%-1.5rem)] sm:max-w-[420px] rounded-[28px] bg-sc-bg p-5 max-h-[92vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Request Cashout</DialogTitle>
-            <DialogDescription>Enter your bank details to request a cashout.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium text-sc-ink2 optimally-visible:text-gray-300">Amount (₦)</label>
-              <Input
-                type="number"
-                value={cashoutAmount}
-                onChange={(e) => handleInputChange('cashoutAmount', e.target.value)}
-                placeholder="Enter amount"
-                className="mt-1"
-              />
-              {errors.cashoutAmount && typeof errors.cashoutAmount === "string" && (
-                <p className="text-sm text-red-600 mt-1">{errors.cashoutAmount}</p>
-              )}
-            </div>
-            <div>
-              <label className="text-sm font-medium text-sc-ink2 optimally-visible:text-gray-300">Bank</label>
-              <Select onValueChange={value => handleInputChange('bankName', value)} value={bankName}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Select bank" />
-                </SelectTrigger>
-                <SelectContent>
-                  {nigerianBanks.map(bank => (
-                    <SelectItem key={bank} value={bank}>{bank}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.bankName && typeof errors.bankName === "string" && (
-                <p className="text-sm text-red-600 mt-1">{errors.bankName}</p>
-              )}
-            </div>
-            <div>
-              <label className="text-sm font-medium text-sc-ink2 optimally-visible:text-gray-300">Account Number</label>
-              <Input
-                type="number"
-                value={bankAccountNumber}
-                onChange={(e) => handleInputChange('bankAccountNumber', e.target.value)}
-                placeholder="Enter 10-digit account number"
-                inputMode="numeric"
-                maxLength={10}
-                className="mt-1"
-              />
-              {errors.bankAccountNumber && typeof errors.bankAccountNumber === "string" && (
-                <p className="text-sm text-red-600 mt-1">{errors.bankAccountNumber}</p>
-              )}
-            </div>
-            <div>
-              <label className="text-sm font-medium text-sc-ink2 optimally-visible:text-gray-300">Account Name</label>
-              <Input
-                value={accountName}
-                onChange={(e) => handleInputChange('accountName', e.target.value)}
-                placeholder="Enter account name"
-                className="mt-1"
-              />
-              {errors.accountName && typeof errors.accountName === "string" && (
-                <p className="text-sm text-red-600 mt-1">{errors.accountName}</p>
-              )}
-            </div>
-          </div>
-          <DialogFooter className="mt-6">
-            <Button
-              variant="outline"
-              onClick={() => setCashoutDialogOpen(false)}
-              className="rounded-md"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleCashoutSubmit}
-              className="bg-sc-green hover:brightness-95 text-sc-green-ink rounded-full font-bold"
-              disabled={loading}
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Processing
-                </>
-              ) : (
-                "Submit"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <CashoutDialog
+        open={cashoutDialogOpen}
+        onOpenChange={setCashoutDialogOpen}
+        balance={walletBalance}
+        accent="#F97316"
+        banks={nigerianBanks}
+        note="Send what you earned from paid spots on this ride to your bank."
+        amount={String(cashoutAmount ?? "")}
+        onAmount={(v) => handleInputChange('cashoutAmount', v)}
+        bank={bankName}
+        onBank={(v) => handleInputChange('bankName', v)}
+        account={String(bankAccountNumber ?? "")}
+        onAccount={(v) => handleInputChange('bankAccountNumber', v.replace(/[^0-9]/g, "").slice(0, 10))}
+        name={accountName}
+        onName={(v) => handleInputChange('accountName', v)}
+        errors={{
+          amount: typeof errors.cashoutAmount === "string" ? errors.cashoutAmount : null,
+          bank: typeof errors.bankName === "string" ? errors.bankName : null,
+          account: typeof errors.bankAccountNumber === "string" ? errors.bankAccountNumber : null,
+          name: typeof errors.accountName === "string" ? errors.accountName : null,
+        }}
+        loading={loading}
+        onSubmit={handleCashoutSubmit}
+      />
     </div>
   );
 };
