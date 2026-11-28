@@ -123,6 +123,7 @@ serve(async (req: Request) => {
         resource_id: pendingTransaction.resource_id,
         resource_type: pendingTransaction.resource_type,
         slug: pendingTransaction.slug,
+        amount: pendingTransaction.amount,
         venue_id: paystackData.data.metadata.venue_id,
         match_id: paystackData.data.metadata.match_id,
         event_id: paystackData.data.metadata.event_id,

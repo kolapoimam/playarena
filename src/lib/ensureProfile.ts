@@ -24,6 +24,7 @@ const checked = new Set<string>();
 export async function ensureProfile(user?: User | null) {
   if (!user || checked.has(user.id)) return;
   checked.add(user.id);
+  requestWelcome(user);
   try {
     const { data, error } = await supabase.from("profiles").select("id").eq("id", user.id).maybeSingle();
     if (error || data) return;
@@ -57,4 +58,23 @@ export function takeAuthError(): string | null {
   if (/database error/i.test(msg)) return "We could not create your account just now. Please try again in a moment.";
   if (/access_denied|cancel/i.test(msg)) return "Google sign in was cancelled.";
   return msg;
+}
+
+/**
+ * Asks the server for the welcome email once, right after sign up. The server checks
+ * the account is new and never sends it twice, so repeats here are harmless.
+ */
+function requestWelcome(user: User) {
+  try {
+    const age = Date.now() - new Date(user.created_at).getTime();
+    if (!(age >= 0 && age < 3 * 86_400_000)) return;
+    const key = `sc_welcome_${user.id}`;
+    if (localStorage.getItem(key)) return;
+    supabase.functions
+      .invoke("send-lifecycle-emails", { body: { welcome: true } })
+      .then(({ error }) => { if (!error) localStorage.setItem(key, "1"); })
+      .catch(() => undefined);
+  } catch {
+    /* never block sign in */
+  }
 }

@@ -1,0 +1,32 @@
+name: Welcome, engagement and feedback emails
+
+# Every hour, asks Supabase to send welcome, engagement and post activity
+# feedback emails. Needs the repo secret CRON_SECRET, with the
+# same value as the CRON_SECRET secret in Supabase Edge Functions.
+on:
+  schedule:
+    - cron: "7 * * * *"
+  workflow_dispatch:
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Send emails
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          # Public anon key, safe to share. It only lets the call reach the function.
+          ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF4YWZpZ2JyZnB4ZGtsd29xa3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY4NTkwOTIsImV4cCI6MjA2MjQzNTA5Mn0.UZ6Kq-8SgYAQcXL2nRwz14sl3ly7YEO71PN8bwn948c
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::notice::CRON_SECRET is not set in GitHub secrets yet, so no emails were sent."
+            exit 0
+          fi
+          code=$(curl -sS -o out.json -w "%{http_code}" -X POST \
+            "https://qxafigbrfpxdklwoqkxj.supabase.co/functions/v1/send-lifecycle-emails" \
+            -H "Authorization: Bearer $ANON_KEY" -H "apikey: $ANON_KEY" \
+            -H "x-cron-secret: $CRON_SECRET" -H "Content-Type: application/json" -d '{}')
+          cat out.json; echo
+          echo "HTTP $code"
+          [ "$code" = "200" ]

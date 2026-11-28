@@ -20,3 +20,11 @@ export function notifyBooking(bookingId: string | number) {
     .then(({ error }) => { if (error) console.warn("Booking notification not sent", error.message); })
     .catch((e) => console.warn("Booking notification not sent", e));
 }
+
+/** Tells the SportCliq admin team about a new cashout request. Nobody else gets it. */
+export function notifyCashout(source: "cashout_requests" | "cycling_cashouts" | "venue_booking_cashout", ids: { match_id?: string; event_id?: string; venue_id?: string }) {
+  supabase.functions
+    .invoke("send-notification", { body: { event: "cashout_requested", source, ...ids } })
+    .then(({ error }) => { if (error) console.warn("Cashout alert not sent", error.message); })
+    .catch((e) => console.warn("Cashout alert not sent", e));
+}

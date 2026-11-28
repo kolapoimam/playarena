@@ -3,7 +3,7 @@
 // The function looks everything else up itself, so callers cannot choose
 // who gets notified or what the message says.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { admin, cors, json, notifyUsers, recent } from "../_shared/notify.ts";
+import { admin, cors, emailShell, esc, json, notifyUsers, recent, sendEmail, sendPush, stableUuid } from "../_shared/notify.ts";
 
 const fmtDate = (d?: string | null) => {
   if (!d) return "";
@@ -123,6 +123,56 @@ serve(async (req) => {
           `${b.title || "A match"} on ${fmtDate(b.match_date)}, ${String(b.start_time || "").slice(0, 5)} to ${String(b.end_time || "").slice(0, 5)}.`,
           `/profile/my-bookings`);
         return json(req, r);
+      }
+
+      // A cashout was requested. Tell the admin team only, never other users.
+      case "cashout_requested": {
+        const source = String(body.source || "");
+        const tables: Record<string, { col: string; amount: string; label: string }> = {
+          cashout_requests: { col: "match_id", amount: "amount", label: "match" },
+          cycling_cashouts: { col: "cycling_event_id_uuid", amount: "total_amount_paid", label: "ride" },
+          venue_booking_cashout: { col: "venue_id", amount: "amount", label: "venue" },
+        };
+        const t = tables[source];
+        const key = body.match_id || body.event_id || body.venue_id;
+        if (!t || !key) return json(req, { error: "Unknown cashout" }, 400);
+        const { data: rows } = await db.from(source).select(`id, ${t.amount}, status, created_at`).eq(t.col, key).order("created_at", { ascending: false }).limit(1);
+        const row: any = rows?.[0];
+        if (!row) return json(req, { error: "Cashout not found" }, 404);
+        if (!recent(row.created_at, 10)) return json(req, { skipped: "not a new cashout" });
+
+        const name = source === "venue_booking_cashout"
+          ? (await db.from("venues").select("name").eq("id", key).maybeSingle()).data?.name
+          : source === "cycling_cashouts"
+            ? (await db.from("cycling_events").select("title").eq("id_uuid", key).maybeSingle()).data?.title
+            : (await db.from("matches").select("title").eq("id", key).maybeSingle()).data?.title;
+        const amount = Number(row[t.amount]) || 0;
+        const naira = `₦${amount.toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        const title = "New cashout request";
+        const message = `${naira} requested for the ${t.label}${name ? ` ${name}` : ""}. Review it in the admin portal.`;
+
+        const { data: admins } = await db.from("admins").select("user_id, email, status");
+        const team = (admins || []).filter((a: any) => a.user_id && String(a.status || "").toLowerCase() === "active");
+        if (!team.length) return json(req, { skipped: "no active admins" });
+
+        const once = `cashout:${source}:${row.id}`;
+        const push = await sendPush(team.map((a: any) => a.user_id), title, message, "/", await stableUuid(once));
+        let emails = 0;
+        for (const a of team) {
+          if (!a.email) continue;
+          const html = emailShell(title, `<p style="margin:0 0 14px">${esc(message)}</p><p style="margin:0"><a class="link" href="https://admin.sportcliq.com/cashouts" style="color:#15803D;font-weight:700">Open cashouts in the admin portal</a></p>`, undefined, { preheader: message, details: [["Amount", naira], ["For", name || t.label], ["Status", String(row.status || "Review")]] });
+          const r = await sendEmail(a.email, `${title}: ${naira}`, html, `${once}:email:${a.user_id}`);
+          if (r.ok) emails++;
+          await new Promise((res) => setTimeout(res, 600));
+        }
+
+        // The database saves its own admin alert for the request. Record that it was delivered.
+        const since = new Date(Date.now() - 10 * 60_000).toISOString();
+        const { data: alerts } = await db.from("notifications").select("id").eq("audience", "admin").is("delivered_at", null).gte("sent_at", since).limit(5);
+        for (const n of alerts || []) {
+          await db.rpc("admin_record_alert_delivery", { p_id: (n as any).id, p_push: push.ok ? team.length : 0, p_email: emails, p_error: push.ok ? "" : String((push as any).body || (push as any).error || "") });
+        }
+        return json(req, { push: push.ok, emails, admins: team.length });
       }
 
       default:

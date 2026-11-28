@@ -1,4 +1,5 @@
 import { BalanceHero, CashoutDialog, CashoutList } from "@/components/sc/CashoutUI";
+import { notifyCashout } from "@/lib/notify";
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -174,6 +175,7 @@ const VenueWallet = ({ venueId, availableFunds, setAvailableFunds }: VenueWallet
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         });
+      if (!error) notifyCashout("venue_booking_cashout", { venue_id: venueId });
 
       if (error) {
         console.error("Cashout error:", error);

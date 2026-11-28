@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Markdown } from "@/lib/markdown";
 import { NotFoundState } from "@/components/sc/FunState";
 import { venueIsActive } from "@/lib/myVenues";
 import { useParams, useNavigate } from "react-router-dom";
@@ -254,7 +255,12 @@ const VenueDetail = () => {
           {venue.description && (
             <div className="bg-white rounded-3xl p-[18px] flex flex-col gap-1">
               <span className="text-base font-extrabold">About</span>
-              <ReactQuill value={venue.description} readOnly={true} modules={quillModules} className="w-full border-none bg-transparent p-0 text-sc-ink2" />
+              {/<[a-z][\s\S]*>/i.test(venue.description) ? (
+                <ReactQuill value={venue.description} readOnly={true} modules={quillModules} className="w-full border-none bg-transparent p-0 text-sc-ink2" />
+              ) : (
+                // Descriptions written in the admin portal use simple formatting marks
+                <Markdown text={venue.description} className="text-sm leading-[22px] text-sc-ink2" />
+              )}
             </div>
           )}
 

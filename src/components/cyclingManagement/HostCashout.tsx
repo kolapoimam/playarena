@@ -1,4 +1,5 @@
 import { BalanceHero, CashoutDialog, CashoutList } from "@/components/sc/CashoutUI";
+import { notifyCashout } from "@/lib/notify";
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -334,6 +335,7 @@ const HostCashout = ({ event, tempIdentifier }: HostCashoutProps) => {
           host_id: event.host_id,
           created_at: new Date().toISOString(),
         });
+      if (!cashoutError) notifyCashout("cycling_cashouts", { event_id: event.id_uuid });
 
       if (cashoutError) {
         console.error("Cashout insert error:", cashoutError);

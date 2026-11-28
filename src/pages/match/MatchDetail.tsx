@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Markdown } from "@/lib/markdown";
 import { matchWindow, phase } from "@/lib/activityTime";
 import AccessGate from "@/components/sc/AccessGate";
 import { LoadFailedState, NotFoundState } from "@/components/sc/FunState";
@@ -333,7 +334,7 @@ const MatchDetail = () => {
           {(match.notes || (userId && match.is_recurring) || match.player_number_required) && (
             <div className="bg-white rounded-3xl p-[18px] flex flex-col gap-3">
               <span className="text-base font-extrabold">Match notes</span>
-              {match.notes && <p className="m-0 text-sm leading-[22px] text-sc-ink2 whitespace-pre-line">{match.notes}</p>}
+              {match.notes && <Markdown text={match.notes} className="text-sm leading-[22px] text-sc-ink2" />}
               <div className="flex gap-1.5 flex-wrap">
                 {match.player_number_required && <Pill sport="guide">Jersey number required</Pill>}
                 {userId && match.is_recurring && (

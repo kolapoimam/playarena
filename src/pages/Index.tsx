@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { Fragment, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useInboxUnread } from "@/lib/inbox";
 import NotificationPanel from "@/components/NotificationPanel";
@@ -15,11 +15,14 @@ import {
   Store,
   Trophy,
   Users,
+  Target,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Seo } from "@/components/Seo";
+import { APP_MODES, useAppMode, type AppMode } from "@/lib/appMode";
+import { HorseIcon } from "@/components/sc/sportIcons";
 import { Avatar, Bubble, FunEmpty, IconButton, Meta, Pill, Screen, Section, SPORT, formatNaira, initialsOf, Cover, myGender } from "@/components/sc/ui";
 import { LocationChip, useUserState } from "@/components/sc/location";
 import { sameState } from "@/lib/location";
@@ -216,6 +219,20 @@ const Index = () => {
   const userState = useUserState();
   const [showAll, setShowAll] = useState(false);
   const scoped = userState && !showAll;
+  const appMode = useAppMode();
+  // The preferred sport goes first. Everything else stays on the page.
+  const orderFor = (m: AppMode): ("soon" | "matches" | "venues" | "rides")[] =>
+    m === "cycling" ? ["rides", "matches", "venues"] : m === "horse_riding" || m === "paintball" ? ["soon", "matches", "rides", "venues"] : ["matches", "venues", "rides"];
+  const soonMode = APP_MODES.find((x) => x.id === appMode);
+  const soonCard = (
+    <div className="mx-5 rounded-3xl bg-white p-5 flex items-center gap-3.5">
+      <Bubble icon={appMode === "horse_riding" ? HorseIcon : Target} sport="pink" />
+      <span className="flex-1 flex flex-col">
+        <span className="text-base font-extrabold">{soonMode?.label} is coming to SportCliq</span>
+        <span className="text-[13px] text-sc-ink3">We are bringing {appMode === "horse_riding" ? "stables and riding sessions" : "paintball arenas and sessions"} onto the app. Until then, here is what is on near you.</span>
+      </span>
+    </div>
+  );
   const footballAll = upcomingMatches.filter((e): e is Match => e.type === "football");
   const cyclingAll = upcomingMatches.filter((e): e is CyclingEvent => e.type === "cycling");
   const footballEvents = scoped ? footballAll.filter((m) => sameState(m.venue?.state, userState)) : footballAll;
@@ -308,11 +325,23 @@ const Index = () => {
           </div>
 
           <div className="grid grid-cols-2 gap-3 px-5">
-            <SportTile label="Play" sub="Football matches" icon={Trophy} sport="football" to="/matches" big />
-            <div className="flex flex-col gap-3">
-              <SportTile label="Cycle" sub="Group rides" icon={Bike} sport="cycling" to="/cycling-activities" />
-              <SportTile label="Book" sub="Venues" icon={Store} sport="venue" to="/venues" />
-            </div>
+            {appMode === "cycling" ? (
+              <>
+                <SportTile label="Cycle" sub="Group rides" icon={Bike} sport="cycling" to="/cycling-activities" big />
+                <div className="flex flex-col gap-3">
+                  <SportTile label="Play" sub="Football matches" icon={Trophy} sport="football" to="/matches" />
+                  <SportTile label="Book" sub="Venues" icon={Store} sport="venue" to="/venues" />
+                </div>
+              </>
+            ) : (
+              <>
+                <SportTile label="Play" sub="Football matches" icon={Trophy} sport="football" to="/matches" big />
+                <div className="flex flex-col gap-3">
+                  <SportTile label="Cycle" sub="Group rides" icon={Bike} sport="cycling" to="/cycling-activities" />
+                  <SportTile label="Book" sub="Venues" icon={Store} sport="venue" to="/venues" />
+                </div>
+              </>
+            )}
           </div>
 
           {loading ? (
@@ -324,6 +353,11 @@ const Index = () => {
             </>
           ) : (
             <>
+              {orderFor(appMode).map((k) => (
+                <Fragment key={k}>
+                  {k === "soon" && soonCard}
+                  {k === "matches" && (
+                    <>
               <Section title="Upcoming matches" action="See all" onAction={() => navigate("/matches")} />
               {footballEvents.length > 0 ? (
                 <div className="flex gap-3 overflow-x-auto px-5 pb-1 snap-x scroll-px-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -364,6 +398,10 @@ const Index = () => {
                 </div>
               )}
 
+                    </>
+                  )}
+                  {k === "venues" && (
+                    <>
               <Section title="Featured venues" action="See all" onAction={() => navigate("/venues")} />
               {venuesShown.length > 0 ? (
                 <div className="flex gap-3 overflow-x-auto px-5 pb-1 snap-x scroll-px-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -406,6 +444,10 @@ const Index = () => {
                 </div>
               )}
 
+                    </>
+                  )}
+                  {k === "rides" && (
+                    <>
               <Section title={cyclingEvents.length > 0 ? "Rides this week" : "Recent rides"} action="See all" onAction={() => navigate("/cycling-activities")} />
               <div className="px-5 flex flex-col gap-3">
                 {ridesToShow.length > 0 ? (
@@ -445,6 +487,10 @@ const Index = () => {
                   </div>
                 )}
               </div>
+                    </>
+                  )}
+                </Fragment>
+              ))}
             </>
           )}
         </div>

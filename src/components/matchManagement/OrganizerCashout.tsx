@@ -1,4 +1,5 @@
 
+import { notifyCashout } from "@/lib/notify";
 import { BalanceHero, CashoutDialog, CashoutList } from "@/components/sc/CashoutUI";
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -321,6 +322,7 @@ const OrganizerCashout = ({ match, tempIdentifier }: OrganizerCashoutProps) => {
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         });
+      if (!cashoutError) notifyCashout("cashout_requests", { match_id: match.id });
 
       if (cashoutError) {
         if (cashoutError.code === '23503') {

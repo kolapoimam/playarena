@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import QRCode from "qrcode";
 import { Smartphone } from "lucide-react";
 import { BrandMark, Pill } from "@/components/sc/ui";
@@ -10,6 +11,9 @@ interface MobileOnlyGuardProps {
 const MobileOnlyGuard: React.FC<MobileOnlyGuardProps> = ({ children }) => {
   const [isMobile, setIsMobile] = useState(true);
   const [qr, setQr] = useState<string | null>(null);
+  // Shared highlights links are public pages, so they open on any screen
+  const { pathname } = useLocation();
+  const publicPage = pathname.startsWith("/highlights/");
 
   useEffect(() => {
     const checkDevice = () => {
@@ -33,7 +37,7 @@ const MobileOnlyGuard: React.FC<MobileOnlyGuardProps> = ({ children }) => {
       .catch(() => setQr(null));
   }, [isMobile]);
 
-  if (!isMobile) {
+  if (!isMobile && !publicPage) {
     return (
       <div className="fixed inset-0 z-50 bg-sc-bg text-sc-ink font-sans flex items-center justify-center p-12 overflow-auto">
         <div className="flex items-center gap-14 max-w-4xl flex-wrap justify-center">

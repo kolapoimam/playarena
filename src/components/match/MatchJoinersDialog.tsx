@@ -99,7 +99,7 @@ const MatchJoinersDialog = ({
     { label: "Date", value: formatDate(match?.match_date) },
     { label: "Time", value: formatTime(match?.match_time) },
     { label: "Venue", value: match?.venue ? `${match.venue.name}, ${match.venue.city}` : "To be confirmed" },
-    { label: "Slots", value: `${selectedSlots} of ${match?.total_slots || 0}` },
+    { label: "Slots", value: `${selectedSlots} slot${selectedSlots === 1 ? "" : "s"} booked` },
     { label: "Entry", value: match?.is_paid && match?.price ? `₦${(match.price * selectedSlots).toLocaleString("en-NG")}` : "Free" },
     ...(userId && match?.is_recurring ? [{ label: "Repeats", value: `${match.recurring_frequency} · ${match.recurring_occurrences}x` }] : []),
   ];

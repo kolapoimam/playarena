@@ -416,7 +416,7 @@ const AttendeesManagement = ({
         <div className="bg-sc-ink text-white rounded-3xl p-4 flex flex-col gap-3">
           <span className="flex flex-col">
             <span className="text-[11px] font-bold tracking-[0.12em] text-[#FED7AA]">CHECK IN IS ON</span>
-            <span className="text-sm text-white/80">Scan a rider's QR ticket, or type their 6 digit code below.</span>
+            <span className="text-sm text-white/80">Scan a rider's QR ticket. The scanner also lets you type a code.</span>
           </span>
           <div className="flex gap-2">
             <ScButton kind="cycling" size="md" icon={ScanLine} onClick={() => setScanOpen(true)}>Scan QR</ScButton>
@@ -468,18 +468,8 @@ const AttendeesManagement = ({
                   </div>
                   {mode === "checkin" && st === "registered" && canConfirmAttendees && (
                     <div className="flex gap-2 pl-[54px]">
-                      <Input
-                        placeholder="6 digit code"
-                        value={checkinCodes[r.id_uuid] || ""}
-                        onChange={(e) => handleCheckinCodeChange(r.id_uuid, e.target.value)}
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        maxLength={6}
-                        className="h-11 flex-1 tracking-[0.3em] font-bold placeholder:tracking-normal placeholder:font-semibold"
-                        disabled={busy}
-                      />
-                      <ScButton size="sm" full={false} kind="cycling" className="h-11 px-5" onClick={() => handleCheckin(r.id_uuid)} disabled={!checkinCodes[r.id_uuid] || checkinCodes[r.id_uuid].length !== 6 || busy}>
-                        {checkingInAttendees[r.id_uuid] ? <Loader2 size={16} className="animate-spin" /> : "Verify"}
+                      <ScButton size="sm" full={false} kind="soft" icon={checkingInAttendees[r.id_uuid] ? undefined : ScanLine} className="h-10 px-4" onClick={() => setScanOpen(true)} disabled={busy}>
+                        {checkingInAttendees[r.id_uuid] ? <Loader2 size={16} className="animate-spin" /> : "Scan ticket"}
                       </ScButton>
                     </div>
                   )}

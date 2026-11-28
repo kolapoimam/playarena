@@ -15,6 +15,8 @@ import {
   Search as SearchIcon,
   SlidersHorizontal,
   Sparkles,
+  Check,
+  LayoutGrid,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { Seo } from "@/components/Seo";
@@ -25,6 +27,8 @@ import usePWAInstallPrompt from "@/hooks/usePWAInstallPrompt";
 import { ListGroup, ListRow, NavHeader, Pill, Screen } from "@/components/sc/ui";
 import { LocationSheet, useUserState } from "@/components/sc/location";
 import { resetOnboarding } from "@/components/sc/Onboarding";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { APP_MODES, setAppMode, useAppMode, type AppMode } from "@/lib/appMode";
 
 const isStandalone = () =>
   window.matchMedia?.("(display-mode: standalone)").matches || (navigator as unknown as { standalone?: boolean }).standalone === true;
@@ -35,6 +39,13 @@ const Settings = () => {
   const { toast } = useToast();
   const state = useUserState();
   const [locOpen, setLocOpen] = useState(false);
+  const appMode = useAppMode();
+  const [modeOpen, setModeOpen] = useState(false);
+  const pickMode = async (m: AppMode) => {
+    await setAppMode(m);
+    setModeOpen(false);
+    toast({ title: `${APP_MODES.find((x) => x.id === m)?.label} first`, description: "Your home screen now leads with it. Every other sport stays one tap away." });
+  };
   const { isInstallable, triggerInstall } = usePWAInstallPrompt();
   const installed = isStandalone();
   const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
@@ -83,8 +94,20 @@ const Settings = () => {
             />
           </ListGroup>
 
+          <ListGroup title="App mode">
+            <ListRow
+              icon={LayoutGrid}
+              sport="football"
+              title={APP_MODES.find((m) => m.id === appMode)?.label || "Football"}
+              subtitle="The sport SportCliq shows you first"
+              right={<Pill sport="football">Change</Pill>}
+              chevron={false}
+              onClick={() => setModeOpen(true)}
+            />
+          </ListGroup>
+
           <ListGroup title="Account">
-            <ListRow icon={CircleUserRound} title="Account details" subtitle="Name, email, phone and password" onClick={() => navigate("/profile/account-details")} />
+            <ListRow icon={CircleUserRound} title="Profile details" subtitle="Display name, email and password" onClick={() => navigate("/profile/account-details")} />
             <ListRow icon={SlidersHorizontal} title="Match preferences" subtitle="Skill level, match type and gender" onClick={() => navigate("/profile/match-preferences")} />
             <ListRow
               icon={Bell}
@@ -180,6 +203,28 @@ const Settings = () => {
           confirmLabel="Sign out"
           onConfirm={signOut}
         />
+        <Dialog open={modeOpen} onOpenChange={setModeOpen}>
+          <DialogContent className="w-full max-w-[calc(100%-1.5rem)] sm:max-w-[420px] rounded-[28px] bg-sc-bg p-5 gap-4">
+            <div className="flex flex-col gap-1 pr-6">
+              <DialogTitle className="text-xl font-extrabold text-sc-ink">Preferred app mode</DialogTitle>
+              <DialogDescription className="text-sm text-sc-ink2">SportCliq puts this sport first on your home screen. You can still explore and join everything else.</DialogDescription>
+            </div>
+            <div className="flex flex-col gap-2" role="radiogroup" aria-label="Preferred app mode">
+              {APP_MODES.map((m) => {
+                const on = m.id === appMode;
+                return (
+                  <button key={m.id} type="button" role="radio" aria-checked={on} onClick={() => pickMode(m.id)} className={`h-16 px-4 rounded-2xl bg-white flex items-center gap-3 text-left ${on ? "ring-2 ring-sc-green" : ""}`}>
+                    <span className="flex-1 flex flex-col">
+                      <span className="text-[15px] font-extrabold">{m.label}</span>
+                      <span className="text-xs text-sc-ink3">{m.sub}</span>
+                    </span>
+                    <span className={`w-6 h-6 rounded-full flex items-center justify-center ${on ? "bg-sc-green text-white" : "border-2 border-sc-line"}`}>{on && <Check size={14} strokeWidth={3} />}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </DialogContent>
+        </Dialog>
         <Navbar />
       </Screen>
     </>

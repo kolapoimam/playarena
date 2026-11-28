@@ -101,11 +101,11 @@ export const ShareCard = forwardRef<HTMLDivElement, { info: ShareInfo; theme: Ca
             {info.priceLabel === "Free" ? "FREE" : "PAID"}
           </span>
         </div>
-        <div style={{ fontSize: 30, lineHeight: "32px", fontWeight: 900, letterSpacing: "-0.03em", marginTop: -4, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const }}>{info.title}</div>
+        <div style={{ fontSize: info.title.length > 34 ? 22 : info.title.length > 22 ? 26 : 30, lineHeight: 1.18, fontWeight: 900, letterSpacing: "-0.03em", marginTop: -4, paddingBottom: 2, wordBreak: "break-word", overflowWrap: "anywhere" }}>{info.title}</div>
         {!!info.chips?.length && (
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: -4 }}>
             {info.chips.map((c) => (
-              <span key={c} style={{ height: 26, padding: "0 10px", display: "inline-flex", alignItems: "center", borderRadius: 99, fontSize: 12, fontWeight: 700, border: `1px solid ${t.line}`, color: t.ink }}>{c}</span>
+              <span key={c} style={{ minHeight: 26, padding: "4px 10px", display: "inline-flex", alignItems: "center", borderRadius: 99, fontSize: 12, lineHeight: "16px", fontWeight: 700, border: `1px solid ${t.line}`, color: t.ink, maxWidth: "100%", wordBreak: "break-word" }}>{c}</span>
             ))}
           </div>
         )}
@@ -116,28 +116,28 @@ export const ShareCard = forwardRef<HTMLDivElement, { info: ShareInfo; theme: Ca
                 <r.icon size={17} />
               </span>
               <span style={{ display: "flex", flexDirection: "column", minWidth: 0, flex: 1 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", opacity: 0.55 }}>{r.label}</span>
-                <span style={{ fontSize: 15, fontWeight: 800, lineHeight: "19px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.value}</span>
+                <span style={{ fontSize: 11, lineHeight: "15px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", opacity: 0.55 }}>{r.label}</span>
+                <span style={{ fontSize: 15, fontWeight: 800, lineHeight: "20px", paddingBottom: 1, whiteSpace: "normal", wordBreak: "break-word", overflowWrap: "anywhere" }}>{r.value}</span>
               </span>
             </div>
           ))}
         </div>
         <div style={{ display: "flex", gap: 14, alignItems: "stretch" }}>
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8, justifyContent: "center" }}>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-              <span style={{ fontSize: 26, fontWeight: 900, letterSpacing: "-0.02em" }}>{info.priceLabel}</span>
-              <span style={{ fontSize: 12, fontWeight: 700, color: t.sub }}>{info.kind === "ride" ? "to ride" : info.priceLabel === "Free" ? "to play" : "per player"}</span>
+          <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 8, justifyContent: "center" }}>
+            <div style={{ display: "flex", alignItems: "baseline", flexWrap: "wrap", columnGap: 8 }}>
+              <span style={{ fontSize: info.priceLabel.length > 9 ? 21 : 26, lineHeight: 1.15, fontWeight: 900, letterSpacing: "-0.02em" }}>{info.priceLabel}</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: t.sub, whiteSpace: "nowrap" }}>{info.kind === "ride" ? "to ride" : info.priceLabel === "Free" ? "to play" : "per player"}</span>
             </div>
             {info.stat && (
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 700, color: t.sub }}><Route size={14} /> {info.stat.value}</span>
+              <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, lineHeight: "17px", fontWeight: 700, color: t.sub, wordBreak: "break-word" }}><Route size={14} style={{ flexShrink: 0 }} /> {info.stat.value}</span>
             )}
             {info.total > 0 && (
               <>
                 <div style={{ height: 8, borderRadius: 99, background: t.line, overflow: "hidden" }}>
                   <div style={{ width: `${pct}%`, height: "100%", borderRadius: 99, background: accent }} />
                 </div>
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 800, color: t.sub }}>
-                  <Users size={13} /> {left > 0 ? `${left} of ${info.total} spots left` : "Fully booked"}
+                <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, lineHeight: "16px", fontWeight: 800, color: t.sub }}>
+                  <Users size={13} style={{ flexShrink: 0 }} /> {left > 0 ? `${left} of ${info.total} spots left` : "Fully booked"}
                 </span>
               </>
             )}

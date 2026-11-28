@@ -8,13 +8,16 @@ on:
       functions:
         description: "Functions to deploy, separated by spaces"
         required: true
-        default: "send-notification send-booking-notification send-match-reminders"
+        default: "send-notification send-booking-notification send-match-reminders send-lifecycle-emails email-unsubscribe verify-paystack-transaction"
   push:
     branches: [main]
     paths:
       - "supabase/functions/send-notification/**"
       - "supabase/functions/send-booking-notification/**"
       - "supabase/functions/send-match-reminders/**"
+      - "supabase/functions/send-lifecycle-emails/**"
+      - "supabase/functions/email-unsubscribe/**"
+      - "supabase/functions/verify-paystack-transaction/**"
       - "supabase/functions/_shared/**"
 
 jobs:
@@ -23,7 +26,7 @@ jobs:
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       PROJECT_REF: qxafigbrfpxdklwoqkxj
-      FUNCTIONS: ${{ github.event.inputs.functions || 'send-notification send-booking-notification send-match-reminders' }}
+      FUNCTIONS: ${{ github.event.inputs.functions || 'send-notification send-booking-notification send-match-reminders send-lifecycle-emails email-unsubscribe verify-paystack-transaction' }}
     steps:
       - uses: actions/checkout@v5
       - uses: supabase/setup-cli@v1

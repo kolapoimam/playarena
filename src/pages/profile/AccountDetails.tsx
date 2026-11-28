@@ -18,26 +18,18 @@ import { ArrowLeft } from "lucide-react";
 
 import { BackButton } from "@/components/sc/ui";
 import { PageSkeleton } from "@/components/sc/skeletons";
+// Name and phone are read only here, so only the display name is checked
 const profileSchema = z.object({
-  first_name: z
-    .string()
-    .min(3, "First name must be at least 3 characters")
-    .regex(/^[a-zA-Z]+$/, "First name must contain only letters")
-    .optional(),
-  last_name: z
-    .string()
-    .min(3, "Last name must be at least 3 characters")
-    .regex(/^[a-zA-Z]+$/, "Last name must contain only letters")
-    .optional(),
+  first_name: z.string().optional(),
+  last_name: z.string().optional(),
   nickname: z
     .string()
-    .min(3, "Nickname must be at least 3 characters")
-    .regex(/^[a-zA-Z0-9\s]+$/, "Nickname must contain letters, numbers, and spaces")
+    .trim()
+    .min(3, "Use at least 3 characters")
+    .max(30, "Keep it to 30 characters")
+    .regex(/^[a-zA-Z0-9\s]+$/, "Use letters, numbers and spaces only")
     .optional(),
-  phone_number: z
-    .string()
-    .regex(/^[0-9]{1,11}$/, "Phone number must contain only numbers and 11 digits")
-    .optional(),
+  phone_number: z.string().optional(),
 });
 
 const emailSchema = z.object({
@@ -120,16 +112,17 @@ const AccountDetails = ({ profile: initialProfile, setProfile: setInitialProfile
     try {
       const { error } = await supabase
         .from("profiles")
-        .update({ ...data, updated_at: new Date().toISOString() })
+        .update({ nickname: data.nickname?.trim() || null, updated_at: new Date().toISOString() })
         .eq("id", profile?.id);
 
       if (error) throw error;
 
       setProfile({ ...profile, ...data, updated_at: new Date().toISOString() });
       if (setInitialProfile) setInitialProfile({ ...profile, ...data, updated_at: new Date().toISOString() });
-      toast({ title: "Success", description: "Profile updated successfully!" });
+      form.reset(data);
+      toast({ title: "Profile saved", description: "Your changes are live across SportCliq." });
     } catch (error) {
-      toast({ title: "Error", description: "Failed to update profile.", variant: "destructive" });
+      toast({ title: "Not saved", description: "Check your connection and try again.", variant: "destructive" });
       console.error("Error updating profile:", error);
     } finally {
       setLoading(false);
@@ -214,169 +207,116 @@ const AccountDetails = ({ profile: initialProfile, setProfile: setInitialProfile
     return diffDays >= 30;
   };
 
-  if (loading) {
-    return (
-      <PageSkeleton />
-    );
+  const dirty = form.formState.isDirty;
+  const nick = form.watch("nickname") || "";
+
+  // Warn before leaving with unsaved changes
+  useEffect(() => {
+    if (!dirty) return;
+    const h = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
+    window.addEventListener("beforeunload", h);
+    return () => window.removeEventListener("beforeunload", h);
+  }, [dirty]);
+
+  if (loading && !profile) {
+    return <PageSkeleton />;
   }
 
-  return (
-    <div className="min-h-screen flex flex-col bg-sc-bg dark:bg-gray-900">
-      <header className="px-5 pt-[max(env(safe-area-inset-top),1rem)]">
-          <div className="pt-3 flex items-center justify-between gap-3">
-            <BackButton to="/profile" />
-            <h1 className="m-0 flex-1 text-center text-[17px] font-extrabold truncate">Account details</h1>
-            <div className="min-w-11 flex justify-end"></div>
-          </div>
-        </header>
-
-      <div className="flex-grow overflow-y-auto">
-        <div className="px-5 pt-3 pb-6 max-w-md mx-auto w-full flex flex-col gap-4">
-          <div className="relative rounded-[28px] p-5 text-white overflow-hidden flex items-center gap-4" style={{ background: "#16A34A" }}>
-            <span aria-hidden="true" className="absolute -right-10 -top-10 w-36 h-36 rounded-full border-[18px] border-white/15" />
-            <span className="rounded-full border-4 border-white/70 shrink-0">
-              <Avatar seed={form.watch("nickname") || form.watch("first_name") || "SportCliq"} gender={myGender()} initials={initialsOf(`${form.watch("first_name") || ""} ${form.watch("last_name") || ""}`.trim() || "SC")} size={64} />
-            </span>
-            <span className="relative flex flex-col min-w-0">
-              <span className="text-[22px] leading-7 font-extrabold tracking-[-0.02em] truncate">{form.watch("nickname") || "Your profile"}</span>
-              <span className="text-sm opacity-85 truncate">{[form.watch("first_name"), form.watch("last_name")].filter(Boolean).join(" ") || "Add your name below"}</span>
-            </span>
-          </div>
-          <Card className="bg-white border-none shadow-none rounded-3xl">
-            <CardContent className="p-[18px]">
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="first_name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-sc-ink2 dark:text-gray-300">First Name</FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              disabled
-                              className="text-base bg-white dark:bg-gray-700 border-sc-line dark:border-gray-600 text-sc-ink dark:text-gray-100 rounded-lg"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="last_name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-sc-ink2 dark:text-gray-300">Last Name</FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              disabled
-                              className="text-base bg-white dark:bg-gray-700 border-sc-line dark:border-gray-600 text-sc-ink dark:text-gray-100 rounded-lg"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  <FormField
-                    control={form.control}
-                    name="nickname"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sc-ink2 dark:text-gray-300">Nickname</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            className="text-base bg-white dark:bg-gray-700 border-sc-line dark:border-gray-600 text-sc-ink dark:text-gray-100 rounded-lg"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="phone_number"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sc-ink2 dark:text-gray-300">Phone Number</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            disabled
-                            inputMode="numeric"
-                            maxLength={11}
-                            className="text-base bg-white dark:bg-gray-700 border-sc-line dark:border-gray-600 text-sc-ink dark:text-gray-100 rounded-lg"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <div>
-                    <FormLabel className="text-sc-ink2 dark:text-gray-300">Email Address</FormLabel>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        value={profile?.email || "user@example.com"}
-                        disabled
-                        className="text-base bg-white dark:bg-gray-700 border-sc-line dark:border-gray-600 text-sc-ink dark:text-gray-100 rounded-lg flex-1"
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="text-sc-green-dark border-sc-green hover:bg-green-500 hover:text-white rounded-lg"
-                        onClick={() => setShowChangeEmailDialog(true)}
-                        disabled={!canChangeEmail()}
-                      >
-                        <Mail size={16} className="mr-2" />
-                        Change
-                      </Button>
-                    </div>
-                    {!canChangeEmail() && (
-                      <p className="text-sm text-sc-ink3 dark:text-gray-400 mt-1">
-                        Email change is available again in 30 days from last change.
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full text-sc-green-dark border-sc-green hover:bg-green-500 hover:text-white rounded-lg"
-                      onClick={() => setShowResetPasswordDialog(true)}
-                    >
-                      <Lock size={16} className="mr-2" />
-                      Reset Password
-                    </Button>
-                  </div>
-                  <Button
-                    type="submit"
-                    className="w-full bg-sc-green hover:brightness-95 text-sc-green-ink font-bold rounded-full px-4 py-2 text-sm flex items-center justify-center"
-                    disabled={loading}
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 size={16} className="mr-2 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle size={16} className="mr-2" />
-                        Save Account Details
-                      </>
-                    )}
-                  </Button>
-                </form>
-              </Form>
-            </CardContent>
-          </Card>
-        </div>
+  const ReadOnly = ({ label, value, hint }: { label: string; value?: string | null; hint?: string }) => (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-[13px] font-bold text-sc-ink2">{label}</span>
+      <div className="h-12 rounded-2xl bg-sc-bg px-4 flex items-center justify-between gap-3">
+        <span className={`text-[15px] font-semibold truncate ${value ? "text-sc-ink" : "text-sc-ink3"}`}>{value || "Not added"}</span>
+        <Lock size={14} className="text-sc-ink3 shrink-0" aria-hidden="true" />
       </div>
+      {hint && <span className="text-xs text-sc-ink3">{hint}</span>}
+    </div>
+  );
 
+  return (
+    <div className="min-h-screen flex flex-col bg-sc-bg font-sans text-sc-ink">
+      <header className="sticky top-0 z-20 bg-sc-bg/95 backdrop-blur-xl px-5 pb-2 pt-[max(env(safe-area-inset-top),1rem)]">
+        <div className="pt-3 flex items-center justify-between gap-3">
+          <BackButton to="/profile" />
+          <h1 className="m-0 flex-1 text-center text-[17px] font-extrabold truncate">Profile details</h1>
+          <div className="min-w-11" />
+        </div>
+      </header>
+
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="flex-grow px-5 pt-2 pb-44 max-w-md mx-auto w-full flex flex-col gap-4" noValidate>
+          <div className="bg-white rounded-3xl p-5 flex items-center gap-4">
+            <Avatar seed={nick || form.watch("first_name") || "SportCliq"} gender={myGender()} initials={initialsOf(`${form.watch("first_name") || ""} ${form.watch("last_name") || ""}`.trim() || "SC")} size={64} />
+            <span className="flex flex-col min-w-0">
+              <span className="text-[20px] leading-7 font-extrabold tracking-[-0.02em] truncate">{nick || "Add a display name"}</span>
+              <span className="text-sm text-sc-ink3 truncate">{[form.watch("first_name"), form.watch("last_name")].filter(Boolean).join(" ") || "Your name"}</span>
+            </span>
+          </div>
+
+          <section className="bg-white rounded-3xl p-[18px] flex flex-col gap-4" aria-labelledby="sec-public">
+            <h2 id="sec-public" className="m-0 text-base font-extrabold">How others see you</h2>
+            <FormField
+              control={form.control}
+              name="nickname"
+              render={({ field }) => (
+                <FormItem className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <FormLabel className="text-[13px] font-bold text-sc-ink2">Display name</FormLabel>
+                    <span className="text-xs text-sc-ink3 tabular-nums">{(field.value || "").length}/30</span>
+                  </div>
+                  <FormControl>
+                    <Input {...field} maxLength={30} autoComplete="nickname" placeholder="What players call you" className="h-12 rounded-2xl text-[15px] font-semibold" />
+                  </FormControl>
+                  <p className="m-0 text-xs text-sc-ink3">Shown on match lists, team sheets and leaderboards. Letters, numbers and spaces.</p>
+                  <FormMessage className="text-xs" />
+                </FormItem>
+              )}
+            />
+          </section>
+
+          <section className="bg-white rounded-3xl p-[18px] flex flex-col gap-4" aria-labelledby="sec-personal">
+            <h2 id="sec-personal" className="m-0 text-base font-extrabold">Personal details</h2>
+            <div className="grid grid-cols-2 gap-3">
+              <ReadOnly label="First name" value={form.watch("first_name")} />
+              <ReadOnly label="Last name" value={form.watch("last_name")} />
+            </div>
+            <ReadOnly label="Phone number" value={form.watch("phone_number")} hint="Your name and phone are used for check in. Contact support to change them." />
+          </section>
+
+          <section className="bg-white rounded-3xl p-[18px] flex flex-col gap-3" aria-labelledby="sec-account">
+            <h2 id="sec-account" className="m-0 text-base font-extrabold">Sign in and security</h2>
+            <div className="flex items-center gap-3 py-1">
+              <span className="w-10 h-10 rounded-xl bg-sc-green-bg text-sc-green-dark flex items-center justify-center shrink-0"><Mail size={18} /></span>
+              <span className="flex-1 min-w-0 flex flex-col">
+                <span className="text-[13px] font-bold text-sc-ink2">Email</span>
+                <span className="text-[15px] font-semibold truncate">{profile?.email || "Not added"}</span>
+              </span>
+              <button type="button" onClick={() => setShowChangeEmailDialog(true)} disabled={!canChangeEmail()} className="h-10 px-4 rounded-full bg-sc-soft text-sm font-extrabold disabled:opacity-40">Change</button>
+            </div>
+            {!canChangeEmail() && <p className="m-0 text-xs text-sc-ink3">You can change your email once every 30 days.</p>}
+            <div className="h-px bg-sc-line" />
+            <div className="flex items-center gap-3 py-1">
+              <span className="w-10 h-10 rounded-xl bg-sc-soft text-sc-ink flex items-center justify-center shrink-0"><Lock size={18} /></span>
+              <span className="flex-1 min-w-0 flex flex-col">
+                <span className="text-[13px] font-bold text-sc-ink2">Password</span>
+                <span className="text-[13px] text-sc-ink3">We email you a secure link to set a new one</span>
+              </span>
+              <button type="button" onClick={() => setShowResetPasswordDialog(true)} className="h-10 px-4 rounded-full bg-sc-soft text-sm font-extrabold">Reset</button>
+            </div>
+          </section>
+
+          <div className="fixed left-0 right-0 bottom-0 z-30 px-5 pt-3 pb-[calc(env(safe-area-inset-bottom)+92px)] bg-sc-bg/95 backdrop-blur-xl">
+            <div className="max-w-md mx-auto flex gap-2.5">
+              {dirty && (
+                <button type="button" onClick={() => form.reset()} disabled={loading} className="h-[54px] px-5 rounded-full bg-white text-sm font-extrabold">Undo</button>
+              )}
+              <button type="submit" disabled={loading || !dirty} className="flex-1 h-[54px] rounded-full bg-sc-green text-white font-bold flex items-center justify-center gap-2 disabled:opacity-50">
+                {loading ? <><Loader2 size={18} className="animate-spin" /> Saving</> : dirty ? <><CheckCircle size={18} /> Save changes</> : "All changes saved"}
+              </button>
+            </div>
+          </div>
+        </form>
+      </Form>
       <Dialog
         open={showResetPasswordDialog}
         onOpenChange={(open) => {

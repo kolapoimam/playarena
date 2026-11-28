@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { rideWindow } from "@/lib/activityTime";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Calendar, Clock, MapPin, Users, Filter, ChevronLeft, ChevronRight, ArrowLeft, Flag, Plus, Bike } from "lucide-react";
@@ -89,7 +90,7 @@ const CyclingActivity = () => {
         .from("cycling_events")
         .select(
           `
-          id_uuid, slug, title, event_date, start_time, max_attendees, is_free, price, host_name, host_id, status,
+          id_uuid, slug, title, event_date, start_time, end_time, duration_type, duration_value, max_attendees, is_free, price, host_name, host_id, status, cancellation_status,
           start_landmark:landmarks!start_landmark_id(id_uuid, name, state, slug),
           attendees:cycling_attendees!cycling_attendees_cycling_event_id_uuid_fkey(id_uuid, attendee_name, status, number_of_slots)
         `,
@@ -105,9 +106,6 @@ const CyclingActivity = () => {
       if (durationFilter !== "all") {
         query = query.eq("duration_type", durationFilter);
       }
-      if (statusFilter) {
-        query = query.eq("status", statusFilter);
-      }
 
       // Fetch all events to sort them client-side
       const { data, error, count } = await query;
@@ -121,97 +119,49 @@ const CyclingActivity = () => {
         cycling_attendees: event.attendees || []
       })) as CyclingEvent[];
 
-      // Convert and sort events
+      // Status comes from the ride's date, start and length, or its cancellation, so the
+      // status filter, the labels and the counts always agree
       const now = DateTime.now().setZone(LAGOS_TIMEZONE);
-      const today = now.startOf('day');
+      const today = now.startOf("day");
       const tomorrow = today.plus({ days: 1 });
       const dayAfterTomorrow = tomorrow.plus({ days: 1 });
 
-      const sortedEvents = processedEvents.map(event => {
-        // Parse event_date (YYYY-MM-DD HH:mm:ss+00) and start_time (hh:mm a)
-        const eventDate = DateTime.fromISO(event.event_date, { zone: "utc" }).setZone(LAGOS_TIMEZONE);
-        const eventTime = DateTime.fromFormat(event.start_time, "hh:mm a", { zone: LAGOS_TIMEZONE });
-        
-        // Combine date and time, fallback if invalid
-        let eventDateTime = eventDate;
-        if (eventTime.isValid) {
-          eventDateTime = eventDate.set({
-            hour: eventTime.hour,
-            minute: eventTime.minute,
-            second: 0,
-            millisecond: 0
-          });
-        }
-
-        // Determine status
+      const withStatus = processedEvents.map((event: any) => {
+        const win = rideWindow(event);
+        const start = DateTime.fromJSDate(win.start).setZone(LAGOS_TIMEZONE);
         let status: string;
-        if (!eventDateTime.isValid || eventDateTime < now) {
-          status = "passed";
-        } else if (eventDateTime >= today && eventDateTime < tomorrow) {
-          status = "today";
-        } else if (eventDateTime >= tomorrow && eventDateTime < dayAfterTomorrow) {
-          status = "tomorrow";
-        } else {
-          status = "upcoming";
-        }
-
-        return {
-          ...event,
-          status
-        };
-      })
-      .sort((a, b) => {
-        // Priority: Today > Tomorrow > Upcoming > Passed
-        const statusOrder = {
-          today: 0,
-          tomorrow: 1,
-          upcoming: 2,
-          passed: 3
-        };
-
-        // First sort by status priority
-        const statusDiff = statusOrder[a.status] - statusOrder[b.status];
-        if (statusDiff !== 0) {
-          return statusDiff;
-        }
-
-        // Then sort by date/time within each status group (ascending)
-        const aDate = DateTime.fromISO(a.event_date, { zone: "utc" }).setZone(LAGOS_TIMEZONE);
-        const aTime = DateTime.fromFormat(a.start_time, "hh:mm a", { zone: LAGOS_TIMEZONE });
-        let aDateTime = aDate;
-        if (aTime.isValid) {
-          aDateTime = aDate.set({
-            hour: aTime.hour,
-            minute: aTime.minute,
-            second: 0,
-            millisecond: 0
-          });
-        }
-
-        const bDate = DateTime.fromISO(b.event_date, { zone: "utc" }).setZone(LAGOS_TIMEZONE);
-        const bTime = DateTime.fromFormat(b.start_time, "hh:mm a", { zone: LAGOS_TIMEZONE });
-        let bDateTime = bDate;
-        if (bTime.isValid) {
-          bDateTime = bDate.set({
-            hour: bTime.hour,
-            minute: bTime.minute,
-            second: 0,
-            millisecond: 0
-          });
-        }
-
-        return aDateTime.toMillis() - bDateTime.toMillis();
+        if (event.cancellation_status) status = "cancelled";
+        else if (now.toMillis() >= win.end.getTime()) status = "passed";
+        else if (now.toMillis() >= win.start.getTime()) status = "live";
+        else if (start >= today && start < tomorrow) status = "today";
+        else if (start >= tomorrow && start < dayAfterTomorrow) status = "tomorrow";
+        else status = "upcoming";
+        return { ...event, status, _start: win.start.getTime() };
       });
+
+      const statusOrder: Record<string, number> = { live: 0, today: 1, tomorrow: 2, upcoming: 3, passed: 4, cancelled: 5 };
+      const sortedEvents = withStatus
+        .filter((e) => {
+          if (!statusFilter) return true;
+          if (statusFilter === "upcoming") return ["live", "today", "tomorrow", "upcoming"].includes(e.status);
+          if (statusFilter === "today") return e.status === "today" || e.status === "live";
+          return e.status === statusFilter;
+        })
+        .sort((a, b) => {
+          if (statusOrder[a.status] !== statusOrder[b.status]) return statusOrder[a.status] - statusOrder[b.status];
+          return a.status === "passed" || a.status === "cancelled" ? b._start - a._start : a._start - b._start;
+        }) as CyclingEvent[];
 
       // Apply pagination client-side
       const stateEvents = activeState ? sortedEvents.filter((e) => sameState(e.start_landmark?.state, activeState)) : sortedEvents;
-      const start = (currentPage - 1) * eventsPerPage;
-      const end = start + eventsPerPage;
-      const paginatedEvents = stateEvents.slice(start, end);
+      const totalPages = Math.max(1, Math.ceil(stateEvents.length / eventsPerPage));
+      const page = Math.min(currentPage, totalPages);
+      if (page !== currentPage) setCurrentPage(page);
+      const paginatedEvents = stateEvents.slice((page - 1) * eventsPerPage, page * eventsPerPage);
 
       setEvents(paginatedEvents);
       setFilteredEvents(paginatedEvents);
-      setTotalEvents(activeState ? stateEvents.length : count || 0);
+      setTotalEvents(stateEvents.length);
     } catch (error: any) {
       console.error("Error fetching cycling events:", error);
       setEvents([]);
@@ -228,6 +178,8 @@ const CyclingActivity = () => {
   };
 
   const getEventStatus = (event: CyclingEvent) => {
+    if (event.status === "live") return { statusLabel: "Live", statusClass: "bg-red-100 text-red-700" };
+    if (event.status === "cancelled") return { statusLabel: "Cancelled", statusClass: "bg-red-100 text-red-700" };
     if (event.status === "today") return { statusLabel: "Today", statusClass: "bg-sc-green-bg text-sc-green-dark" };
     if (event.status === "tomorrow") return { statusLabel: "Tomorrow", statusClass: "bg-yellow-100 text-yellow-700" };
     if (event.status === "upcoming") return { statusLabel: "Upcoming", statusClass: "bg-blue-100 text-blue-800" };
@@ -389,6 +341,7 @@ const CyclingActivity = () => {
                     <SelectItem value="tomorrow">Tomorrow</SelectItem>
                     <SelectItem value="upcoming">Upcoming</SelectItem>
                     <SelectItem value="passed">Passed</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

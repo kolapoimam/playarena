@@ -295,18 +295,20 @@ const PlayerManagement = ({
 
   const [scanFor, setScanFor] = useState<"player" | "ticket" | null>(null);
 
+  // One scanner for every ticket in the match. A player code checks the player in,
+  // a spectator code checks the spectator ticket in, whichever mode is open.
   const handleScannedCode = async (code: string) => {
-    if (scanFor === "ticket") {
+    const player = match?.players?.find((p) => p.confirmation_code === code);
+    if (player) {
+      await validateCheckinCode(player.id, code);
+      return;
+    }
+    if (match?.sell_tickets) {
       setTicketInput(code);
       await validateTicketCode(code);
       return;
     }
-    const player = match?.players?.find((p) => p.confirmation_code === code);
-    if (!player) {
-      toast({ title: "Code not found", description: "No player in this match has that code.", variant: "destructive" });
-      return;
-    }
-    await validateCheckinCode(player.id, code);
+    toast({ title: "Code not found", description: "No player or ticket in this match has that code.", variant: "destructive" });
   };
 
   const handleCheckinMode = () => {
@@ -647,7 +649,7 @@ const PlayerManagement = ({
           <div className="flex items-center justify-between gap-3">
             <span className="flex flex-col">
               <span className="text-[11px] font-bold tracking-[0.12em] text-[#BEF264]">CHECK IN IS ON</span>
-              <span className="text-sm text-white/80">Scan a player's QR ticket, or type their 6 digit code below.</span>
+              <span className="text-sm text-white/80">Scan a player or spectator QR ticket. The scanner also lets you type a code.</span>
             </span>
           </div>
           <div className="flex gap-2">
@@ -696,24 +698,8 @@ const PlayerManagement = ({
                   </div>
                   {mode === "checkin" && st !== "Checked In" && (
                     <div className="flex gap-2 pl-[54px]">
-                      <Input
-                        placeholder="6 digit code"
-                        value={checkinCodes[player.id] || ""}
-                        onChange={(e) => handleCheckinCodeChange(player.id, e.target.value)}
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        maxLength={6}
-                        className="h-11 flex-1 tracking-[0.3em] font-bold placeholder:tracking-normal placeholder:font-semibold"
-                        disabled={busy}
-                      />
-                      <ScButton
-                        size="sm"
-                        full={false}
-                        className="h-11 px-5"
-                        onClick={() => validateCheckinCode(player.id)}
-                        disabled={!checkinCodes[player.id] || checkinCodes[player.id].length !== 6 || busy}
-                      >
-                        {busy ? <Loader2 size={16} className="animate-spin" /> : "Verify"}
+                      <ScButton size="sm" full={false} kind="soft" icon={busy ? undefined : ScanLine} className="h-10 px-4" onClick={() => setScanFor("player")} disabled={busy}>
+                        {busy ? <Loader2 size={16} className="animate-spin" /> : "Scan ticket"}
                       </ScButton>
                     </div>
                   )}
@@ -733,21 +719,6 @@ const PlayerManagement = ({
           </div>
           {mode === "ticket" ? (
             <div className="flex flex-col gap-2.5">
-              <div className="flex gap-2">
-                <Input
-                  placeholder="6 digit ticket code"
-                  value={ticketInput}
-                  onChange={(e) => handleTicketCodeChange(e.target.value)}
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  maxLength={6}
-                  className="h-11 flex-1 tracking-[0.3em] font-bold placeholder:tracking-normal placeholder:font-semibold"
-                  disabled={verifyingTicket}
-                />
-                <ScButton size="sm" full={false} className="h-11 px-5" kind="dark" onClick={() => validateTicketCode()} disabled={!ticketInput || ticketInput.length !== 6 || verifyingTicket}>
-                  {verifyingTicket ? <Loader2 size={16} className="animate-spin" /> : "Verify"}
-                </ScButton>
-              </div>
               {ticketError && <p className="m-0 text-xs font-bold text-sport-red-fg">{ticketError}</p>}
               <div className="flex gap-2">
                 <ScButton kind="soft" size="md" icon={ScanLine} onClick={() => setScanFor("ticket")}>Scan ticket</ScButton>

@@ -8,6 +8,25 @@ const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 export const EMAIL_FROM = Deno.env.get("EMAIL_FROM") || "SportCliq <hello@sportcliq.com>";
 export const REPLY_TO = "sportcliqapp@gmail.com";
 
+// Official SportCliq channels, shown in the footer of every email
+export const SOCIAL = {
+  x: "https://x.com/SportCliq",
+  instagram: "https://www.instagram.com/SportCliqHQ",
+  whatsapp: "https://whatsapp.com/channel/0029Vb69lS19RZAYCY9ors35",
+};
+
+function socialRow() {
+  const pill = (href: string, label: string, bg: string, fg: string) =>
+    `<td style="padding:0 4px"><a href="${href}" class="soc" style="display:inline-block;padding:9px 14px;border-radius:999px;background:${bg};color:${fg};font-size:12px;font-weight:700;text-decoration:none;-webkit-text-fill-color:${fg}">${label}</a></td>`;
+  return `<table role="presentation" cellpadding="0" cellspacing="0" align="center" style="margin:0 auto"><tr>
+${pill(SOCIAL.whatsapp, "Join our WhatsApp community", "#15803D", "#FFFFFF")}
+</tr></table>
+<table role="presentation" cellpadding="0" cellspacing="0" align="center" style="margin:10px auto 0"><tr>
+${pill(SOCIAL.x, "X @SportCliq", "#0E1411", "#FFFFFF")}
+${pill(SOCIAL.instagram, "Instagram @SportCliqHQ", "#0E1411", "#FFFFFF")}
+</tr></table>`;
+}
+
 const ALLOWED = (Deno.env.get("ALLOWED_ORIGINS") || "https://app.sportcliq.com,https://sportcliq.com,http://localhost:8080,http://localhost:5173")
   .split(",").map((s) => s.trim()).filter(Boolean);
 
@@ -89,6 +108,7 @@ function emailLayout(o: {
   cta?: { label: string; url: string }
   details?: [string, string][]
   footerHtml: string
+  unsubscribeUrl?: string
 }) {
   const details = o.details?.length
     ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="panel" style="margin:22px 0 0;background:#F4F7F5;border-radius:14px">
@@ -129,6 +149,7 @@ ${o.details.map(([k, v], i) => `<tr><td class="muted" style="padding:${i ? '0' :
   [data-ogsc] .muted { color:#A3AEA7 !important; }
   [data-ogsc] .foot { background:#101612 !important; border-top-color:#243029 !important; }
   [data-ogsc] .btn-a { color:#FFFFFF !important; }
+  [data-ogsc] .soc { color:#FFFFFF !important; }
 </style>
 </head>
 <body class="bg" style="margin:0;padding:0;background:#F3F5F2;font-family:'Plus Jakarta Sans',Segoe UI,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased">
@@ -153,21 +174,22 @@ ${o.details.map(([k, v], i) => `<tr><td class="muted" style="padding:${i ? '0' :
   <tr><td class="foot muted" style="padding:18px 34px 22px;background:#F8FAF8;border-top:1px solid #EDF0EE;font-size:12px;line-height:1.6;color:#69746D">${o.footerHtml}</td></tr>
   </table>
 </td></tr>
-<tr><td class="muted" align="center" style="padding:18px 6px 0;font-size:11px;line-height:1.6;color:#8A948E">SportCliq &middot; Play, organise and book sports near you</td></tr>
+<tr><td align="center" style="padding:20px 6px 0">${socialRow()}</td></tr>
+<tr><td class="muted" align="center" style="padding:14px 6px 0;font-size:11px;line-height:1.6;color:#8A948E">SportCliq &middot; Play, organise and book sports near you${o.unsubscribeUrl ? `<br><a href="${o.unsubscribeUrl}" class="link" style="color:#8A948E;text-decoration:underline">Unsubscribe from these emails</a>` : ""}</td></tr>
 </table>
 </td></tr></table>
 </body></html>`
 }
 
-export function emailShell(title: string, bodyHtml: string, cta?: { label: string; path: string }, extra?: { preheader?: string; details?: [string, string][] }) {
+export function emailShell(title: string, bodyHtml: string, cta?: { label: string; path: string }, extra?: { preheader?: string; details?: [string, string][]; unsubscribeUrl?: string }) {
   return emailLayout({
-    brandUrl: APP_URL, title, bodyHtml, preheader: extra?.preheader, details: extra?.details,
+    brandUrl: APP_URL, title, bodyHtml, preheader: extra?.preheader, details: extra?.details, unsubscribeUrl: extra?.unsubscribeUrl,
     cta: cta ? { label: cta.label, url: `${APP_URL}${cta.path}` } : undefined,
     footerHtml: `You can change which emails you get in the SportCliq app under Profile, Settings, Notifications. Questions? Reply to this email or write to <a class="link" href="mailto:${REPLY_TO}" style="color:#15803D">${REPLY_TO}</a>.`,
   });
 }
 
-export async function sendEmail(to: string, subject: string, html: string, idempotencyKey?: string) {
+export async function sendEmail(to: string, subject: string, html: string, idempotencyKey?: string, opts?: { tags?: { name: string; value: string }[]; unsubscribeUrl?: string }) {
   if (!RESEND_API_KEY) return { ok: false, error: "RESEND_API_KEY missing" };
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -176,7 +198,12 @@ export async function sendEmail(to: string, subject: string, html: string, idemp
       "Content-Type": "application/json",
       ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
     },
-    body: JSON.stringify({ from: EMAIL_FROM, to: [to], reply_to: REPLY_TO, subject, html }),
+    body: JSON.stringify({
+      from: EMAIL_FROM, to: [to], reply_to: REPLY_TO, subject, html,
+      ...(opts?.tags ? { tags: opts.tags } : {}),
+      // One click unsubscribe for mail apps that support it
+      ...(opts?.unsubscribeUrl ? { headers: { "List-Unsubscribe": `<${opts.unsubscribeUrl}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" } } : {}),
+    }),
   });
   const text = await res.text();
   if (!res.ok) console.error("Resend error", res.status, text);

@@ -46,6 +46,8 @@ const Notifications = load(() => import("@/pages/profile/Notifications"));
 const Inbox = load(() => import("@/pages/Inbox"));
 const ViewProfile = load(() => import("@/pages/profile/ViewProfile"));
 const ResetPassword = load(() => import("@/pages/ResetPassword"));
+const ForgotPassword = load(() => import("@/pages/ForgotPassword"));
+const RideFeedback = load(() => import("@/pages/cycling/RideFeedback"));
 const Organize = load(() => import("@/pages/gameManagement/Organize"));
 const MatchDetail = load(() => import("@/pages/match/MatchDetail"));
 const JoinMatch = load(() => import("@/pages/match/JoinMatch"));
@@ -191,8 +193,10 @@ const AppRoutes = () => {
       <Route path="/venue/:slug/book" element={<RequireAuth kind="book"><VenueBookingForm /></RequireAuth>} />
       <Route path="/cycling-event/:slug" element={<CyclingDetail />} />
       <Route path="/feedback/cycling/:slug" element={<LegacyRideFeedback />} />
+      <Route path="/feedback/ride/:slug" element={<RideFeedback />} />
       <Route path="/login" element={<Navigate to="/auth" replace />} />
       <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/not-found" element={<NotFound />} />
       <Route path="*" element={<NotFound />} />
     </Routes>

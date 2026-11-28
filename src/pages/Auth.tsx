@@ -110,84 +110,37 @@ const Auth = () => {
     }
   };
 
+  // Google sign in leaves the page and comes back to /auth/callback, which finishes the
+  // session and creates the profile. Nothing else runs here after a successful start.
   const handleGoogleAuth = async () => {
     setLoading(true);
     try {
-      // Attempt to initiate Google OAuth
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
           redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
+          queryParams: { prompt: "select_account" },
         },
       });
-
-      // If no error, the browser will redirect to Google's OAuth page
-      // No toast should be shown here, as this is the expected behavior
-      if (error) {
-        console.error("Google OAuth error:", error.message); // Log for debugging
-        throw error;
-      }
-
-      // Note: Code below this point executes only after OAuth redirect callback
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      if (userError) {
-        console.error("User data error:", userError.message); // Log for debugging
-        throw userError;
-      }
-
-      if (userData.user) {
-        const identity = userData.user.identities?.find(id => id.provider === 'google');
-        const firstName = identity?.identity_data?.first_name || identity?.identity_data?.name || userData.user.email?.split('@')[0] || 'Unknown';
-        const lastName = identity?.identity_data?.last_name || identity?.identity_data?.family_name || 'User';
-
-        const { error: profileError } = await supabase
-          .from("profiles")
-          .upsert({
-            id: userData.user.id,
-            email: userData.user.email,
-            first_name: firstName,
-            last_name: lastName,
-            is_initial_setup: true,
-            updated_at: new Date().toISOString(),
-          }, {
-            onConflict: 'id',
-          });
-
-        if (profileError) {
-          console.error("Profile upsert error:", profileError.message); // Log for debugging
-          // Continue to navigate to profile even if upsert fails
-        }
-
-        navigate("/profile");
-      }
-    } catch (error) {
-      // Suppress toast for errors that occur during redirect initiation
-      if (error.message.includes("redirect") || error.code === "user_cancelled") {
-        console.warn("OAuth redirect initiated or user cancelled, no toast displayed:", error.message);
-        // No toast for redirect-related errors or user cancellation
-      } else if (error.message.includes("network")) {
-        console.error("Network error during Google OAuth:", error.message);
-        toast({
-          title: "Network Error",
-          description: "Unable to connect to the server. Please check your internet connection and try again.",
-          variant: "destructive",
-        });
-      } else {
-        console.error("Unexpected Google OAuth error:", error.message);
-        toast({
-          title: "Authentication Error",
-          description: "Unable to complete Google login. Please try again later or contact support.",
-          variant: "destructive",
-        });
-      }
-    } finally {
+      if (error) throw error;
+      // Some browsers and installed apps do not follow the redirect by themselves
+      if (data?.url) window.location.assign(data.url);
+    } catch (error: any) {
+      const msg = String(error?.message || "");
+      console.error("Google sign in could not start:", msg);
       setLoading(false);
+      toast({
+        title: /network|fetch/i.test(msg) ? "No connection" : "Google sign in did not start",
+        description: /network|fetch/i.test(msg)
+          ? "Check your internet connection and try again."
+          : /provider is not enabled|unsupported provider/i.test(msg)
+            ? "Google sign in is switched off right now. Use your email and password, or contact support."
+            : "Please try again in a moment. You can also sign in with your email and password.",
+        variant: "destructive",
+      });
     }
   };
+
 
   const handleForgotPassword = async () => {
     if (!validateEmail(resetEmail)) {
@@ -338,7 +291,7 @@ const Auth = () => {
               {!isSignUp && (
                 <div className="text-right">
                   <button
-                    onClick={() => setShowForgotPassword(true)}
+                    onClick={() => navigate(`/forgot-password${email ? `?email=${encodeURIComponent(email)}` : ""}`)}
                     className="text-sm font-bold text-sc-green-dark"
                   >
                     Forgot password?

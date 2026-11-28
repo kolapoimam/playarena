@@ -138,9 +138,15 @@ const TicketCard = forwardRef<HTMLDivElement, Props>(function TicketCard(
 export default TicketCard;
 
 /** Render an element to a sharp PNG (4x) and download it. */
-export const downloadElementAsPng = async (el: HTMLElement, filename: string) => {
+// Every saved image (match and ride cards, tickets, reports) comes out at the same width,
+// so a ticket and a match card look the same size on the phone.
+export const SAVED_IMAGE_WIDTH = 1080;
+
+export const downloadElementAsPng = async (el: HTMLElement, filename: string, opts?: { width?: number }) => {
+  const target = opts?.width ?? SAVED_IMAGE_WIDTH;
+  const w = el.offsetWidth || el.getBoundingClientRect().width || 340;
   const canvas = await html2canvas(el, {
-    scale: Math.max(4, window.devicePixelRatio || 1),
+    scale: Math.max(2, target / w),
     useCORS: true,
     backgroundColor: null,
     logging: false,

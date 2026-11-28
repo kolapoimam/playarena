@@ -11,6 +11,7 @@ import {
   Plus,
   Route,
   Store,
+  Target,
   Trophy,
   Volleyball,
   LucideIcon,
@@ -19,6 +20,7 @@ import Navbar from "@/components/Navbar";
 import { Seo } from "@/components/Seo";
 import { supabase } from "@/integrations/supabase/client";
 import { HorseIcon, PadelIcon } from "@/components/sc/sportIcons";
+import { useAppMode } from "@/lib/appMode";
 import { Bubble, ListGroup, ListRow, PageHeader, Pill, Screen, SPORT, Sport, formatShortDate, formatTime12 } from "@/components/sc/ui";
 
 const META_KEYWORDS = "Football in Nigeria, Sports in Nigeria, Play Sports Near You, Football Fields Near Me, Livescore, Osimhen, Asisat Oshola, Nigeria Startup, Sportstech, Football venues in Lagos, Football venues in Ilorin, Sports Betting in Nigeria, Organize sports in Nigeria, Football Matches, Bicycle Training in Nigeria, Cycling in Nigeria, Nigerian football, Nigerian cycling, Nigerian sports, Play football in Lagos, Play football in Ilorin, Play football in Abuja, Play football in Nigeria, Play cycling in Nigeria, Play sports in Nigeria, Nigerian sports tech, Nigerian sports startup, Nigerian sports community, Football events Nigeria, Cycling events Nigeria, Sport Cliq, SportCliq, sportcliq.com.ng, sportcliq.ng, sportcliq, sport cliq, sportcliq app, sportcliq platform, sportcliq football, sportcliq cycling, sportcliq venues, sportcliq matches, sportcliq events, sportcliq sports, sportcliq nigeria, sportcliq lagos, sportcliq ilorin, sportcliq abuja, sportcliq startup, sportcliq tech, sportcliq community, sportcliq platform, sportcliq app, sportcliq website, sportcliq online, sportcliq booking, sportcliq organize, sportcliq join, sportcliq play, sportcliq find, sportcliq search, sportcliq discover, sportcliq connect, sportcliq join match, sportcliq join cycling, sportcliq join event, sportcliq join venue, sportcliq join football, sportcliq join sports, sportcliq join nigeria, sportcliq join lagos, sportcliq join ilorin, sportcliq join abuja, sportcliq join startup, sportcliq join tech, sportcliq join community, sportcliq join platform, sportcliq join app, sportcliq join website, sportcliq join online, sportcliq join booking, sportcliq join organize, sportcliq join play, sportcliq join find, sportcliq join search, sportcliq join discover, sportcliq join connect";
@@ -36,6 +38,7 @@ const sports: SportItem[] = [
   { name: "Walking", icon: Footprints, sport: "money", active: false },
   { name: "Horse Riding", icon: HorseIcon, sport: "pink", active: false },
   { name: "Padel", icon: PadelIcon, sport: "tennis", active: false },
+  { name: "Paintball", icon: Target, sport: "red", active: false },
 ];
 
 type Upcoming = { key: string; kind: "organised" | "joined" | "hosted"; title: string; date: string; time?: string | null; to: string; tag?: string };
@@ -43,6 +46,10 @@ type Upcoming = { key: string; kind: "organised" | "joined" | "hosted"; title: s
 const Activities = () => {
   const navigate = useNavigate();
   const [upcoming, setUpcoming] = useState<Upcoming[]>([]);
+  const appMode = useAppMode();
+  const modeName = { football: "Football", cycling: "Cycling", horse_riding: "Horse Riding", paintball: "Paintball" }[appMode];
+  // The preferred sport leads, live sports stay ahead of the ones coming soon
+  const ordered = [...sports].sort((a, b) => Number(b.name === modeName && b.active) - Number(a.name === modeName && a.active) || Number(b.active) - Number(a.active));
 
   useEffect(() => {
     const load = async () => {
@@ -120,7 +127,7 @@ const Activities = () => {
           <div className="flex flex-col gap-2.5">
             <span className="text-[13px] font-bold text-sc-ink2">Sports</span>
             <div className="grid grid-cols-2 gap-2.5">
-              {sports.map((s) => {
+              {ordered.map((s) => {
                 const c = SPORT[s.sport];
                 const Icon = s.icon;
                 if (s.active) {

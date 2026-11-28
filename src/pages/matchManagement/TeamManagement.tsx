@@ -12,6 +12,7 @@ import { TouchBackend } from "react-dnd-touch-backend";
 import Navbar from "@/components/Navbar";
 import MatchReport from "@/components/match/MatchReport";
 import TeamMatchDetails from "@/components/match/TeamMatchDetails";
+import { mergeEvents, renameTeamEvents, teamIndexOf, type MatchEvent } from "@/lib/matchEvents";
 
 import { BackButton, EmptyState, ScButton, Segmented } from "@/components/sc/ui";
 import { RowsSkeleton } from "@/components/sc/skeletons";
@@ -22,16 +23,7 @@ type Team = {
   score: number;
   analytics: { possession: number; shots: number; fouls: number; yellow_cards: number; red_cards: number };
 };
-type MatchEvent = {
-  id: string;
-  match_id: string;
-  type: "goal" | "yellow_card" | "red_card" | "foul" | "shot" | "substitution";
-  team_name: string;
-  player_id?: string;
-  minute: number;
-  description: string;
-};
-type Match = { id: string; slug: string; super_code: string; title: string; match_date: string; match_time: string; venue: string };
+type Match = { id: string; slug: string; super_code: string; title: string; match_date: string; match_time: string; end_time?: string | null; venue: string };
 
 const fetchWithRetry = async (query: any, retries = 3, delay = 1000) => {
   for (let i = 0; i < retries; i++) {
@@ -75,7 +67,7 @@ const TeamManagement = () => {
           supabase
             .from("matches")
             .select(`
-              id, slug, super_code, title, match_date::text, match_time, venue,
+              id, slug, super_code, title, match_date::text, match_time, end_time, venue,
               venue_info:venues(name, city),
               team_assignments!fk_match (id, teams, is_public)
             `)
@@ -97,6 +89,7 @@ const TeamManagement = () => {
           title: match.title, 
           match_date: match.match_date, 
           match_time: match.match_time,
+          end_time: match.end_time,
           venue: match.venue_info?.name
             ? `${match.venue_info.name}${match.venue_info.city ? `, ${match.venue_info.city}` : ""}`
             : typeof match.venue === "string" && match.venue
@@ -111,15 +104,27 @@ const TeamManagement = () => {
           { name: "Team 1", players: [], score: 0, analytics: { possession: 50, shots: 0, fouls: 0, yellow_cards: 0, red_cards: 0 } },
           { name: "Team 2", players: [], score: 0, analytics: { possession: 50, shots: 0, fouls: 0, yellow_cards: 0, red_cards: 0 } },
         ];
-        const initialTeams = teamAssignment.teams?.length ? teamAssignment.teams : defaultTeams;
-        setTeams(initialTeams);
+        let initialTeams: Team[] = teamAssignment.teams?.length ? teamAssignment.teams : defaultTeams;
         setIsPublic(teamAssignment.is_public || false);
 
         const { data: eventsData, error: eventsError } = await fetchWithRetry(
           supabase.from("match_events").select("*").eq("match_id", match.id).order("created_at", { ascending: true })
         );
         if (eventsError) throw eventsError;
-        setEvents(eventsData || []);
+        const loaded: MatchEvent[] = eventsData || [];
+        setEvents(loaded);
+
+        // The score can never be lower than the goals on the timeline
+        if (teamAssignment.teams?.length) {
+          let raised = false;
+          initialTeams = initialTeams.map((t, i) => {
+            const goals = loaded.filter((e) => e.type === "goal" && teamIndexOf(initialTeams, e) === i).length;
+            if (goals > (t.score || 0)) { raised = true; return { ...t, score: goals }; }
+            return t;
+          });
+          if (raised) await saveTeams(initialTeams, match.id, match.super_code, teamAssignment.is_public || false);
+        }
+        setTeams(initialTeams);
 
         const { data: playersData, error: playersError } = await fetchWithRetry(
           supabase.from("players").select("id, player_name").eq("match_id", match.id)
@@ -176,9 +181,15 @@ const TeamManagement = () => {
       .channel(`match_events:${match.id}`)
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'match_events', filter: `match_id=eq.${match.id}` },
-        (payload) => {
-          setEvents((prev) => [...prev, payload.new]);
+        { event: '*', schema: 'public', table: 'match_events', filter: `match_id=eq.${match.id}` },
+        (payload: any) => {
+          // One copy per event, so a save on this phone and its live echo never show twice
+          if (payload.eventType === 'DELETE') {
+            const id = payload.old?.id;
+            if (id) setEvents((prev) => prev.filter((e) => e.id !== id));
+          } else if (payload.new?.id) {
+            setEvents((prev) => mergeEvents(prev, payload.new as MatchEvent));
+          }
         }
       )
       .subscribe();
@@ -229,6 +240,16 @@ const TeamManagement = () => {
   };
 
   const addToHistory = (newTeams: Team[]) => {
+    // A renamed team takes its moments with it, so the timeline shows the new name
+    if (match && newTeams.length === teams.length) {
+      newTeams.forEach((t, i) => {
+        const oldName = teams[i]?.name;
+        if (oldName && t.name && oldName !== t.name) {
+          setEvents((prev) => prev.map((e) => (e.team_name === oldName ? { ...e, team_name: t.name, team_index: i } : e)));
+          renameTeamEvents(match.super_code, match.id, oldName, t.name, i).catch((err) => console.error("Could not rename team moments", err));
+        }
+      });
+    }
     const newHistory = history.slice(0, historyIndex + 1);
     newHistory.push(newTeams);
     setHistory(newHistory);

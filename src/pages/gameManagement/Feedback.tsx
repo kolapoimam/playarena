@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -159,6 +159,15 @@ const Feedback = () => {
       setLoading(false);
     }
   };
+
+  // Links in the feedback email carry the ticket code, so open the form straight away
+  const autoChecked = useRef(false);
+  useEffect(() => {
+    if (autoChecked.current || !matchSlug || !/^\d{6}$/.test(code.trim())) return;
+    autoChecked.current = true;
+    validateCode();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [matchSlug]);
 
   const onSubmit = async (data: FeedbackFormValues) => {
     if (!match || !match.players) return;

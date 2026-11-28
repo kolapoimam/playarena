@@ -83,6 +83,7 @@ const JoinMatch = () => {
   const [successDialogOpen, setSuccessDialogOpen] = useState(false);
   const [confirmationCode, setConfirmationCode] = useState<string | null>(null);
   const [selectedSlots, setSelectedSlots] = useState(1);
+  const [bookedSlots, setBookedSlots] = useState(1);
   const [userId, setUserId] = useState<string | null>(null);
   const defaultEmail = "sportcliqapp@gmail.com";
 
@@ -210,70 +211,83 @@ const JoinMatch = () => {
     fetchMatch();
   }, [slug, toast, form, userId]);
 
+  // Details and slots are kept on the device while Paystack is open, so a page
+  // reload after payment can still finish the registration by itself.
+  const pendingKey = match ? `sc_join_${match.id}` : "";
+  const savePending = (values: any, slots: number) => {
+    try { sessionStorage.setItem(pendingKey, JSON.stringify({ values, slots, at: Date.now() })); } catch { /* ignore */ }
+  };
+  const readPending = (): { values?: any; slots?: number } => {
+    try { return JSON.parse(sessionStorage.getItem(pendingKey) || "{}"); } catch { return {}; }
+  };
+  const clearPending = () => { try { sessionStorage.removeItem(pendingKey); } catch { /* ignore */ } };
+  const verifiedRefs = useRef(new Set<string>());
+
+  /** Checks the payment with the server, then registers the player. Never trusts the popup alone. */
+  const completePaidJoin = async (ref: string) => {
+    if (!match || verifiedRefs.current.has(ref)) return;
+    verifiedRefs.current.add(ref);
+    setVerifyingPayment(true);
+    try {
+      const response = await supabase.functions.invoke("verify-paystack-transaction", { body: { reference: ref } });
+      if (response.error) throw new Error(response.error.message);
+      const { verified, match_id, slug: matchSlug, amount } = response.data || {};
+      if (!(verified && match_id === match.id && matchSlug === slug)) {
+        setPaymentStatus("failed");
+        toast({ title: "Payment not confirmed", description: "We could not confirm this payment. If you were charged, contact support with your reference.", variant: "destructive" });
+        return;
+      }
+      setPaymentStatus("success");
+      const saved = readPending();
+      // The number of slots comes from what was actually paid
+      const paidSlots = Number(amount) && match.price ? Math.max(1, Math.round(Number(amount) / match.price)) : Math.max(1, Number(saved.slots) || selectedSlots);
+      setSelectedSlots(paidSlots);
+      const values = saved.values || form.getValues();
+      const ok = formSchema.safeParse(values);
+      if (ok.success) {
+        form.reset(values);
+        await register(values, paidSlots, ref, true);
+      } else {
+        form.reset(values || {});
+        toast({ title: "Payment confirmed", description: "Add your details below to finish joining. Do not close this page." });
+      }
+    } catch (error) {
+      console.error("Error verifying payment:", error);
+      verifiedRefs.current.delete(ref);
+      setPaymentStatus("failed");
+      toast({ title: "Payment check failed", description: "We could not reach the server to confirm your payment. Refresh this page to try again.", variant: "destructive" });
+    } finally {
+      setVerifyingPayment(false);
+    }
+  };
+
   useEffect(() => {
     if (!urlReference || !match) return;
+    completePaidJoin(urlReference);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlReference, match?.id]);
 
-    const verifyPayment = async () => {
-      setVerifyingPayment(true);
-      try {
-        const response = await supabase.functions.invoke("verify-paystack-transaction", {
-          body: { reference: paymentReference },
-        });
-
-        if (response.error) {
-          throw new Error(response.error.message);
-        }
-
-        const { verified, match_id, slug: matchSlug } = response.data;
-
-        if (verified && match_id === match.id && matchSlug === slug) {
-          setPaymentStatus("success");
-          toast({
-            title: "Payment Successful",
-            description: "Your payment was processed successfully. Please complete your registration. Do not close this page",
-          });
-        } else {
-          setPaymentStatus("failed");
-          toast({
-            title: "Payment Verification Failed",
-            description: "We could not verify your payment. Please try again.",
-            variant: "destructive",
-          });
-        }
-      } catch (error) {
-        console.error("Error verifying payment:", error);
-        setPaymentStatus("failed");
-        toast({
-          title: "Payment Verification Error",
-          description: "An error occurred while verifying your payment.",
-          variant: "destructive",
-        });
-      } finally {
-        setVerifyingPayment(false);
-      }
-    };
-
-    verifyPayment();
-  }, [urlReference, match, slug, toast]);
-
-  const handlePaymentInitiation = async () => {
+  const handlePaymentInitiation = async (values: any) => {
     if (!match || !match.is_paid || !match.price) return;
 
     if (!paystackLoaded || !window.PaystackPop) {
-      toast({
-        title: "Error",
-        description: "Paystack is not available. Please try again later.",
-        variant: "destructive",
-      });
+      toast({ title: "Payment is not ready", description: "Paystack did not load. Check your connection and try again.", variant: "destructive" });
+      return;
+    }
+
+    const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
+    if (totalPlayerSlots + selectedSlots > match.total_slots) {
+      toast({ title: "Not enough slots", description: `Only ${match.total_slots - totalPlayerSlots} slot(s) are available.`, variant: "destructive" });
       return;
     }
 
     try {
       setJoining(true);
+      savePending(values, selectedSlots);
 
       const response = await supabase.functions.invoke("initialize-paystack-transaction", {
         body: {
-          email: await payerEmail(form.getValues("email")),
+          email: await payerEmail(values?.email ?? form.getValues("email")),
           amount: match.price * selectedSlots,
           match_id: match.id,
           slug: match.slug,
@@ -290,62 +304,63 @@ const JoinMatch = () => {
       const paystack = new window.PaystackPop();
       paystack.resumeTransaction(access_code, {
         onSuccess: (transaction) => {
-          setPopupReference(transaction?.reference || null);
-          setPaymentStatus("success");
-          toast({
-            title: "Payment Successful",
-            description: `Your payment for ${selectedSlots} slot(s) was processed successfully. Please complete your registration.`,
-          });
           setJoining(false);
+          const ref = transaction?.reference || null;
+          setPopupReference(ref);
+          if (ref) completePaidJoin(ref);
         },
         onCancel: () => {
-          toast({
-            title: "Payment Cancelled",
-            description: "You've cancelled the payment process.",
-            variant: "destructive",
-          });
+          toast({ title: "Payment cancelled", description: "You were not charged." });
           setJoining(false);
         },
       });
     } catch (error) {
       console.error("Error initiating payment:", error);
-      toast({
-        title: "Payment Error",
-        description: "Failed to initiate payment. Please try again.",
-        variant: "destructive",
-      });
+      toast({ title: "Payment error", description: "Could not start the payment. Please try again.", variant: "destructive" });
       setJoining(false);
     }
   };
 
   const onSubmit = async (data: any) => {
+    if (!match) return;
+    if (match.is_paid && paymentStatus !== "success") return handlePaymentInitiation(data);
+    return register(data, selectedSlots, paymentReference, match.is_paid && paymentStatus === "success");
+  };
+
+  /** Shows the ticket, using the slots this player actually booked. */
+  const showTicket = (code: string, slots: number) => {
+    setConfirmationCode(code);
+    setBookedSlots(slots);
+    setSuccessDialogOpen(true);
+  };
+
+  const register = async (data: any, slots: number, ref: string | null, paid: boolean) => {
     if (!match || !slug) return;
     if (submitLock.current) return;
-
-    const totalPlayerSlots = match.players.reduce((sum, player) => sum + (player.number_of_slots || 1), 0);
-    if (totalPlayerSlots + selectedSlots > match.total_slots) {
-      toast({
-        title: "Not enough slots",
-        description: `Only ${match.total_slots - totalPlayerSlots} slot(s) are available.`,
-        variant: "destructive",
-      });
-      return;
-    }
-
     submitLock.current = true;
     setJoining(true);
 
     try {
-      // One payment can only be used to join once
-      if (match.is_paid && paymentStatus === "success") {
-        if (!paymentReference) throw new Error("We could not find your payment reference. Please contact support.");
+      // One payment joins once. A repeat callback shows the ticket it already made.
+      if (paid) {
+        if (!ref) throw new Error("We could not find your payment reference. Please contact support.");
         const { data: used } = await supabase
-          .from("players").select("id").eq("match_id", match.id)
-          .eq("details->>payment_reference", paymentReference).limit(1);
+          .from("players").select("id, confirmation_code, number_of_slots").eq("match_id", match.id)
+          .eq("details->>payment_reference", ref).limit(1);
         if (used && used.length > 0) {
-          setPaymentStatus("pending");
-          throw new Error("This payment has already been used to join this match.");
+          clearPending();
+          if (urlReference) window.history.replaceState(null, "", window.location.pathname);
+          showTicket(used[0].confirmation_code, used[0].number_of_slots || slots);
+          return;
         }
+      }
+
+      const { data: fresh } = await supabase.from("players").select("number_of_slots").eq("match_id", match.id);
+      const taken = (fresh || match.players).reduce((sum: number, p: any) => sum + (p.number_of_slots || 1), 0);
+      if (taken + slots > match.total_slots) {
+        throw new Error(paid
+          ? `The match filled up while you paid. Your payment is safe, contact support with reference ${ref} for a refund.`
+          : `Only ${Math.max(0, match.total_slots - taken)} slot(s) are available.`);
       }
 
       const playerDetails: Record<string, any> = {};
@@ -355,9 +370,9 @@ const JoinMatch = () => {
         }
       });
 
-      if (match.is_paid && paymentStatus === "success") {
-        playerDetails.email = defaultEmail;
-        playerDetails.payment_reference = paymentReference;
+      if (paid) {
+        playerDetails.email = playerDetails.email || defaultEmail;
+        playerDetails.payment_reference = ref;
         playerDetails.payment_status = "paid";
       }
 
@@ -369,16 +384,17 @@ const JoinMatch = () => {
           match_id: match.id,
           player_name: data.name,
           details: Object.keys(playerDetails).length > 0 ? playerDetails : undefined,
-          payment_status: match.is_paid ? (paymentStatus === "success" ? "paid" : "pending") : "free",
+          payment_status: match.is_paid ? (paid ? "paid" : "pending") : "free",
           status: "registered",
-          number_of_slots: selectedSlots,
+          number_of_slots: slots,
           confirmation_code: confirmationCode,
         })
-        .select("id, confirmation_code")
+        .select("id, confirmation_code, number_of_slots")
         .single();
 
       if (playerError) throw playerError;
       notify("match_joined", { match_id: match.id, player_id: playerData.id });
+      clearPending();
 
       if (userId) {
         const { error: joinError } = await supabase
@@ -388,48 +404,32 @@ const JoinMatch = () => {
             match_id: match.id,
             player_id: playerData.id,
           });
+        if (joinError) console.error("Could not link the match to the account", joinError);
 
-        if (joinError) throw joinError;
-
-        if (match.is_paid && paymentStatus === "success") {
+        if (paid) {
           const { error: transactionError } = await supabase
             .from("user_transactions")
             .insert({
               user_id: userId,
               match_id: match.id,
-              amount: match.price! * selectedSlots,
+              amount: match.price! * slots,
               transaction_type: "payment",
             });
-
-          if (transactionError) throw transactionError;
+          if (transactionError) console.error("Could not save the transaction record", transactionError);
         }
       }
 
-      setConfirmationCode(playerData.confirmation_code);
-
       toast({
-        title: "Success!",
-        description: `You have joined the match successfully for ${selectedSlots} slot${selectedSlots > 1 ? "s" : ""}.`,
+        title: "You're in",
+        description: `You joined with ${slots} slot${slots > 1 ? "s" : ""}.`,
       });
 
-      form.reset();
       setPaymentStatus("pending");
       setPopupReference(null);
-      setSelectedSlots(1);
       // Drop the payment reference from the address so a refresh cannot reuse it
       if (urlReference) window.history.replaceState(null, "", window.location.pathname);
-      // Ensure match and confirmationCode are set before opening dialog
-      if (match && playerData.confirmation_code) {
-        setSuccessDialogOpen(true);
-      } else {
-        console.error('Failed to open dialog: match or confirmationCode missing', { match, confirmationCode: playerData.confirmation_code });
-        toast({
-          title: "Error",
-          description: "Failed to display registration confirmation. Please try again.",
-          variant: "destructive",
-        });
-      }
-      
+      showTicket(playerData.confirmation_code, playerData.number_of_slots || slots);
+
       const { data: updatedMatch } = await supabase
         .from("matches")
         .select(
@@ -447,12 +447,11 @@ const JoinMatch = () => {
       if (updatedMatch) {
         setMatch(updatedMatch as Match);
       }
-      
     } catch (error: any) {
       console.error("Error joining match:", error);
       toast({
         title: "Could not join",
-        description: error?.message && error.message.length < 120 ? error.message : "Failed to join the match. Please try again.",
+        description: error?.message && error.message.length < 160 ? error.message : "Failed to join the match. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -550,39 +549,37 @@ const JoinMatch = () => {
             <FunEmpty icon={Calendar} sport="football" title="This one has been played" body="The final whistle has gone on this match. Plenty more are kicking off soon." primary={{ label: "Find another match", onClick: () => navigate("/matches") }} />
           ) : isFull ? (
             <FunEmpty icon={Users} sport="red" title="Every slot is taken" body="This squad is complete. Check the match page in case a spot opens up." primary={{ label: "View match", onClick: () => navigate(`/match/${match.slug}`) }} secondary={{ label: "Find another match", onClick: () => navigate("/matches") }} />
-          ) : match.is_paid && paymentStatus === "pending" ? (
-            <div className="bg-white rounded-3xl p-[18px] flex flex-col gap-4">
-              <div className="flex items-center gap-3">
-                <Bubble icon={Wallet} sport="money" size={44} radius={14} />
-                <span className="flex flex-col">
-                  <span className="text-base font-extrabold">Pay to lock your slot</span>
-                  <span className="text-[13px] text-sc-ink3">{formatNairaExact(match.price)} per slot, paid securely with Paystack</span>
-                </span>
-              </div>
-              {match.allow_bulk_tickets && maxSlots > 1 && (
-                <div className="flex items-center justify-between rounded-2xl bg-sc-bg px-4 py-3">
-                  <span className="flex flex-col">
-                    <span className="text-sm font-bold">Slots</span>
-                    <span className="text-xs text-sc-ink3">Bring your friends, up to {maxSlots}</span>
-                  </span>
-                  <div className="flex items-center gap-3">
-                    <button type="button" aria-label="Fewer slots" onClick={() => setSelectedSlots((prev) => Math.max(1, prev - 1))} disabled={selectedSlots <= 1} className="w-10 h-10 rounded-full bg-white text-xl font-bold disabled:opacity-40">−</button>
-                    <span className="w-6 text-center text-xl font-extrabold">{selectedSlots}</span>
-                    <button type="button" aria-label="More slots" onClick={() => setSelectedSlots((prev) => Math.min(maxSlots, prev + 1))} disabled={selectedSlots >= maxSlots} className="w-10 h-10 rounded-full bg-white text-xl font-bold disabled:opacity-40">+</button>
-                  </div>
-                </div>
-              )}
-              <div className="flex justify-between items-baseline">
-                <span className="text-sm text-sc-ink3 font-semibold">Total</span>
-                <span className="text-[26px] font-extrabold tracking-[-0.02em]">{formatNairaExact((match.price || 0) * selectedSlots)}</span>
-              </div>
-              <ScButton icon={joining ? undefined : Wallet} onClick={handlePaymentInitiation} disabled={joining || !paystackLoaded}>
-                {joining ? "Processing..." : !paystackLoaded ? "Getting payment ready..." : `Pay ${formatNairaExact((match.price || 0) * selectedSlots)}`}
-              </ScButton>
-            </div>
           ) : (
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="bg-white rounded-3xl p-[18px] flex flex-col gap-4">
+                {match.is_paid && paymentStatus !== "success" && (
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center gap-3">
+                      <Bubble icon={Wallet} sport="money" size={44} radius={14} />
+                      <span className="flex flex-col">
+                        <span className="text-base font-extrabold">Pay to lock your slot</span>
+                        <span className="text-[13px] text-sc-ink3">{formatNairaExact(match.price)} per slot, paid securely with Paystack</span>
+                      </span>
+                    </div>
+                    {match.allow_bulk_tickets && maxSlots > 1 && (
+                      <div className="flex items-center justify-between rounded-2xl bg-sc-bg px-4 py-3">
+                        <span className="flex flex-col">
+                          <span className="text-sm font-bold">Slots</span>
+                          <span className="text-xs text-sc-ink3">Bring your friends, up to {maxSlots}</span>
+                        </span>
+                        <div className="flex items-center gap-3">
+                          <button type="button" aria-label="Fewer slots" onClick={() => setSelectedSlots((prev) => Math.max(1, prev - 1))} disabled={selectedSlots <= 1} className="w-10 h-10 rounded-full bg-white text-xl font-bold disabled:opacity-40">−</button>
+                          <span className="w-6 text-center text-xl font-extrabold">{selectedSlots}</span>
+                          <button type="button" aria-label="More slots" onClick={() => setSelectedSlots((prev) => Math.min(maxSlots, prev + 1))} disabled={selectedSlots >= maxSlots} className="w-10 h-10 rounded-full bg-white text-xl font-bold disabled:opacity-40">+</button>
+                        </div>
+                      </div>
+                    )}
+                    <div className="flex justify-between items-baseline">
+                      <span className="text-sm text-sc-ink3 font-semibold">Total</span>
+                      <span className="text-[26px] font-extrabold tracking-[-0.02em]">{formatNairaExact((match.price || 0) * selectedSlots)}</span>
+                    </div>
+                  </div>
+                )}
                 {match.is_paid && paymentStatus === "success" && (
                   <div className="rounded-2xl p-4 flex gap-3" style={{ background: SPORT.football.bg, color: SPORT.football.fg }}>
                     <CheckCircle2 size={22} className="shrink-0" />
@@ -619,9 +616,16 @@ const JoinMatch = () => {
                     )}
                   />
                 ))}
-                <ScButton type="submit" disabled={joining}>
-                  {joining ? "Joining..." : `Join match${selectedSlots > 1 ? ` · ${selectedSlots} slots` : ""}`}
-                </ScButton>
+                {match.is_paid && paymentStatus !== "success" ? (
+                  <ScButton type="submit" icon={joining ? undefined : Wallet} disabled={joining || !paystackLoaded}>
+                    {joining ? "Processing..." : !paystackLoaded ? "Getting payment ready..." : `Pay ${formatNairaExact((match.price || 0) * selectedSlots)}`}
+                  </ScButton>
+                ) : (
+                  <ScButton type="submit" disabled={joining}>
+                    {joining ? "Joining..." : `Join match${selectedSlots > 1 ? ` · ${selectedSlots} slots` : ""}`}
+                  </ScButton>
+                )}
+                {match.is_paid && paymentStatus !== "success" && <p className="m-0 text-xs text-sc-ink3 text-center">You are registered as soon as the payment is confirmed.</p>}
               </form>
             </Form>
           )}
@@ -635,11 +639,13 @@ const JoinMatch = () => {
               form.reset();
               setPaymentStatus("pending");
               setSelectedSlots(1);
+              // Back to the match, now showing this player in the squad
+              navigate(`/match/${match.slug}`);
             }
           }}
           match={match}
           confirmationCode={confirmationCode}
-          selectedSlots={selectedSlots}
+          selectedSlots={bookedSlots}
           totalPlayerSlots={totalPlayerSlots}
         />
       </div>

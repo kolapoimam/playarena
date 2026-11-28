@@ -36,7 +36,7 @@ export default function Onboarding() {
   const touch = useRef<{ x: number; y: number; lock: boolean | null } | null>(null);
 
   useEffect(() => {
-    if (pathname.startsWith("/auth/callback")) return;
+    if (pathname.startsWith("/auth/callback") || pathname.startsWith("/highlights/")) return;
     try {
       if (!localStorage.getItem(KEY)) setOpen(true);
     } catch {

@@ -7,3 +7,6 @@ verify_jwt = false
 
 [functions.verify-paystack-transaction]
 verify_jwt = false
+
+[functions.email-unsubscribe]
+verify_jwt = false

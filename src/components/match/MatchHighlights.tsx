@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -42,7 +42,17 @@ type MatchHighlight = {
   }[];
 };
 
-const Navbar = lazy(() => import("@/components/Navbar"));
+/** A plain header for the public page. No back button and no app navigation. */
+function PublicHeader() {
+  return (
+    <header className="px-5 pt-[max(env(safe-area-inset-top),1rem)]">
+      <div className="max-w-2xl mx-auto pt-3 flex items-center justify-between gap-3">
+        <a href="/" aria-label="SportCliq"><img src="/brand/sportcliq-wordmark.png" alt="SportCliq" className="h-7 w-auto" /></a>
+        <a href="/" className="h-10 px-4 rounded-full bg-sc-ink text-white text-sm font-extrabold inline-flex items-center">Open SportCliq</a>
+      </div>
+    </header>
+  );
+}
 
 const MatchHighlights = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -103,14 +113,14 @@ const MatchHighlights = () => {
   if (!highlight) {
     return (
       <div className="min-h-screen bg-sc-bg">
-        <NavHeader title="Highlights" />
+        <PublicHeader />
         <div className="px-5 pt-4">
           <FunEmpty
             icon={Sparkles}
             sport="tennis"
             title="No highlights yet"
             body="The organiser has not shared highlights for this match. Goals, assists and the man of the match land here once they do."
-            primary={{ label: "Back to the match", onClick: () => window.history.length > 1 ? window.history.back() : (window.location.href = `/match/${slug}`) }}
+            primary={{ label: "See the match", onClick: () => { window.location.href = `/match/${slug}`; } }}
           />
         </div>
       </div>
@@ -132,8 +142,8 @@ const MatchHighlights = () => {
   const date = highlight.match_date ? new Date(`${String(highlight.match_date).slice(0, 10)}T12:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }) : "";
 
   return (
-    <div className="min-h-screen bg-sc-bg text-sc-ink pb-32">
-      <NavHeader title="Highlights" />
+    <div className="min-h-screen bg-sc-bg text-sc-ink pb-12">
+      <PublicHeader />
       <main className="max-w-2xl mx-auto px-4 pt-2 flex flex-col gap-4">
         <div className="bg-sc-ink text-white rounded-3xl p-5 flex flex-col gap-4">
           <div className="flex items-center justify-between gap-3">
@@ -221,7 +231,6 @@ const MatchHighlights = () => {
           </div>
         </div>
       </main>
-      <Navbar />
     </div>
   );
 };

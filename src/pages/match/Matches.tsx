@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
+import { matchWindow } from "@/lib/activityTime";
+import { toMinutes } from "@/lib/venueSlots";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Calendar, Clock, MapPin, Users, ChevronLeft, ChevronRight, Filter, Lock, ArrowLeft, Plus, Trophy } from "lucide-react";
@@ -58,7 +60,8 @@ interface Match {
     player_name: string;
   }[];
   created_at: string;
-  status: string; // live, today, next_day, upcoming, or past
+  status: string; // live, today, next_day, upcoming, past or cancelled
+  cancellation_status?: boolean | null;
 };
 
 type Organizer = {
@@ -147,6 +150,8 @@ const Matches = () => {
     }
   };
 
+  // Every filter works on the full list, so status, counts and pages always agree.
+  // Status comes from the match date, kick off, end time and cancellation, never a stored label.
   const fetchMatches = async () => {
     try {
       setLoading(true);
@@ -154,33 +159,21 @@ const Matches = () => {
         .from("matches")
         .select(
           `
-          id, slug, title, match_date, match_time, start_time, end_time, total_slots, is_paid, price, notes, organizer_name, organizer_id, is_private, access_password,
-          venue:venues${stateFilter && stateFilter !== "all" ? "!inner" : ""}(slug, name, city, state, image_urls),
+          id, slug, title, match_date, match_time, start_time, end_time, total_slots, is_paid, price, notes, organizer_name, organizer_id, is_private, access_password, cancellation_status,
+          venue:venues(slug, name, city, state, image_urls),
           players(*),
           created_at
-        `,
-          { count: "exact" }
-        );
+        `
+        )
+        .order("match_date", { ascending: false })
+        .limit(1000);
 
-      // Apply filters
-      if (isPaidFilter !== null) {
-        query = query.eq("is_paid", isPaidFilter);
-      }
-      if (venueFilter) {
-        const venue = venues.find((v) => v.slug === venueFilter);
-        if (venue) {
-          query = query.eq("venue_id", venue.id);
-        }
-      }
+      if (isPaidFilter !== null) query = query.eq("is_paid", isPaidFilter);
+
       if (durationFilter !== "all") {
         const today = DateTime.now().setZone(LAGOS_TIMEZONE).startOf("day");
         let startDate: DateTime, endDate: DateTime;
-
         switch (durationFilter) {
-          case "today":
-            startDate = today;
-            endDate = today;
-            break;
           case "this_week":
             startDate = today.startOf("week");
             endDate = startDate.plus({ days: 6 });
@@ -197,93 +190,56 @@ const Matches = () => {
             startDate = today;
             endDate = today;
         }
-
-        const startDateStr = startDate.toISODate();
-        const endDateStr = endDate.toISODate();
-        query = query.gte("match_date", startDateStr!).lte("match_date", endDateStr!);
-      }
-      if (timeStart) {
-        const timeRanges: { [key: string]: { start: string; end: string } } = {
-          morning: { start: "06:00:00", end: "11:59:59" },
-          afternoon: { start: "12:00:00", end: "17:59:59" },
-          evening: { start: "18:00:00", end: "23:59:59" },
-        };
-        query = query.gte("match_time", timeRanges[timeStart].start).lte("match_time", timeRanges[timeStart].end);
-      }
-      if (stateFilter && stateFilter !== "all") {
-        query = query.eq("venue.state", stateFilter);
+        query = query.gte("match_date", startDate.toISODate()!).lte("match_date", endDate.toISODate()!);
       }
 
-      // Sorting logic
-      if (currentPage === 1) {
-        query = query.order("created_at", { ascending: false });
-      } else {
-        query = query.order("match_date", { ascending: true }).order("match_time", { ascending: true });
-      }
-
-      // Pagination
-      const start = (currentPage - 1) * matchesPerPage;
-      const end = start + matchesPerPage - 1;
-      query = query.range(start, end);
-
-      const { data, error, count } = await query;
-
+      const { data, error } = await query;
       if (error) throw error;
 
-      // Convert and sort matches
       const now = DateTime.now().setZone(LAGOS_TIMEZONE);
-      const today = now.startOf('day');
+      const today = now.startOf("day");
       const tomorrow = today.plus({ days: 1 });
       const dayAfterTomorrow = tomorrow.plus({ days: 1 });
+      const ranges: Record<string, [number, number]> = { morning: [360, 719], afternoon: [720, 1079], evening: [1080, 1439] };
 
-      const sortedMatches = (data as Match[]).map(match => {
-        const matchDateTime = DateTime.fromISO(`${match.match_date}T${match.match_time}`).setZone(LAGOS_TIMEZONE);
-        const endDateTime = DateTime.fromISO(`${match.match_date}T${match.end_time}`).setZone(LAGOS_TIMEZONE);
-        
-        // Determine status
+      const all = ((data || []) as any[]).map((match) => {
+        const win = matchWindow(match);
+        const start = DateTime.fromJSDate(win.start).setZone(LAGOS_TIMEZONE);
         let status: string;
-        if (matchDateTime < now) {
-          status = "past";
-        } else if (matchDateTime >= today && matchDateTime < tomorrow) {
-          status = "today";
-          if (matchDateTime <= now && now <= endDateTime) {
-            status = "live";
-          }
-        } else if (matchDateTime >= tomorrow && matchDateTime < dayAfterTomorrow) {
-          status = "next_day";
-        } else {
-          status = "upcoming";
-        }
-
-        return {
-          ...match,
-          status
-        };
-      })
-      .sort((a, b) => {
-        // Priority: Live > Today > Next Day > Upcoming > Past
-        const statusOrder = {
-          live: 0,
-          today: 1,
-          next_day: 2,
-          upcoming: 3,
-          past: 4
-        };
-
-        // First sort by status priority
-        if (statusOrder[a.status] !== statusOrder[b.status]) {
-          return statusOrder[a.status] - statusOrder[b.status];
-        }
-
-        // Then sort by date/time within each group
-        const aDateTime = DateTime.fromISO(`${a.match_date}T${a.match_time}`).setZone(LAGOS_TIMEZONE);
-        const bDateTime = DateTime.fromISO(`${b.match_date}T${b.match_time}`).setZone(LAGOS_TIMEZONE);
-        return aDateTime.toMillis() - bDateTime.toMillis();
+        if (match.cancellation_status) status = "cancelled";
+        else if (now.toMillis() >= win.end.getTime()) status = "past";
+        else if (now.toMillis() >= win.start.getTime()) status = "live";
+        else if (start >= today && start < tomorrow) status = "today";
+        else if (start >= tomorrow && start < dayAfterTomorrow) status = "next_day";
+        else status = "upcoming";
+        return { ...match, status, _start: win.start.getTime(), _mins: toMinutes(match.start_time || match.match_time) } as Match & { _start: number; _mins: number | null };
       });
 
-      setMatches(sortedMatches);
-      setFilteredMatches(sortedMatches);
-      setTotalMatches(count!);
+      const statusOrder: Record<string, number> = { live: 0, today: 1, next_day: 2, upcoming: 3, past: 4, cancelled: 5 };
+      const shown = all
+        .filter((m) => !venueFilter || m.venue?.slug === venueFilter)
+        .filter((m) => !stateFilter || stateFilter === "all" || m.venue?.state === stateFilter)
+        .filter((m) => !timeStart || (m._mins != null && m._mins >= ranges[timeStart][0] && m._mins <= ranges[timeStart][1]))
+        .filter((m) => {
+          if (!statusFilter) return true;
+          // Upcoming means anything still to come, so it includes today and tomorrow
+          if (statusFilter === "upcoming") return ["today", "next_day", "upcoming"].includes(m.status);
+          return m.status === statusFilter;
+        })
+        .sort((a, b) => {
+          if (statusOrder[a.status] !== statusOrder[b.status]) return statusOrder[a.status] - statusOrder[b.status];
+          // Coming up soonest first, finished most recent first
+          return a.status === "past" || a.status === "cancelled" ? b._start - a._start : a._start - b._start;
+        });
+
+      const totalPages = Math.max(1, Math.ceil(shown.length / matchesPerPage));
+      const page = Math.min(currentPage, totalPages);
+      if (page !== currentPage) setCurrentPage(page);
+      const pageItems = shown.slice((page - 1) * matchesPerPage, page * matchesPerPage);
+
+      setMatches(pageItems);
+      setFilteredMatches(pageItems);
+      setTotalMatches(shown.length);
     } catch (error: any) {
       console.error("Error fetching matches:", error.message);
       setMatches([]);
@@ -307,6 +263,7 @@ const Matches = () => {
     if (match.status === "today") return { statusLabel: "Today", statusClass: "bg-sc-green-bg text-sc-green-dark" };
     if (match.status === "next_day") return { statusLabel: "Tomorrow", statusClass: "bg-yellow-100 text-yellow-700" };
     if (match.status === "upcoming") return { statusLabel: "Upcoming", statusClass: "bg-blue-100 text-blue-800" };
+    if (match.status === "cancelled") return { statusLabel: "Cancelled", statusClass: "bg-red-100 text-red-700" };
     return { statusLabel: "Passed", statusClass: "bg-sc-soft2 text-sc-ink3" };
   };
 
@@ -438,6 +395,7 @@ const Matches = () => {
                       <SelectItem value="next_day">Tomorrow</SelectItem>
                       <SelectItem value="upcoming">Upcoming</SelectItem>
                       <SelectItem value="past">Past</SelectItem>
+                      <SelectItem value="cancelled">Cancelled</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
