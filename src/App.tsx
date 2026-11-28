@@ -19,6 +19,7 @@ import Index from "@/pages/Index";
 import NotFound from "@/pages/NotFound";
 import AppErrorBoundary from "@/components/sc/AppErrorBoundary";
 import SwipeBack from "@/components/sc/SwipeBack";
+import { syncBlockedFromAccount } from "@/lib/safety";
 import RequireAuth from "@/components/sc/RequireAuth";
 
 
@@ -132,6 +133,8 @@ const AppRoutes = () => {
     }
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_OUT") localStorage.removeItem("sc_profile_cache");
+      if (event === "SIGNED_OUT") syncBlockedFromAccount(null);
+      if (event === "SIGNED_IN" || event === "INITIAL_SESSION" || event === "USER_UPDATED") syncBlockedFromAccount(session?.user?.user_metadata);
       if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") linkPushUser(session?.user?.id);
       if (event === "SIGNED_IN") setTimeout(() => ensureProfile(session?.user), 0);
     });

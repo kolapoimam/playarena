@@ -14,6 +14,7 @@ import { DirectionsButton } from "@/components/sc/external";
 import { Seo } from "@/components/Seo";
 
 import { BackButton, Bubble, DateBox, Meta, Pill, ScButton, SPORT, Spinner, StickyFooter, formatNaira, Cover } from "@/components/sc/ui";
+import { ReportButton } from "@/components/sc/ReportSheet";
 import { RowsSkeleton, DetailSkeleton } from "@/components/sc/skeletons";
 // Custom CSS to style ReactQuill for description and facilities
 const quillStyles = `
@@ -211,6 +212,7 @@ const VenueDetail = () => {
           <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/25 to-transparent" />
           <div className="absolute left-5 right-5 flex justify-between" style={{ top: "max(env(safe-area-inset-top), 1rem)" }}>
             <BackButton className="mt-3" />
+            <ReportButton kind="venue" id={String(venue.id)} title={venue.name} className="mt-3" />
           </div>
           {venue.image_urls && venue.image_urls.length > 1 && (
             <span className="absolute right-5 bottom-3.5 h-[30px] px-3 rounded-full bg-sc-ink/60 text-white text-[13px] font-bold flex items-center">

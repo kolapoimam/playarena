@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import ConfirmModal from "@/components/sc/ConfirmModal";
 import { useNavigate } from "react-router-dom";
 import {
@@ -17,6 +17,7 @@ import {
   Sparkles,
   Check,
   LayoutGrid,
+  ShieldOff,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { Seo } from "@/components/Seo";
@@ -29,6 +30,7 @@ import { LocationSheet, useUserState } from "@/components/sc/location";
 import { resetOnboarding } from "@/components/sc/Onboarding";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { APP_MODES, setAppMode, useAppMode, type AppMode } from "@/lib/appMode";
+import { blockedPeople, onBlockedChange, unblockPerson, type BlockedPerson } from "@/lib/safety";
 
 const isStandalone = () =>
   window.matchMedia?.("(display-mode: standalone)").matches || (navigator as unknown as { standalone?: boolean }).standalone === true;
@@ -41,6 +43,20 @@ const Settings = () => {
   const [locOpen, setLocOpen] = useState(false);
   const appMode = useAppMode();
   const [modeOpen, setModeOpen] = useState(false);
+  const [blocked, setBlocked] = useState<BlockedPerson[]>(() => blockedPeople());
+  const [blockedOpen, setBlockedOpen] = useState(false);
+  useEffect(() => {
+    const off = onBlockedChange(() => setBlocked(blockedPeople()));
+    return () => { off(); };
+  }, []);
+  const unblock = async (p: BlockedPerson) => {
+    try {
+      await unblockPerson(p.id);
+      toast({ title: `${p.name} unblocked` });
+    } catch (e: any) {
+      toast({ title: "Could not unblock", description: e?.message, variant: "destructive" });
+    }
+  };
   const pickMode = async (m: AppMode) => {
     await setAppMode(m);
     setModeOpen(false);
@@ -119,7 +135,32 @@ const Settings = () => {
               right={pushState === "granted" ? <Pill sport="football">On</Pill> : pushState === "denied" ? <Pill sport="red">Blocked</Pill> : <Pill sport="tennis">Turn on</Pill>}
             />
             <ListRow icon={Bell} title="Notification preferences" subtitle="Choose which reminders you get" onClick={() => navigate("/profile/notifications")} />
+            <ListRow
+              icon={ShieldOff}
+              title="Blocked people"
+              subtitle={blocked.length ? `${blocked.length} blocked` : "No one blocked"}
+              onClick={() => setBlockedOpen(true)}
+            />
           </ListGroup>
+
+          <Dialog open={blockedOpen} onOpenChange={setBlockedOpen}>
+            <DialogContent className="w-full max-w-[calc(100%-2rem)] sm:max-w-[420px] rounded-[28px] bg-white p-6 gap-0">
+              <DialogTitle className="text-xl font-extrabold text-sc-ink">Blocked people</DialogTitle>
+              <DialogDescription className="text-sm text-sc-ink2 mt-1">You don't see matches or rides from people you block.</DialogDescription>
+              <div className="flex flex-col gap-2 mt-5">
+                {blocked.length === 0 ? (
+                  <p className="text-sm text-sc-ink3 py-4 text-center">No one blocked. Use the flag on a match or ride to block an organiser.</p>
+                ) : (
+                  blocked.map((p) => (
+                    <div key={p.id} className="flex items-center justify-between gap-3 rounded-2xl bg-sc-bg px-4 py-3">
+                      <span className="text-[15px] font-bold text-sc-ink truncate">{p.name}</span>
+                      <button type="button" onClick={() => unblock(p)} className="h-9 px-4 rounded-full bg-white text-sc-ink text-[13px] font-bold shrink-0">Unblock</button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
 
           <ListGroup title="App">
             <ListRow

@@ -15,6 +15,7 @@ import { DateTime } from "luxon";
 import { BackButton, Cover, DateBox, FunEmpty, Meta, Pill, Progress, SPORT, formatNaira, Pager } from "@/components/sc/ui";
 import { StateScope, useUserState } from "@/components/sc/location";
 import { sameState } from "@/lib/location";
+import { isBlocked } from "@/lib/safety";
 import { EventListSkeleton } from "@/components/sc/skeletons";
 interface CyclingEvent {
   id_uuid: string;
@@ -141,6 +142,7 @@ const CyclingActivity = () => {
 
       const statusOrder: Record<string, number> = { live: 0, today: 1, tomorrow: 2, upcoming: 3, passed: 4, cancelled: 5 };
       const sortedEvents = withStatus
+        .filter((e) => !isBlocked((e as any).host_id))
         .filter((e) => {
           if (!statusFilter) return true;
           if (statusFilter === "upcoming") return ["live", "today", "tomorrow", "upcoming"].includes(e.status);

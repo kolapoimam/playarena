@@ -15,6 +15,7 @@ const readRecent = (): string[] => {
 };
 import { format } from "date-fns";
 import { DateTime } from "luxon";
+import { isBlocked } from "@/lib/safety";
 import { Seo } from "@/components/Seo";
 
 interface Match {
@@ -118,7 +119,7 @@ const SearchPage = () => {
   // Rides by title, or by the name or state of their start landmark
   const searchRides = async (query: string): Promise<Ride[]> => {
     try {
-      const cols = "id_uuid, slug, title, event_date, start_time, is_free, price, max_attendees, status, start_landmark_id, start:landmarks!start_landmark_id(name, state), cycling_attendees!cycling_attendees_cycling_event_id_uuid_fkey(number_of_slots, status)";
+      const cols = "id_uuid, slug, title, event_date, start_time, is_free, price, max_attendees, status, host_id, start_landmark_id, start:landmarks!start_landmark_id(name, state), cycling_attendees!cycling_attendees_cycling_event_id_uuid_fkey(number_of_slots, status)";
       const { data: lms } = await supabase.from("landmarks").select("id_uuid").or(`name.ilike.%${query}%,state.ilike.%${query}%`).limit(50);
       const lmIds = ((lms as any[]) || []).map((l) => l.id_uuid);
       const [byTitle, byPlace] = await Promise.all([
@@ -202,6 +203,7 @@ const SearchPage = () => {
           match_time,
           is_paid,
           price,
+          organizer_name,
           total_slots,
           status,
           venue:venues(id, slug, name, city, state),
@@ -224,6 +226,7 @@ const SearchPage = () => {
             match_time,
             is_paid,
             price,
+            organizer_name,
             total_slots,
             status,
             venue:venues(id, slug, name, city, state),
@@ -271,16 +274,17 @@ const SearchPage = () => {
         return aDateTime.toMillis() - bDateTime.toMillis();
       });
 
-      setMatches(sortedMatches);
+      const visibleMatches = sortedMatches.filter((m: any) => !isBlocked(null, m.organizer_name));
+      setMatches(visibleMatches);
       setVenues(venuesWithDetails);
-      foundMatches = sortedMatches.length;
+      foundMatches = visibleMatches.length;
       foundVenues = venuesWithDetails.length;
     } catch (error) {
       console.error("Error searching:", error);
       setMatches([]);
       setVenues([]);
     }
-    const foundRides = await ridesFound;
+    const foundRides = (await ridesFound).filter((r: any) => !isBlocked(r.host_id));
     setRides(foundRides);
     // Open the tab that has results. If the current tab is empty, move to the first one that is not.
     const counts = { matches: foundMatches, rides: foundRides.length, venues: foundVenues };

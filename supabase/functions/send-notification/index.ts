@@ -211,6 +211,40 @@ serve(async (req) => {
         return json(req, { push: push.ok, emails, admins: team.length, requester_emailed: requesterEmailed });
       }
 
+      // Someone reported a match, ride, venue or person. Email the SportCliq team to review it.
+      case "content_reported": {
+        const kinds: Record<string, string> = { match: "Match", cycling: "Ride", venue: "Venue", person: "Person" };
+        const reasons = ["Spam or a scam", "Offensive or abusive", "Fake or misleading", "Safety concern", "Something else"];
+        const kind = String(body.kind || "");
+        const reason = String(body.reason || "");
+        const targetId = String(body.target_id || "").slice(0, 80);
+        if (!kinds[kind] || !reasons.includes(reason) || !targetId) return json(req, { error: "Invalid report" }, 400);
+        const title = String(body.title || "").slice(0, 160);
+        const details = String(body.details || "").slice(0, 600);
+        const page = String(body.page || "").replace(/[^\w\-/]/g, "").slice(0, 160);
+
+        // Who sent it, if they were signed in
+        let reporter = "Someone not signed in";
+        const auth = req.headers.get("authorization") || "";
+        const tokenPart = auth.replace(/^Bearer\s+/i, "");
+        if (tokenPart) {
+          const { data } = await db.auth.getUser(tokenPart);
+          if (data?.user) reporter = data.user.email || data.user.id;
+        }
+
+        const once = await stableUuid(`report:${reporter}:${kind}:${targetId}:${reason}`);
+        const subject = `Report: ${kinds[kind]} "${title || targetId}" (${reason})`;
+        const link = page ? `https://app.sportcliq.com${page}` : "https://app.sportcliq.com";
+        const html = emailShell(
+          "New report to review",
+          `<p style="margin:0 0 14px">A ${kinds[kind].toLowerCase()} was reported in the app. Please review it within 24 hours and remove it or block the account if it breaks the rules.</p>${details ? `<p style="margin:0 0 14px"><b>What they said:</b> ${esc(details)}</p>` : ""}<p style="margin:0"><a class="link" href="${esc(link)}" style="color:#15803D;font-weight:700">Open it in SportCliq</a></p>`,
+          undefined,
+          { preheader: `${kinds[kind]} reported for ${reason}`, details: [["Type", kinds[kind]], ["Name", title || "Not given"], ["Reason", reason], ["Reported by", reporter], ["ID", targetId]] },
+        );
+        const r = await sendEmail("sportcliqapp@gmail.com", subject, html, `report:${once}`);
+        return json(req, { ok: r.ok });
+      }
+
       default:
         return json(req, { error: "Unknown event" }, 400);
     }

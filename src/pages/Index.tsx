@@ -26,6 +26,7 @@ import { HorseIcon } from "@/components/sc/sportIcons";
 import { Avatar, Bubble, FunEmpty, IconButton, Meta, Pill, Screen, Section, SPORT, formatNaira, initialsOf, Cover, myGender } from "@/components/sc/ui";
 import { LocationChip, useUserState } from "@/components/sc/location";
 import { sameState } from "@/lib/location";
+import { isBlocked } from "@/lib/safety";
 import { HomeRailSkeleton } from "@/components/sc/skeletons";
 
 type Match = {
@@ -121,8 +122,8 @@ const Index = () => {
         const currentDateTime = new Date(now);
         const currentDate = currentDateTime.toISOString().split("T")[0];
         const currentTime = currentDateTime.toTimeString().slice(0, 5);
-        const matchCols = `id, slug, title, match_date, match_time, is_paid, price, venue:venues(slug, name, city, state, image_urls)`;
-        const rideCols = `id, slug, title, event_date, start_time, is_free, start_landmark:landmarks!start_landmark_id(name, state)`;
+        const matchCols = `id, slug, title, match_date, match_time, is_paid, price, organizer_name, venue:venues(slug, name, city, state, image_urls)`;
+        const rideCols = `id, slug, title, event_date, start_time, is_free, host_id, start_landmark:landmarks!start_landmark_id(name, state)`;
 
         // Everything the home screen needs, asked for at the same time
         const [upRes, upRideRes, recentRes, recentRideRes, venueRes, pastRes] = await Promise.all([
@@ -233,12 +234,13 @@ const Index = () => {
       </span>
     </div>
   );
-  const footballAll = upcomingMatches.filter((e): e is Match => e.type === "football");
-  const cyclingAll = upcomingMatches.filter((e): e is CyclingEvent => e.type === "cycling");
+  const footballAll = upcomingMatches.filter((e): e is Match => e.type === "football" && !isBlocked(null, (e as any).organizer_name));
+  const cyclingAll = upcomingMatches.filter((e): e is CyclingEvent => e.type === "cycling" && !isBlocked((e as any).host_id));
   const footballEvents = scoped ? footballAll.filter((m) => sameState(m.venue?.state, userState)) : footballAll;
   const cyclingEvents = (scoped ? cyclingAll.filter((e) => sameState(e.start_landmark?.state, userState)) : cyclingAll).filter((e) => e.event_date >= new Date().toISOString().slice(0, 10));
-  const recentScoped = scoped ? recentRides.filter((e) => sameState(e.start_landmark?.state, userState)) : recentRides;
-  const ridesToShow = cyclingEvents.length > 0 ? cyclingEvents : (recentScoped.length > 0 ? recentScoped : recentRides).slice(0, 3);
+  const recentVisible = recentRides.filter((e) => !isBlocked((e as any).host_id));
+  const recentScoped = scoped ? recentVisible.filter((e) => sameState(e.start_landmark?.state, userState)) : recentVisible;
+  const ridesToShow = cyclingEvents.length > 0 ? cyclingEvents : (recentScoped.length > 0 ? recentScoped : recentVisible).slice(0, 3);
   const venuesShown = scoped ? popularVenues.filter((v) => sameState(v.state, userState)) : popularVenues;
 
   const quickActions = [

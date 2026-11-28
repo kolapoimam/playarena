@@ -31,6 +31,7 @@ import { Seo } from "@/components/Seo";
 import { Avatar, BackButton, Cover, DateBox, FunEmpty, Meta, Pill, Progress, formatNaira, initialsOf, sportFor, Pager } from "@/components/sc/ui";
 import { StateScope, useUserState } from "@/components/sc/location";
 import { getSavedState } from "@/lib/location";
+import { isBlocked } from "@/lib/safety";
 import { EventListSkeleton } from "@/components/sc/skeletons";
 // Match type definition based on the existing Supabase schema
 interface Match {
@@ -217,6 +218,7 @@ const Matches = () => {
 
       const statusOrder: Record<string, number> = { live: 0, today: 1, next_day: 2, upcoming: 3, past: 4, cancelled: 5 };
       const shown = all
+        .filter((m) => !isBlocked(null, (m as any).organizer_name))
         .filter((m) => !venueFilter || m.venue?.slug === venueFilter)
         .filter((m) => !stateFilter || stateFilter === "all" || m.venue?.state === stateFilter)
         .filter((m) => !timeStart || (m._mins != null && m._mins >= ranges[timeStart][0] && m._mins <= ranges[timeStart][1]))

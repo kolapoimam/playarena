@@ -99,7 +99,11 @@ const TermsAndPrivacy = () => {
                         <li>Not engage in fraudulent activities, such as misrepresenting match details or payment information.</li>
                         <li>Maintain the confidentiality of your Super Code or Player Code and not share it with unauthorized parties.</li>
                         <li>Respect other users, including organizers, players, and venue owners.</li>
+                        <li>Not post content that is offensive, abusive, hateful, sexual, violent, misleading or a scam, in match or ride details, venue listings, names or anywhere else on the Platform. SportCliq has zero tolerance for this content and for abusive users.</li>
                       </ul>
+                      <p className="mt-2">
+                        You can report any match, ride or venue with the flag button on its page, and block an organiser so their activities no longer show for you. Our team reviews every report within 24 hours, removes content that breaks these terms and may suspend or remove the account that posted it.
+                      </p>
                     </section>
 
                     <section>
