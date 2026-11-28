@@ -1,0 +1,37 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["RNA757LX4U.com.sportcliq.app"],
+        "components": [
+          { "/": "/api/*", "exclude": true },
+          { "/": "/admin*", "exclude": true },
+          { "/": "/match/*" },
+          { "/": "/matches*" },
+          { "/": "/join/*" },
+          { "/": "/cycling*" },
+          { "/": "/cycling-event/*" },
+          { "/": "/join-cycling/*" },
+          { "/": "/venue*" },
+          { "/": "/landmark*" },
+          { "/": "/highlights/*" },
+          { "/": "/ticketing/*" },
+          { "/": "/profile*" },
+          { "/": "/notifications" },
+          { "/": "/feedback/*" },
+          { "/": "/confirm*" },
+          { "/": "/reset-password*" },
+          { "/": "/activities" },
+          { "/": "/organize" },
+          { "/": "/host-cycling" },
+          { "/": "/match-id/*" },
+          { "/": "/search" },
+          { "/": "/guides" }
+        ]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": ["RNA757LX4U.com.sportcliq.app"]
+  }
+}
