@@ -21,7 +21,7 @@ const TermsAndPrivacy = () => {
         image={undefined}
         children={null}
       />
-      <div className="min-h-screen pb-20 bg-sc-bg dark:bg-gray-900">
+      <div className="min-h-screen bg-sc-bg dark:bg-gray-900" style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 8.5rem)" }}>
         <header className="px-5 pt-[max(env(safe-area-inset-top),1rem)]">
           <div className="pt-3 flex items-center justify-between gap-3">
             <BackButton />

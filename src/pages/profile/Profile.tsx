@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from "react";
 import ConfirmModal from "@/components/sc/ConfirmModal";
 import { Link, useNavigate } from "react-router-dom";
-import { useInboxUnread } from "@/lib/inbox";
-import NotificationPanel from "@/components/NotificationPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { User, LogOut, Trophy, Wallet, Volleyball, Settings, Calendar, Bike, BookOpen, Mail, Key, MapPin, ChevronRight, FileText, Medal, ArrowLeft, CircleUserRound, Bell } from "lucide-react";
+import { User, LogOut, Trophy, Wallet, Volleyball, Settings, Calendar, Bike, BookOpen, Mail, Key, MapPin, ChevronRight, FileText, Medal, ArrowLeft, CircleUserRound } from "lucide-react";
 import Navbar from "@/components/Navbar";
 
 import { Avatar, IconButton, ListRow, Sport, initialsOf } from "@/components/sc/ui";
@@ -21,8 +19,6 @@ const Profile = () => {
   const [isLoading, setIsLoading] = useState(!cached);
   const [confirmOut, setConfirmOut] = useState(false);
   const navigate = useNavigate();
-  const inboxUnread = useInboxUnread();
-  const [panelOpen, setPanelOpen] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -110,8 +106,6 @@ const Profile = () => {
       <div className="relative overflow-hidden rounded-b-[40px] bg-sc-green px-5 pb-[26px] flex flex-col gap-[18px]" style={{ paddingTop: "max(env(safe-area-inset-top), 1rem)" }}>
         <Trophy aria-hidden="true" className="absolute text-white/10" size={220} strokeWidth={1} style={{ right: -40, top: 40 }} />
         <div className="relative pt-3 flex justify-end gap-2">
-          <IconButton icon={Bell} label={inboxUnread ? `Notifications, ${inboxUnread} unread` : "Notifications"} dot={inboxUnread > 0} onClick={() => setPanelOpen(true)} />
-              <NotificationPanel open={panelOpen} onOpenChange={setPanelOpen} />
           <IconButton icon={Settings} label="Settings" onClick={() => navigate("/profile/settings")} />
         </div>
         <div className="relative flex items-center gap-4">
@@ -121,13 +115,6 @@ const Profile = () => {
           <div className="flex flex-col gap-1 text-sc-green-ink min-w-0">
             <span className="text-2xl font-extrabold tracking-[-0.02em] truncate">{name}</span>
             <span className="text-sm font-bold opacity-80 truncate">{profile?.email}</span>
-            <button
-              type="button"
-              onClick={() => navigate("/profile/view-profile")}
-              className="self-start mt-1 h-8 px-3 rounded-full bg-sc-ink text-white text-xs font-bold"
-            >
-              View profile
-            </button>
           </div>
         </div>
       </div>
