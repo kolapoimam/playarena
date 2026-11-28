@@ -2,7 +2,7 @@
   "applinks": {
     "details": [
       {
-        "appIDs": ["RNA757LX4U.com.sportcliq.app"],
+        "appIDs": ["RNA757LX4U.com.sportcliq.mobile"],
         "components": [
           { "/": "/api/*", "exclude": true },
           { "/": "/admin*", "exclude": true },
@@ -32,6 +32,6 @@
     ]
   },
   "webcredentials": {
-    "apps": ["RNA757LX4U.com.sportcliq.app"]
+    "apps": ["RNA757LX4U.com.sportcliq.mobile"]
   }
 }
