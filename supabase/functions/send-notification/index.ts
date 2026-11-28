@@ -136,7 +136,7 @@ serve(async (req) => {
         const t = tables[source];
         const key = body.match_id || body.event_id || body.venue_id;
         if (!t || !key) return json(req, { error: "Unknown cashout" }, 400);
-        const { data: rows } = await db.from(source).select(`id, ${t.amount}, status, created_at`).eq(t.col, key).order("created_at", { ascending: false }).limit(1);
+        const { data: rows } = await db.from(source).select("*").eq(t.col, key).order("created_at", { ascending: false }).limit(1);
         const row: any = rows?.[0];
         if (!row) return json(req, { error: "Cashout not found" }, 404);
         if (!recent(row.created_at, 10)) return json(req, { skipped: "not a new cashout" });
@@ -151,11 +151,35 @@ serve(async (req) => {
         const title = "New cashout request";
         const message = `${naira} requested for the ${t.label}${name ? ` ${name}` : ""}. Review it in the admin portal.`;
 
+        const once = `cashout:${source}:${row.id}`;
+
+        // The person who asked gets a receipt for their request by email
+        let requesterEmailed = false;
+        try {
+          let uid: string | null = null;
+          if (source === "venue_booking_cashout") uid = (await db.from("venues").select("user_id").eq("id", key).maybeSingle()).data?.user_id ?? null;
+          else if (source === "cycling_cashouts") uid = row.host_id || (await db.from("user_hosted_cycling").select("user_id").eq("cycling_event_id", key).limit(1)).data?.[0]?.user_id || null;
+          else uid = (await db.from("user_organized_matches").select("user_id").eq("match_id", key).limit(1)).data?.[0]?.user_id ?? null;
+          const to = uid ? (await db.auth.admin.getUserById(uid)).data?.user?.email : null;
+          if (to) {
+            const bank = row.bank_name || row.account_details?.bank_name || "";
+            const acct = String(row.account_number || row.bank_account_number || row.account_details?.bank_account_number || "");
+            const masked = acct ? `•••• ${acct.slice(-4)}` : "";
+            const r = await sendEmail(to, `We got your cashout request for ${naira}`, emailShell(
+              "Cashout request received",
+              `<p style="margin:0 0 14px">We have your request to cash out <b>${esc(naira)}</b>${name ? ` from <b>${esc(name)}</b>` : ""}.</p><p style="margin:0">Our team is reviewing it now. We will email you again when it is paid to your bank, or if we need anything from you.</p>`,
+              source === "venue_booking_cashout" ? { label: "Open your venue", path: "/profile/my-venue" } : { label: "View your wallet", path: "/profile/wallet" },
+              { preheader: `Your ${naira} cashout request is being reviewed.`, details: [["Amount", naira], ["For", name || t.label], ...(bank || masked ? [["Pay to", [bank, masked].filter(Boolean).join(" ")] as [string, string]] : []), ["Status", "Under review"]] },
+            ), `${once}:requester`);
+            requesterEmailed = r.ok;
+          }
+        } catch (e) {
+          console.error("Cashout receipt email failed", e);
+        }
+
         const { data: admins } = await db.from("admins").select("user_id, email, status");
         const team = (admins || []).filter((a: any) => a.user_id && String(a.status || "").toLowerCase() === "active");
-        if (!team.length) return json(req, { skipped: "no active admins" });
-
-        const once = `cashout:${source}:${row.id}`;
+        if (!team.length) return json(req, { skipped: "no active admins", requester_emailed: requesterEmailed });
         const push = await sendPush(team.map((a: any) => a.user_id), title, message, "/", await stableUuid(once));
         let emails = 0;
         for (const a of team) {
@@ -172,7 +196,7 @@ serve(async (req) => {
         for (const n of alerts || []) {
           await db.rpc("admin_record_alert_delivery", { p_id: (n as any).id, p_push: push.ok ? team.length : 0, p_email: emails, p_error: push.ok ? "" : String((push as any).body || (push as any).error || "") });
         }
-        return json(req, { push: push.ok, emails, admins: team.length });
+        return json(req, { push: push.ok, emails, admins: team.length, requester_emailed: requesterEmailed });
       }
 
       default:

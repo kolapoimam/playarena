@@ -26,7 +26,7 @@ SportCliq is built for players, ride hosts, match organisers and venue owners in
 
 - Website: https://app.sportcliq.com
 - Country: Nigeria (all 36 states and the FCT)
-- Sports today: football and cycling. Tennis, basketball, volleyball, running, ping pong and walking are coming soon.
+- Sports today: football and cycling. Tennis, basketball, volleyball, running, ping pong, horse riding, padel and paintball are coming soon.
 - Accounts: email and password, or Google sign in.
 - Cost: free to use. Organisers, hosts and venue owners set their own fees.
 - Install: Android browsers offer Install. On iPhone, open in Safari, tap Share, then Add to Home Screen.

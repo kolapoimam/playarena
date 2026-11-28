@@ -15,15 +15,15 @@ export const SOCIAL = {
   whatsapp: "https://whatsapp.com/channel/0029Vb69lS19RZAYCY9ors35",
 };
 
+// Round brand icons, hosted with the app so every mail client can load them
+const ICONS = "https://app.sportcliq.com/brand";
 function socialRow() {
-  const pill = (href: string, label: string, bg: string, fg: string) =>
-    `<td style="padding:0 4px"><a href="${href}" class="soc" style="display:inline-block;padding:9px 14px;border-radius:999px;background:${bg};color:${fg};font-size:12px;font-weight:700;text-decoration:none;-webkit-text-fill-color:${fg}">${label}</a></td>`;
+  const icon = (href: string, file: string, label: string) =>
+    `<td style="padding:0 7px"><a href="${href}" title="${label}" style="display:inline-block;text-decoration:none"><img src="${ICONS}/${file}" width="36" height="36" alt="${label}" style="display:block;width:36px;height:36px;border:0;border-radius:18px"></a></td>`;
   return `<table role="presentation" cellpadding="0" cellspacing="0" align="center" style="margin:0 auto"><tr>
-${pill(SOCIAL.whatsapp, "Join our WhatsApp community", "#15803D", "#FFFFFF")}
-</tr></table>
-<table role="presentation" cellpadding="0" cellspacing="0" align="center" style="margin:10px auto 0"><tr>
-${pill(SOCIAL.x, "X @SportCliq", "#0E1411", "#FFFFFF")}
-${pill(SOCIAL.instagram, "Instagram @SportCliqHQ", "#0E1411", "#FFFFFF")}
+${icon(SOCIAL.whatsapp, "social-wa.png", "SportCliq on WhatsApp")}
+${icon(SOCIAL.x, "social-x.png", "SportCliq on X")}
+${icon(SOCIAL.instagram, "social-ig.png", "SportCliq on Instagram")}
 </tr></table>`;
 }
 

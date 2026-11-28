@@ -35,7 +35,6 @@ const sports: SportItem[] = [
   { name: "Volleyball", icon: Volleyball, sport: "guide", active: false },
   { name: "Running", icon: Footprints, sport: "red", active: false },
   { name: "Ping Pong", icon: CircleDot, sport: "venue", active: false },
-  { name: "Walking", icon: Footprints, sport: "money", active: false },
   { name: "Horse Riding", icon: HorseIcon, sport: "pink", active: false },
   { name: "Padel", icon: PadelIcon, sport: "tennis", active: false },
   { name: "Paintball", icon: Target, sport: "red", active: false },
