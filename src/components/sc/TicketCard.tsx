@@ -144,15 +144,44 @@ export const SAVED_IMAGE_WIDTH = 1080;
 
 export const downloadElementAsPng = async (el: HTMLElement, filename: string, opts?: { width?: number }) => {
   const target = opts?.width ?? SAVED_IMAGE_WIDTH;
-  const w = el.offsetWidth || el.getBoundingClientRect().width || 340;
-  const canvas = await html2canvas(el, {
-    scale: Math.max(2, target / w),
-    useCORS: true,
-    backgroundColor: null,
-    logging: false,
-    scrollX: 0,
-    scrollY: -window.scrollY,
-  });
+  const w = Math.round(el.offsetWidth || el.getBoundingClientRect().width || 340);
+  // Capture a copy pinned to the top left of the page. Capturing the card where it sits,
+  // inside a scrolled sheet, left empty space above it and made the image too tall.
+  const holder = document.createElement("div");
+  holder.setAttribute("aria-hidden", "true");
+  holder.style.cssText = `position:fixed;left:0;top:0;width:${w}px;z-index:-1;pointer-events:none;`;
+  const clone = el.cloneNode(true) as HTMLElement;
+  clone.style.margin = "0";
+  clone.style.width = `${w}px`;
+  clone.style.maxWidth = "none";
+  clone.style.boxShadow = "none";
+  holder.appendChild(clone);
+  document.body.appendChild(holder);
+  let canvas: HTMLCanvasElement;
+  try {
+    await Promise.all(
+      Array.from(clone.querySelectorAll("img")).map((img) =>
+        img.complete ? Promise.resolve() : new Promise<void>((r) => { img.onload = () => r(); img.onerror = () => r(); }),
+      ),
+    );
+    const h = Math.ceil(clone.getBoundingClientRect().height);
+    canvas = await html2canvas(clone, {
+      scale: Math.max(2, target / w),
+      useCORS: true,
+      backgroundColor: null,
+      logging: false,
+      x: 0,
+      y: 0,
+      width: w,
+      height: h,
+      scrollX: 0,
+      scrollY: 0,
+      windowWidth: Math.max(w, document.documentElement.clientWidth),
+      windowHeight: Math.max(h, window.innerHeight),
+    });
+  } finally {
+    holder.remove();
+  }
   const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob((b) => resolve(b), "image/png", 1));
   if (!blob) throw new Error("Could not create image");
   const file = filename.replace(/[^\w.-]+/g, "-");

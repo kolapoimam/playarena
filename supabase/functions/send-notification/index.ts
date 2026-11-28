@@ -4,12 +4,21 @@
 // who gets notified or what the message says.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { admin, cors, emailShell, esc, json, notifyUsers, recent, sendEmail, sendPush, stableUuid } from "../_shared/notify.ts";
+import { time12 } from "../_shared/time.ts";
 
 const fmtDate = (d?: string | null) => {
   if (!d) return "";
   const x = new Date(d + (d.length === 10 ? "T12:00:00Z" : ""));
   return isNaN(x.getTime()) ? d : x.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "Africa/Lagos" });
 };
+
+// Venue notifications go only to people who manage the venue: the account the venue is
+// assigned to, plus anyone who linked it with its code.
+async function venueManagers(db: any, venueId: string, ownerId?: string | null): Promise<string[]> {
+  const { data: pins } = await db.from("access_pins").select("user_id").eq("venue_id", venueId).not("user_id", "is", null);
+  const ids = [ownerId, ...((pins ?? []) as { user_id: string }[]).map((p) => p.user_id)].filter(Boolean) as string[];
+  return [...new Set(ids)];
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors(req) });
@@ -98,13 +107,14 @@ serve(async (req) => {
         const path = `/match/${m.slug}`;
         const when = fmtDate(m.match_date);
         const out: Record<string, unknown> = {};
-        if (v.user_id && v.user_id !== m.user_id) {
-          out.owner = await notifyUsers(db, [v.user_id], "venue_match_created",
+        const managers = (await venueManagers(db, v.id, v.user_id)).filter((id) => id !== m.user_id);
+        if (managers.length) {
+          out.owner = await notifyUsers(db, managers, "venue_match_created",
             `New match at ${v.name}`, `${m.title}${when ? ` on ${when}` : ""} has been set up at your venue.`, path);
         }
         if (!m.is_private) {
           const { data: favs } = await db.from("user_venue_favourites").select("user_id").eq("venue_id", v.id).limit(500);
-          const ids = (favs ?? []).map((f) => f.user_id).filter((id) => id !== m.user_id && id !== v.user_id);
+          const ids = (favs ?? []).map((f) => f.user_id).filter((id) => id !== m.user_id && !managers.includes(id));
           out.favourites = await notifyUsers(db, ids, "venue_favourite_match",
             `New game at ${v.name}`, `${m.title}${when ? ` on ${when}` : ""} is open. Grab a spot before it fills up.`, path);
         }
@@ -118,9 +128,11 @@ serve(async (req) => {
         if (!recent(b.created_at)) return json(req, { skipped: "not a new booking" });
         const { data: v } = await db.from("venues").select("name, slug, user_id").eq("id", b.venue_id).maybeSingle();
         if (!v) return json(req, { skipped: "venue not found" });
-        const r = await notifyUsers(db, [v.user_id], "booking_confirmation",
+        const managers = await venueManagers(db, b.venue_id, v.user_id);
+        if (!managers.length) return json(req, { skipped: "venue has no manager" });
+        const r = await notifyUsers(db, managers, "booking_confirmation",
           `New booking at ${v.name}`,
-          `${b.title || "A match"} on ${fmtDate(b.match_date)}, ${String(b.start_time || "").slice(0, 5)} to ${String(b.end_time || "").slice(0, 5)}.`,
+          `${b.title || "A match"} on ${fmtDate(b.match_date)}, ${time12(b.start_time)} to ${time12(b.end_time)}.`,
           `/profile/my-bookings`);
         return json(req, r);
       }

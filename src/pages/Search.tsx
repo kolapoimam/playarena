@@ -3,22 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
 import { Calendar, MapPin, Bike, Clock, Flag, Search as SearchIcon, ShieldCheck, Store, Trophy, X, ChevronLeft, ChevronRight, LucideIcon } from "lucide-react";
-import {
-  Bubble,
-  DateBox,
-  EmptyState,
-  ListGroup,
-  ListRow,
-  Meta,
-  PageHeader,
-  Pill,
-  Progress,
-  Screen,
-  Segmented,
-  Spinner,
-  SPORT,
-  Sport,
-  formatNaira, Cover } from "@/components/sc/ui";
+import { Bubble, DateBox, EmptyState, ListGroup, ListRow, Meta, PageHeader, Pill, Progress, Screen, Segmented, Spinner, SPORT, Sport, formatNaira, Cover, Pager } from "@/components/sc/ui";
 
 const RECENT_KEY = "sc_recent_searches";
 const readRecent = (): string[] => {
@@ -162,7 +147,9 @@ const SearchPage = () => {
 
   const searchMatchesAndVenues = async (query: string) => {
     setLoading(true);
-    searchRides(query).then(setRides);
+    const ridesFound = searchRides(query);
+    let foundMatches = 0;
+    let foundVenues = 0;
     try {
       // Search for venues matching the query in name, city, or state
       const { data: venueData, error: venueError } = await supabase
@@ -286,13 +273,24 @@ const SearchPage = () => {
 
       setMatches(sortedMatches);
       setVenues(venuesWithDetails);
+      foundMatches = sortedMatches.length;
+      foundVenues = venuesWithDetails.length;
     } catch (error) {
       console.error("Error searching:", error);
       setMatches([]);
       setVenues([]);
-    } finally {
-      setLoading(false);
     }
+    const foundRides = await ridesFound;
+    setRides(foundRides);
+    // Open the tab that has results. If the current tab is empty, move to the first one that is not.
+    const counts = { matches: foundMatches, rides: foundRides.length, venues: foundVenues };
+    setActiveTab((current) => {
+      if (counts[current] > 0) return current;
+      const firstWithResults = (["matches", "rides", "venues"] as const).find((t) => counts[t] > 0);
+      return firstWithResults ?? current;
+    });
+    setCurrentPage(1);
+    setLoading(false);
   };
 
   const formatDate = (dateString: string) => {
@@ -654,31 +652,7 @@ const SearchPage = () => {
               <EmptyState icon={Store} sport="venue" title="No venues found" subtitle="Try searching with different keywords." />
             )}
 
-            {!loading && totalPages > 1 && (
-              <div className="flex justify-center items-center gap-3 pt-2">
-                <button
-                  type="button"
-                  aria-label="Previous page"
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  className="w-11 h-11 rounded-full bg-white flex items-center justify-center disabled:opacity-40"
-                >
-                  <ChevronLeft size={20} />
-                </button>
-                <span className="text-sm font-bold text-sc-ink2">
-                  Page {currentPage} of {totalPages}
-                </span>
-                <button
-                  type="button"
-                  aria-label="Next page"
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                  className="w-11 h-11 rounded-full bg-white flex items-center justify-center disabled:opacity-40"
-                >
-                  <ChevronRight size={20} />
-                </button>
-              </div>
-            )}
+            {!loading && <Pager page={currentPage} pages={totalPages} onChange={handlePageChange} />}
           </main>
         )}
 

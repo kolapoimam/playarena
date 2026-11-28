@@ -28,7 +28,7 @@ import TeamMatchDetails from "@/components/match/TeamMatchDetails";
 import UserMatches from "@/components/match/UserMatches";
 import { Seo } from "@/components/Seo";
 
-import { Avatar, BackButton, Cover, DateBox, FunEmpty, Meta, Pill, Progress, formatNaira, initialsOf, sportFor } from "@/components/sc/ui";
+import { Avatar, BackButton, Cover, DateBox, FunEmpty, Meta, Pill, Progress, formatNaira, initialsOf, sportFor, Pager } from "@/components/sc/ui";
 import { StateScope, useUserState } from "@/components/sc/location";
 import { getSavedState } from "@/lib/location";
 import { EventListSkeleton } from "@/components/sc/skeletons";
@@ -571,27 +571,7 @@ const Matches = () => {
               );
             })}
             
-            <div className="flex justify-between items-center mt-4">
-              <Button
-                variant="outline"
-                disabled={currentPage === 1}
-                onClick={handlePreviousPage}
-              >
-                <ChevronLeft size={16} className="mr-2" />
-                Previous
-              </Button>
-              <span className="text-sc-ink2 dark:text-gray-300">
-                Page {currentPage} of {totalPages}
-              </span>
-              <Button
-                variant="outline"
-                disabled={currentPage === totalPages || totalPages === 0}
-                onClick={handleNextPage}
-              >
-                Next
-                <ChevronRight size={16} className="ml-2" />
-              </Button>
-            </div>
+            <Pager page={currentPage} pages={totalPages} onChange={(p) => (p > currentPage ? handleNextPage() : handlePreviousPage())} />
           </div>
         ) : (
           <div className="px-5">

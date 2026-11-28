@@ -161,16 +161,18 @@ const Profile = () => {
           { to: "/profile/my-cycling", icon: Bike, sport: "cycling", title: "My cycling", sub: "Rides you joined and host" },
           { to: "/profile/wallet", icon: Wallet, sport: "money", title: "Wallet", sub: "Payments and cashouts" },
         ])}
-        <span className="text-[13px] font-bold text-sc-ink3 uppercase tracking-[0.06em] px-1 pt-1">Venue manager</span>
-        {rows([
-          { to: "/profile/my-venue", icon: MapPin, sport: "venue", title: "My venues", sub: isVenueLinked ? "Dashboard, earnings and payouts" : "Link or list your venue" },
-          ...(isVenueLinked
-            ? [
-                { to: "/profile/my-bookings", icon: Calendar, sport: "guide" as Sport, title: "Bookings", sub: "Calendar of bookings at your venue" },
-                { to: "/profile/booking-code", icon: Key, sport: "pink" as Sport, title: "Booking codes", sub: "Give organisers a free slot" },
-              ]
-            : []),
-        ])}
+        {/* Only people who manage a venue see this. SportCliq links the first venue from admin.
+            More venues are linked by admin or with the venue's code from My venues. */}
+        {isVenueLinked && (
+          <>
+            <span className="text-[13px] font-bold text-sc-ink3 uppercase tracking-[0.06em] px-1 pt-1">Venue manager</span>
+            {rows([
+              { to: "/profile/my-venue", icon: MapPin, sport: "venue", title: "My venues", sub: "Dashboard, earnings and payouts" },
+              { to: "/profile/my-bookings", icon: Calendar, sport: "guide" as Sport, title: "Bookings", sub: "Calendar of bookings at your venue" },
+              { to: "/profile/booking-code", icon: Key, sport: "pink" as Sport, title: "Booking codes", sub: "Give organisers a free slot" },
+            ])}
+          </>
+        )}
         <span className="text-[13px] font-bold text-sc-ink3 uppercase tracking-[0.06em] px-1 pt-1">Account</span>
         {rows([
           { to: "/profile/settings", icon: Settings, sport: "gray", title: "Settings", sub: "Location, app and notifications" },

@@ -99,11 +99,6 @@ export const googleCalendarUrl = (e: CalEvent) =>
   `&location=${encodeURIComponent(e.location || "")}` +
   `&details=${encodeURIComponent((e.details || "") + (e.url ? `\n\n${e.url}` : ""))}`;
 
-export const outlookCalendarUrl = (e: CalEvent) =>
-  "https://outlook.live.com/calendar/0/deeplink/compose?path=/calendar/action/compose&rru=addevent" +
-  `&subject=${encodeURIComponent(e.title)}&startdt=${e.start.toISOString()}&enddt=${e.end.toISOString()}` +
-  `&location=${encodeURIComponent(e.location || "")}&body=${encodeURIComponent((e.details || "") + (e.url ? `\n\n${e.url}` : ""))}`;
-
 export const icsText = (e: CalEvent) =>
   [
     "BEGIN:VCALENDAR",
@@ -147,39 +142,68 @@ function downloadIcs(e: CalEvent) {
   setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
 
+export const isAndroid = () => /android/i.test(navigator.userAgent);
+
+/**
+ * The iPhone app plugs in its own calendar here so events go straight into the phone's calendar.
+ * It returns true when it handled the event.
+ */
+export const nativeCalendar: { add?: (e: CalEvent) => Promise<boolean> } = {};
+
+type CalTarget = "apple" | "google";
+
+/** iPhone gets Apple Calendar first. Everything else gets Google Calendar first. */
+const preferredCalendar = (): CalTarget => (isIOS() ? "apple" : "google");
+
+async function addTo(target: CalTarget, e: CalEvent) {
+  if (target === "apple") {
+    if (nativeCalendar.add && (await nativeCalendar.add(e).catch(() => false))) return;
+    downloadIcs(e);
+    return;
+  }
+  // On Android the app's own calendar is usually Google Calendar
+  if (isAndroid() && nativeCalendar.add && (await nativeCalendar.add(e).catch(() => false))) return;
+  openExternal(googleCalendarUrl(e));
+}
+
+const calName = (t: CalTarget) => (t === "apple" ? "Apple Calendar" : "Google Calendar");
+
+const whenLabel = (e: CalEvent) =>
+  `${e.start.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })} · ${e.start
+    .toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })
+    .toLowerCase()}`;
+
 export function AddToCalendarSheet({ open, onOpenChange, event }: { open: boolean; onOpenChange: (v: boolean) => void; event: CalEvent | null }) {
   if (!event) return null;
-  const options = [
-    { label: "Google Calendar", sub: "Opens in a new tab", run: () => openExternal(googleCalendarUrl(event)) },
-    { label: isIOS() ? "Apple Calendar" : "Calendar file", sub: "Works with iPhone, Outlook and most apps", run: () => downloadIcs(event) },
-    { label: "Outlook", sub: "Opens in a new tab", run: () => openExternal(outlookCalendarUrl(event)) },
-  ];
+  const first = preferredCalendar();
+  const other: CalTarget = first === "apple" ? "google" : "apple";
+  const go = (t: CalTarget) => {
+    addTo(t, event);
+    onOpenChange(false);
+  };
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full max-w-[calc(100%-2rem)] sm:max-w-[400px] rounded-[28px] bg-sc-bg p-5 gap-4">
-        <div className="flex flex-col items-center text-center gap-2 pt-1">
+      <DialogContent className="w-full max-w-[calc(100%-2rem)] sm:max-w-[400px] rounded-[28px] bg-white p-6 gap-0">
+        <div className="flex flex-col items-center text-center gap-2">
           <span className="w-14 h-14 rounded-full bg-sc-green text-white flex items-center justify-center"><CalendarPlus size={26} /></span>
           <DialogTitle className="text-xl font-extrabold text-sc-ink">Add to calendar</DialogTitle>
-          <DialogDescription className="text-sm text-sc-ink2">We add a reminder two hours before it starts.</DialogDescription>
+          <DialogDescription className="text-sm text-sc-ink2 max-w-[290px]">
+            {event.title}
+            <br />
+            {whenLabel(event)}. We add a reminder two hours before.
+          </DialogDescription>
         </div>
-        <div className="bg-white rounded-3xl overflow-hidden">
-          {options.map((o, i) => (
-            <button
-              key={o.label}
-              type="button"
-              onClick={() => {
-                o.run();
-                onOpenChange(false);
-              }}
-              className={`w-full flex items-center justify-between gap-3 px-[18px] py-4 text-left ${i ? "border-t border-sc-line" : ""}`}
-            >
-              <span className="flex flex-col">
-                <span className="text-[15px] font-bold text-sc-ink">{o.label}</span>
-                <span className="text-xs text-sc-ink3">{o.sub}</span>
-              </span>
-              <ExternalLink size={16} className="text-sc-ink3" />
-            </button>
-          ))}
+        <div className="flex flex-col gap-2.5 mt-6">
+          <button
+            type="button"
+            onClick={() => go(first)}
+            className="h-[52px] rounded-full bg-sc-green text-white font-bold inline-flex items-center justify-center gap-2"
+          >
+            <CalendarPlus size={18} /> Add to {calName(first)}
+          </button>
+          <button type="button" onClick={() => go(other)} className="h-[48px] rounded-full bg-sc-soft text-sc-ink font-bold">
+            Use {calName(other)} instead
+          </button>
         </div>
       </DialogContent>
     </Dialog>

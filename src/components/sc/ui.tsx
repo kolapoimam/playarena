@@ -675,3 +675,45 @@ export function Cover({ src, kind, alt = "", className = "" }: { src?: string | 
     />
   );
 }
+
+/* ---------- Pagination ---------- */
+
+/** Splits a list into pages. Goes back to page 1 whenever resetKey changes, for example the tab. */
+export function usePaged<T>(items: T[], size = 10, resetKey?: unknown, scrollToTop = true) {
+  const [page, setPage] = useState(1);
+  const [key, setKey] = useState(resetKey);
+  if (key !== resetKey) {
+    setKey(resetKey);
+    setPage(1);
+  }
+  const pages = Math.max(1, Math.ceil(items.length / size));
+  const current = Math.min(page, pages);
+  return {
+    rows: items.slice((current - 1) * size, current * size),
+    page: current,
+    pages,
+    setPage: (p: number) => {
+      setPage(Math.max(1, Math.min(pages, p)));
+      if (scrollToTop && typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+    },
+  };
+}
+
+/** Previous, page count and Next. Hidden when everything fits on one page. */
+export function Pager({ page, pages, onChange, className }: { page: number; pages: number; onChange: (p: number) => void; className?: string }) {
+  if (pages <= 1) return null;
+  const btn = "h-11 px-4 rounded-full bg-white text-sc-ink text-[14px] font-bold inline-flex items-center gap-1.5 disabled:opacity-40";
+  return (
+    <div className={cn("flex items-center justify-between gap-3 pt-2", className)}>
+      <button type="button" className={btn} disabled={page <= 1} onClick={() => onChange(page - 1)} aria-label="Previous page">
+        <ChevronLeft size={18} /> Previous
+      </button>
+      <span className="text-[13px] font-bold text-sc-ink2">
+        Page {page} of {pages}
+      </span>
+      <button type="button" className={btn} disabled={page >= pages} onClick={() => onChange(page + 1)} aria-label="Next page">
+        Next <ChevronRight size={18} />
+      </button>
+    </div>
+  );
+}

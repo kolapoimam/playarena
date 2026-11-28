@@ -3,6 +3,7 @@
 // so this function cannot be used to email anyone else.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { admin, cors, emailShell, esc, json, notifyUsers, recent, sendEmail } from "../_shared/notify.ts";
+import { time12 } from "../_shared/time.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors(req) });
@@ -33,7 +34,7 @@ serve(async (req) => {
       bookerEmail = data?.user?.email || "";
     }
 
-    const time = (t?: string | null) => String(t || "").slice(0, 5);
+    const time = (t?: string | null) => time12(t);
     const rows: [string, string][] = [
       ["Venue", v.name],
       ["Date", String(b.match_date || "")],

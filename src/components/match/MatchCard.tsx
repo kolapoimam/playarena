@@ -86,7 +86,7 @@ export default function MatchCard({
         <h3 className="text-lg font-bold">{title}</h3>
         <p className="text-muted-foreground">{details}</p>
         <p className="text-xs text-muted-foreground mt-1">
-          Match time: {startDateTime.toFormat("DDDD 'at' HH:mm")}
+          Match time: {startDateTime.toFormat("DDDD 'at' h:mm a")}
         </p>
         <div className="mt-2">
           {is_paid ? (

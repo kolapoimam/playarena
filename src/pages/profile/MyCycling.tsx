@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import ActivityCard, { activityStatus } from "@/components/sc/ActivityCard";
 import ConfirmModal from "@/components/sc/ConfirmModal";
-import { PageHeader, Segmented, formatTime12, formatNairaExact } from "@/components/sc/ui";
+import { PageHeader, Pager, Segmented, formatTime12, formatNairaExact, usePaged } from "@/components/sc/ui";
 import { refundShare, rideWindow } from "@/lib/activityTime";
 import { Ban } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -257,6 +257,7 @@ const MyCycling = () => {
     if (rank(sx) !== rank(sy)) return rank(sx) - rank(sy);
     return rank(sx) < 3 ? String(x.event_date).localeCompare(String(y.event_date)) : String(y.event_date).localeCompare(String(x.event_date));
   });
+  const paged = usePaged(sorted, 10, tab);
 
   const doCancel = async () => {
     if (!cancelling) return;
@@ -318,7 +319,7 @@ const MyCycling = () => {
             <FunEmpty icon={BikeIcon} sport="cycling" title="Your wheels are waiting" body="Rides you join appear here with your ticket. Find a group ride near you." primary={{ label: "Browse rides", onClick: () => navigate("/cycling-activities") }} />
           )
         ) : (
-          sorted.map((event) => {
+          paged.rows.map((event) => {
             const riding = tab === "riding";
             const cancelled = event.status === "cancelled" || (riding && event.my_status === "cancelled");
             const status = activityStatus(event.event_date, event.start_time, null, cancelled, 3);
@@ -377,6 +378,7 @@ const MyCycling = () => {
             );
           })
         )}
+        <Pager page={paged.page} pages={paged.pages} onChange={paged.setPage} />
       </main>
       <ConfirmModal
         open={!!cancelling}

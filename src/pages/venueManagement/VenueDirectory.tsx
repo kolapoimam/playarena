@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Seo } from "@/components/Seo";
 
-import { BackButton, FunEmpty, Meta, Pill, SPORT, formatNaira, Cover } from "@/components/sc/ui";
+import { BackButton, FunEmpty, Meta, Pill, SPORT, formatNaira, Cover, Pager } from "@/components/sc/ui";
 import { StateScope, useUserState } from "@/components/sc/location";
 import { getSavedState } from "@/lib/location";
 import { VenueListSkeleton } from "@/components/sc/skeletons";
@@ -419,29 +419,7 @@ const VenueDirectory = () => {
                 })}
               </div>
 
-              <div className="flex justify-between items-center mt-4">
-                <Button
-                  variant="outline"
-                  disabled={currentPage === 1}
-                  onClick={handlePreviousPage}
-                  className="bg-white dark:bg-gray-800 text-sc-green-dark border-sc-green hover:bg-green-600 hover:text-white transition-colors"
-                >
-                  <ChevronLeft size={16} className="mr-2" />
-                  Previous
-                </Button>
-                <span className="text-sc-ink2 dark:text-gray-300">
-                  Page {currentPage} of {totalPages}
-                </span>
-                <Button
-                  variant="outline"
-                  disabled={currentPage === totalPages || totalPages === 0}
-                  onClick={handleNextPage}
-                  className="bg-white dark:bg-gray-800 text-sc-green-dark border-sc-green hover:bg-green-600 hover:text-white transition-colors"
-                >
-                  Next
-                  <ChevronRight size={16} className="ml-2" />
-                </Button>
-              </div>
+              <Pager page={currentPage} pages={totalPages} onChange={(p) => (p > currentPage ? handleNextPage() : handlePreviousPage())} />
             </>
           ) : (
             <FunEmpty

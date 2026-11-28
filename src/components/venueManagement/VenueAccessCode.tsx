@@ -30,6 +30,12 @@ type Freq = "once" | "daily" | "weekly" | "monthly";
 
 const todayIso = () => isoOf(new Date());
 const hh = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+// Time choices every 15 minutes, shown in 12 hour format and stored as "HH:MM"
+const QUARTER_HOURS = Array.from({ length: 96 }, (_, i) => {
+  const m = i * 15;
+  const h = Math.floor(m / 60);
+  return { value: hh(m), label: `${h % 12 === 0 ? 12 : h % 12}:${String(m % 60).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}` };
+});
 const shortDate = (iso: string) => dateOf(iso).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
 
 const durationLabel = (start?: string | null, end?: string | null) => {
@@ -427,9 +433,15 @@ const VenueAccessCode = ({ venueId, venueName, venueSlug }: { venueId: string; v
                 <section className="flex flex-col gap-2 min-w-0">
                   <span className="text-[12px] font-extrabold uppercase tracking-[0.08em] text-sc-ink3">Time</span>
                   <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
-                    <input type="time" step={900} value={start} onChange={(e) => { setStart(e.target.value); setFormError(null); }} aria-label="Start time" className={field} />
+                    <select value={toMinutes(start) == null ? "" : hh(toMinutes(start)!)} onChange={(e) => { setStart(e.target.value); setFormError(null); }} aria-label="Start time" className={field}>
+                      <option value="" disabled>Pick a time</option>
+                      {QUARTER_HOURS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+                    </select>
                     <span className="text-sc-ink3 text-[13px] font-bold">to</span>
-                    <input type="time" step={900} value={end} onChange={(e) => { setEnd(e.target.value); setFormError(null); }} aria-label="End time" className={field} />
+                    <select value={toMinutes(end) == null ? "" : hh(toMinutes(end)!)} onChange={(e) => { setEnd(e.target.value); setFormError(null); }} aria-label="End time" className={field}>
+                      <option value="" disabled>Pick a time</option>
+                      {QUARTER_HOURS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+                    </select>
                   </div>
                   <div className="grid grid-cols-4 gap-1.5">
                     {[60, 90, 120, 180].map((mins) => {

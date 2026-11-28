@@ -231,7 +231,7 @@ const Feedback = () => {
       doc.text(`${match.title} Report`, 105, 30, { align: "center" });
       const now = new Date();
       doc.setFontSize(10);
-      doc.text(`Generated: ${now.toLocaleString("en-NG", { timeZone: "Africa/Lagos" })}`, 105, 40, { align: "center" });
+      doc.text(`Generated: ${now.toLocaleString("en-NG", { timeZone: "Africa/Lagos", hour12: true })}`, 105, 40, { align: "center" });
 
       // Content Section
       doc.setFillColor(240, 240, 240); // Light gray background
@@ -264,7 +264,7 @@ const Feedback = () => {
           doc.setFontSize(20);
           doc.text("Sport Cliq Feedback Report (Cont.)", 105, 30, { align: "center" });
           doc.setFontSize(10);
-          doc.text(`Generated: ${now.toLocaleString("en-NG", { timeZone: "Africa/Lagos" })}`, 105, 40, { align: "center" });
+          doc.text(`Generated: ${now.toLocaleString("en-NG", { timeZone: "Africa/Lagos", hour12: true })}`, 105, 40, { align: "center" });
           doc.setFillColor(240, 240, 240);
           doc.rect(10, 60, 190, 120, "F");
           doc.setTextColor(0, 0, 0);

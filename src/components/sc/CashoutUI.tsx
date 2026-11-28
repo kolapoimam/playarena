@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { ArrowDownToLine, Banknote, RefreshCw, Clock, CheckCircle2, XCircle, ChevronDown, ChevronLeft, Loader2, Wallet } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { modalAction, modalCancel } from "@/components/ui/modal-styles";
-import { formatNairaExact } from "@/components/sc/ui";
+import { Pager, formatNairaExact, usePaged } from "@/components/sc/ui";
 import { cn } from "@/lib/utils";
 
 export type CashoutRow = { id: string; amount: number; created_at: string; status: string; name?: string | null; bank?: string | null; account?: string | null };
@@ -79,7 +79,9 @@ const tone = (s: string) => {
 };
 
 export function CashoutList({ rows, title = "Cashout history" }: { rows: CashoutRow[]; title?: string }) {
+  const paged = usePaged(rows, 5, undefined, false);
   return (
+    <div className="flex flex-col gap-1">
     <div className="bg-white rounded-3xl p-[18px] flex flex-col gap-1">
       <span className="text-base font-extrabold mb-1">{title}</span>
       {rows.length === 0 ? (
@@ -88,7 +90,7 @@ export function CashoutList({ rows, title = "Cashout history" }: { rows: Cashout
           <span className="text-sm text-sc-ink3">No cashouts yet. Requests you make show up here with their status.</span>
         </div>
       ) : (
-        rows.map((r, i) => {
+        paged.rows.map((r, i) => {
           const t = tone(r.status);
           return (
             <div key={r.id} className={`flex items-center gap-3 py-3 ${i ? "border-t border-sc-line" : ""}`}>
@@ -104,6 +106,8 @@ export function CashoutList({ rows, title = "Cashout history" }: { rows: Cashout
           );
         })
       )}
+    </div>
+    <Pager page={paged.page} pages={paged.pages} onChange={(p) => paged.setPage(p)} />
     </div>
   );
 }

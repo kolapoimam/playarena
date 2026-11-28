@@ -1,0 +1,24 @@
+name: Supabase sign in emails
+
+# Saves the confirm sign up, reset password and other sign in emails to Supabase so they
+# match the rest of SportCliq's emails. Runs when the templates change on main, or by hand.
+# Uses the repo secret SUPABASE_ACCESS_TOKEN.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "supabase/auth-emails/**"
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Save the emails to Supabase
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: node supabase/auth-emails/build.mjs --push

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import ActivityCard, { activityStatus } from "@/components/sc/ActivityCard";
 import ConfirmModal from "@/components/sc/ConfirmModal";
-import { PageHeader, Segmented, formatTime12, formatNairaExact } from "@/components/sc/ui";
+import { PageHeader, Pager, Segmented, formatTime12, formatNairaExact, usePaged } from "@/components/sc/ui";
 import { matchWindow, refundShare } from "@/lib/activityTime";
 import { Ban } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -430,6 +430,7 @@ const MyMatches = () => {
     if (rank(sx) !== rank(sy)) return rank(sx) - rank(sy);
     return rank(sx) < 3 ? x.match_date.localeCompare(y.match_date) : y.match_date.localeCompare(x.match_date);
   });
+  const paged = usePaged(sorted, 10, tab);
 
   return (
     <div className="min-h-screen flex flex-col bg-sc-bg text-sc-ink font-sans pb-32">
@@ -450,7 +451,7 @@ const MyMatches = () => {
             <FunEmpty icon={TrophyIcon} sport="football" title="Your boots are still clean" body="Matches you join show up here with your ticket. Find a game near you and grab a slot." primary={{ label: "Find a match", onClick: () => navigate("/matches") }} />
           )
         ) : (
-          sorted.map((match) => {
+          paged.rows.map((match) => {
             const organizer = organizers.find((org) => org.name === match.organizer_name);
             const joined = tab === "playing";
             const cancelled = match.cancellation_status || (joined && match.player_cancellation_status);
@@ -515,6 +516,7 @@ const MyMatches = () => {
             );
           })
         )}
+        <Pager page={paged.page} pages={paged.pages} onChange={paged.setPage} />
       </main>
 
       <ConfirmModal
